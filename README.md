@@ -34,6 +34,29 @@
 1. `.env.example` -> `.env`
 2. `BackEnd/.env.example` -> `BackEnd/.env`
 
+## 로컬 실행 기준값
+
+현재 로컬 기준으로 맞춰둔 값:
+
+| Key | Value |
+| --- | --- |
+| `SPRING_PROFILES_ACTIVE` | `local` |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/test` |
+| `DB_USER` | `ssafy` |
+| `DB_PASSWORD` | `ssafy` |
+| `JWT_ENABLED` | `false` |
+| `APP_COLOR` | `LOCAL` |
+| `SPRING_RABBITMQ_HOST` | `localhost` |
+| `SPRING_RABBITMQ_PORT` | `5672` |
+| `SPRING_RABBITMQ_USERNAME` | `myuser` |
+| `SPRING_RABBITMQ_PASSWORD` | `secret` |
+
+IntelliJ Run Configuration 환경변수 예시:
+
+```text
+SPRING_PROFILES_ACTIVE=local;DB_URL=jdbc:postgresql://localhost:5432/test;DB_USER=ssafy;DB_PASSWORD=ssafy;JWT_ENABLED=false;APP_COLOR=LOCAL;SPRING_RABBITMQ_HOST=localhost;SPRING_RABBITMQ_PORT=5672;SPRING_RABBITMQ_USERNAME=myuser;SPRING_RABBITMQ_PASSWORD=secret
+```
+
 ## 실행 기준
 
 - 로컬 기본 실행: `SPRING_PROFILES_ACTIVE=local`
