@@ -2,7 +2,7 @@ spring:
   application:
     name: game-infra-test
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/mydatabase}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mydatabase}
     username: ${DB_USER:myuser}
     password: ${DB_PASSWORD:secret}
   jpa:
