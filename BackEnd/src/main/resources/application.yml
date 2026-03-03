@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: game-infra-test
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/mydatabase}
+    username: ${DB_USER:myuser}
+    password: ${DB_PASSWORD:secret}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  color: ${APP_COLOR:UNKNOWN}
