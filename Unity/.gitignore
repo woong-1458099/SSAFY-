@@ -1,0 +1,42 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+Assets/_Recovery/
+Assets/_Recovery.meta
+
+# Addressables / build cache
+Assets/AddressableAssetsData/*/*.bin*
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vsconfig
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity / Mono crash logs
+sysinfo.txt
+mono_crash.*
+
+# OS files
+.DS_Store
+Thumbs.db
