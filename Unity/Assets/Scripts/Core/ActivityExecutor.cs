@@ -10,14 +10,9 @@ public class ActivityExecutor : MonoBehaviour
             return;
         }
 
-        if (StatsManager.Instance == null)
-        {
-            var go = new GameObject("StatsManager");
-            go.AddComponent<StatsManager>();
-            Debug.LogWarning("[ActivityExecutor] StatsManager was missing and has been created at runtime.");
-        }
+        var manager = StatsManager.EnsureInstance();
 
         Debug.Log($"[ActivityExecutor] DoActivity: {activity.activityName}");
-        StatsManager.Instance.ApplyDelta(activity.delta);
+        manager.ApplyDelta(activity.delta);
     }
 }
