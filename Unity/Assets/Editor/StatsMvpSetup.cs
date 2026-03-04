@@ -32,7 +32,7 @@ public static class StatsMvpSetup
 
         var statsText = GetOrCreateStatsText(canvas.transform);
         var statsUi = statsText.GetComponent<StatsUI>() ?? statsText.gameObject.AddComponent<StatsUI>();
-        statsUi.statsText = statsText;
+        statsUi.SetStatsText(statsText);
 
         var lecture = CreateOrUpdateActivity("Lecture", "Lecture", "Boosts coding/presentation, adds stress", new StatDelta
         {

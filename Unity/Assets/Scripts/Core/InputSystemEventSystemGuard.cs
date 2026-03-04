@@ -17,7 +17,7 @@ public static class InputSystemEventSystemGuard
 
     private static void EnsureAllEventSystemsUseInputSystem()
     {
-        var systems = Object.FindObjectsOfType<EventSystem>(true);
+        var systems = Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var es in systems)
         {
             var modules = es.GetComponents<BaseInputModule>();
