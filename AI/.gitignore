@@ -1,0 +1,5 @@
+# AI 폴더 내 .gitignore 필수 항목
+venv/
+__pycache__/
+*.pyc
+.env
