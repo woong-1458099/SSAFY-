@@ -1,4 +1,0 @@
-repository "SSAFYTraineeRaising/SSAFYTraineeRaising@14569394505970@cloud"
-  path "/"
-    br "/main"
-    co "/main"
