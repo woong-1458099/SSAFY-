@@ -4,69 +4,117 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    public TextMeshProUGUI statText;
+    [SerializeField] private TextMeshProUGUI statText;
 
-    int health = 50;
-    int knowledge = 50;
-    int stress = 0;
-    int affection = 0;
+    private bool _isSubscribed;
 
-    void Start()
+    private void Awake()
+    {
+        StatsManager.EnsureInstance();
+    }
+
+    private void OnEnable()
+    {
+        TrySubscribe();
+    }
+
+    private void Start()
     {
         if (statText == null)
         {
-            statText = FindObjectOfType<TextMeshProUGUI>();
+            statText = Object.FindFirstObjectByType<TextMeshProUGUI>();
             Debug.LogWarning($"[GameManager] statText was null. Auto-bound to: {(statText != null ? statText.name : "null")}");
         }
 
         Debug.Log($"[GameManager] Start in scene: {SceneManager.GetActiveScene().name}");
-        UpdateUI();
+        if (StatsManager.Instance != null)
+        {
+            Render(StatsManager.Instance.CurrentStats);
+        }
+    }
+
+    private void Update()
+    {
+        if (!_isSubscribed)
+        {
+            TrySubscribe();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (!_isSubscribed || StatsManager.Instance == null) return;
+        StatsManager.Instance.OnStatsChanged -= HandleStatsChanged;
+        _isSubscribed = false;
     }
 
     public void Study()
     {
         Debug.Log("[GameManager] Study button clicked");
-        knowledge += 10;
-        stress += 5;
-        health -= 3;
-        UpdateUI();
+        StatsManager.EnsureInstance().ApplyDelta(new StatDelta
+        {
+            hp = -3,
+            coding = 10,
+            stress = 5
+        });
     }
 
     public void Rest()
     {
         Debug.Log("[GameManager] Rest button clicked");
-        health += 5;
-        stress -= 5;
-        UpdateUI();
+        StatsManager.EnsureInstance().ApplyDelta(new StatDelta
+        {
+            hp = 5,
+            stress = -5
+        });
     }
 
     public void TeamProject()
     {
         Debug.Log("[GameManager] TeamProject button clicked");
-        knowledge += 5;
-        stress += 10;
-        affection += 3;
-        UpdateUI();
+        StatsManager.EnsureInstance().ApplyDelta(new StatDelta
+        {
+            coding = 5,
+            teamwork = 3,
+            stress = 10
+        });
     }
 
     public void Snack()
     {
         Debug.Log("[GameManager] Snack button clicked");
-        health += 3;
-        stress -= 2;
-        affection += 1;
-        UpdateUI();
+        StatsManager.EnsureInstance().ApplyDelta(new StatDelta
+        {
+            hp = 3,
+            teamwork = 1,
+            stress = -2
+        });
     }
 
-    void UpdateUI()
+    private void TrySubscribe()
     {
-        if (health < 0) health = 0;
-        if (stress < 0) stress = 0;
+        if (_isSubscribed || StatsManager.Instance == null) return;
+        StatsManager.Instance.OnStatsChanged += HandleStatsChanged;
+        _isSubscribed = true;
+        Render(StatsManager.Instance.CurrentStats);
+    }
+
+    private void HandleStatsChanged(PlayerStats stats)
+    {
+        Render(stats);
+    }
+
+    private void Render(PlayerStats stats)
+    {
+        if (statText == null || stats == null)
+        {
+            return;
+        }
 
         statText.text =
-            "체력: " + health + "\n" +
-            "지식: " + knowledge + "\n" +
-            "스트레스: " + stress + "\n" +
-            "호감도: " + affection;
+            "Health: " + stats.hp + "/" + stats.maxHP + "\n" +
+            "Knowledge: " + stats.coding + "\n" +
+            "Stress: " + stats.stress + "\n" +
+            "Affinity: " + stats.teamwork;
     }
 }

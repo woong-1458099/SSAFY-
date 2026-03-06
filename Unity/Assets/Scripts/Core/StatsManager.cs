@@ -17,7 +17,8 @@ public class StatsManager : MonoBehaviour
 {
     public static StatsManager Instance { get; private set; }
 
-    public PlayerStats stats = new PlayerStats();
+    [SerializeField] private PlayerStats stats = new PlayerStats();
+    public PlayerStats CurrentStats => stats;
 
     public event Action<PlayerStats> OnStatsChanged;
     public event Action OnStressGameOver;
@@ -60,5 +61,16 @@ public class StatsManager : MonoBehaviour
     public void EndOfDay()
     {
         ApplyDelta(new StatDelta { hp = 10 });
+    }
+
+    public static StatsManager EnsureInstance()
+    {
+        if (Instance != null)
+        {
+            return Instance;
+        }
+
+        var go = new GameObject("StatsManager");
+        return go.AddComponent<StatsManager>();
     }
 }

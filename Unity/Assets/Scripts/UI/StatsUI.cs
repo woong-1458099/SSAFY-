@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class StatsUI : MonoBehaviour
 {
-    public TextMeshProUGUI statsText;
+    [SerializeField] private TextMeshProUGUI statsText;
 
     private bool _gameOver;
     private bool _isSubscribed;
@@ -54,7 +54,7 @@ public class StatsUI : MonoBehaviour
         _gameOver = true;
         if (StatsManager.Instance != null)
         {
-            HandleStatsChanged(StatsManager.Instance.stats);
+            HandleStatsChanged(StatsManager.Instance.CurrentStats);
         }
     }
 
@@ -65,6 +65,11 @@ public class StatsUI : MonoBehaviour
         StatsManager.Instance.OnStatsChanged += HandleStatsChanged;
         StatsManager.Instance.OnStressGameOver += HandleStressGameOver;
         _isSubscribed = true;
-        HandleStatsChanged(StatsManager.Instance.stats);
+        HandleStatsChanged(StatsManager.Instance.CurrentStats);
+    }
+
+    public void SetStatsText(TextMeshProUGUI target)
+    {
+        statsText = target;
     }
 }
