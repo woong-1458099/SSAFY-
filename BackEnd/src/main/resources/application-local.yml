@@ -3,6 +3,15 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/mydatabase}
     username: ${DB_USER:myuser}
     password: ${DB_PASSWORD:secret}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:myuser}
+    password: ${RABBITMQ_PASSWORD:secret}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -11,6 +20,7 @@ spring:
       enabled: false
 
 app:
+  color: ${APP_COLOR:LOCAL}
   security:
     jwt:
       enabled: ${JWT_ENABLED:false}
