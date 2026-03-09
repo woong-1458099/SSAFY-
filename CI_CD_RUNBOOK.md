@@ -104,3 +104,43 @@
 3. 3단계: CD 파이프라인 반영
 - `jenkins/Jenkinsfile.cd-develop` 기준으로 SSH 접속 후 배포/헬스체크/업스트림 스위칭 수행
 - 장애 시 blue/green 롤백 절차 유지
+
+## 2026-03-09 CI/CD 운영 기준 확정
+
+### 브랜치 역할
+
+- `develop`: 개발 통합 브랜치
+- `master`: 배포 기준 브랜치
+- `master`는 direct push를 허용하지 않고 MR merge만 허용한다.
+
+### Jenkins 잡 기준
+
+1. `develop-mr-ci-dev-deploy`
+- 트리거: `develop` 대상 MR 생성/업데이트
+- 실행 범위: `test -> build -> docker image build -> dev 환경 배포 -> health check`
+- 추가 작업: n8n 코드리뷰 워크플로우 트리거
+- 대상 정책: 모든 MR 대상
+
+2. `master-merge-cd`
+- 트리거: `develop -> master` MR merge 후 `master` 브랜치 갱신
+- 실행 범위: blue/green 배포 -> health check -> nginx upstream 전환
+- 실패 정책: health check 실패 또는 전환 검증 실패 시 이전 슬롯으로 rollback
+
+3. `nightly-deploy`
+- 용도: 필요 시 수동으로 활성화하는 예약 배포 잡
+- 기본 정책: 기본 비활성 상태 유지
+- 예정 시각: 새벽 2시 기준으로 사용 가능하도록 유지
+- 비고: 초기 운영에서는 상시 활성화하지 않는다.
+
+### 배포 환경 기준
+
+- MR 검증 결과는 개발자 확인을 위해 개발 환경에 자동 반영한다.
+- 실제 배포 서버 반영은 `master` merge 이후에만 수행한다.
+- 개발 환경은 단일 환경을 사용하며, 최신 MR 기준으로 덮어쓴다.
+
+### 리뷰 및 권한 정책
+
+- 모든 MR에 대해 n8n 기반 코드리뷰 코멘트를 남긴다.
+- 리뷰 프롬프트는 추후 언어별로 별도 정리한다.
+- 현재 팀 운영 특성상 모든 팀원이 MR 생성/승인 가능하도록 유지한다.
+- 권한을 넓게 두는 대신 Jenkins 배포 이력과 rollback 절차를 운영 기준으로 삼는다.

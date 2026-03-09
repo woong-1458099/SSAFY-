@@ -1,4 +1,4 @@
-﻿# 진행 현황 및 다음 계획
+# 진행 현황 및 다음 계획
 
 ## 1. 현재 확정 아키텍처
 
@@ -85,3 +85,36 @@ docker compose -p ops --env-file docker/.env.ops -f docker/compose.ops.yml up -d
 - 로컬 개발자용 env와 배포용 env는 분리 유지
 - 운영 자동화/모니터링 스택은 앱 스택과 분리 유지
 - 장기적으로는 Data 계층을 별도 EC2로 분리하는 방향 유지
+
+## 8. 2026-03-09 EC2 진행 업데이트
+
+### 완료한 작업
+
+1. Ubuntu 24.04.3 LTS EC2 기본 점검 완료
+2. Docker / Docker Compose 설치 완료
+3. `docker/compose.app.yml`, `docker/compose.data.local.yml`을 같은 내부 네트워크(`s14p21e206_core_net`) 기준으로 정리
+4. STG data 스택 기동 성공
+   - `postgres`, `redis`, `rabbitmq`
+   - 외부 포트 미공개, Docker 내부 네트워크 전용
+5. STG app 스택 기동 성공
+   - `api-blue`, `api-green`, `nginx`
+   - `nginx`가 `80` 포트로 정상 응답
+6. 애플리케이션 연결 검증 완료
+   - PostgreSQL 연결 성공
+   - RabbitMQ 사용자 생성 반영 확인
+   - Docker 네트워크 내부 기준 `/actuator/health` 응답 `UP` 확인
+
+### 현재 상태
+
+- 외부 공개 포트: `22`, `80`, `443`
+- data 계층(PostgreSQL / Redis / RabbitMQ)은 외부 미공개
+- STG app/data는 같은 Docker 네트워크를 통해 서비스명(`postgres`, `redis`, `rabbitmq`)으로 통신
+- nginx upstream 현재 active 대상은 `api-green`
+
+### 다음 작업
+
+1. 수동 배포 성공 절차를 Jenkins 파이프라인으로 이관
+2. blue/green 전환 및 롤백 절차 명문화
+3. STG/PROD 실제 비밀값 관리 방식 정리
+4. 팀원용 SSH 터널 접속 가이드와 `env.local` 표준안 공유
+5. ops 스택(`jenkins`, `n8n`, `prometheus`, `grafana`) 검증

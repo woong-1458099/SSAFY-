@@ -70,3 +70,29 @@ ssh -L 15432:127.0.0.1:5432 -L 16379:127.0.0.1:6379 -L 15673:127.0.0.1:5672 <use
   - `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD`
 - `BackEnd/Dockerfile`은 앱 이미지 빌드용으로 준비되어 있음
 - Jenkins/n8n은 tgz 복원 후 기존 볼륨 재사용 정책으로 유지됨
+
+## 7. 2026-03-09 기준 추가 정리
+
+### EC2 staging env 기준
+
+- `docker/.env.stg`는 EC2 내부 Docker 네트워크 기준으로 작성한다.
+- `BACKEND_IMAGE`는 EC2에서 직접 빌드한 이미지 태그를 사용한다.
+- data 계층 호스트는 외부 주소가 아니라 Docker 서비스명 기준으로 사용한다.
+  - `DB_URL=jdbc:postgresql://postgres:5432/...`
+  - `REDIS_HOST=redis`
+  - `RABBITMQ_HOST=rabbitmq`
+
+### local env 기준
+
+- 로컬 개발은 SSH 터널 기반으로 통일한다.
+- 로컬 앱은 아래 포트로 접속한다.
+  - PostgreSQL: `localhost:15432`
+  - Redis: `localhost:16379`
+  - RabbitMQ: `localhost:15673`
+- `env.local`은 Git에 실제 값으로 커밋하지 않고, 팀 공통 예시와 별도 공유값 기준으로 관리한다.
+
+### 비밀값 관리 원칙
+
+- `stg/prod` 실제 비밀값은 Git에 커밋하지 않는다.
+- 운영 배포용 비밀값은 Jenkins Credentials 또는 별도 비밀 저장소 기준으로 관리한다.
+- `.env.example` 또는 문서에는 예시 값만 기록한다.
