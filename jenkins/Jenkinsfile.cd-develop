@@ -1,0 +1,113 @@
+pipeline {
+  agent any
+
+  parameters {
+    choice(name: 'TARGET_COLOR', choices: ['green', 'blue'], description: 'Deploy target color')
+    string(name: 'EC2_HOST', defaultValue: '', description: 'EC2 public host or IP')
+    string(name: 'REMOTE_PROJECT_DIR', defaultValue: '/home/ubuntu/S14P21E206', description: 'Remote project directory')
+    booleanParam(name: 'AUTO_SWITCH', defaultValue: true, description: 'Switch nginx upstream after deploy')
+  }
+
+  stages {
+    stage('Validate Params') {
+      steps {
+        script {
+          if (!params.EC2_HOST?.trim()) {
+            error('EC2_HOST is required')
+          }
+        }
+      }
+    }
+
+    stage('Deploy Target Color') {
+      steps {
+        sshagent(credentials: ['ec2-deploy-ssh']) {
+          sh '''
+            set -eu
+            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+              cd ${REMOTE_PROJECT_DIR} &&
+              docker compose -f compose.dev.yml up -d api-${TARGET_COLOR}
+            "
+          '''
+        }
+      }
+    }
+
+    stage('Health Check') {
+      steps {
+        sshagent(credentials: ['ec2-deploy-ssh']) {
+          sh '''
+            set -eu
+            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+              cd ${REMOTE_PROJECT_DIR} &&
+              docker compose -f compose.dev.yml ps api-${TARGET_COLOR} &&
+              sleep 2
+            "
+          '''
+        }
+      }
+    }
+
+    stage('Switch Nginx Upstream') {
+      when {
+        expression { return params.AUTO_SWITCH }
+      }
+      steps {
+        sshagent(credentials: ['ec2-deploy-ssh']) {
+          sh '''
+            set -eu
+            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+              cd ${REMOTE_PROJECT_DIR} &&
+              printf 'upstream api_upstream {\\n  server api-${TARGET_COLOR}:8080;\\n}\\n' > Infra/infra/nginx/upstreams/active.conf &&
+              docker compose -f compose.dev.yml restart nginx
+            "
+          '''
+        }
+      }
+    }
+
+    stage('Verify And Rollback') {
+      when {
+        expression { return params.AUTO_SWITCH }
+      }
+      steps {
+        sshagent(credentials: ['ec2-deploy-ssh']) {
+          sh '''
+            set -eu
+            rollback_color=blue
+            if [ "${TARGET_COLOR}" = "blue" ]; then
+              rollback_color=green
+            fi
+            target_upper=$(echo "${TARGET_COLOR}" | tr '[:lower:]' '[:upper:]')
+
+            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+              set -eu
+              cd ${REMOTE_PROJECT_DIR}
+              response=\\$(curl -fsS --max-time 5 http://localhost/api || true)
+              if echo \\\"\\$response\\\" | grep -q \\\"${target_upper}\\\"; then
+                echo 'verify success: '${target_upper}
+              else
+                echo 'verify failed. rollback to '${rollback_color}
+                printf 'upstream api_upstream {\\\\n  server api-${rollback_color}:8080;\\\\n}\\\\n' > Infra/infra/nginx/upstreams/active.conf
+                docker compose -f compose.dev.yml restart nginx
+                exit 1
+              fi
+            "
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Deploy success: ${params.TARGET_COLOR}"
+    }
+    failure {
+      script {
+        def rollbackColor = params.TARGET_COLOR == 'green' ? 'blue' : 'green'
+        echo "Deploy failed. Suggested rollback color: ${rollbackColor}"
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+services:
+  api-blue:
+    image: hashicorp/http-echo:1.0.0
+    command: ["-listen=:8080", "-text=BLUE"]
+    networks: [appnet]
+
+  api-green:
+    image: hashicorp/http-echo:1.0.0
+    command: ["-listen=:8080", "-text=GREEN"]
+    networks: [appnet]
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/upstreams:/etc/nginx/upstreams:ro
+    depends_on:
+      - api-blue
+      - api-green
+    networks: [appnet]
+
+networks:
+  appnet:
+    driver: bridge
