@@ -1,4 +1,4 @@
-# 진행 현황 및 다음 계획
+﻿# 진행 현황 및 다음 계획
 
 ## 1. 현재 확정 아키텍처
 
@@ -38,17 +38,17 @@
 
 ### 스테이징 앱
 ```bash
-docker compose -p stg --env-file docker/.env.stg -f docker/compose.app.yml up -d
+docker compose -p stg-app --env-file docker/.env.stg -f docker/compose.app.yml up -d
 ```
 
 ### 운영 앱
 ```bash
-docker compose -p prod --env-file docker/.env.prod -f docker/compose.app.yml up -d
+docker compose -p prod-app --env-file docker/.env.prod -f docker/compose.app.yml up -d
 ```
 
 ### 운영 도구
 ```bash
-docker compose -p ops --env-file docker/.env.ops -f docker/compose.ops.yml up -d
+docker compose -p docker --env-file docker/.env.ops -f docker/compose.ops.yml up -d
 ```
 
 ## 4. 네트워크/보안 운영 원칙
@@ -110,6 +110,8 @@ docker compose -p ops --env-file docker/.env.ops -f docker/compose.ops.yml up -d
 - data 계층(PostgreSQL / Redis / RabbitMQ)은 외부 미공개
 - STG app/data는 같은 Docker 네트워크를 통해 서비스명(`postgres`, `redis`, `rabbitmq`)으로 통신
 - nginx upstream 현재 active 대상은 `api-green`
+- STG app compose 프로젝트명은 `stg-app`
+- Jenkinsfile 경로는 `jenkins/Jenkinsfile.develop-mr-ci-dev-deploy`
 
 ### 다음 작업
 
@@ -118,3 +120,65 @@ docker compose -p ops --env-file docker/.env.ops -f docker/compose.ops.yml up -d
 3. STG/PROD 실제 비밀값 관리 방식 정리
 4. 팀원용 SSH 터널 접속 가이드와 `env.local` 표준안 공유
 5. ops 스택(`jenkins`, `n8n`, `prometheus`, `grafana`) 검증
+
+## 9. 2026-03-09 운영 도메인/ops 복구 업데이트
+
+### 완료한 작업
+
+1. Jenkins / n8n 백업 볼륨을 EC2에 업로드하고 external volume 기준으로 복원 완료
+   - `jenkins_jenkins_home.tgz`
+   - `n8n_n8n_data.tgz`
+2. Jenkins credential 복원 확인 완료
+   - `ec2-deploy-ssh`
+   - `gitlab-token-string`
+   - GitLab 관련 credential
+3. n8n 백업 내부 `config` 파일 기준 encryption key 확인 후 복원 성공
+4. `docker/compose.ops.yml` 기준 ops 스택 기동 및 Jenkins / n8n / Prometheus / Grafana 컨테이너 실행 확인
+5. 신규 도메인 `ssafymaker.cloud` 구매 및 Cloudflare 연결 완료
+6. host 기반 reverse proxy 구조로 운영 방향 전환
+   - `ssafymaker.cloud` -> 메인 서비스
+   - `jenkins.ssafymaker.cloud` -> Jenkins
+   - `n8n.ssafymaker.cloud` -> n8n
+7. 기존 `j14e206.p.ssafy.io`는 SSH/관리용 주소로 유지
+8. `/n8n` path 기반 프록시는 정적 asset/API 경로 문제로 운영 대상에서 제외하고, n8n은 서브도메인 기반으로 정리
+
+### 작업 중 확인한 이슈
+
+1. nginx 설정 파일 `app.conf` 저장 시 UTF-8 BOM 문제로 컨테이너 기동 실패 발생
+   - 증상: `unknown directive "﻿include"`
+   - 조치: BOM 제거 후 nginx 재기동
+2. Jenkins / n8n을 path 기반(`/jenkins`, `/n8n`)으로 동일 호스트 아래에 두는 방식은 Jenkins는 가능했으나 n8n은 자산 경로/REST 경로 불일치로 white screen 발생
+   - 결론: n8n은 서브도메인 기반이 더 적합
+3. Cloudflare `Full` 모드에서는 origin 443 미구성 상태와 맞지 않아 `521` 발생
+   - 현재 origin은 80 포트 기준 운영
+
+### 다음 작업
+
+1. Jenkins 잡 구조 정리
+   - `develop-mr-ci-dev-deploy`
+   - `master-merge-cd`
+   - `nightly-deploy` 기본 비활성
+2. GitLab webhook 및 Jenkins 연동 정리
+3. n8n MR 코드리뷰 자동화 연동
+4. Cloudflare/origin HTTPS 구성 후 SSL 모드 상향 검토
+
+
+## 10. 다음 Codex 작업 메모
+
+현재 기준 사실:
+
+1. STG 서버 경로는 `~/apps/S14P21E206`
+2. STG app compose 프로젝트명은 `stg-app`
+3. Jenkins 배포 파일은 `jenkins/Jenkinsfile.develop-mr-ci-dev-deploy`
+4. nginx `/api` 프록시는 수정 완료되어 `curl http://localhost/api/public/checks`가 `200` 응답함
+5. active upstream 기본 상태는 `api-green`
+6. Jenkins/GitLab HTTPS 인증은 비밀번호가 아니라 토큰 기반으로 처리해야 함
+
+다음 Codex가 이어서 할 일:
+
+1. Jenkins 잡 `develop-mr-ci-dev-deploy`를 `Pipeline script from SCM`으로 연결하고 첫 수동 실행 결과를 검증한다.
+2. 현재 Jenkinsfile에 없는 `test`, `build`, Docker image build/tag update 단계를 추가한다.
+3. `master-merge-cd`용 Jenkinsfile을 별도로 만들고 blue/green 전환 기준을 분리한다.
+4. `nightly-deploy` 잡은 기본 비활성으로만 생성한다.
+5. `docker/.env.prod`를 실제 운영 기준으로 작성하고 `prod-app` 프로젝트명 정책을 문서/파이프라인에 맞춘다.
+6. `BACKEND_IMAGE=s14p21e206-backend:latest`를 commit SHA 기반 태그 전략으로 교체한다.
