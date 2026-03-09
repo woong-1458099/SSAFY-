@@ -11,10 +11,10 @@ function GameScreen({ user, onLogout }: GameScreenProps) {
     <main className="game-shell">
       <section className="game-header-card">
         <div>
-          <p className="eyebrow">Game Lobby</p>
-          <h1>{user.nickname}님, 로컬 미니게임 센터에 입장했습니다.</h1>
+          <p className="eyebrow">게임 로비</p>
+          <h1>{user.nickname}님, 미니게임 센터에 입장했습니다.</h1>
           <p className="support-text">
-            로그인 성공 후에는 `ssafy-maker` 내부로 옮긴 Phaser 미니게임 씬들을 직접 실행합니다.
+            로그인 이후에는 `ssafy-maker` 내부에서 바로 필드 허브와 Phaser 미니게임이 실행됩니다.
           </p>
         </div>
         <button type="button" className="secondary-button" onClick={onLogout}>
@@ -24,11 +24,12 @@ function GameScreen({ user, onLogout }: GameScreenProps) {
 
       <section className="game-panel">
         <div className="game-copy">
-          <p className="eyebrow">Live Session</p>
-          <h2>로그인 이후 실제 미니게임 허브가 실행됩니다.</h2>
+          <p className="eyebrow">실시간 플레이</p>
+          <h2>필드에서 NPC와 상호작용해 미니게임을 시작할 수 있습니다.</h2>
           <p>
-            메뉴에서 퀴즈, 리듬, 정렬, 버그잡기, 러너, 에임, 타이핑 미니게임으로 이동할 수 있습니다. 인증은 여전히 별도
-            화면에서 관리되고, 게임 실행은 이 영역에서만 이뤄집니다.
+            퀴즈, 리듬, 정렬, 버그잡기, 러너, 에임, 타이핑, 비즈니스 웃음, 웃음참기까지 9종의 미니게임을 NPC
+            패널에서 선택할 수 있습니다. 게임 중에는 `ESC`로 일시정지하고, `E`로 재개하거나 `ESC`로 허브로
+            돌아갈 수 있습니다.
           </p>
         </div>
         <PhaserGame playerName={user.nickname} />

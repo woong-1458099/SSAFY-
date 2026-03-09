@@ -1,5 +1,6 @@
 // @ts-nocheck
 import Phaser from 'phaser';
+import { installMinigamePause } from './installMinigamePause';
 
 const PF = '"Press Start 2P"';
 const BUGS = ['🐛', '🐞', '🦗', '🕷️', '🐜'];
@@ -8,6 +9,7 @@ export default class BugScene extends Phaser.Scene {
   constructor() { super({ key: 'BugScene' }); }
 
   create() {
+    installMinigamePause(this);
     const W = 800, H = 600;
     this.score = 0; this.combo = 0; this.maxCombo = 0; this.missed = 0; this.timeLeft = 30; this.gameOver = false; this.bugs = []; this.spawnDelay = 1200;
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);

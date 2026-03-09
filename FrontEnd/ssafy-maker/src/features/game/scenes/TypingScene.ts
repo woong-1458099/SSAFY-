@@ -1,5 +1,6 @@
 // @ts-nocheck
 import Phaser from 'phaser';
+import { installMinigamePause } from './installMinigamePause';
 
 const PF = '"Press Start 2P"';
 const CODE_CHALLENGES = [
@@ -16,6 +17,7 @@ export default class TypingScene extends Phaser.Scene {
   constructor() { super({ key: 'TypingScene' }); }
 
   create() {
+    installMinigamePause(this);
     const W = 800, H = 600;
     this.typedText = ''; this.timeLeft = 20; this.answered = false; this.startTime = null; this.challenge = Phaser.Math.RND.pick(CODE_CHALLENGES);
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);

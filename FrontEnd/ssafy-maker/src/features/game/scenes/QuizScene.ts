@@ -1,5 +1,6 @@
 // @ts-nocheck
 import Phaser from 'phaser';
+import { installMinigamePause } from './installMinigamePause';
 
 const PIXEL_FONT = '"Press Start 2P"';
 const QUESTIONS = [
@@ -14,6 +15,7 @@ export default class QuizScene extends Phaser.Scene {
   constructor() { super({ key: 'QuizScene' }); }
 
   create() {
+    installMinigamePause(this);
     this.currentIndex = 0; this.score = 0; this.timeLeft = 15; this.answered = false;
     this.questions = Phaser.Utils.Array.Shuffle([...QUESTIONS]);
     const W = 800, H = 600;

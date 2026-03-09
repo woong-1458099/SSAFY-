@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import AimScene from './features/game/scenes/AimScene';
+import BusinessSmileScene from './features/game/scenes/BusinessSmileScene';
 import BugScene from './features/game/scenes/BugScene';
+import DontSmileScene from './features/game/scenes/DontSmileScene';
 import DragScene from './features/game/scenes/DragScene';
 import MenuScene from './features/game/scenes/MenuScene';
+import MinigamePauseScene from './features/game/scenes/MinigamePauseScene';
 import QuizScene from './features/game/scenes/QuizScene';
 import RhythmScene from './features/game/scenes/RhythmScene';
 import RunnerScene from './features/game/scenes/RunnerScene';
@@ -18,6 +21,7 @@ interface PhaserGameProps {
 
 const scenes: Phaser.Types.Scenes.SceneType[] = [
   MenuScene,
+  MinigamePauseScene,
   QuizScene,
   RhythmScene,
   DragScene,
@@ -25,6 +29,8 @@ const scenes: Phaser.Types.Scenes.SceneType[] = [
   RunnerScene,
   AimScene,
   TypingScene,
+  BusinessSmileScene,
+  DontSmileScene,
 ];
 
 function PhaserGame({ playerName }: PhaserGameProps) {
@@ -49,6 +55,9 @@ function PhaserGame({ playerName }: PhaserGameProps) {
         pixelArt: true,
         roundPixels: true,
       },
+      dom: {
+        createContainer: true,
+      },
       scene: scenes,
     });
 
@@ -60,8 +69,8 @@ function PhaserGame({ playerName }: PhaserGameProps) {
   return (
     <div className="phaser-frame">
       <div className="phaser-banner">
-        <span>{playerName} 님 로그인 완료</span>
-        <strong>SSAFY Game 미니게임 센터</strong>
+        <span>{playerName}님 로그인 완료</span>
+        <strong>SSAFY 미니게임 센터</strong>
       </div>
       <div ref={gameRef} className="phaser-root" />
     </div>

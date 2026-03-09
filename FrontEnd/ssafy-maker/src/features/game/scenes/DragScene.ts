@@ -1,5 +1,6 @@
 // @ts-nocheck
 import Phaser from 'phaser';
+import { installMinigamePause } from './installMinigamePause';
 
 const PF = '"Press Start 2P"';
 const CHALLENGES = [
@@ -11,6 +12,7 @@ const CHALLENGES = [
 export default class DragScene extends Phaser.Scene {
   constructor() { super({ key: 'DragScene' }); }
   create() {
+    installMinigamePause(this);
     const W = 800, H = 600;
     this.answered = false; this.timeLeft = 60; this.blocks = []; this.challenge = Phaser.Math.RND.pick(CHALLENGES); this.correctOrder = [...this.challenge.lines]; this.shuffled = Phaser.Utils.Array.Shuffle([...this.challenge.lines]);
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);

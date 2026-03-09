@@ -1,5 +1,6 @@
 // @ts-nocheck
 import Phaser from 'phaser';
+import { installMinigamePause } from './installMinigamePause';
 
 const PF = '"Press Start 2P"';
 const SONGS = [{ title: 'SSAFY RHYTHIM', notes: [{ key: 'A', time: 1000 }, { key: 'S', time: 1500 }, { key: 'D', time: 2000 }, { key: 'F', time: 2500 }, { key: 'A', time: 3000 }, { key: 'D', time: 3500 }, { key: 'S', time: 4000 }, { key: 'F', time: 4500 }, { key: 'A', time: 5000 }, { key: 'S', time: 5000 }, { key: 'D', time: 5500 }, { key: 'F', time: 6000 }, { key: 'A', time: 6500 }, { key: 'S', time: 7000 }, { key: 'D', time: 7500 }, { key: 'F', time: 7500 }, { key: 'A', time: 8000 }, { key: 'S', time: 8500 }, { key: 'D', time: 9000 }, { key: 'F', time: 9500 }] }];
@@ -10,6 +11,7 @@ export default class RhythmScene extends Phaser.Scene {
   constructor() { super({ key: 'RhythmScene' }); }
 
   create() {
+    installMinigamePause(this);
     const W = 800, H = 600;
     this.score = 0; this.combo = 0; this.maxCombo = 0; this.perfect = 0; this.good = 0; this.miss = 0; this.noteObjects = []; this.startTime = null; this.gameOver = false; this.songNotes = [...SONGS[0].notes];
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);
