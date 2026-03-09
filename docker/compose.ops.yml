@@ -10,7 +10,6 @@
     environment:
       TZ: ${TZ}
       JAVA_OPTS: -Djenkins.install.runSetupWizard=true
-      JENKINS_OPTS: --prefix=/jenkins
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
@@ -27,7 +26,7 @@
       N8N_HOST: ${N8N_HOST}
       N8N_PORT: 5678
       N8N_PROTOCOL: ${N8N_PROTOCOL}
-      N8N_PATH: /n8n/
+      N8N_PATH: ${N8N_PATH}
       WEBHOOK_URL: ${WEBHOOK_URL}
       N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL}
       N8N_PROXY_HOPS: "1"
