@@ -17,7 +17,7 @@ services:
       JWT_ENABLED: ${JWT_ENABLED}
       JWT_ISSUER_URI: ${JWT_ISSUER_URI}
     networks:
-      - app-net
+      - core-net
 
   api-green:
     image: ${BACKEND_IMAGE}
@@ -37,7 +37,7 @@ services:
       JWT_ENABLED: ${JWT_ENABLED}
       JWT_ISSUER_URI: ${JWT_ISSUER_URI}
     networks:
-      - app-net
+      - core-net
 
   nginx:
     image: nginx:1.27-alpine
@@ -51,8 +51,8 @@ services:
       - ../Infra/infra/nginx/conf.d:/etc/nginx/conf.d:ro
       - ../Infra/infra/nginx/upstreams:/etc/nginx/upstreams:ro
     networks:
-      - app-net
+      - core-net
 
 networks:
-  app-net:
-    driver: bridge
+  core-net:
+    name: s14p21e206_core_net
