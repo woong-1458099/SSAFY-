@@ -1,0 +1,21 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  image-rendering: pixelated;       /* 픽셀 선명하게 */
+  image-rendering: crisp-edges;
+}
+
+body {
+  background-color: #0a0a1a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+}
+
+canvas {
+  image-rendering: pixelated;      /* 캔버스 픽셀 선명하게 */
+  image-rendering: crisp-edges;
+}
