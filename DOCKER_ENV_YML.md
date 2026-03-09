@@ -43,3 +43,23 @@ docker compose -p ops --env-file docker/.env.ops -f docker/compose.ops.yml up -d
 - 데이터 유지가 필요하면 `down -v` 금지
 - `docker volume prune` 사용 금지
 - 외부 공개 포트는 Nginx 중심(80/443)으로 제한
+
+## 5. 2026-03-09 compose 운영 기준 보완
+
+### app / data 네트워크
+
+- `compose.app.yml`과 `compose.data.local.yml`은 같은 Docker 네트워크(`s14p21e206_core_net`)를 사용하도록 맞춘다.
+- 앱은 내부 서비스명(`postgres`, `redis`, `rabbitmq`)으로 data 계층에 접근한다.
+
+### 외부 공개 포트 정책
+
+- 외부 공개는 `22`, `80`, `443`만 사용한다.
+- PostgreSQL / Redis / RabbitMQ는 `ports:`로 외부 공개하지 않는다.
+- `nginx`만 `80/443` 진입점으로 둔다.
+
+### 현재 검증 결과
+
+- data 스택 컨테이너 정상 기동 확인
+- app 스택 컨테이너 정상 기동 확인
+- nginx -> backend 프록시 경로(`/api`) 동작 확인
+- 내부 Docker 네트워크 기준 actuator health 응답 확인
