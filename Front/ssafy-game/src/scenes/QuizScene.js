@@ -1,264 +1,303 @@
 import Phaser from 'phaser';
 
+const PIXEL_FONT = '"Press Start 2P"';
+
 const QUESTIONS = [
-    {
-        question: "OSI 7계층에서 전송 계층 프로토콜은?",
-        options: ["HTTP", "TCP", "IP", "FTP"],
-        answer: 1
-    },
-    {
-        question: "데이터베이스에서 기본키(Primary Key)의 특징은?",
-        options: ["중복 허용", "NULL 허용", "유일성 보장", "외래키와 동일"],
-        answer: 2
-    },
-    {
-        question: "프로세스와 스레드의 차이로 올바른 것은?",
-        options: [
-            "스레드는 독립적인 메모리를 가진다",
-            "프로세스는 스레드보다 가볍다",
-            "스레드는 프로세스 내 자원을 공유한다",
-            "프로세스는 스레드를 포함할 수 없다"
-        ],
-        answer: 2
-    },
-    {
-        question: "SQL에서 GROUP BY와 함께 사용하는 조건절은?",
-        options: ["WHERE", "HAVING", "ORDER BY", "JOIN"],
-        answer: 1
-    },
-    {
-        question: "시간 복잡도 O(n log n)인 정렬 알고리즘은?",
-        options: ["버블 정렬", "선택 정렬", "삽입 정렬", "퀵 정렬"],
-        answer: 3
-    }
+  {
+    question: "OSI 7계층에서\n전송 계층 프로토콜은?",
+    options: ["HTTP", "TCP", "IP", "FTP"],
+    answer: 1
+  },
+  {
+    question: "기본키(Primary Key)의\n특징으로 올바른 것은?",
+    options: ["중복 허용", "NULL 허용", "유일성 보장", "외래키와 동일"],
+    answer: 2
+  },
+  {
+    question: "프로세스와 스레드의\n차이로 올바른 것은?",
+    options: ["스레드는 독립 메모리", "프로세스가 더 가볍다", "스레드는 자원 공유", "프로세스는 스레드 불포함"],
+    answer: 2
+  },
+  {
+    question: "GROUP BY와 함께\n사용하는 조건절은?",
+    options: ["WHERE", "HAVING", "ORDER BY", "JOIN"],
+    answer: 1
+  },
+  {
+    question: "시간복잡도 O(n log n)인\n정렬 알고리즘은?",
+    options: ["버블 정렬", "선택 정렬", "삽입 정렬", "퀵 정렬"],
+    answer: 3
+  }
 ];
 
 export default class QuizScene extends Phaser.Scene {
-    constructor() {
-        super({ key: 'QuizScene' });
+  constructor() {
+    super({ key: 'QuizScene' });
+  }
+
+  create() {
+    this.currentIndex = 0;
+    this.score = 0;
+    this.timeLeft = 15;
+    this.answered = false;
+    this.questions = Phaser.Utils.Array.Shuffle([...QUESTIONS]);
+
+    const W = 800, H = 600;
+
+    // 배경
+    for (let x = 0; x < W; x += 32) {
+      for (let y = 0; y < H; y += 32) {
+        const color = ((x + y) / 32) % 2 === 0 ? 0x1a1a2e : 0x16213e;
+        this.add.rectangle(x + 16, y + 16, 32, 32, color);
+      }
     }
 
-    create() {
-        this.currentIndex = 0;
-        this.score = 0;
-        this.timeLeft = 15;
-        this.answered = false;
-        this.questions = Phaser.Utils.Array.Shuffle([...QUESTIONS]);
+    // 상단 HUD 바
+    this.add.rectangle(W/2, 35, W, 70, 0x0f3460);
+    this.add.rectangle(W/2, 4, W, 8, 0xFFD700);
+    this.add.rectangle(W/2, 70, W, 4, 0x4488ff);
 
-        // 배경
-        this.add.rectangle(400, 300, 800, 600, 0x1a1a2e);
+    // 문제 번호
+    this.questionNum = this.add.text(20, 20, 'Q 1/5', {
+      fontSize: '10px', color: '#aaddff', fontFamily: PIXEL_FONT
+    });
 
-        // 상단 바
-        this.add.rectangle(400, 40, 800, 80, 0x1E3A5F);
+    // 점수
+    this.scoreText = this.add.text(20, 42, 'SCORE: 0', {
+      fontSize: '8px', color: '#FFD700', fontFamily: PIXEL_FONT
+    });
 
-        // 문제 번호
-        this.questionNum = this.add.text(30, 20, '', {
-            fontSize: '16px', color: '#aaaaaa', fontFamily: 'Arial'
-        });
+    // 타이머 텍스트
+    this.timerText = this.add.text(W - 20, 20, '15', {
+      fontSize: '20px', color: '#ffffff', fontFamily: PIXEL_FONT
+    }).setOrigin(1, 0);
 
-        // 타이머 텍스트
-        this.timerText = this.add.text(740, 20, '', {
-            fontSize: '20px', color: '#ffffff', fontFamily: 'Arial'
-        }).setOrigin(1, 0);
+    this.add.text(W - 20, 48, 'SEC', {
+      fontSize: '7px', color: '#888888', fontFamily: PIXEL_FONT
+    }).setOrigin(1, 0);
 
-        // 타이머 바 배경
-        this.add.rectangle(400, 75, 700, 12, 0x333333);
-        this.timerBar = this.add.rectangle(50, 75, 700, 12, 0x00cc66).setOrigin(0, 0.5);
+    // 타이머 바
+    this.add.rectangle(W/2, 62, 680, 8, 0x333333);
+    this.timerBar = this.add.rectangle(60, 62, 680, 8, 0x00cc66).setOrigin(0, 0.5);
 
-        // 문제 텍스트
-        this.questionText = this.add.text(400, 160, '', {
-            fontSize: '20px',
-            color: '#ffffff',
-            fontFamily: 'Arial',
-            wordWrap: { width: 680 },
-            align: 'center'
-        }).setOrigin(0.5);
+    // 문제 박스
+    this.add.rectangle(W/2 + 3, 153, 694, 94, 0x000000); // 그림자
+    this.add.rectangle(W/2, 150, 694, 94, 0x0f3460);
+    this.add.rectangle(W/2, 104, 694, 4, 0x4488ff);
+    this.add.rectangle(W/2, 196, 694, 4, 0x4488ff);
+    this.add.rectangle(W/2 - 345, 150, 4, 94, 0x4488ff);
+    this.add.rectangle(W/2 + 345, 150, 4, 94, 0x4488ff);
 
-        // 선택지 버튼 4개
-        this.optionBtns = [];
-        const btnColors = [0x2E5F9F, 0x2E5F9F, 0x2E5F9F, 0x2E5F9F];
+    this.questionText = this.add.text(W/2, 150, '', {
+      fontSize: '13px', color: '#ffffff',
+      fontFamily: PIXEL_FONT,
+      align: 'center', lineSpacing: 10
+    }).setOrigin(0.5);
 
-        for (let i = 0; i < 4; i++) {
-            const y = 280 + i * 75;
+    // 선택지
+    this.optionBtns = [];
+    const optLabels = ['A', 'B', 'C', 'D'];
+    const optColors = [0x4488ff, 0x44aa44, 0xffaa00, 0xff4466];
 
-            const bg = this.add.rectangle(400, y, 680, 60, btnColors[i], 1)
-                .setInteractive()
-                .setStrokeStyle(2, 0x4488cc);
+    for (let i = 0; i < 4; i++) {
+      const y = 255 + i * 78;
 
-            const label = this.add.text(400, y, '', {
-                fontSize: '17px',
-                color: '#ffffff',
-                fontFamily: 'Arial',
-                wordWrap: { width: 640 },
-                align: 'center'
-            }).setOrigin(0.5);
+      // 버튼 그림자
+      this.add.rectangle(W/2 + 3, y + 3, 680, 62, 0x000000);
 
-            bg.on('pointerover', () => {
-                if (!this.answered) bg.setFillStyle(0x3a6fc0);
-            });
-            bg.on('pointerout', () => {
-                if (!this.answered) bg.setFillStyle(0x2E5F9F);
-            });
-            bg.on('pointerdown', () => this.checkAnswer(i));
+      const bg = this.add.rectangle(W/2, y, 680, 62, 0x0d1117)
+        .setInteractive()
+        .setStrokeStyle(3, optColors[i]);
 
-            this.optionBtns.push({ bg, label });
+      // 레이블 박스
+      this.add.rectangle(80, y, 44, 44, optColors[i]);
+      this.add.text(80, y, optLabels[i], {
+        fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT
+      }).setOrigin(0.5);
+
+      const label = this.add.text(W/2 + 20, y, '', {
+        fontSize: '11px', color: '#ffffff',
+        fontFamily: PIXEL_FONT, align: 'center',
+        wordWrap: { width: 520 }
+      }).setOrigin(0.5);
+
+      bg.on('pointerover', () => {
+        if (!this.answered) {
+          bg.setFillStyle(0x1a2a4a);
+          this.tweens.add({ targets: bg, scaleX: 1.01, duration: 60 });
         }
+      });
+      bg.on('pointerout', () => {
+        if (!this.answered) {
+          bg.setFillStyle(0x0d1117);
+          this.tweens.add({ targets: bg, scaleX: 1, duration: 60 });
+        }
+      });
+      bg.on('pointerdown', () => this.checkAnswer(i));
 
-        // 결과 텍스트
-        this.resultText = this.add.text(400, 570, '', {
-            fontSize: '20px', color: '#FFD700', fontFamily: 'Arial'
-        }).setOrigin(0.5);
+      this.optionBtns.push({ bg, label });
+    }
 
-        // 점수 텍스트
-        this.scoreText = this.add.text(400, 540, '', {
-            fontSize: '16px', color: '#aaaaaa', fontFamily: 'Arial'
-        }).setOrigin(0.5);
+    // 결과 텍스트
+    this.resultText = this.add.text(W/2, 568, '', {
+      fontSize: '11px', color: '#FFD700', fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
 
-        // 타이머 이벤트
-        this.timerEvent = this.time.addEvent({
-            delay: 1000,
-            callback: this.tick,
-            callbackScope: this,
-            loop: true
-        });
+    // 타이머
+    this.timerEvent = this.time.addEvent({
+      delay: 1000, callback: this.tick,
+      callbackScope: this, loop: true
+    });
 
+    this.showQuestion();
+  }
+
+  showQuestion() {
+    this.answered = false;
+    this.timeLeft = 15;
+    this.resultText.setText('');
+
+    const q = this.questions[this.currentIndex];
+    this.questionNum.setText(`Q ${this.currentIndex + 1}/${this.questions.length}`);
+    this.scoreText.setText(`SCORE: ${this.score}`);
+    this.questionText.setText(q.question);
+
+    q.options.forEach((opt, i) => {
+      this.optionBtns[i].label.setText(opt);
+      this.optionBtns[i].bg.setFillStyle(0x0d1117);
+      this.optionBtns[i].bg.setInteractive();
+    });
+
+    this.timerBar.setScale(1, 1).setFillStyle(0x00cc66);
+    this.timerText.setText('15');
+  }
+
+  tick() {
+    if (this.answered) return;
+    this.timeLeft--;
+    this.timerText.setText(String(this.timeLeft));
+
+    const ratio = this.timeLeft / 15;
+    this.timerBar.setScale(ratio, 1);
+    if (ratio < 0.3) this.timerBar.setFillStyle(0xff4444);
+    else if (ratio < 0.6) this.timerBar.setFillStyle(0xffaa00);
+    else this.timerBar.setFillStyle(0x00cc66);
+
+    if (this.timeLeft <= 0) this.checkAnswer(-1);
+  }
+
+  checkAnswer(selected) {
+    if (this.answered) return;
+    this.answered = true;
+
+    const correct = this.questions[this.currentIndex].answer;
+    const isCorrect = selected === correct;
+
+    this.optionBtns.forEach((btn, i) => {
+      btn.bg.disableInteractive();
+      if (i === correct) btn.bg.setFillStyle(0x00aa44);
+      else if (i === selected) btn.bg.setFillStyle(0xaa2222);
+      else btn.bg.setFillStyle(0x222222);
+    });
+
+    if (isCorrect) {
+      this.score++;
+      this.cameras.main.flash(150, 0, 255, 100, false);
+      this.resultText.setColor('#00ff88').setText('✓ CORRECT!');
+    } else if (selected === -1) {
+      this.resultText.setColor('#ff4444').setText('TIME UP!');
+    } else {
+      this.cameras.main.shake(200, 0.005);
+      this.resultText.setColor('#ff4444').setText('✗ WRONG!');
+    }
+
+    this.time.delayedCall(1500, () => {
+      this.currentIndex++;
+      if (this.currentIndex < this.questions.length) {
         this.showQuestion();
+      } else {
+        this.endGame();
+      }
+    });
+  }
+
+  endGame() {
+    this.timerEvent.remove();
+    this.children.removeAll();
+
+    const W = 800, H = 600;
+
+    // 배경
+    for (let x = 0; x < W; x += 32) {
+      for (let y = 0; y < H; y += 32) {
+        const color = ((x + y) / 32) % 2 === 0 ? 0x1a1a2e : 0x16213e;
+        this.add.rectangle(x + 16, y + 16, 32, 32, color);
+      }
     }
 
-    showQuestion() {
-        this.answered = false;
-        this.timeLeft = 15;
-        this.resultText.setText('');
-        this.scoreText.setText(`점수: ${this.score} / ${this.currentIndex}`);
+    this.add.rectangle(W/2, 4, W, 8, 0xFFD700);
 
-        const q = this.questions[this.currentIndex];
+    const total = this.questions.length;
+    const ratio = this.score / total;
 
-        this.questionNum.setText(`문제 ${this.currentIndex + 1} / ${this.questions.length}`);
-        this.questionText.setText(q.question);
-
-        q.options.forEach((opt, i) => {
-            this.optionBtns[i].label.setText(`${i + 1}.  ${opt}`);
-            this.optionBtns[i].bg.setFillStyle(0x2E5F9F);
-            this.optionBtns[i].bg.setInteractive();
-        });
-
-        this.timerBar.setScale(1, 1);
+    let grade, color, statMsg;
+    if (ratio >= 0.8) {
+      grade = 'PERFECT!';
+      color = '#FFD700';
+      statMsg = 'INT +10    GP +30';
+    } else if (ratio >= 0.6) {
+      grade = 'GOOD!';
+      color = '#00ff88';
+      statMsg = 'INT +5    GP +15';
+    } else {
+      grade = 'TRY AGAIN';
+      color = '#ff8844';
+      statMsg = 'INT +2    STRESS +5';
     }
 
-    tick() {
-        if (this.answered) return;
-        this.timeLeft--;
-        this.timerText.setText(`${this.timeLeft}초`);
+    // 결과 박스
+    this.add.rectangle(W/2 + 3, 223, 604, 304, 0x000000);
+    this.add.rectangle(W/2, 220, 604, 304, 0x0f3460);
+    this.add.rectangle(W/2, 69, 604, 4, 0xFFD700);
+    this.add.rectangle(W/2, 371, 604, 4, 0xFFD700);
+    this.add.rectangle(W/2 - 300, 220, 4, 304, 0xFFD700);
+    this.add.rectangle(W/2 + 300, 220, 4, 304, 0xFFD700);
 
-        // 타이머 바 줄어들기
-        const ratio = this.timeLeft / 15;
-        this.timerBar.setScale(ratio, 1);
-        if (ratio < 0.3) this.timerBar.setFillStyle(0xff4444);
-        else if (ratio < 0.6) this.timerBar.setFillStyle(0xffaa00);
-        else this.timerBar.setFillStyle(0x00cc66);
+    this.add.text(W/2, 120, 'RESULT', {
+      fontSize: '24px', color: '#FFD700', fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
 
-        if (this.timeLeft <= 0) {
-            this.checkAnswer(-1); // 시간 초과
-        }
-    }
+    this.add.text(W/2, 175, `${this.score} / ${total}`, {
+      fontSize: '36px', color: '#ffffff', fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
 
-    checkAnswer(selected) {
-        if (this.answered) return;
-        this.answered = true;
+    this.add.text(W/2, 235, grade, {
+      fontSize: '20px', color, fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
 
-        const correct = this.questions[this.currentIndex].answer;
-        const isCorrect = selected === correct;
+    this.add.text(W/2, 290, statMsg, {
+      fontSize: '12px', color: '#aaddff', fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
 
-        // 정답/오답 색상 표시
-        this.optionBtns.forEach((btn, i) => {
-            btn.bg.disableInteractive();
-            if (i === correct) btn.bg.setFillStyle(0x00aa44);        // 정답 초록
-            else if (i === selected) btn.bg.setFillStyle(0xcc2222);  // 선택한 오답 빨강
-            else btn.bg.setFillStyle(0x333333);                       // 나머지 회색
-        });
+    // 버튼들
+    this.createPixelBtn(270, 350, 'RETRY', 0x2E5F9F, 0x4488ff, () => this.scene.restart());
+    this.createPixelBtn(530, 350, 'MENU', 0x3d1f0f, 0xffaa44, () => this.scene.start('MenuScene'));
+  }
 
-        if (isCorrect) {
-            this.score++;
-            this.resultText.setColor('#00ff88').setText('✅ 정답!');
-        } else if (selected === -1) {
-            this.resultText.setColor('#ff4444').setText('⏰ 시간 초과!');
-        } else {
-            this.resultText.setColor('#ff4444').setText('❌ 오답!');
-        }
+  createPixelBtn(x, y, label, bg, border, callback) {
+    this.add.rectangle(x + 3, y + 3, 190, 50, 0x000000);
+    const btn = this.add.rectangle(x, y, 190, 50, bg)
+      .setInteractive()
+      .setStrokeStyle(3, border);
+    this.add.text(x, y, label, {
+      fontSize: '11px', color: '#ffffff', fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
 
-        // 1.5초 후 다음 문제 or 종료
-        this.time.delayedCall(1500, () => {
-            this.currentIndex++;
-            if (this.currentIndex < this.questions.length) {
-                this.showQuestion();
-            } else {
-                this.endGame();
-            }
-        });
-    }
-
-    endGame() {
-        this.timerEvent.remove();
-
-        // 화면 클리어
-        this.children.removeAll();
-        this.add.rectangle(400, 300, 800, 600, 0x1a1a2e);
-
-        const total = this.questions.length;
-        const ratio = this.score / total;
-
-        let grade, color, statMsg;
-        if (ratio >= 0.8) {
-            grade = '🏆 완벽해요!';
-            color = '#FFD700';
-            statMsg = '지능 +10  재화 +30';
-        } else if (ratio >= 0.6) {
-            grade = '👍 잘했어요!';
-            color = '#00ff88';
-            statMsg = '지능 +5  재화 +15';
-        } else {
-            grade = '😅 더 공부해요!';
-            color = '#ff8844';
-            statMsg = '지능 +2  스트레스 +5';
-        }
-
-        this.add.text(400, 180, '퀴즈 종료!', {
-            fontSize: '32px', color: '#ffffff', fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        this.add.text(400, 260, `${this.score} / ${total} 정답`, {
-            fontSize: '28px', color: '#ffffff', fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        this.add.text(400, 330, grade, {
-            fontSize: '26px', color, fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        this.add.text(400, 400, statMsg, {
-            fontSize: '22px', color: '#aaddff', fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        // 다시하기 버튼
-        const retryBtn = this.add.rectangle(400, 490, 200, 50, 0x2E5F9F)
-            .setInteractive()
-            .setStrokeStyle(2, 0x4488cc);
-        this.add.text(400, 490, '다시 하기', {
-            fontSize: '20px', color: '#ffffff', fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        retryBtn.on('pointerdown', () => this.scene.restart());
-        retryBtn.on('pointerover', () => retryBtn.setFillStyle(0x3a6fc0));
-        retryBtn.on('pointerout', () => retryBtn.setFillStyle(0x2E5F9F));
-
-        // 메뉴로 돌아가기
-        const menuBtn = this.add.rectangle(400, 595, 160, 36, 0x333333)
-            .setInteractive().setStrokeStyle(1, 0x555555);
-        this.add.text(400, 595, '◀ 메뉴로', {
-            fontSize: '15px', color: '#aaaaaa', fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        menuBtn.on('pointerdown', () => this.scene.start('MenuScene'));
-        menuBtn.on('pointerover', () => menuBtn.setFillStyle(0x444444));
-        menuBtn.on('pointerout', () => menuBtn.setFillStyle(0x333333));
-    }
+    btn.on('pointerover', () => btn.setFillStyle(border));
+    btn.on('pointerout', () => btn.setFillStyle(bg));
+    btn.on('pointerdown', () => {
+      this.cameras.main.flash(150, 255, 255, 255, false);
+      this.time.delayedCall(150, callback);
+    });
+  }
 }

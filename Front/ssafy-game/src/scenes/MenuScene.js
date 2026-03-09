@@ -1,133 +1,233 @@
 import Phaser from 'phaser';
 
+const PIXEL_FONT = '"Press Start 2P"';
+
 export default class MenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MenuScene' });
   }
 
   create() {
-    // 배경
-    this.add.rectangle(400, 300, 800, 600, 0x1a1a2e);
+    const W = 800, H = 600;
 
-    // 상단 장식 바
-    this.add.rectangle(400, 8, 800, 16, 0x2E5F9F);
+    // 배경 - 체커보드 패턴
+    for (let x = 0; x < W; x += 32) {
+      for (let y = 0; y < H; y += 32) {
+        const color = ((x + y) / 32) % 2 === 0 ? 0x1a1a2e : 0x16213e;
+        this.add.rectangle(x + 16, y + 16, 32, 32, color);
+      }
+    }
 
-    // 타이틀
-    this.add.text(400, 80, 'SSAFY생 키우기', {
-      fontSize: '42px', color: '#FFD700',
-      fontFamily: 'Arial', fontStyle: 'bold'
+    // 상단 타이틀 배경
+    this.add.rectangle(W/2, H/2, W, H, 0x0a0a1f);
+    // 픽셀 테두리 효과 (상하)
+    this.add.rectangle(W/2, 10, W, 8, 0xFFD700);
+    this.add.rectangle(W/2, 130, W, 4, 0xFFD700);
+
+    // 타이틀 그림자 효과
+    this.add.text(W/2 + 4, 44, 'SSAFY LIFE', {
+      fontSize: '28px', color: '#8B6914',
+      fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
+    this.add.text(W/2, 40, 'SSAFY LIFE', {
+      fontSize: '28px', color: '#FFD700',
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
-    this.add.text(400, 130, '⌨️  미니게임 센터', {
-      fontSize: '22px', color: '#aaddff', fontFamily: 'Arial'
+    // 서브타이틀
+    this.add.text(W/2, 90, '- MINI GAME CENTER -', {
+      fontSize: '10px', color: '#aaddff',
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
-    // 구분선
-    this.add.rectangle(400, 165, 600, 2, 0x333333);
+    // 깜빡이는 Press Start 텍스트
+    const pressText = this.add.text(W/2, 118, '▼ SELECT GAME ▼', {
+      fontSize: '8px', color: '#ffffff',
+      fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
+    this.time.addEvent({
+      delay: 600, loop: true,
+      callback: () => pressText.setVisible(!pressText.visible)
+    });
 
     // 게임 카드 데이터
     const games = [
       {
         key: 'QuizScene',
         icon: '📝',
-        title: '정처기 퀴즈',
-        desc: '4지선다 문제를 풀어라!\n15초 안에 정답 선택',
-        reward: '지능 +10  재화 +30',
-        color: 0x2E5F9F,
-        hoverColor: 0x3a6fc0,
-        stroke: 0x4488cc
+        title: 'QUIZ',
+        subtitle: '정처기 퀴즈',
+        desc: '15SEC / 5 QUESTIONS',
+        reward: 'INT+10  GP+30',
+        bgColor: 0x0f3460,
+        borderColor: 0x4488ff,
+        glowColor: 0x2255cc,
+        level: 'EASY'
       },
       {
         key: 'TypingScene',
         icon: '⌨️',
-        title: '알고리즘 타이핑',
-        desc: '코드를 빠르게 타이핑!\n20초 안에 완성',
-        reward: '지능 +7  재화 +20',
-        color: 0x1E6F3F,
-        hoverColor: 0x258a50,
-        stroke: 0x44aa66
+        title: 'TYPING',
+        subtitle: '알고리즘 타이핑',
+        desc: '20SEC / CODE INPUT',
+        reward: 'INT+7  GP+20',
+        bgColor: 0x0f3d1f,
+        borderColor: 0x44ff88,
+        glowColor: 0x226633,
+        level: 'NORMAL'
       },
       {
         key: 'DragScene',
         icon: '🧩',
-        title: '코드 순서 맞추기',
-        desc: '뒤섞인 코드를 드래그!\n60초 안에 정렬',
-        reward: '지능 +10  재화 +30',
-        color: 0x6B2E9F,
-        hoverColor: 0x7d3ab5,
-        stroke: 0x9944cc
+        title: 'SORT',
+        subtitle: '코드 순서 맞추기',
+        desc: '60SEC / DRAG & DROP',
+        reward: 'INT+10  GP+30',
+        bgColor: 0x2d0f3d,
+        borderColor: 0xcc44ff,
+        glowColor: 0x661199,
+        level: 'HARD'
       }
     ];
 
-    // 카드 생성
     games.forEach((game, i) => {
-      const y = 270 + i * 110;
-      this.createGameCard(game, y);
+      this.createPixelCard(game, 210 + i * 130);
     });
 
-    // 하단 안내
-    this.add.text(400, 575, '강의장에서 미니게임으로 능력치를 올려보세요!', {
-      fontSize: '14px', color: '#555555', fontFamily: 'Arial'
+    // 하단 바
+    this.add.rectangle(W/2, 590, W, 20, 0x0f3460);
+    this.add.rectangle(W/2, 581, W, 2, 0xFFD700);
+    this.add.text(W/2, 590, 'SSAFY 14th  S14P21E206', {
+      fontSize: '7px', color: '#555577',
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
+
+    // 별 파티클 효과
+    this.createStars();
   }
 
-  createGameCard(game, y) {
-    // 카드 배경
-    const card = this.add.rectangle(400, y, 680, 95, game.color)
-      .setStrokeStyle(2, game.stroke)
-      .setInteractive();
+  createPixelCard(game, y) {
+    const x = 400;
 
-    // 아이콘
-    this.add.text(80, y, game.icon, {
-      fontSize: '36px', fontFamily: 'Arial'
+    // 카드 외곽 테두리 (픽셀 느낌)
+    this.add.rectangle(x + 3, y + 3, 700, 110, 0x000000); // 그림자
+    const cardBg = this.add.rectangle(x, y, 700, 110, game.bgColor);
+
+    // 픽셀 테두리 (4면)
+    this.add.rectangle(x, y - 53, 700, 4, game.borderColor); // 상
+    this.add.rectangle(x, y + 53, 700, 4, game.borderColor); // 하
+    this.add.rectangle(x - 348, y, 4, 110, game.borderColor); // 좌
+    this.add.rectangle(x + 348, y, 4, 110, game.borderColor); // 우
+
+    // 코너 픽셀 (포켓몬 스타일)
+    const corners = [
+      [x - 348, y - 53], [x + 348, y - 53],
+      [x - 348, y + 53], [x + 348, y + 53]
+    ];
+    corners.forEach(([cx, cy]) => {
+      this.add.rectangle(cx, cy, 8, 8, 0xFFD700);
+    });
+
+    // 레벨 배지
+    const levelColor = game.level === 'EASY' ? 0x00cc44
+      : game.level === 'NORMAL' ? 0xffaa00 : 0xff4444;
+    this.add.rectangle(x - 270, y - 32, 70, 20, levelColor);
+    this.add.text(x - 270, y - 32, game.level, {
+      fontSize: '7px', color: '#ffffff',
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
-    // 제목
-    this.add.text(160, y - 22, game.title, {
-      fontSize: '20px', color: '#ffffff',
-      fontFamily: 'Arial', fontStyle: 'bold'
+    // 아이콘
+    this.add.text(x - 300, y + 5, game.icon, {
+      fontSize: '30px'
+    }).setOrigin(0.5);
+
+    // 제목 (그림자 효과)
+    this.add.text(x - 181, y - 18, game.title, {
+      fontSize: '16px', color: '#000000',
+      fontFamily: PIXEL_FONT
+    }).setOrigin(0, 0.5);
+    this.add.text(x - 183, y - 20, game.title, {
+      fontSize: '16px', color: '#ffffff',
+      fontFamily: PIXEL_FONT
+    }).setOrigin(0, 0.5);
+
+    // 서브타이틀
+    this.add.text(x - 183, y + 5, game.subtitle, {
+      fontSize: '9px', color: '#aaaaaa',
+      fontFamily: PIXEL_FONT
     }).setOrigin(0, 0.5);
 
     // 설명
-    this.add.text(160, y + 8, game.desc, {
-      fontSize: '13px', color: '#cccccc',
-      fontFamily: 'Arial', lineSpacing: 4
+    this.add.text(x - 183, y + 28, game.desc, {
+      fontSize: '8px', color: '#666688',
+      fontFamily: PIXEL_FONT
     }).setOrigin(0, 0.5);
 
-    // 보상 텍스트
-    this.add.text(690, y, '🎁 ' + game.reward, {
-      fontSize: '13px', color: '#FFD700', fontFamily: 'Arial'
+    // 보상
+    this.add.text(x + 290, y - 10, 'REWARD', {
+      fontSize: '7px', color: '#888888',
+      fontFamily: PIXEL_FONT
+    }).setOrigin(1, 0.5);
+    this.add.text(x + 290, y + 12, game.reward, {
+      fontSize: '8px', color: '#FFD700',
+      fontFamily: PIXEL_FONT
     }).setOrigin(1, 0.5);
 
-    // 화살표
-    this.add.text(745, y, '▶', {
-      fontSize: '18px', color: '#ffffff', fontFamily: 'Arial'
+    // 화살표 (깜빡임)
+    const arrow = this.add.text(x + 320, y, '►', {
+      fontSize: '16px', color: game.borderColor === 0x4488ff ? '#4488ff'
+        : game.borderColor === 0x44ff88 ? '#44ff88' : '#cc44ff',
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
-    // 호버 효과
-    card.on('pointerover', () => {
-      card.setFillStyle(game.hoverColor);
+    this.time.addEvent({
+      delay: 500 + Math.random() * 300, loop: true,
+      callback: () => arrow.setVisible(!arrow.visible)
+    });
+
+    // 인터랙션
+    cardBg.setInteractive();
+
+    cardBg.on('pointerover', () => {
+      cardBg.setFillStyle(game.glowColor);
       this.tweens.add({
-        targets: card, scaleX: 1.02, scaleY: 1.02,
-        duration: 100, ease: 'Power1'
+        targets: cardBg, scaleX: 1.01, scaleY: 1.05,
+        duration: 80, ease: 'Power1'
       });
     });
 
-    card.on('pointerout', () => {
-      card.setFillStyle(game.color);
+    cardBg.on('pointerout', () => {
+      cardBg.setFillStyle(game.bgColor);
       this.tweens.add({
-        targets: card, scaleX: 1, scaleY: 1,
-        duration: 100, ease: 'Power1'
+        targets: cardBg, scaleX: 1, scaleY: 1,
+        duration: 80, ease: 'Power1'
       });
     });
 
-    card.on('pointerdown', () => {
-      // 클릭 효과
-      this.tweens.add({
-        targets: card, scaleX: 0.97, scaleY: 0.97,
-        duration: 80, yoyo: true, ease: 'Power1',
-        onComplete: () => this.scene.start(game.key)
-      });
+    cardBg.on('pointerdown', () => {
+      this.cameras.main.flash(200, 255, 255, 255, false);
+      this.time.delayedCall(200, () => this.scene.start(game.key));
     });
+  }
+
+  createStars() {
+    for (let i = 0; i < 30; i++) {
+      const x = Phaser.Math.Between(0, 800);
+      const y = Phaser.Math.Between(0, 600);
+      const size = Phaser.Math.Between(1, 3);
+      const star = this.add.rectangle(x, y, size, size, 0xffffff, 0.4);
+
+      this.time.addEvent({
+        delay: Phaser.Math.Between(500, 2000),
+        loop: true,
+        callback: () => {
+          this.tweens.add({
+            targets: star, alpha: Phaser.Math.FloatBetween(0.1, 0.8),
+            duration: 400, yoyo: true
+          });
+        }
+      });
+    }
   }
 }
