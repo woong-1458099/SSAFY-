@@ -1,0 +1,106 @@
+﻿services:
+  jenkins:
+    build:
+      context: ../jenkins
+      dockerfile: Dockerfile
+    image: local/jenkins-jdk25:lts
+    restart: unless-stopped
+    ports:
+      - "${JENKINS_AGENT_PORT}:50000"
+    environment:
+      TZ: ${TZ}
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=true
+      JENKINS_OPTS: --prefix=/jenkins
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    user: root
+    networks:
+      - ops-net
+      - core-net
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      N8N_HOST: ${N8N_HOST}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL}
+      N8N_PATH: /n8n/
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL}
+      N8N_PROXY_HOPS: "1"
+      GENERIC_TIMEZONE: ${TZ}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      JENKINS_BASE_URL: ${JENKINS_BASE_URL}
+      JENKINS_JOB_NAME: ${JENKINS_JOB_NAME}
+      JENKINS_USER: ${JENKINS_USER}
+      JENKINS_API_TOKEN: ${JENKINS_API_TOKEN}
+      JENKINS_REMOTE_TOKEN: ${JENKINS_REMOTE_TOKEN}
+      GITLAB_BASE_URL: ${GITLAB_BASE_URL}
+      GITLAB_PROJECT_ID: ${GITLAB_PROJECT_ID}
+      GITLAB_TOKEN: ${GITLAB_TOKEN}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      SHEETS_WEBHOOK_URL: ${SHEETS_WEBHOOK_URL}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../Infra/n8n/workflows:/workflows
+    depends_on:
+      - jenkins
+    networks:
+      - ops-net
+      - core-net
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    volumes:
+      - ../Infra/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - ops-net
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - ops-net
+
+volumes:
+  jenkins_home:
+    external: true
+    name: jenkins_jenkins_home
+  n8n_data:
+    external: true
+    name: n8n_n8n_data
+  prometheus_data:
+    name: s14p21e206_prometheus_data
+  grafana_data:
+    name: s14p21e206_grafana_data
+
+networks:
+  ops-net:
+    driver: bridge
+  core-net:
+    external: true
+    name: s14p21e206_core_net

@@ -1,0 +1,11 @@
+# Global secret/env protection
+.env
+.env.*
+!.env.example
+
+# Any nested service env files
+**/.env
+**/.env.*
+!**/.env.example
+n8n_n8n_data.tgz
+jenkins_jenkins_home.tgz

@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - core-net
+
+  redis:
+    image: ${REDIS_IMAGE}
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - core-net
+
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE}
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - core-net
+
+networks:
+  core-net:
+    name: s14p21e206_core_net
+
+volumes:
+  pg_data:
+    name: s14p21e206_pg_data
+  redis_data:
+    name: s14p21e206_redis_data
+  rabbitmq_data:
+    name: s14p21e206_rabbitmq_data

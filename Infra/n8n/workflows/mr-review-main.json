@@ -1,0 +1,425 @@
+{
+  "name": "mr-review-main",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gitlab/mr-review",
+        "responseMode": "lastNode"
+      },
+      "id": "webhook",
+      "name": "GitLab MR Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        280
+      ],
+      "webhookId": "gitlab-mr-review"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.object_kind}}",
+              "operation": "equal",
+              "value2": "merge_request"
+            }
+          ]
+        }
+      },
+      "id": "ifMergeRequest",
+      "name": "Is Merge Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        500,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "mr_iid",
+              "value": "={{$json.body.object_attributes.iid}}"
+            },
+            {
+              "name": "mr_title",
+              "value": "={{$json.body.object_attributes.title}}"
+            },
+            {
+              "name": "mr_url",
+              "value": "={{$json.body.object_attributes.url}}"
+            },
+            {
+              "name": "author",
+              "value": "={{$json.body.user.username}}"
+            },
+            {
+              "name": "source_branch",
+              "value": "={{$json.body.object_attributes.source_branch}}"
+            },
+            {
+              "name": "target_branch",
+              "value": "={{$json.body.object_attributes.target_branch}}"
+            },
+            {
+              "name": "sha",
+              "value": "={{$json.body.object_attributes.last_commit.id}}"
+            }
+          ]
+        }
+      },
+      "id": "normalize",
+      "name": "Normalize MR Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        760,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.GITLAB_BASE_URL + '/api/v4/projects/' + $env.GITLAB_PROJECT_ID + '/merge_requests/' + $json.mr_iid + '/changes'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "PRIVATE-TOKEN",
+              "value": "={{$env.GITLAB_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "id": "fetchChanges",
+      "name": "Fetch MR Changes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item.json;\nconst changes = item.changes || [];\nconst compact = changes.slice(0, 10).map((c) => ({ file: c.new_path || c.old_path, diff: (c.diff || '').slice(0, 3000) }));\nconst prompt = [\n  'You are a strict senior reviewer.',\n  'Classify MR type as one of: fix|feat|docs|refactor|test|chore.',\n  'Return strict JSON with keys: mr_type, summary, overall_risk, findings, comment_markdown.',\n  `MR Title: ${item.title || ''}`,\n  `Source: ${item.source_branch || ''} -> Target: ${item.target_branch || ''}`,\n  `Author: ${item.author?.username || ''}`,\n  `Changes: ${JSON.stringify(compact)}`\n].join('\\n');\n\nreturn {\n  json: {\n    mr_iid: item.iid || item.mr_iid,\n    mr_title: item.title || item.mr_title,\n    mr_url: item.web_url || item.mr_url,\n    author: item.author?.username || item.author,\n    source_branch: item.source_branch,\n    target_branch: item.target_branch,\n    sha: item.sha,\n    prompt\n  }\n};"
+      },
+      "id": "buildPrompt",
+      "name": "Build Review Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: ($env.OPENAI_MODEL || 'gpt-4.1-mini'), input: $json.prompt } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "id": "requestReview",
+      "name": "Request Codex Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1480,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $input.item.json;\nconst fallback = {\n  mr_type: 'chore',\n  summary: 'Review generated but parser fallback used.',\n  overall_risk: 'medium',\n  findings: [],\n  comment_markdown: 'Automated review completed. Please check logs for raw output.'\n};\n\nlet text = '';\nif (raw.output_text) text = raw.output_text;\nelse if (Array.isArray(raw.output)) {\n  const chunks = [];\n  for (const o of raw.output) {\n    if (Array.isArray(o.content)) {\n      for (const c of o.content) {\n        if (c.type === 'output_text' && c.text) chunks.push(c.text);\n      }\n    }\n  }\n  text = chunks.join('\\n');\n}\n\nlet parsed = fallback;\ntry {\n  parsed = JSON.parse(text);\n} catch (e) {\n  parsed.comment_markdown = `Automated review output (raw):\\n\\n\\`\\`\\`\\n${text.slice(0, 3500)}\\n\\`\\`\\``;\n}\n\nreturn {\n  json: {\n    mr_type: parsed.mr_type || 'chore',\n    summary: parsed.summary || fallback.summary,\n    overall_risk: parsed.overall_risk || 'medium',\n    findings_count: Array.isArray(parsed.findings) ? parsed.findings.length : 0,\n    comment_markdown: parsed.comment_markdown || fallback.comment_markdown\n  }\n};"
+      },
+      "id": "parseReview",
+      "name": "Parse Review JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "position"
+      },
+      "id": "mergeMeta",
+      "name": "Merge MR + Review",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1960,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.GITLAB_BASE_URL + '/api/v4/projects/' + $env.GITLAB_PROJECT_ID + '/merge_requests/' + $json.mr_iid + '/notes'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "PRIVATE-TOKEN",
+              "value": "={{$env.GITLAB_TOKEN}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{$json.comment_markdown}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "postComment",
+      "name": "Post GitLab Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SHEETS_WEBHOOK_URL}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { timestamp: $now, project: $env.GITLAB_PROJECT_ID, mr_iid: $json.mr_iid, mr_title: $json.mr_title, author: $json.author, source_branch: $json.source_branch, target_branch: $json.target_branch, commit_sha: $json.sha, mr_type: $json.mr_type, overall_risk: $json.overall_risk, summary: $json.summary, findings_count: $json.findings_count, gitlab_mr_url: $json.mr_url, status: 'success', error_message: '' } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "appendSheets",
+      "name": "Append Google Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, mr_iid: $json.mr_iid, mr_type: $json.mr_type, findings_count: $json.findings_count } }}"
+      },
+      "id": "respond",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        2440,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, skipped: true, reason: 'not-merge-request-event' } }}"
+      },
+      "id": "respondSkip",
+      "name": "Skip Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        760,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "GitLab MR Webhook": {
+      "main": [
+        [
+          {
+            "node": "Is Merge Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Merge Request?": {
+      "main": [
+        [
+          {
+            "node": "Normalize MR Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize MR Data": {
+      "main": [
+        [
+          {
+            "node": "Fetch MR Changes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge MR + Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch MR Changes": {
+      "main": [
+        [
+          {
+            "node": "Build Review Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Review Prompt": {
+      "main": [
+        [
+          {
+            "node": "Request Codex Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Codex Review": {
+      "main": [
+        [
+          {
+            "node": "Parse Review JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Review JSON": {
+      "main": [
+        [
+          {
+            "node": "Merge MR + Review",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge MR + Review": {
+      "main": [
+        [
+          {
+            "node": "Post GitLab Comment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post GitLab Comment": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1",
+  "meta": {
+    "instanceId": "local"
+  },
+  "id": "mr-review-main",
+  "tags": []
+}
