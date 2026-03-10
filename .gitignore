@@ -1,7 +1,6 @@
 # Global secret/env protection
 .env
 .env.*
-!.env.example
 
 # Any nested service env files
 **/.env
