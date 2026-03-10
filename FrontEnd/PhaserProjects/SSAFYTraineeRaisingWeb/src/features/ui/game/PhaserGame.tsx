@@ -1,16 +1,16 @@
 import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
-import AimScene from './features/game/scenes/AimScene';
-import BusinessSmileScene from './features/game/scenes/BusinessSmileScene';
-import BugScene from './features/game/scenes/BugScene';
-import DontSmileScene from './features/game/scenes/DontSmileScene';
-import DragScene from './features/game/scenes/DragScene';
-import MenuScene from './features/game/scenes/MenuScene';
-import MinigamePauseScene from './features/game/scenes/MinigamePauseScene';
-import QuizScene from './features/game/scenes/QuizScene';
-import RhythmScene from './features/game/scenes/RhythmScene';
-import RunnerScene from './features/game/scenes/RunnerScene';
-import TypingScene from './features/game/scenes/TypingScene';
+import AimScene from '@features/minigames/scenes/AimScene';
+import BusinessSmileScene from '@features/minigames/scenes/BusinessSmileScene';
+import BugScene from '@features/minigames/scenes/BugScene';
+import DontSmileScene from '@features/minigames/scenes/DontSmileScene';
+import DragScene from '@features/minigames/scenes/DragScene';
+import MenuScene from '@features/minigames/scenes/MenuScene';
+import MinigamePauseScene from '@features/minigames/scenes/MinigamePauseScene';
+import QuizScene from '@features/minigames/scenes/QuizScene';
+import RhythmScene from '@features/minigames/scenes/RhythmScene';
+import RunnerScene from '@features/minigames/scenes/RunnerScene';
+import TypingScene from '@features/minigames/scenes/TypingScene';
 
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;

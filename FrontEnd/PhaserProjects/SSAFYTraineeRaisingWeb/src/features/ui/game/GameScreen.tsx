@@ -1,4 +1,4 @@
-import PhaserGame from '../../PhaserGame';
+import PhaserGame from './PhaserGame';
 import type { AuthenticatedUser } from '../auth/authConfig';
 
 interface GameScreenProps {
