@@ -126,7 +126,7 @@ pipeline {
           ]) {
             sh '''
 set -eu
-ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST <<EOSSH
+ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "TARGET_COLOR='$TARGET_COLOR' REMOTE_PROJECT_DIR='$REMOTE_PROJECT_DIR' bash -se" <<'EOSSH'
 set -eu
 cd $REMOTE_PROJECT_DIR
 
