@@ -243,3 +243,37 @@ docker compose -p stg-app --env-file docker/.env.stg -f docker/compose.app.yml u
 ### 주의사항
 - PROD 컨테이너명(`prod-app-*`)은 실제 PROD compose 기동 전에는 존재하지 않는다.
 - PROD 분리 후 `docker ps` 결과 기준으로 health check 컨테이너명을 최종 점검한다.
+## 2026-03-10 Jenkins STG 파이프라인 검증 결과
+
+### 검증된 사항
+- Jenkins에서 다음 단계는 정상 동작 확인:
+  - `Resolve Image Tag (Commit SHA)`
+  - `Test` (`./BackEnd/gradlew test --no-daemon -p BackEnd`)
+  - `Build Jar` (`./BackEnd/gradlew bootJar --no-daemon -p BackEnd`)
+  - `Build Docker Image On EC2`
+  - `Detect Active Color` (`active.conf` 기반)
+  - `Deploy Target Color` (inactive color 배포)
+
+### 확인된 구성값
+- `EC2_HOST=13.125.26.13`
+- `REMOTE_PROJECT_DIR=/home/ubuntu/apps/S14P21E206`
+- compose args: `-p stg-app --env-file docker/.env.stg -f docker/compose.app.yml`
+- credential id: `ec2-deploy-ssh-v2`
+
+### 현재 실패 지점
+- `Health Check` 단계
+- 주 원인 후보:
+  1. 원격 실행 컨텍스트 누락(로컬 Jenkins에서 docker 명령 실행)
+  2. `TARGET_COLOR` 전달 누락
+  3. health 응답 파싱 패턴 불일치
+
+### 권장 Health Check 기준
+- 실행 위치: 반드시 EC2 원격 shell 내부
+- 대상: `docker exec stg-app-nginx-1` 통해 `api-<color>:8080/actuator/health` 조회
+- 성공 조건:
+  - `grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'`
+
+### 참고 운영 경고
+- compose 경고:
+  - `a network with name s14p21e206_core_net exists but was not created for project "stg-app"`
+- 필요 시 `docker/compose.app.yml`의 `core-net`에 `external: true` 명시
