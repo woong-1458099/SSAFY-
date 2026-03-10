@@ -7,14 +7,14 @@ pipeline {
   }
 
   parameters {
-    choice(name: 'TARGET_COLOR', choices: ['green', 'blue'], description: 'Deploy target color for STG')
+    choice(name: 'TARGET_COLOR', choices: ['blue', 'green'], description: 'Deploy target color for PROD')
     booleanParam(name: 'AUTO_SWITCH', defaultValue: true, description: 'Switch nginx upstream after deploy')
   }
 
   environment {
     EC2_HOST = '13.125.26.13'
     REMOTE_PROJECT_DIR = '/home/ubuntu/apps/S14P21E206'
-    COMPOSE_ARGS = '-p stg-app --env-file docker/.env.stg -f docker/compose.app.yml'
+    COMPOSE_ARGS = '-p prod-app --env-file docker/.env.prod -f docker/compose.app.yml'
   }
 
   stages {
@@ -95,7 +95,7 @@ pipeline {
               cd ${REMOTE_PROJECT_DIR} &&
               docker compose ${COMPOSE_ARGS} ps api-${params.TARGET_COLOR} &&
               sleep 2 &&
-              docker exec stg-app-api-${params.TARGET_COLOR}-1 curl -fsS http://localhost:8080/actuator/health
+              docker exec prod-app-api-${params.TARGET_COLOR}-1 curl -fsS http://localhost:8080/actuator/health
             "
           """
         }
@@ -113,38 +113,7 @@ pipeline {
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
               printf 'upstream api_upstream {\\n  server api-${params.TARGET_COLOR}:8080;\\n}\\n' > Infra/infra/nginx/upstreams/active.conf &&
-              docker exec stg-app-nginx-1 nginx -s reload
-            "
-          """
-        }
-      }
-    }
-
-    stage('Verify And Rollback') {
-      when {
-        expression { return params.AUTO_SWITCH }
-      }
-      steps {
-        sshagent(credentials: ['ec2-deploy-ssh']) {
-          sh """
-            set -eu
-            rollback_color=blue
-            if [ "${params.TARGET_COLOR}" = "blue" ]; then
-              rollback_color=green
-            fi
-
-            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
-              set -eu
-              cd ${REMOTE_PROJECT_DIR}
-              response=\\\$(curl -fsS --max-time 5 http://localhost/api/public/checks || true)
-              if echo \\\"\\\$response\\\" | grep -q '\\"db\\":\\"UP\\"' && echo \\\"\\\$response\\\" | grep -q '\\"redis\\":\\"UP\\"'; then
-                echo 'verify success'
-              else
-                echo 'verify failed. rollback to '\\\$rollback_color
-                printf 'upstream api_upstream {\\\\n  server api-'\\\$rollback_color':8080;\\\\n}\\\\n' > Infra/infra/nginx/upstreams/active.conf
-                docker exec stg-app-nginx-1 nginx -s reload
-                exit 1
-              fi
+              docker exec prod-app-nginx-1 nginx -s reload
             "
           """
         }
@@ -154,12 +123,12 @@ pipeline {
 
   post {
     success {
-      echo "Deploy success: ${params.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
+      echo "PROD deploy success: ${params.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
     }
     failure {
       script {
         def rollbackColor = params.TARGET_COLOR == 'green' ? 'blue' : 'green'
-        echo "Deploy failed. Suggested rollback color: ${rollbackColor}"
+        echo "PROD deploy failed. Suggested rollback color: ${rollbackColor}"
       }
     }
   }

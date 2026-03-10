@@ -1,0 +1,38 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  parameters {
+    booleanParam(name: 'ENABLE_NIGHTLY', defaultValue: false, description: 'Run nightly deploy when true')
+  }
+
+  stages {
+    stage('Guard') {
+      steps {
+        script {
+          if (!params.ENABLE_NIGHTLY) {
+            echo 'nightly-deploy is disabled by default. Set ENABLE_NIGHTLY=true to run.'
+            currentBuild.result = 'NOT_BUILT'
+            return
+          }
+        }
+      }
+    }
+
+    stage('Run Nightly Task') {
+      when {
+        expression { return params.ENABLE_NIGHTLY }
+      }
+      steps {
+        build job: 'master-merge-cd', wait: true, propagate: true, parameters: [
+              string(name: 'TARGET_COLOR', value: 'blue'),
+              booleanParam(name: 'AUTO_SWITCH', value: true)
+        ]
+      }
+    }
+  }
+}
