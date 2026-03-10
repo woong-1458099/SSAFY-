@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import '../styles/App.css';
-import AuthScreen from '../auth/AuthScreen';
-import { AUTH_VIEWS, type AuthenticatedUser, type AuthView } from '../auth/authConfig';
-import GameScreen from '../game/GameScreen';
+import './App.css';
+import AuthScreen from './features/auth/AuthScreen';
+import { AUTH_VIEWS, type AuthenticatedUser, type AuthView } from './features/auth/authConfig';
+import GameScreen from './features/game/GameScreen';
 
 function App() {
   const [authView, setAuthView] = useState<AuthView>(AUTH_VIEWS.LOGIN);
