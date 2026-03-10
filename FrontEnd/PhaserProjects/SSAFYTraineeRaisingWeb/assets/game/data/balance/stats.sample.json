@@ -1,0 +1,15 @@
+{
+  "baseStats": {
+    "health": 100,
+    "coding": 0,
+    "presentation": 0,
+    "teamwork": 0,
+    "luck": 1,
+    "stress": 0
+  },
+  "activityDelta": {
+    "study": { "coding": 3, "stress": 5, "health": -2 },
+    "rest": { "health": 8, "stress": -10 }
+  }
+}
+
