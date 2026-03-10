@@ -7,7 +7,6 @@ pipeline {
   }
 
   parameters {
-    choice(name: 'TARGET_COLOR', choices: ['green', 'blue'], description: 'Deploy target color for STG')
     booleanParam(name: 'AUTO_SWITCH', defaultValue: true, description: 'Switch nginx upstream after deploy')
   }
 
@@ -36,25 +35,21 @@ pipeline {
 
     stage('Test') {
       steps {
-        dir('BackEnd') {
-          sh '''
-            set -eu
-            chmod +x gradlew
-            ./gradlew test --no-daemon
-          '''
-        }
+        sh '''
+          set -eu
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+        '''
       }
     }
 
     stage('Build Jar') {
       steps {
-        dir('BackEnd') {
-          sh '''
-            set -eu
-            chmod +x gradlew
-            ./gradlew bootJar --no-daemon
-          '''
-        }
+        sh '''
+          set -eu
+          chmod +x gradlew
+          ./gradlew bootJar --no-daemon
+        '''
       }
     }
 
@@ -65,9 +60,42 @@ pipeline {
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              docker build -t ${BACKEND_IMAGE} BackEnd
+              docker build -t ${env.BACKEND_IMAGE} BackEnd
             "
           """
+        }
+      }
+    }
+
+    stage('Detect Active Color') {
+      steps {
+        sshagent(credentials: ['ec2-deploy-ssh']) {
+          script {
+            def activeColor = sh(
+              returnStdout: true,
+              script: """
+                set -eu
+                ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+                  cd ${REMOTE_PROJECT_DIR} &&
+                  if grep -q 'api-green:8080' Infra/infra/nginx/upstreams/active.conf; then
+                    echo green
+                  elif grep -q 'api-blue:8080' Infra/infra/nginx/upstreams/active.conf; then
+                    echo blue
+                  else
+                    echo unknown
+                  fi
+                "
+              """
+            ).trim()
+
+            if (activeColor == 'unknown') {
+              error('Cannot detect active color from active.conf')
+            }
+
+            env.ACTIVE_COLOR = activeColor
+            env.TARGET_COLOR = (activeColor == 'green') ? 'blue' : 'green'
+            echo "ACTIVE_COLOR=${env.ACTIVE_COLOR}, TARGET_COLOR=${env.TARGET_COLOR}"
+          }
         }
       }
     }
@@ -79,7 +107,7 @@ pipeline {
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              BACKEND_IMAGE=${BACKEND_IMAGE} docker compose ${COMPOSE_ARGS} up -d api-${params.TARGET_COLOR}
+              BACKEND_IMAGE=${env.BACKEND_IMAGE} docker compose ${COMPOSE_ARGS} up -d api-${env.TARGET_COLOR}
             "
           """
         }
@@ -93,9 +121,15 @@ pipeline {
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              docker compose ${COMPOSE_ARGS} ps api-${params.TARGET_COLOR} &&
+              docker compose ${COMPOSE_ARGS} ps api-${env.TARGET_COLOR} &&
               sleep 2 &&
-              docker exec stg-app-api-${params.TARGET_COLOR}-1 curl -fsS http://localhost:8080/actuator/health
+              docker exec stg-app-api-${env.TARGET_COLOR}-1 sh -c '
+                if command -v curl >/dev/null 2>&1; then
+                  curl -fsS http://localhost:8080/actuator/health
+                else
+                  wget -qO- http://localhost:8080/actuator/health
+                fi
+              '
             "
           """
         }
@@ -112,7 +146,7 @@ pipeline {
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              printf 'upstream api_upstream {\\n  server api-${params.TARGET_COLOR}:8080;\\n}\\n' > Infra/infra/nginx/upstreams/active.conf &&
+              printf 'upstream api_upstream {\\n  server api-${env.TARGET_COLOR}:8080;\\n}\\n' > Infra/infra/nginx/upstreams/active.conf &&
               docker exec stg-app-nginx-1 nginx -s reload
             "
           """
@@ -129,15 +163,22 @@ pipeline {
           sh """
             set -eu
             rollback_color=blue
-            if [ "${params.TARGET_COLOR}" = "blue" ]; then
+            if [ "${env.TARGET_COLOR}" = "blue" ]; then
               rollback_color=green
             fi
 
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               set -eu
               cd ${REMOTE_PROJECT_DIR}
-              response=\\\$(curl -fsS --max-time 5 http://localhost/api/public/checks || true)
-              if echo \\\"\\\$response\\\" | grep -q '\\"db\\":\\"UP\\"' && echo \\\"\\\$response\\\" | grep -q '\\"redis\\":\\"UP\\"'; then
+              response=\\\$(docker exec stg-app-api-${env.TARGET_COLOR}-1 sh -c '
+                if command -v curl >/dev/null 2>&1; then
+                  curl -fsS http://localhost:8080/actuator/health
+                else
+                  wget -qO- http://localhost:8080/actuator/health
+                fi
+              ' || true)
+
+              if echo \\\"\\\$response\\\" | grep -q '\\"status\\":\\"UP\\"'; then
                 echo 'verify success'
               else
                 echo 'verify failed. rollback to '\\\$rollback_color
@@ -151,15 +192,14 @@ pipeline {
       }
     }
   }
-
   post {
     success {
-      echo "Deploy success: ${params.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
+      echo "Deploy success: ${env.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
     }
     failure {
       script {
-        def rollbackColor = params.TARGET_COLOR == 'green' ? 'blue' : 'green'
-        echo "Deploy failed. Suggested rollback color: ${rollbackColor}"
+        def rollbackColor = env.ACTIVE_COLOR ?: 'unknown'
+        echo "Deploy failed. Rollback target(keep current active): ${rollbackColor}"
       }
     }
   }
