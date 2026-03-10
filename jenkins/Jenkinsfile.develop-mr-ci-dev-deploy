@@ -122,24 +122,27 @@ pipeline {
           withEnv([
             "EC2_HOST=${env.EC2_HOST}",
             "REMOTE_PROJECT_DIR=${env.REMOTE_PROJECT_DIR}",
-            "COMPOSE_ARGS=${env.COMPOSE_ARGS}",
             "TARGET_COLOR=${env.TARGET_COLOR}"
           ]) {
             sh '''
-              set -eu
-              ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
-                cd $REMOTE_PROJECT_DIR &&
-                docker compose $COMPOSE_ARGS ps api-$TARGET_COLOR &&
-                for i in $(seq 1 20); do
-                  body=$(docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-'$TARGET_COLOR':8080/actuator/health' || true)
-                  echo \"health[$i]=$body\"
-                  echo \"$body\" | grep -Eq '\"status\"[[:space:]]*:[[:space:]]*\"UP\"' && exit 0
-                  sleep 3
-                done
-                echo health check failed
-                docker logs stg-app-api-$TARGET_COLOR-1 --tail 120 || true
-                exit 1
-              "
+set -eu
+ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST <<EOSSH
+set -eu
+cd $REMOTE_PROJECT_DIR
+
+docker compose -p stg-app --env-file docker/.env.stg -f docker/compose.app.yml ps api-$TARGET_COLOR
+
+for i in $(seq 1 20); do
+  body=$(docker exec stg-app-nginx-1 sh -c "wget -qO- http://api-$TARGET_COLOR:8080/actuator/health" || true)
+  echo "health[$i]=$body"
+  echo "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"' && exit 0
+  sleep 3
+done
+
+echo "health check failed"
+docker logs stg-app-api-$TARGET_COLOR-1 --tail 120 || true
+exit 1
+EOSSH
             '''
           }
         }
