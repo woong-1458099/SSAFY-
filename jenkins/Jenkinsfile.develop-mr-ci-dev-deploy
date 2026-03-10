@@ -123,21 +123,22 @@ pipeline {
             "EC2_HOST=${env.EC2_HOST}",
             "REMOTE_PROJECT_DIR=${env.REMOTE_PROJECT_DIR}",
             "COMPOSE_ARGS=${env.COMPOSE_ARGS}",
-            "TARGET_COLOR=${env.TARGET_COLOR}",
+            "TARGET_COLOR=${env.TARGET_COLOR}"
           ]) {
             sh '''
               set -eu
               ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
                 cd $REMOTE_PROJECT_DIR &&
                 docker compose $COMPOSE_ARGS ps api-$TARGET_COLOR &&
-                for i in 1 2 3 4 5 6 7 8 9 10; do
-                  if docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-'$TARGET_COLOR':8080/actuator/health' | grep -q '"status":"UP"'; then
+                for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+                  if docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-$TARGET_COLOR:8080/actuator/health' | grep -q '\"status\":\"UP\"'; then
                     echo health ok
                     exit 0
                   fi
-                  sleep 2
+                  sleep 3
                 done
                 echo health check failed
+                docker logs stg-app-api-$TARGET_COLOR-1 --tail 120 || true
                 exit 1
               "
             '''
