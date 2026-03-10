@@ -202,3 +202,44 @@ docker compose -p stg-app --env-file docker/.env.stg -f docker/compose.app.yml u
 2. `BACKEND_IMAGE=s14p21e206-backend:latest`를 commit SHA 기반 태그 전략으로 교체한다.
 3. `master-merge-cd` Jenkinsfile을 별도 파일로 분리한다.
 4. `nightly-deploy`는 기본 비활성 잡으로만 생성하고 운영 정책을 문서화한다.
+
+## 2026-03-10 Jenkins 파이프라인 기준 업데이트
+
+### 확정된 서버/경로/컨테이너 정보
+- STG 서버 공인 IP: `13.125.26.13`
+- 원격 프로젝트 경로: `/home/ubuntu/apps/S14P21E206`
+- STG app compose 프로젝트명: `stg-app`
+- STG data compose 프로젝트명: `stg-data`
+- 현재 STG 컨테이너:
+  - `stg-app-nginx-1`
+  - `stg-app-api-green-1`
+  - `stg-app-api-blue-1`
+  - `stg-data-postgres-1`
+  - `stg-data-redis-1`
+  - `stg-data-rabbitmq-1`
+- compose 서비스명(`docker/compose.app.yml`): `api-green`, `api-blue`, `nginx`
+
+### 이미지 태그 정책
+- `latest` 고정 태그 대신 `commit SHA` 태그를 사용한다.
+- Jenkins에서 `git rev-parse --short=12 HEAD` 값을 태그로 생성한다.
+- 배포 시 `BACKEND_IMAGE=s14p21e206-backend:<short_sha>`를 런타임 주입한다.
+
+### Jenkins 잡/스크립트 경로
+- `develop-mr-ci-dev-deploy`
+  - Script Path: `jenkins/Jenkinsfile.develop-mr-ci-dev-deploy`
+  - 목적: STG 배포(blue/green 전환 + verify + rollback)
+- `master-merge-cd`
+  - Script Path: `jenkins/Jenkinsfile.master-merge-cd`
+  - 목적: PROD 배포용 파이프라인 분리
+- `nightly-deploy`
+  - Script Path: `jenkins/Jenkinsfile.nightly-deploy`
+  - 기본 정책: 비활성(`ENABLE_NIGHTLY=false`)
+
+### 현재 env 상태 메모
+- `docker/.env.stg`에는 `BACKEND_IMAGE=s14p21e206-backend:latest`가 존재한다.
+- `docker/.env.prod`에는 `BACKEND_IMAGE` 값이 아직 확인되지 않았다.
+- Jenkins 런타임 주입값(`BACKEND_IMAGE=<sha>`)을 우선 사용한다.
+
+### 주의사항
+- PROD 컨테이너명(`prod-app-*`)은 실제 PROD compose 기동 전에는 존재하지 않는다.
+- PROD 분리 후 `docker ps` 결과 기준으로 health check 컨테이너명을 최종 점검한다.
