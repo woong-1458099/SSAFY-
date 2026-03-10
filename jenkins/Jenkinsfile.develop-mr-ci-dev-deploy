@@ -35,11 +35,11 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh '''
-          set -eu
-          chmod +x gradlew
-          ./gradlew test --no-daemon
-        '''
+          sh '''
+            set -eu
+            chmod +x BackEnd/gradlew
+            ./BackEnd/gradlew test --no-daemon -p BackEnd
+          '''
       }
     }
 
@@ -47,8 +47,8 @@ pipeline {
       steps {
         sh '''
           set -eu
-          chmod +x gradlew
-          ./gradlew bootJar --no-daemon
+          chmod +x BackEnd/gradlew
+          ./BackEnd/gradlew bootJar --no-daemon -p BackEnd
         '''
       }
     }
