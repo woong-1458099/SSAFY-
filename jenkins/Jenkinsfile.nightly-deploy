@@ -28,7 +28,10 @@ pipeline {
         expression { return params.ENABLE_NIGHTLY }
       }
       steps {
-        echo 'TODO: connect nightly flow (ex: call master-merge-cd or run smoke deploy)'
+        build job: 'master-merge-cd', wait: true, propagate: true, parameters: [
+              string(name: 'TARGET_COLOR', value: 'blue'),
+              booleanParam(name: 'AUTO_SWITCH', value: true)
+        ]
       }
     }
   }
