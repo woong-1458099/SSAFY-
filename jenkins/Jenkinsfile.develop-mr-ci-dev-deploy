@@ -119,22 +119,29 @@ pipeline {
     stage('Health Check') {
       steps {
         sshagent(credentials: ['ec2-deploy-ssh-v2']) {
-          sh """
-            set -eu
-            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
-              cd ${REMOTE_PROJECT_DIR} &&
-              docker compose ${COMPOSE_ARGS} ps api-${env.TARGET_COLOR} &&
-              for i in 1 2 3 4 5 6 7 8 9 10; do
-                if docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-${env.TARGET_COLOR}:8080/actuator/health' | grep -q '\\"status\\":\\"UP\\"'; then
-                  echo health ok
-                  exit 0
-                fi
-                sleep 2
-              done
-              echo health check failed
-              exit 1
-            "
-          """
+          withEnv([
+            "EC2_HOST=${env.EC2_HOST}",
+            "REMOTE_PROJECT_DIR=${env.REMOTE_PROJECT_DIR}",
+            "COMPOSE_ARGS=${env.COMPOSE_ARGS}",
+            "TARGET_COLOR=${env.TARGET_COLOR}",
+          ]) {
+            sh '''
+              set -eu
+              ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
+                cd $REMOTE_PROJECT_DIR &&
+                docker compose $COMPOSE_ARGS ps api-$TARGET_COLOR &&
+                for i in 1 2 3 4 5 6 7 8 9 10; do
+                  if docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-'$TARGET_COLOR':8080/actuator/health' | grep -q '"status":"UP"'; then
+                    echo health ok
+                    exit 0
+                  fi
+                  sleep 2
+                done
+                echo health check failed
+                exit 1
+              "
+            '''
+          }
         }
       }
     }
@@ -163,28 +170,34 @@ pipeline {
       }
       steps {
         sshagent(credentials: ['ec2-deploy-ssh-v2']) {
-          sh """
-            set -eu
-            rollback_color=blue
-            if [ "${env.TARGET_COLOR}" = "blue" ]; then
-              rollback_color=green
-            fi
-
-            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} '
+          withEnv([
+            "EC2_HOST=${env.EC2_HOST}",
+            "REMOTE_PROJECT_DIR=${env.REMOTE_PROJECT_DIR}",
+            "TARGET_COLOR=${env.TARGET_COLOR}"
+          ]) {
+            sh '''
               set -eu
-              cd ${REMOTE_PROJECT_DIR}
-              response=$(docker exec stg-app-nginx-1 sh -c "wget -qO- http://api-${env.TARGET_COLOR}:8080/actuator/health" || true)
-
-              if echo "$response" | grep -q "\"status\":\"UP\""; then
-                echo verify success
-              else
-                echo verify failed. rollback to '"$rollback_color"'
-                printf "upstream api_upstream {\\n  server api-%s:8080;\\n}\\n" "$rollback_color" > Infra/infra/nginx/upstreams/active.conf
-                docker exec stg-app-nginx-1 nginx -s reload
-                exit 1
+              rollback_color=blue
+              if [ "$TARGET_COLOR" = "blue" ]; then
+                rollback_color=green
               fi
-            '
-          """
+
+              ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
+                set -eu
+                cd $REMOTE_PROJECT_DIR
+                response=\\$(docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-$TARGET_COLOR:8080/actuator/health' || true)
+
+                if echo \\"\\$response\\" | grep -q '\\"status\\":\\"UP\\"'; then
+                  echo verify success
+                else
+                  echo verify failed. rollback to \\$rollback_color
+                  printf 'upstream api_upstream {\\\\n  server api-%s:8080;\\\\n}\\\\n' \\$rollback_color > Infra/infra/nginx/upstreams/active.conf
+                  docker exec stg-app-nginx-1 nginx -s reload
+                  exit 1
+                fi
+              "
+            '''
+          }
         }
       }
     }
