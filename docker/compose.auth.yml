@@ -1,0 +1,21 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: stg-keycloak
+    restart: unless-stopped
+    command:
+      - start
+      - --http-enabled=true
+      - --hostname=auth.ssafymaker.cloud
+      - --hostname-strict=false
+      - --proxy-headers=xforwarded
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    networks:
+      - core-net
+
+networks:
+  core-net:
+    external: true
+    name: s14p21e206_core_net
