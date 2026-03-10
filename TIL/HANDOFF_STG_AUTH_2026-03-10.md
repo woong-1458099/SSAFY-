@@ -116,3 +116,44 @@ curl -fsS https://auth.ssafymaker.cloud/realms/app/.well-known/openid-configurat
 - Jenkins 파이프라인에서 SHA 태그 주입 배포 고정
 - PROD 분리 시 docker/.env.prod 실값과 prod-app 컨테이너 네이밍 검증
 
+## 12) 2026-03-10 Jenkins STG 파이프라인 진행 현황 (추가)
+
+### 현재까지 통과한 단계
+1. Checkout
+2. Resolve Image Tag (Commit SHA)
+3. Test
+4. Build Jar
+5. Build Docker Image On EC2
+6. Detect Active Color
+7. Deploy Target Color
+
+### 현재 실패 지점
+- Health Check 단계에서 실패하여 `Switch Nginx Upstream`, `Verify And Rollback` 미실행
+
+### 실패 원인 정리
+- 애플리케이션 자체는 정상 기동 로그 확인됨
+  - `Tomcat started on port 8080`
+  - DB 연결 정상
+  - RabbitMQ 연결 정상
+- 파이프라인 Health Check 로직에서 문자열 판정/원격 실행 컨텍스트 문제로 실패
+- 특히 health 응답 패턴 매칭이 잘못되면 정상 기동 상태에서도 실패 처리됨
+
+### Health Check 최종 기준(고정 필요)
+- 대상: `http://api-${TARGET_COLOR}:8080/actuator/health` (docker network 내부 호출)
+- 성공 판정 regex:
+  - `grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'`
+- 재시도:
+  - 20회, 3초 간격 권장
+- 실패 시:
+  - `docker logs stg-app-api-${TARGET_COLOR}-1 --tail 120` 출력 후 종료
+
+### 보강 메모
+- compose 경고:
+  - `a network with name s14p21e206_core_net exists but was not created for project "stg-app"`
+- 장기적으로 `docker/compose.app.yml`의 `core-net`에 `external: true` 명시 권장
+
+### 다음 액션
+1. Health Check 블록 최종 고정
+2. 파이프라인 재실행 후 `Switch Nginx Upstream` 진입 확인
+3. `Verify And Rollback` 성공 여부 확인
+4. 최종 성공 로그 기준으로 RUNBOOK 동기화

@@ -182,3 +182,30 @@ docker compose -p docker --env-file docker/.env.ops -f docker/compose.ops.yml up
 4. `nightly-deploy` 잡은 기본 비활성으로만 생성한다.
 5. `docker/.env.prod`를 실제 운영 기준으로 작성하고 `prod-app` 프로젝트명 정책을 문서/파이프라인에 맞춘다.
 6. `BACKEND_IMAGE=s14p21e206-backend:latest`를 commit SHA 기반 태그 전략으로 교체한다.
+
+## 2026-03-10 STG 인증/도메인/배포 파이프라인 진행 업데이트
+
+### 완료
+1. `auth.ssafymaker.cloud`를 Keycloak(`stg-keycloak`)으로 reverse proxy 연결 완료
+2. Cloudflare Origin Cert + nginx 443 설정 완료, `Full (strict)` 기준 동작 확인
+3. OIDC issuer 확인 완료
+   - `https://auth.ssafymaker.cloud/realms/app/.well-known/openid-configuration`
+4. STG 앱 DB/Redis/RabbitMQ 연결 정상화
+   - DB: `postgres:5432/stg_app`
+   - Redis: `redis:6379`
+   - RabbitMQ: `rabbitmq:5672`
+5. Jenkins STG 파이프라인에서 아래 단계 정상 통과 확인
+   - Checkout / Test / Build Jar / Remote Docker Build / Active Color Detect / Deploy Target Color
+
+### 현재 이슈(미해결)
+1. Jenkins `Health Check` 단계 실패
+   - 원인: 원격(EC2) 실행/변수 전달/grep 패턴 불일치가 섞여 간헐 실패
+   - 앱 자체는 기동 완료 로그 확인됨 (`Tomcat started on port 8080`, RabbitMQ connection created)
+2. `Switch Nginx Upstream`/`Verify And Rollback` 단계는 Health Check 실패로 미실행
+
+### 다음 액션
+1. Jenkinsfile `Health Check`를 원격 ssh heredoc 방식으로 고정
+2. `TARGET_COLOR`를 `withEnv`로 명시 전달
+3. health 판정식을 JSON 기준으로 고정
+   - `grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'`
+4. 통과 후 `Switch/Verify/Rollback` 최종 검증
