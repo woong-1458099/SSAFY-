@@ -124,8 +124,15 @@ pipeline {
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
               docker compose ${COMPOSE_ARGS} ps api-${env.TARGET_COLOR} &&
-              sleep 3 &&
-              curl -fsS http://localhost:8080/actuator/health || curl -fsS http://localhost/api/public/checks
+              for i in 1 2 3 4 5 6 7 8 9 10; do
+                if docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-${env.TARGET_COLOR}:8080/actuator/health' | grep -q '\\"status\\":\\"UP\\"'; then
+                  echo health ok
+                  exit 0
+                fi
+                sleep 2
+              done
+              echo health check failed
+              exit 1
             "
           """
         }
@@ -167,9 +174,8 @@ pipeline {
               set -eu
               cd ${REMOTE_PROJECT_DIR}
 
-              response=\\\$(curl -fsS --max-time 5 http://localhost:8080/actuator/health || true)
-
-              if echo \\\"\\\$response\\\" | grep -q '\\"status\\":\\"UP\\"'; then
+              response=\\$(docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-${env.TARGET_COLOR}:8080/actuator/health' || true)
+              if echo "\\$response" | grep -q '"status":"UP"'; then
                 echo 'verify success'
               else
                 echo 'verify failed. rollback to '\\\$rollback_color
