@@ -14,6 +14,8 @@ pipeline {
     EC2_HOST = '13.125.26.13'
     REMOTE_PROJECT_DIR = '/home/ubuntu/apps/S14P21E206'
     COMPOSE_ARGS = '-p stg-app --env-file docker/.env.stg -f docker/compose.app.yml'
+    JAVA_HOME = '/opt/java/openjdk'
+    PATH = "/opt/java/openjdk/bin:${env.PATH}"
   }
 
   stages {
