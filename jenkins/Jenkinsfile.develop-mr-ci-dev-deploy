@@ -105,9 +105,9 @@ pipeline {
                 set -eu
                 ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
                   cd ${REMOTE_PROJECT_DIR} &&
-                  if grep -q 'api-green:8080' Infra/infra/nginx/upstreams/active.conf; then
+                  if grep -q 'api-green:8080' /home/ubuntu/deploy/nginx/upstreams/active.conf; then
                     echo green
-                  elif grep -q 'api-blue:8080' Infra/infra/nginx/upstreams/active.conf; then
+                  elif grep -q 'api-blue:8080' /home/ubuntu/deploy/nginx/upstreams/active.conf; then
                     echo blue
                   else
                     echo unknown
@@ -185,7 +185,7 @@ EOSSH
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              printf 'upstream api_upstream {\\n  server api-${env.TARGET_COLOR}:8080;\\n}\\n' > Infra/infra/nginx/upstreams/active.conf &&
+              printf 'upstream api_upstream {\\n  server api-${env.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active.conf &&
               docker exec stg-app-nginx-1 nginx -s reload
             "
           """
@@ -220,7 +220,7 @@ EOSSH
                   echo verify success
                 else
                   echo verify failed. rollback to \\$rollback_color
-                  printf 'upstream api_upstream {\\\\n  server api-%s:8080;\\\\n}\\\\n' \\$rollback_color > Infra/infra/nginx/upstreams/active.conf
+                  printf 'upstream api_upstream {\\\\n  server api-%s:8080;\\\\n}\\\\n' \\$rollback_color > /home/ubuntu/deploy/nginx/upstreams/active.conf
                   docker exec stg-app-nginx-1 nginx -s reload
                   exit 1
                 fi
