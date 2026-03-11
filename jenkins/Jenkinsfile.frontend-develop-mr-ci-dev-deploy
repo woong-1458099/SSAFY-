@@ -134,32 +134,38 @@ pipeline {
     stage('Health/Smoke Check') {
       when { expression { env.SKIP_PIPELINE != 'true' } }
       steps {
-        sshagent(credentials: [env.SSH_CREDENTIAL_ID]) {
-          sh """
-            set -eu
-            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
-              set -eu
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
+          withEnv([
+            "EC2_HOST=${env.EC2_HOST}",
+            "FRONTEND_DOMAIN=${env.FRONTEND_DOMAIN}",
+            "NGINX_CONTAINER=${env.NGINX_CONTAINER}"
+          ]) {
+            sh '''
+set -eu
+ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "FRONTEND_DOMAIN='$FRONTEND_DOMAIN' NGINX_CONTAINER='$NGINX_CONTAINER' bash -se" <<'EOSSH'
+set -eu
 
-              # Origin check (Cloudflare 우회)
-              docker exec ${NGINX_CONTAINER} sh -c \\"wget -qO- --header='Host: ${FRONTEND_DOMAIN}' http://127.0.0.1/ > /dev/null\\"
+# 1) origin 직접 확인 (Cloudflare 우회)
+docker exec "$NGINX_CONTAINER" sh -c "wget -qO- --header='Host: $FRONTEND_DOMAIN' http://127.0.0.1/ > /dev/null"
 
-              root_code=\\$(curl -k -s -o /dev/null -w '%{http_code}' https://${FRONTEND_DOMAIN}/ || true)
-              api_code=\\$(curl -k -s -o /dev/null -w '%{http_code}' https://${FRONTEND_DOMAIN}/api/public/checks || true)
+# 2) 외부 smoke
+root_code=$(curl -k -s -o /dev/null -w '%{http_code}' "https://$FRONTEND_DOMAIN/" || true)
+api_code=$(curl -k -s -o /dev/null -w '%{http_code}' "https://$FRONTEND_DOMAIN/api/public/checks" || true)
 
-              echo root_code=\\$root_code
-              echo api_code=\\$api_code
+echo "root_code=$root_code"
+echo "api_code=$api_code"
 
-              case \\$root_code in
-                200|301|302|304) ;;
-                *) echo 'root smoke check failed'; exit 1 ;;
-              esac
+case "$root_code" in
+  200|301|302|304) ;;
+  *) echo "root smoke check failed"; exit 1 ;;
+esac
 
-              case \\$api_code in
-                200|401) ;;
-                *) echo 'api smoke check failed'; exit 1 ;;
-              esac
-            "
-          """
+case "$api_code" in
+  200|401) ;;
+  *) echo "api smoke check failed"; exit 1 ;;
+esac
+EOSSH
+          '''
         }
       }
     }
