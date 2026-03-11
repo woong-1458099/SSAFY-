@@ -5,6 +5,7 @@ export class IntroScene extends Phaser.Scene {
   private allElements: Phaser.GameObjects.GameObject[] = [];
   private dimOverlay!: Phaser.GameObjects.Rectangle;
   private skipText!: Phaser.GameObjects.Text;
+  private introEnded = false;
   
   private readonly FONT_FAMILY = 'PFStardustBold'; 
 
@@ -13,33 +14,33 @@ export class IntroScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.audio('type_sound', '../../assets/game/audio/SoundEffect/type.mp3');
-    this.load.audio('street_bgm', '../../assets/game/audio/BGM/survive.mp3');
-    this.load.audio('subway_arrival', '../../assets/game/audio/SoundEffect/subway_come.mp3');
-    this.load.audio('subway_train_snd', '../../assets/game/audio/SoundEffect/train.mp3');
-    this.load.audio('door_open_snd', '../../assets/game/audio/SoundEffect/door_open.mp3');
-    this.load.audio('crowded_snd', '../../assets/game/audio/SoundEffect/crowded.mp3');
-    this.load.audio('roomtone', '../../assets/game/audio/BGM/roomtone.mp3');
-    this.load.audio('voice_male', '../../assets/game/audio/SoundEffect/voice_male.wav');
-    this.load.audio('voice_female', '../../assets/game/audio/SoundEffect/voice_female.wav');
-    this.load.audio('panic_snd', '../../assets/game/audio/SoundEffect/no.mp3');
-    this.load.audio('click_snd', '../../assets/game/audio/SoundEffect/click2.mp3'); 
-    this.load.audio('thump_snd', '../../assets/game/audio/SoundEffect/no.mp3'); 
-    this.load.audio('victory_bgm', '../../assets/game/audio/BGM/Event2.mp3'); 
+    this.load.audio('type_sound', 'assets/game/audio/SoundEffect/type.mp3');
+    this.load.audio('street_bgm', 'assets/game/audio/BGM/survive.mp3');
+    this.load.audio('subway_arrival', 'assets/game/audio/SoundEffect/subway_come.mp3');
+    this.load.audio('subway_train_snd', 'assets/game/audio/SoundEffect/train.mp3');
+    this.load.audio('door_open_snd', 'assets/game/audio/SoundEffect/door_open.mp3');
+    this.load.audio('crowded_snd', 'assets/game/audio/SoundEffect/crowded.mp3');
+    this.load.audio('roomtone', 'assets/game/audio/BGM/roomtone.mp3');
+    this.load.audio('voice_male', 'assets/game/audio/SoundEffect/voice_male.wav');
+    this.load.audio('voice_female', 'assets/game/audio/SoundEffect/voice_female.wav');
+    this.load.audio('panic_snd', 'assets/game/audio/SoundEffect/no.mp3');
+    this.load.audio('click_snd', 'assets/game/audio/SoundEffect/click2.mp3');
+    this.load.audio('thump_snd', 'assets/game/audio/SoundEffect/no.mp3');
+    this.load.audio('victory_bgm', 'assets/game/audio/BGM/Event2.mp3');
 
-    this.load.image('subway_bg', '../../assets/game/backgrounds/subway_back.png');
-    this.load.image('subway_train_img', '../../assets/game/backgrounds/train.png');
-    this.load.image('subway_train_open', '../../assets/game/backgrounds/train_open.png');
-    this.load.image('subway_fg', '../../assets/game/backgrounds/subway_front.png');
-    this.load.image('crowd1', '../../assets/game/backgrounds/crowd1.png');
-    this.load.image('crowd2', '../../assets/game/backgrounds/crowd2.png');
-    this.load.image('crowd3', '../../assets/game/backgrounds/crowd3.png');
-    this.load.image('yeoksam_outside', '../../assets/game/backgrounds/yeoksam.png');
-    this.load.image('yeoksam_inside', '../../assets/game/backgrounds/yeoksam2.png');
-    this.load.image('yeoksam3', '../../assets/game/backgrounds/yeoksam3.png');
-    this.load.image('pass_screen', '../../assets/game/backgrounds/pass_SF.png');
-    this.load.image('pass_screen2', '../../assets/game/backgrounds/pass_SF2.png');
-    this.load.image('victory_bg', '../../assets/game/backgrounds/pass_SF2.png'); 
+    this.load.image('subway_bg', 'assets/game/backgrounds/subway_back.png');
+    this.load.image('subway_train_img', 'assets/game/backgrounds/train.png');
+    this.load.image('subway_train_open', 'assets/game/backgrounds/train_open.png');
+    this.load.image('subway_fg', 'assets/game/backgrounds/subway_front.png');
+    this.load.image('crowd1', 'assets/game/backgrounds/crowd1.png');
+    this.load.image('crowd2', 'assets/game/backgrounds/crowd2.png');
+    this.load.image('crowd3', 'assets/game/backgrounds/crowd3.png');
+    this.load.image('yeoksam_outside', 'assets/game/backgrounds/yeoksam.png');
+    this.load.image('yeoksam_inside', 'assets/game/backgrounds/yeoksam2.png');
+    this.load.image('yeoksam3', 'assets/game/backgrounds/yeoksam3.png');
+    this.load.image('pass_screen', 'assets/game/backgrounds/pass_SF.png');
+    this.load.image('pass_screen2', 'assets/game/backgrounds/pass_SF2.png');
+    this.load.image('victory_bg', 'assets/game/backgrounds/pass_SF2.png');
   }
 
   private safePlay(key: string, config?: Phaser.Types.Sound.SoundConfig) {
@@ -55,12 +56,7 @@ export class IntroScene extends Phaser.Scene {
     this.sound.stopAll();
 
     const skipToIntro = () => {
-      this.sound.stopAll(); 
-      this.time.removeAllEvents(); 
-      this.tweens.killAll();
-      
-      const nextKey = (SceneKey as any).NewCharacter || 'NewCharacterScene';
-      this.scene.start(nextKey);
+      this.startMainScene();
     };
 
     this.skipText = this.add.text(width - 20, 20, "클릭해서 스킵", {
@@ -74,10 +70,6 @@ export class IntroScene extends Phaser.Scene {
 
     this.skipText.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      skipToIntro();
-    });
-
-    this.input.once("pointerdown", () => {
       skipToIntro();
     });
 
@@ -180,11 +172,8 @@ export class IntroScene extends Phaser.Scene {
                         }).setOrigin(0.5).setDepth(100);
                         this.tweens.add({ targets: guideTxt, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
 
-                        this.input.once("pointerdown", () => {
-                          this.sound.stopAll();
-                          const nextKey = (SceneKey as any).NewCharacter || 'NewCharacterScene';
-                          this.scene.start(nextKey);
-                        });
+                        this.input.once("pointerdown", () => this.startMainScene());
+                        this.time.delayedCall(1800, () => this.startMainScene());
                     });
                 });
             });
@@ -457,6 +446,18 @@ export class IntroScene extends Phaser.Scene {
         this.tweens.add({ targets: bgm, volume: 0.5, duration: 2000 });
     }
     this.tweens.add({ targets: newBg, alpha: 1, duration: 1500 });
+  }
+
+  private startMainScene(): void {
+    if (this.introEnded) {
+      return;
+    }
+
+    this.introEnded = true;
+    this.sound.stopAll();
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    this.scene.start(SceneKey.NewCharacter);
   }
 
   private typewriteText(text: string, label: Phaser.GameObjects.Text, onComplete: () => void) {

@@ -4,6 +4,7 @@ import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 
 export class TitleScene extends Phaser.Scene {
   private enterKey?: Phaser.Input.Keyboard.Key;
+  private startArmed = false;
 
   constructor() {
     super(SceneKey.Title);
@@ -23,17 +24,31 @@ export class TitleScene extends Phaser.Scene {
     });
 
     this.enterKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    this.input.once("pointerdown", () => this.startMain());
+    this.input.on("pointerup", this.handlePointerUp, this);
+    this.time.delayedCall(180, () => {
+      this.startArmed = true;
+    });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.off("pointerup", this.handlePointerUp, this);
+    });
   }
 
   update(): void {
-    if (this.enterKey && Phaser.Input.Keyboard.JustDown(this.enterKey)) {
+    if (this.startArmed && this.enterKey && Phaser.Input.Keyboard.JustDown(this.enterKey)) {
       this.startMain();
     }
   }
 
+  private handlePointerUp(): void {
+    if (!this.startArmed) {
+      return;
+    }
+    this.startMain();
+  }
+
   private startMain(): void {
-    this.scene.start(SceneKey.Main);
+    this.scene.start(SceneKey.Intro);
   }
 }
 
