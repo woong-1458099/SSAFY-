@@ -25,6 +25,32 @@ pipeline {
       }
     }
 
+    stage('Detect Changes') {
+      steps {
+        script {
+          // MR 타겟 브랜치 우선, 없으면 develop 기준
+          def targetBranch = env.gitlabTargetBranch ?: 'develop'
+          sh "git fetch --no-tags origin ${targetBranch}"
+
+          def changed = sh(
+            returnStdout: true,
+            script: "git diff --name-only origin/${targetBranch}...HEAD"
+          ).trim().split('\n') as List
+
+          def backendChanged = changed.any { it ==~ /^BackEnd\\/.+/ }
+          echo "targetBranch=${targetBranch}"
+          echo "backendChanged=${backendChanged}"
+          echo "changedFilesCount=${changed.findAll { it?.trim() }.size()}"
+
+          if (!backendChanged) {
+            currentBuild.description = "Skip: BackEnd changes not found"
+            currentBuild.result = 'NOT_BUILT'
+            error('No BackEnd changes. Stop backend pipeline.')
+          }
+        }
+      }
+    }
+
     stage('Resolve Image Tag (Commit SHA)') {
       steps {
         script {

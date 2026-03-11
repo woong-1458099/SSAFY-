@@ -1,0 +1,199 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    EC2_HOST = '13.125.26.13'
+    REMOTE_PROJECT_DIR = '/home/ubuntu/apps/S14P21E206'
+    SSH_CREDENTIAL_ID = 'ec2-deploy-ssh-v2'
+
+    FRONTEND_SRC_DIR = 'FrontEnd/ssafy-maker'
+    FRONTEND_BUILD_DIR = 'dist'
+    FRONTEND_RELEASES_DIR = '/home/ubuntu/deploy/frontend/releases'
+    FRONTEND_CURRENT_LINK = '/home/ubuntu/deploy/frontend/current'
+    NGINX_CONTAINER = 'stg-app-nginx-1'
+    FRONTEND_DOMAIN = 'ssafymaker.cloud'
+
+    SKIP_PIPELINE = 'false'
+    RELEASE_TAG = ''
+    PREV_CURRENT_TARGET = ''
+    SWITCH_DONE = 'false'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Detect Changes') {
+      steps {
+        script {
+          def targetBranch = env.gitlabTargetBranch ?: 'develop'
+          sh "git fetch --no-tags origin ${targetBranch}"
+
+          def raw = sh(returnStdout: true, script: "git diff --name-only origin/${targetBranch}...HEAD").trim()
+          def changed = raw ? raw.split('\n') as List : []
+
+          def frontendChanged = changed.any { it ==~ /^FrontEnd\\/ssafy-maker\\/.+/ }
+
+          echo "targetBranch=${targetBranch}"
+          echo "frontendChanged=${frontendChanged}"
+          echo "changedFilesCount=${changed.size()}"
+
+          if (!frontendChanged) {
+            env.SKIP_PIPELINE = 'true'
+            currentBuild.description = 'Skip: FrontEnd/ssafy-maker changes not found'
+            currentBuild.result = 'NOT_BUILT'
+          }
+        }
+      }
+    }
+
+    stage('Resolve Release Tag') {
+      when { expression { env.SKIP_PIPELINE != 'true' } }
+      steps {
+        script {
+          env.RELEASE_TAG = sh(returnStdout: true, script: 'git rev-parse --short=12 HEAD').trim()
+          echo "RELEASE_TAG=${env.RELEASE_TAG}"
+        }
+      }
+    }
+
+    stage('Frontend CI') {
+      when { expression { env.SKIP_PIPELINE != 'true' } }
+      steps {
+        sh """
+          set -eu
+          cd ${FRONTEND_SRC_DIR}
+          npm ci
+          npm run lint
+          npm run build
+          test -d ${FRONTEND_BUILD_DIR}
+        """
+      }
+    }
+
+    stage('Upload Release To EC2') {
+      when { expression { env.SKIP_PIPELINE != 'true' } }
+      steps {
+        sshagent(credentials: [env.SSH_CREDENTIAL_ID]) {
+          sh """
+            set -eu
+            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+              mkdir -p ${FRONTEND_RELEASES_DIR}/${RELEASE_TAG}
+            "
+
+            tar -C ${FRONTEND_SRC_DIR}/${FRONTEND_BUILD_DIR} -cf - . | \
+            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+              rm -rf ${FRONTEND_RELEASES_DIR}/${RELEASE_TAG}/* &&
+              tar -xf - -C ${FRONTEND_RELEASES_DIR}/${RELEASE_TAG}
+            "
+          """
+        }
+      }
+    }
+
+    stage('Switch Current Symlink') {
+      when { expression { env.SKIP_PIPELINE != 'true' } }
+      steps {
+        sshagent(credentials: [env.SSH_CREDENTIAL_ID]) {
+          script {
+            env.PREV_CURRENT_TARGET = sh(
+              returnStdout: true,
+              script: """
+                set -eu
+                ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+                  if [ -L ${FRONTEND_CURRENT_LINK} ]; then
+                    readlink -f ${FRONTEND_CURRENT_LINK}
+                  fi
+                "
+              """
+            ).trim()
+
+            sh """
+              set -eu
+              ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+                ln -sfn ${FRONTEND_RELEASES_DIR}/${RELEASE_TAG} ${FRONTEND_CURRENT_LINK} &&
+                docker exec ${NGINX_CONTAINER} nginx -t &&
+                docker exec ${NGINX_CONTAINER} nginx -s reload
+              "
+            """
+
+            env.SWITCH_DONE = 'true'
+          }
+        }
+      }
+    }
+
+    stage('Health/Smoke Check') {
+      when { expression { env.SKIP_PIPELINE != 'true' } }
+      steps {
+        sshagent(credentials: [env.SSH_CREDENTIAL_ID]) {
+          sh """
+            set -eu
+            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+              set -eu
+
+              # Origin check (Cloudflare 우회)
+              docker exec ${NGINX_CONTAINER} sh -c \\"wget -qO- --header='Host: ${FRONTEND_DOMAIN}' http://127.0.0.1/ > /dev/null\\"
+
+              root_code=\\$(curl -k -s -o /dev/null -w '%{http_code}' https://${FRONTEND_DOMAIN}/ || true)
+              api_code=\\$(curl -k -s -o /dev/null -w '%{http_code}' https://${FRONTEND_DOMAIN}/api/public/checks || true)
+
+              echo root_code=\\$root_code
+              echo api_code=\\$api_code
+
+              case \\$root_code in
+                200|301|302|304) ;;
+                *) echo 'root smoke check failed'; exit 1 ;;
+              esac
+
+              case \\$api_code in
+                200|401) ;;
+                *) echo 'api smoke check failed'; exit 1 ;;
+              esac
+            "
+          """
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      script {
+        if (env.SKIP_PIPELINE == 'true') {
+          echo 'Frontend pipeline skipped by path filter.'
+        } else {
+          echo "Frontend deploy success: release=${env.RELEASE_TAG}"
+        }
+      }
+    }
+
+    failure {
+      script {
+        if (env.SWITCH_DONE == 'true' && env.PREV_CURRENT_TARGET?.trim()) {
+          sshagent(credentials: [env.SSH_CREDENTIAL_ID]) {
+            sh """
+              set -eu
+              ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+                ln -sfn ${env.PREV_CURRENT_TARGET} ${FRONTEND_CURRENT_LINK} &&
+                docker exec ${NGINX_CONTAINER} nginx -t &&
+                docker exec ${NGINX_CONTAINER} nginx -s reload
+              "
+            """
+          }
+          echo "Rollback done: ${env.PREV_CURRENT_TARGET}"
+        } else {
+          echo 'Rollback skipped: previous symlink target missing or switch not completed.'
+        }
+      }
+    }
+  }
+}
