@@ -4,6 +4,9 @@ export enum SceneKey {
   Login = "LoginScene",
   Title = "TitleScene",
   Main = "MainScene",
+  Intro = "IntroScene",
+  NewCharacter = "NewCharacterScene",
+  
   MiniGameCenter = "MiniGameCenterScene",
   MiniGameTyping = "MiniGameTypingScene",
   MiniGameReflex = "MiniGameReflexScene"
