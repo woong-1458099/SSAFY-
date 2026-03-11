@@ -22,7 +22,7 @@ pipeline {
     FRONTEND_SRC_DIR = 'FrontEnd/ssafy-maker'
     FRONTEND_BUILD_DIR = 'dist'
     FRONTEND_RELEASES_DIR = '/home/ubuntu/deploy/frontend/releases'
-    FRONTEND_CURRENT_LINK = '/home/ubuntu/deploy/frontend/current'
+    FRONTEND_LIVE_DIR = '/home/ubuntu/deploy/frontend/live'
     NGINX_CONTAINER = 'stg-app-nginx-1'
     FRONTEND_DOMAIN = 'ssafymaker.cloud'
   }
@@ -48,7 +48,10 @@ pipeline {
             script: "git rev-parse --verify HEAD~1 >/dev/null 2>&1 && git diff --name-only HEAD~1..HEAD || git show --pretty='' --name-only HEAD"
           ).trim()
           def changed = raw ? raw.split('\n') as List : []
-          def frontendChanged = changed.any { it ==~ /^FrontEnd\\/ssafy-maker\\/.+/ }
+          def frontendChanged = changed.any {
+            it ==~ /^FrontEnd\\/ssafy-maker\\/.+/ ||
+            it == 'jenkins/Jenkinsfile.frontend-develop-mr-ci-dev-deploy'
+          }
 
           echo "frontendChanged=${frontendChanged}"
           echo "changedFilesCount=${changed.size()}"
@@ -98,31 +101,32 @@ pipeline {
       }
     }
 
-    stage('Switch Current Symlink') {
-      steps {
-        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
-          script {
-            env.PREV_CURRENT_TARGET = sh(
-              returnStdout: true,
-              script: '''
-                set -eu
-                ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "if [ -L $FRONTEND_CURRENT_LINK ]; then readlink -f $FRONTEND_CURRENT_LINK; fi"
-              '''
-            ).trim()
+     stage('Sync Release To Live') {
+          steps {
+            sshagent(credentials: ['ec2-deploy-ssh-v2']) {
+              script {
+                env.PREV_CURRENT_TARGET = sh(
+                  returnStdout: true,
+                  script: '''
+                    set -eu
+                    ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "readlink -f /home/ubuntu/deploy/frontend/current || true"
+                  '''
+                ).trim()
 
-            sh '''
-              set -eu
-              ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
-                ln -sfn $FRONTEND_RELEASES_DIR/$RELEASE_TAG $FRONTEND_CURRENT_LINK &&
-                docker exec $NGINX_CONTAINER nginx -t &&
-                docker exec $NGINX_CONTAINER nginx -s reload
-              "
-            '''
-            env.SWITCH_DONE = 'true'
+                sh '''
+                  set -eu
+                  ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
+                    mkdir -p $FRONTEND_LIVE_DIR &&
+                    rsync -a --delete $FRONTEND_RELEASES_DIR/$RELEASE_TAG/ $FRONTEND_LIVE_DIR/ &&
+                    docker exec $NGINX_CONTAINER nginx -t &&
+                    docker exec $NGINX_CONTAINER nginx -s reload
+                  "
+                '''
+                env.SWITCH_DONE = 'true'
+              }
+            }
           }
         }
-      }
-    }
 
     stage('Health/Smoke Check') {
       steps {
@@ -190,9 +194,12 @@ EOSSH
             sh '''
               set -eu
               ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
-                ln -sfn $PREV_CURRENT_TARGET $FRONTEND_CURRENT_LINK &&
-                docker exec $NGINX_CONTAINER nginx -t &&
-                docker exec $NGINX_CONTAINER nginx -s reload
+                if [ -n \"$PREV_CURRENT_TARGET\" ]; then
+                  mkdir -p $FRONTEND_LIVE_DIR &&
+                  rsync -a --delete $PREV_CURRENT_TARGET/ $FRONTEND_LIVE_DIR/ &&
+                  docker exec $NGINX_CONTAINER nginx -t &&
+                  docker exec $NGINX_CONTAINER nginx -s reload
+                fi
               "
             '''
           }

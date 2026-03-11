@@ -53,7 +53,10 @@ pipeline {
 
           changed = changed.unique()
 
-          def backendChanged = changed.any { it ==~ /^BackEnd\/.+/ }
+          def backendChanged = changed.any {
+            it ==~ /^BackEnd\\/.+/ ||
+            it == 'jenkins/Jenkinsfile.develop-mr-ci-dev-deploy'
+          }
 
           echo "backendChanged=${backendChanged}"
           echo "changedFilesCount=${changed.size()}"

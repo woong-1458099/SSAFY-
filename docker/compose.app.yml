@@ -72,7 +72,7 @@ services:
       - ../Infra/infra/nginx/conf.d:/etc/nginx/conf.d:ro
       - /home/ubuntu/deploy/nginx/upstreams:/etc/nginx/upstreams:ro
       - /home/ubuntu/certs/cloudflare:/etc/nginx/certs:ro
-      - /home/ubuntu/deploy/frontend/current:/usr/share/nginx/frontend:ro
+      - /home/ubuntu/deploy/frontend/live:/usr/share/nginx/frontend:ro
     networks:
       - core-net
 
