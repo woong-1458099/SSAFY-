@@ -112,7 +112,7 @@ pipeline {
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              printf 'upstream api_upstream {\\n  server api-${params.TARGET_COLOR}:8080;\\n}\\n' > Infra/infra/nginx/upstreams/active.conf &&
+              printf 'upstream api_upstream {\\n  server api-${params.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active.conf &&
               docker exec prod-app-nginx-1 nginx -s reload
             "
           """
