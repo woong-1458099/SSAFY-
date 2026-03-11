@@ -160,6 +160,22 @@ EOSSH
         }
       }
     }
+    stage('Purge Cloudflare Cache') {
+          steps {
+            withCredentials([
+              string(credentialsId: 'cloudflare-api-token', variable: 'CF_API_TOKEN'),
+              string(credentialsId: 'cloudflare-zone-id', variable: 'CF_ZONE_ID')
+            ]) {
+              sh '''
+                set -eu
+                curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
+                  -H "Authorization: Bearer $CF_API_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  --data '{"prefixes":["ssafymaker.cloud/assets/game/","ssafymaker.cloud/assets/"]}'
+              '''
+            }
+          }
+        }
   }
 
   post {
