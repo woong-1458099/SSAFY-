@@ -7,7 +7,16 @@ pipeline {
   }
 
   parameters {
-    booleanParam(name: 'AUTO_SWITCH', defaultValue: true, description: 'Switch nginx upstream after deploy')
+    booleanParam(
+      name: 'SKIP_PATH_FILTER',
+      defaultValue: false,
+      description: 'true면 경로 변경 감지(Diff) 없이 백엔드 파이프라인을 강제 실행합니다. (수동 테스트용)'
+    )
+    booleanParam(
+      name: 'AUTO_SWITCH',
+      defaultValue: true,
+      description: 'Switch nginx upstream after deploy'
+    )
   }
 
   environment {
@@ -28,6 +37,11 @@ pipeline {
     stage('Detect Changes') {
       steps {
         script {
+          if (params.SKIP_PATH_FILTER) {
+            echo 'SKIP_PATH_FILTER=true -> backend path filter skipped'
+            return
+          }
+
           // MR 타겟 브랜치 우선, 없으면 develop 기준
           def targetBranch = env.gitlabTargetBranch ?: 'develop'
           sh "git fetch --no-tags origin ${targetBranch}"
