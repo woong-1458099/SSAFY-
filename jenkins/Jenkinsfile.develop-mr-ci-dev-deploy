@@ -42,22 +42,29 @@ pipeline {
             return
           }
 
-          // MR 타겟 브랜치 우선, 없으면 develop 기준
-          def targetBranch = env.gitlabTargetBranch ?: 'develop'
-          sh "git fetch --no-tags origin ${targetBranch}"
+          def changed = []
+          for (changeLog in currentBuild.changeSets) {
+            for (entry in changeLog.items) {
+              for (file in entry.affectedFiles) {
+                changed << file.path
+              }
+            }
+          }
 
-          def changed = sh(
-            returnStdout: true,
-            script: "git diff --name-only origin/${targetBranch}...HEAD"
-          ).trim().split('\n') as List
+          changed = changed.unique()
 
-          def backendChanged = changed.any { it ==~ /^BackEnd\\/.+/ }
-          echo "targetBranch=${targetBranch}"
+          def backendChanged = changed.any { it ==~ /^BackEnd\/.+/ }
+
           echo "backendChanged=${backendChanged}"
-          echo "changedFilesCount=${changed.findAll { it?.trim() }.size()}"
+          echo "changedFilesCount=${changed.size()}"
+          if (changed) {
+            echo "changedFiles=${changed.join(', ')}"
+          } else {
+            echo 'No changelog entries found from Jenkins changeSets.'
+          }
 
           if (!backendChanged) {
-            currentBuild.description = "Skip: BackEnd changes not found"
+            currentBuild.description = 'Skip: BackEnd changes not found'
             currentBuild.result = 'NOT_BUILT'
             error('No BackEnd changes. Stop backend pipeline.')
           }
