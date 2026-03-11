@@ -6,6 +6,14 @@ pipeline {
     disableConcurrentBuilds()
   }
 
+  parameters {
+    booleanParam(
+      name: 'SKIP_PATH_FILTER',
+      defaultValue: false,
+      description: 'true면 경로 변경 감지(Diff) 없이 파이프라인을 강제 실행합니다. (수동 테스트용)'
+    )
+  }
+
   environment {
     EC2_HOST = '13.125.26.13'
     REMOTE_PROJECT_DIR = '/home/ubuntu/apps/S14P21E206'
@@ -29,16 +37,16 @@ pipeline {
     stage('Detect Changes') {
       steps {
         script {
-          // Jenkins 원인에 USERIDCAUSE가 있으면 수동 실행으로 간주
-          def manualRun = currentBuild.rawBuild.getCause(hudson.model.Cause$UserIdCause) != null
-          echo "manualRun=${manualRun}"
-
-          if (manualRun) {
-            echo 'Manual build: skip path filter'
+          if (params.SKIP_PATH_FILTER) {
+            echo 'SKIP_PATH_FILTER=true -> path filter skipped'
             return
           }
 
-          def raw = sh(returnStdout: true, script: "git diff-tree --no-commit-id --name-only -r HEAD").trim()
+          // 최근 커밋 기준 변경 파일 확인
+          def raw = sh(
+            returnStdout: true,
+            script: "git rev-parse --verify HEAD~1 >/dev/null 2>&1 && git diff --name-only HEAD~1..HEAD || git show --pretty='' --name-only HEAD"
+          ).trim()
           def changed = raw ? raw.split('\n') as List : []
           def frontendChanged = changed.any { it ==~ /^FrontEnd\\/ssafy-maker\\/.+/ }
 
