@@ -169,6 +169,17 @@ const STAT_ROW_DEFS: Array<{ key: StatKey; label: string }> = [
   { key: "stress", label: "\uC2A4\uD2B8\uB808\uC2A4" }
 ];
 
+const TIME_CYCLE = ["\uC624\uC804", "\uC624\uD6C4", "\uC800\uB141", "\uBC24"] as const;
+const DAY_CYCLE = [
+  "\uC6D4\uC694\uC77C",
+  "\uD654\uC694\uC77C",
+  "\uC218\uC694\uC77C",
+  "\uBAA9\uC694\uC77C",
+  "\uAE08\uC694\uC77C",
+  "\uD1A0\uC694\uC77C",
+  "\uC77C\uC694\uC77C"
+] as const;
+
 export class MainScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Image;
   private interactionTarget!: Phaser.GameObjects.Rectangle;
@@ -196,8 +207,10 @@ export class MainScene extends Phaser.Scene {
   private carriedItem: InventoryItemStack | null = null;
   private carriedFromIndex: number | null = null;
   private pendingInventoryPickup?: { index: number; at: number; timer: Phaser.Time.TimerEvent };
-  private actionPoint = 3;
-  private readonly maxActionPoint = 3;
+  private actionPoint = 4;
+  private readonly maxActionPoint = 4;
+  private timeCycleIndex = 0;
+  private dayCycleIndex = 0;
 
   private readonly inventorySlots: Array<InventoryItemStack | null> = Array.from({ length: 16 }, () => null);
   private readonly equippedSlots: Record<EquipmentSlotKey, InventoryItemTemplate | null> = {
@@ -697,14 +710,16 @@ export class MainScene extends Phaser.Scene {
         this.showSystemToast("\uB3C8\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4");
         return;
       }
+      if (!this.spendActionPoint()) {
+        return;
+      }
 
       const nextHp = Phaser.Math.Clamp(this.hudState.hp + 8, 0, this.hudState.hpMax);
       const nextStress = Phaser.Math.Clamp(this.hudState.stress - 12, 0, 100);
       this.updateHudState({
         hp: nextHp,
         stress: nextStress,
-        money: this.hudState.money - cost,
-        timeLabel: "\uC624\uD6C4"
+        money: this.hudState.money - cost
       });
       this.closePlacePopup();
       this.showSystemToast("\uCE74\uD398\uC5D0\uC11C \uD734\uC2DD\uD588\uC2B5\uB2C8\uB2E4");
@@ -770,28 +785,26 @@ export class MainScene extends Phaser.Scene {
   }
 
   private useHomeAction(action: "sleep" | "study" | "game"): void {
-    if (this.actionPoint <= 0) {
-      this.showSystemToast("AP\uAC00 \uBD80\uC871\uD569\uB2C8\uB2E4");
+    if (!this.spendActionPoint()) {
       return;
     }
-    this.actionPoint = Phaser.Math.Clamp(this.actionPoint - 1, 0, this.maxActionPoint);
 
     if (action === "sleep") {
       const nextHp = Phaser.Math.Clamp(this.hudState.hp + 22, 0, this.hudState.hpMax);
       const nextStress = Phaser.Math.Clamp(this.hudState.stress - 20, 0, 100);
-      this.updateHudState({ hp: nextHp, stress: nextStress, timeLabel: "\uC800\uB141" });
+      this.updateHudState({ hp: nextHp, stress: nextStress });
       this.showSystemToast("\uC7A0\uC790\uAE30 \uC644\uB8CC");
     } else if (action === "study") {
       const nextHp = Phaser.Math.Clamp(this.hudState.hp - 12, 0, this.hudState.hpMax);
       const nextStress = Phaser.Math.Clamp(this.hudState.stress + 10, 0, 100);
       this.applyStatDelta({ coding: 8 });
-      this.updateHudState({ hp: nextHp, stress: nextStress, timeLabel: "\uC624\uD6C4" });
+      this.updateHudState({ hp: nextHp, stress: nextStress });
       this.showSystemToast("\uACF5\uBD80\uD558\uAE30 \uC644\uB8CC");
     } else {
       const nextHp = Phaser.Math.Clamp(this.hudState.hp - 6, 0, this.hudState.hpMax);
       const nextStress = Phaser.Math.Clamp(this.hudState.stress - 12, 0, 100);
       this.applyStatDelta({ coding: -3 });
-      this.updateHudState({ hp: nextHp, stress: nextStress, timeLabel: "\uC624\uD6C4" });
+      this.updateHudState({ hp: nextHp, stress: nextStress });
       this.showSystemToast("\uAC8C\uC784\uD558\uAE30 \uC644\uB8CC");
     }
 
@@ -875,7 +888,10 @@ export class MainScene extends Phaser.Scene {
         this.showSystemToast("\uB3C8\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4");
         return false;
       }
-      this.updateHudState({ money: this.hudState.money - cost, timeLabel: "\uC624\uD6C4" });
+      if (!this.spendActionPoint()) {
+        return false;
+      }
+      this.updateHudState({ money: this.hudState.money - cost });
       return true;
     };
 
@@ -2049,10 +2065,51 @@ export class MainScene extends Phaser.Scene {
 
   private updateHudState(next: Partial<HudState>): void {
     this.hudState = { ...this.hudState, ...next };
+    if (typeof next.timeLabel === "string") {
+      const nextTimeIndex = TIME_CYCLE.indexOf(next.timeLabel as (typeof TIME_CYCLE)[number]);
+      if (nextTimeIndex >= 0) {
+        this.timeCycleIndex = nextTimeIndex;
+      }
+    }
+    if (typeof next.dayLabel === "string") {
+      const nextDayIndex = DAY_CYCLE.indexOf(next.dayLabel as (typeof DAY_CYCLE)[number]);
+      if (nextDayIndex >= 0) {
+        this.dayCycleIndex = nextDayIndex;
+      }
+    }
     if (typeof next.stress === "number") {
       this.statsState.stress = Phaser.Math.Clamp(this.hudState.stress, 0, 100);
       this.refreshStatsUi();
     }
     this.hud.applyState(this.hudState);
+  }
+
+  private spendActionPoint(): boolean {
+    if (this.actionPoint <= 0) {
+      this.showSystemToast("AP\uAC00 \uBD80\uC871\uD569\uB2C8\uB2E4");
+      return false;
+    }
+
+    this.actionPoint = Phaser.Math.Clamp(this.actionPoint - 1, 0, this.maxActionPoint);
+    this.timeCycleIndex = (this.timeCycleIndex + 1) % TIME_CYCLE.length;
+
+    const patch: Partial<HudState> = {
+      timeLabel: TIME_CYCLE[this.timeCycleIndex]
+    };
+
+    if (this.timeCycleIndex === 0) {
+      this.actionPoint = this.maxActionPoint;
+      this.dayCycleIndex = (this.dayCycleIndex + 1) % DAY_CYCLE.length;
+      patch.dayLabel = DAY_CYCLE[this.dayCycleIndex];
+      if (this.dayCycleIndex === 0) {
+        patch.week = this.hudState.week + 1;
+      }
+      this.time.delayedCall(180, () => {
+        this.showSystemToast("\uD558\uB8E8\uAC00 \uC9C0\uB0AC\uC2B5\uB2C8\uB2E4");
+      });
+    }
+
+    this.updateHudState(patch);
+    return true;
   }
 }

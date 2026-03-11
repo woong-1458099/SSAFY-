@@ -1,7 +1,10 @@
 import { BootScene } from "@scenes/BootScene";
 import { LoginScene } from "@scenes/LoginScene";
 import { PreloadScene } from "@scenes/PreloadScene";
+import { StartScene } from "@scenes/StartScene";
 import { TitleScene } from "@scenes/TitleScene";
+import { IntroScene } from "@scenes/IntroScene";
+import { NewCharacterScene } from "@scenes/NewCharacterScene";
 import { MainScene } from "@scenes/MainScene";
 import LegacyAimScene from "@scenes/legacyMinigames/AimScene";
 import LegacyBugScene from "@scenes/legacyMinigames/BugScene";
@@ -20,7 +23,10 @@ export const SCENE_REGISTRY = [
   BootScene,
   PreloadScene,
   LoginScene,
+  StartScene,
   TitleScene,
+  IntroScene,
+  NewCharacterScene,
   MainScene,
   LegacyMenuScene,
   LegacyMinigamePauseScene,

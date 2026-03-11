@@ -164,7 +164,9 @@ export class LoginScene extends Phaser.Scene {
           return;
         }
         this.registry.set("authUser", { loginId: id, nickname: id });
-        this.scene.start(SceneKey.Main);
+        this.time.delayedCall(0, () => {
+          this.scene.start(SceneKey.Start);
+        });
         return;
       }
 
