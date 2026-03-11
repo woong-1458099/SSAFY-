@@ -6,10 +6,6 @@ pipeline {
     disableConcurrentBuilds()
   }
 
-  parameters {
-    booleanParam(name: 'FORCE_RUN', defaultValue: false, description: 'Ignore path filter and run all stages')
-  }
-
   environment {
     EC2_HOST = '13.125.26.13'
     REMOTE_PROJECT_DIR = '/home/ubuntu/apps/S14P21E206'
@@ -33,11 +29,23 @@ pipeline {
     stage('Detect Changes') {
       steps {
         script {
+          // Jenkins 원인에 USERIDCAUSE가 있으면 수동 실행으로 간주
+          def manualRun = currentBuild.rawBuild.getCause(hudson.model.Cause$UserIdCause) != null
+          echo "manualRun=${manualRun}"
+
+          if (manualRun) {
+            echo 'Manual build: skip path filter'
+            return
+          }
+
           def raw = sh(returnStdout: true, script: "git diff-tree --no-commit-id --name-only -r HEAD").trim()
           def changed = raw ? raw.split('\n') as List : []
           def frontendChanged = changed.any { it ==~ /^FrontEnd\\/ssafy-maker\\/.+/ }
 
-          if (!frontendChanged && !params.FORCE_RUN) {
+          echo "frontendChanged=${frontendChanged}"
+          echo "changedFilesCount=${changed.size()}"
+
+          if (!frontendChanged) {
             currentBuild.description = 'Skip: FrontEnd/ssafy-maker changes not found'
             currentBuild.result = 'NOT_BUILT'
             error('No frontend changes')
