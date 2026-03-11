@@ -26,3 +26,5 @@ app:
   security:
     jwt:
       enabled: ${JWT_ENABLED:true}
+  keycloak:
+    enabled: ${KEYCLOAK_ENABLED:true}
