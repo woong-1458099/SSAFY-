@@ -38,8 +38,8 @@ export class LoginScene extends Phaser.Scene {
 
   private buildAuthLayout(): void {
     const html = `
-      <div style="width:1120px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:24px;font-family:'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
-        <section style="position:relative;overflow:hidden;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:34px 36px;">
+      <div style="width:1120px;height:640px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:24px;align-items:stretch;font-family:'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+        <section style="position:relative;overflow:hidden;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:34px 36px;">
           <p style="margin:0 0 10px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;">SSAFY Maker</p>
           <h1 style="margin:0;color:#f4fbff;font-size:62px;line-height:0.94;">로그인하고<br/>싸피생 키우기</h1>
           <p style="margin:18px 0 0;color:#b6c5d3;font-size:16px;line-height:1.5;">기존 로그인 UI 흐름 그대로 계정 확인 후 게임에 입장합니다. 미니게임은 게임 내 NPC와 대화하여 시작합니다.</p>
@@ -61,7 +61,7 @@ export class LoginScene extends Phaser.Scene {
             </article>
           </div>
         </section>
-        <section style="position:relative;overflow:hidden;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:24px;">
+        <section style="position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:24px;">
           <div style="margin-bottom:10px;">
             <p style="margin:0 0 6px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;">Player Access</p>
             <h2 style="margin:0;color:#f4fbff;font-size:34px;" id="auth-title">로그인</h2>
@@ -73,7 +73,7 @@ export class LoginScene extends Phaser.Scene {
             <button data-view="findPw" style="padding:12px;border-radius:14px;border:0;cursor:pointer;background:rgba(21,33,48,0.86);color:#c0cfdb;">비밀번호 찾기</button>
           </div>
           <div id="auth-msg" style="margin-top:12px;padding:12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;">로그인 후 게임에 입장할 수 있습니다.</div>
-          <div id="auth-form" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;"></div>
+          <div id="auth-form" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:6px;scrollbar-width:thin;"></div>
           <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">로그인</button>
         </section>
       </div>
