@@ -1,0 +1,207 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  parameters {
+    booleanParam(
+      name: 'SKIP_PATH_FILTER',
+      defaultValue: false,
+      description: 'true면 경로 변경 감지(Diff) 없이 파이프라인을 강제 실행합니다. (수동 테스트용)'
+    )
+  }
+
+  environment {
+    EC2_HOST = '13.125.26.13'
+    REMOTE_PROJECT_DIR = '/home/ubuntu/apps/S14P21E206'
+    SSH_CREDENTIAL_ID = 'ec2-deploy-ssh-v2'
+
+    FRONTEND_SRC_DIR = 'FrontEnd/ssafy-maker'
+    FRONTEND_BUILD_DIR = 'dist'
+    FRONTEND_RELEASES_DIR = '/home/ubuntu/deploy/frontend/prod/releases'
+    FRONTEND_LIVE_DIR = '/home/ubuntu/deploy/frontend/prod/live'
+    NGINX_CONTAINER = 'ingress-nginx-1'
+    FRONTEND_DOMAIN = 'ssafymaker.cloud'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Detect Changes') {
+      steps {
+        script {
+          if (params.SKIP_PATH_FILTER) {
+            echo 'SKIP_PATH_FILTER=true -> path filter skipped'
+            return
+          }
+
+          def raw = sh(
+            returnStdout: true,
+            script: "git rev-parse --verify HEAD~1 >/dev/null 2>&1 && git diff --name-only HEAD~1..HEAD || git show --pretty='' --name-only HEAD"
+          ).trim()
+          def changed = raw ? raw.split('\n') as List : []
+          def frontendChanged = changed.any {
+            it ==~ /^FrontEnd\\/ssafy-maker\\/.+/ ||
+            it == 'jenkins/Jenkinsfile.frontend-master-prod'
+          }
+
+          echo "frontendChanged=${frontendChanged}"
+          echo "changedFilesCount=${changed.size()}"
+
+          if (!frontendChanged) {
+            currentBuild.description = 'Skip: FrontEnd/ssafy-maker changes not found'
+            currentBuild.result = 'NOT_BUILT'
+            error('No frontend changes')
+          }
+        }
+      }
+    }
+
+    stage('Resolve Release Tag') {
+      steps {
+        script {
+          env.RELEASE_TAG = sh(returnStdout: true, script: 'git rev-parse --short=12 HEAD').trim()
+          echo "RELEASE_TAG=${env.RELEASE_TAG}"
+        }
+      }
+    }
+
+    stage('Frontend CI') {
+      steps {
+        sh '''
+          set -eu
+          cd FrontEnd/ssafy-maker
+          npm ci
+          npm run lint
+          npm run build
+          test -d dist
+        '''
+      }
+    }
+
+    stage('Upload Release To EC2') {
+      steps {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
+          sh '''
+            set -eu
+            ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "mkdir -p $FRONTEND_RELEASES_DIR/$RELEASE_TAG"
+
+            tar -C "$FRONTEND_SRC_DIR/$FRONTEND_BUILD_DIR" -cf - . | \
+            ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "rm -rf $FRONTEND_RELEASES_DIR/$RELEASE_TAG/* && tar -xf - -C $FRONTEND_RELEASES_DIR/$RELEASE_TAG"
+          '''
+        }
+      }
+    }
+
+    stage('Sync Release To Live') {
+      steps {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
+          script {
+            env.PREV_LIVE_DIR = env.FRONTEND_LIVE_DIR
+
+            sh '''
+              set -eu
+              ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
+                mkdir -p $FRONTEND_LIVE_DIR &&
+                rsync -a --delete $FRONTEND_RELEASES_DIR/$RELEASE_TAG/ $FRONTEND_LIVE_DIR/ &&
+                docker exec $NGINX_CONTAINER nginx -t &&
+                docker exec $NGINX_CONTAINER nginx -s reload
+              "
+            '''
+            env.SWITCH_DONE = 'true'
+          }
+        }
+      }
+    }
+
+    stage('Health/Smoke Check') {
+      steps {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
+          withEnv([
+            "EC2_HOST=${env.EC2_HOST}",
+            "FRONTEND_DOMAIN=${env.FRONTEND_DOMAIN}",
+            "NGINX_CONTAINER=${env.NGINX_CONTAINER}"
+          ]) {
+            sh '''
+set -eu
+ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "FRONTEND_DOMAIN='$FRONTEND_DOMAIN' NGINX_CONTAINER='$NGINX_CONTAINER' bash -se" <<'EOSSH'
+set -eu
+
+docker exec "$NGINX_CONTAINER" sh -c "wget -qO- --header='Host: $FRONTEND_DOMAIN' http://127.0.0.1/ > /dev/null"
+
+root_code=$(curl -k -s -o /dev/null -w '%{http_code}' "https://$FRONTEND_DOMAIN/" || true)
+api_code=$(curl -k -s -o /dev/null -w '%{http_code}' "https://$FRONTEND_DOMAIN/api/public/checks" || true)
+
+echo "root_code=$root_code"
+echo "api_code=$api_code"
+
+case "$root_code" in
+  200|301|302|304) ;;
+  *) echo "root smoke check failed"; exit 1 ;;
+esac
+
+case "$api_code" in
+  200|401) ;;
+  *) echo "api smoke check failed"; exit 1 ;;
+esac
+EOSSH
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Purge Cloudflare Cache') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'cloudflare-api-token', variable: 'CF_API_TOKEN'),
+          string(credentialsId: 'cloudflare-zone-id', variable: 'CF_ZONE_ID')
+        ]) {
+          sh '''
+            set -eu
+            curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
+              -H "Authorization: Bearer $CF_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data '{"prefixes":["ssafymaker.cloud/assets/game/","ssafymaker.cloud/assets/"]}'
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Frontend PROD deploy success: release=${env.RELEASE_TAG}"
+    }
+
+    failure {
+      script {
+        if (env.SWITCH_DONE == 'true' && env.PREV_LIVE_DIR?.trim()) {
+          sshagent(credentials: ['ec2-deploy-ssh-v2']) {
+            sh '''
+              set -eu
+              ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
+                mkdir -p $FRONTEND_LIVE_DIR &&
+                if [ -d \"$PREV_LIVE_DIR\" ]; then
+                  rsync -a --delete $PREV_LIVE_DIR/ $FRONTEND_LIVE_DIR/ &&
+                  docker exec $NGINX_CONTAINER nginx -t &&
+                  docker exec $NGINX_CONTAINER nginx -s reload
+                fi
+              "
+            '''
+          }
+          echo "Rollback done: ${env.PREV_LIVE_DIR}"
+        } else {
+          echo 'Rollback skipped: previous live dir missing or switch not completed.'
+        }
+      }
+    }
+  }
+}
