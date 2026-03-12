@@ -21,10 +21,10 @@ pipeline {
 
     FRONTEND_SRC_DIR = 'FrontEnd/ssafy-maker'
     FRONTEND_BUILD_DIR = 'dist'
-    FRONTEND_RELEASES_DIR = '/home/ubuntu/deploy/frontend/stg/releases'
-    FRONTEND_LIVE_DIR = '/home/ubuntu/deploy/frontend/stg/live'
+    FRONTEND_RELEASES_DIR = '/home/ubuntu/deploy/frontend/prod/releases'
+    FRONTEND_LIVE_DIR = '/home/ubuntu/deploy/frontend/prod/live'
     NGINX_CONTAINER = 'ingress-nginx-1'
-    FRONTEND_DOMAIN = 'stg.ssafymaker.cloud'
+    FRONTEND_DOMAIN = 'ssafymaker.cloud'
   }
 
   stages {
@@ -49,7 +49,7 @@ pipeline {
           def changed = raw ? raw.split('\n') as List : []
           def frontendChanged = changed.any {
             it ==~ /^FrontEnd\\/ssafy-maker\\/.+/ ||
-            it == 'jenkins/Jenkinsfile.frontend-develop-mr-ci-dev-deploy'
+            it == 'jenkins/Jenkinsfile.frontend-master-cd'
           }
 
           echo "frontendChanged=${frontendChanged}"
@@ -169,7 +169,7 @@ EOSSH
             curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
               -H "Authorization: Bearer $CF_API_TOKEN" \
               -H "Content-Type: application/json" \
-              --data '{"prefixes":["stg.ssafymaker.cloud/assets/game/","stg.ssafymaker.cloud/assets/"]}'
+              --data '{"prefixes":["ssafymaker.cloud/assets/game/","ssafymaker.cloud/assets/"]}'
           '''
         }
       }
@@ -178,7 +178,7 @@ EOSSH
 
   post {
     success {
-      echo "Frontend STG deploy success: release=${env.RELEASE_TAG}"
+      echo "Frontend PROD deploy success: release=${env.RELEASE_TAG}"
     }
 
     failure {
