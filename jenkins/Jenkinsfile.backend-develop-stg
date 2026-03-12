@@ -8,6 +8,11 @@ pipeline {
 
   parameters {
     booleanParam(
+      name: 'SKIP_PATH_FILTER',
+      defaultValue: false,
+      description: 'true면 경로 변경 감지(Diff) 없이 백엔드 파이프라인을 강제 실행합니다. (수동 테스트용)'
+    )
+    booleanParam(
       name: 'AUTO_SWITCH',
       defaultValue: true,
       description: 'Switch nginx upstream after deploy'
@@ -17,13 +22,56 @@ pipeline {
   environment {
     EC2_HOST = '13.125.26.13'
     REMOTE_PROJECT_DIR = '/home/ubuntu/apps/S14P21E206'
-    COMPOSE_ARGS = '-p prod-app --env-file docker/.env.prod -f docker/compose.app.yml'
+    COMPOSE_ARGS = '-p stg-app --env-file docker/.env.stg -f docker/compose.app.yml'
+    JAVA_HOME = '/opt/java/openjdk'
+    PATH = "/opt/java/openjdk/bin:${env.PATH}"
   }
 
   stages {
     stage('Checkout') {
       steps {
         checkout scm
+      }
+    }
+
+    stage('Detect Changes') {
+      steps {
+        script {
+          if (params.SKIP_PATH_FILTER) {
+            echo 'SKIP_PATH_FILTER=true -> backend path filter skipped'
+            return
+          }
+
+          def changed = []
+          for (changeLog in currentBuild.changeSets) {
+            for (entry in changeLog.items) {
+              for (file in entry.affectedFiles) {
+                changed << file.path
+              }
+            }
+          }
+
+          changed = changed.unique()
+
+          def backendChanged = changed.any {
+            it ==~ /^BackEnd\\/.+/ ||
+            it == 'jenkins/Jenkinsfile.backend-develop-stg'
+          }
+
+          echo "backendChanged=${backendChanged}"
+          echo "changedFilesCount=${changed.size()}"
+          if (changed) {
+            echo "changedFiles=${changed.join(', ')}"
+          } else {
+            echo 'No changelog entries found from Jenkins changeSets.'
+          }
+
+          if (!backendChanged) {
+            currentBuild.description = 'Skip: BackEnd changes not found'
+            currentBuild.result = 'NOT_BUILT'
+            error('No BackEnd changes. Stop backend pipeline.')
+          }
+        }
       }
     }
 
@@ -59,7 +107,7 @@ pipeline {
 
     stage('Build Docker Image On EC2') {
       steps {
-        sshagent(credentials: ['ec2-deploy-ssh']) {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           sh """
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
@@ -73,7 +121,7 @@ pipeline {
 
     stage('Detect Active Color') {
       steps {
-        sshagent(credentials: ['ec2-deploy-ssh']) {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           script {
             def activeColor = sh(
               returnStdout: true,
@@ -81,9 +129,9 @@ pipeline {
                 set -eu
                 ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
                   cd ${REMOTE_PROJECT_DIR} &&
-                  if grep -q 'prod-api-green:8080' /home/ubuntu/deploy/nginx/upstreams/active-prod.conf; then
+                  if grep -q 'stg-api-green:8080' /home/ubuntu/deploy/nginx/upstreams/active-stg.conf; then
                     echo green
-                  elif grep -q 'prod-api-blue:8080' /home/ubuntu/deploy/nginx/upstreams/active-prod.conf; then
+                  elif grep -q 'stg-api-blue:8080' /home/ubuntu/deploy/nginx/upstreams/active-stg.conf; then
                     echo blue
                   else
                     echo unknown
@@ -93,7 +141,7 @@ pipeline {
             ).trim()
 
             if (activeColor == 'unknown') {
-              error('Cannot detect active color from active-prod.conf')
+              error('Cannot detect active color from active-stg.conf')
             }
 
             env.ACTIVE_COLOR = activeColor
@@ -106,7 +154,7 @@ pipeline {
 
     stage('Deploy Target Color') {
       steps {
-        sshagent(credentials: ['ec2-deploy-ssh']) {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           sh """
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
@@ -120,7 +168,7 @@ pipeline {
 
     stage('Health Check') {
       steps {
-        sshagent(credentials: ['ec2-deploy-ssh']) {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           withEnv([
             "EC2_HOST=${env.EC2_HOST}",
             "REMOTE_PROJECT_DIR=${env.REMOTE_PROJECT_DIR}",
@@ -132,17 +180,17 @@ ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "TARGET_COLOR='$TARGET_COLOR' R
 set -eu
 cd $REMOTE_PROJECT_DIR
 
-docker compose -p prod-app --env-file docker/.env.prod -f docker/compose.app.yml ps api-$TARGET_COLOR
+docker compose -p stg-app --env-file docker/.env.stg -f docker/compose.app.yml ps api-$TARGET_COLOR
 
 for i in $(seq 1 20); do
-  body=$(docker exec ingress-nginx-1 sh -c "wget -qO- http://prod-api-$TARGET_COLOR:8080/actuator/health" || true)
+  body=$(docker exec ingress-nginx-1 sh -c "wget -qO- http://stg-api-$TARGET_COLOR:8080/actuator/health" || true)
   echo "health[$i]=$body"
   echo "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"' && exit 0
   sleep 3
 done
 
 echo "health check failed"
-docker logs prod-app-api-$TARGET_COLOR-1 --tail 120 || true
+docker logs stg-app-api-$TARGET_COLOR-1 --tail 120 || true
 exit 1
 EOSSH
             '''
@@ -156,12 +204,12 @@ EOSSH
         expression { return params.AUTO_SWITCH }
       }
       steps {
-        sshagent(credentials: ['ec2-deploy-ssh']) {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           sh """
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              printf 'upstream api_upstream_prod {\\n  server prod-api-${env.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active-prod.conf &&
+              printf 'upstream api_upstream_stg {\\n  server stg-api-${env.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active-stg.conf &&
               docker exec ingress-nginx-1 nginx -s reload
             "
           """
@@ -174,7 +222,7 @@ EOSSH
         expression { return params.AUTO_SWITCH }
       }
       steps {
-        sshagent(credentials: ['ec2-deploy-ssh']) {
+        sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           withEnv([
             "EC2_HOST=${env.EC2_HOST}",
             "REMOTE_PROJECT_DIR=${env.REMOTE_PROJECT_DIR}",
@@ -190,13 +238,13 @@ EOSSH
               ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
                 set -eu
                 cd $REMOTE_PROJECT_DIR
-                response=\$(docker exec ingress-nginx-1 sh -c 'wget -qO- http://prod-api-$TARGET_COLOR:8080/actuator/health' || true)
+                response=\$(docker exec ingress-nginx-1 sh -c 'wget -qO- http://stg-api-$TARGET_COLOR:8080/actuator/health' || true)
 
                 if echo \\"\\$response\\" | grep -q '\\"status\\":\\"UP\\"'; then
                   echo verify success
                 else
                   echo verify failed. rollback to \\$rollback_color
-                  printf 'upstream api_upstream_prod {\\\\n  server prod-api-%s:8080;\\\\n}\\\\n' \\$rollback_color > /home/ubuntu/deploy/nginx/upstreams/active-prod.conf
+                  printf 'upstream api_upstream_stg {\\\\n  server stg-api-%s:8080;\\\\n}\\\\n' \\$rollback_color > /home/ubuntu/deploy/nginx/upstreams/active-stg.conf
                   docker exec ingress-nginx-1 nginx -s reload
                   exit 1
                 fi
@@ -210,12 +258,12 @@ EOSSH
 
   post {
     success {
-      echo "PROD deploy success: ${env.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
+      echo "Deploy success: ${env.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
     }
     failure {
       script {
         def rollbackColor = env.ACTIVE_COLOR ?: 'unknown'
-        echo "PROD deploy failed. Rollback target(keep current active): ${rollbackColor}"
+        echo "Deploy failed. Rollback target(keep current active): ${rollbackColor}"
       }
     }
   }
