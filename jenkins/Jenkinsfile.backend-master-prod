@@ -22,7 +22,7 @@ pipeline {
   environment {
     EC2_HOST = '13.125.26.13'
     REMOTE_PROJECT_DIR = '/home/ubuntu/apps/S14P21E206'
-    COMPOSE_ARGS = '-p stg-app --env-file docker/.env.stg -f docker/compose.app.yml'
+    COMPOSE_ARGS = '-p prod-app --env-file docker/.env.prod -f docker/compose.app.yml'
     JAVA_HOME = '/opt/java/openjdk'
     PATH = "/opt/java/openjdk/bin:${env.PATH}"
   }
@@ -55,7 +55,7 @@ pipeline {
 
           def backendChanged = changed.any {
             it ==~ /^BackEnd\\/.+/ ||
-            it == 'jenkins/Jenkinsfile.develop-mr-ci-dev-deploy'
+            it == 'jenkins/Jenkinsfile.backend-master-prod'
           }
 
           echo "backendChanged=${backendChanged}"
@@ -129,9 +129,9 @@ pipeline {
                 set -eu
                 ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
                   cd ${REMOTE_PROJECT_DIR} &&
-                  if grep -q 'stg-api-green:8080' /home/ubuntu/deploy/nginx/upstreams/active-stg.conf; then
+                  if grep -q 'prod-api-green:8080' /home/ubuntu/deploy/nginx/upstreams/active-prod.conf; then
                     echo green
-                  elif grep -q 'stg-api-blue:8080' /home/ubuntu/deploy/nginx/upstreams/active-stg.conf; then
+                  elif grep -q 'prod-api-blue:8080' /home/ubuntu/deploy/nginx/upstreams/active-prod.conf; then
                     echo blue
                   else
                     echo unknown
@@ -141,7 +141,7 @@ pipeline {
             ).trim()
 
             if (activeColor == 'unknown') {
-              error('Cannot detect active color from active-stg.conf')
+              error('Cannot detect active color from active-prod.conf')
             }
 
             env.ACTIVE_COLOR = activeColor
@@ -180,17 +180,17 @@ ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "TARGET_COLOR='$TARGET_COLOR' R
 set -eu
 cd $REMOTE_PROJECT_DIR
 
-docker compose -p stg-app --env-file docker/.env.stg -f docker/compose.app.yml ps api-$TARGET_COLOR
+docker compose -p prod-app --env-file docker/.env.prod -f docker/compose.app.yml ps api-$TARGET_COLOR
 
 for i in $(seq 1 20); do
-  body=$(docker exec ingress-nginx-1 sh -c "wget -qO- http://stg-api-$TARGET_COLOR:8080/actuator/health" || true)
+  body=$(docker exec ingress-nginx-1 sh -c "wget -qO- http://prod-api-$TARGET_COLOR:8080/actuator/health" || true)
   echo "health[$i]=$body"
   echo "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"' && exit 0
   sleep 3
 done
 
 echo "health check failed"
-docker logs stg-app-api-$TARGET_COLOR-1 --tail 120 || true
+docker logs prod-app-api-$TARGET_COLOR-1 --tail 120 || true
 exit 1
 EOSSH
             '''
@@ -209,7 +209,7 @@ EOSSH
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              printf 'upstream api_upstream_stg {\\n  server stg-api-${env.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active-stg.conf &&
+              printf 'upstream api_upstream_prod {\\n  server prod-api-${env.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active-prod.conf &&
               docker exec ingress-nginx-1 nginx -s reload
             "
           """
@@ -238,13 +238,13 @@ EOSSH
               ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
                 set -eu
                 cd $REMOTE_PROJECT_DIR
-                response=\$(docker exec ingress-nginx-1 sh -c 'wget -qO- http://stg-api-$TARGET_COLOR:8080/actuator/health' || true)
+                response=\$(docker exec ingress-nginx-1 sh -c 'wget -qO- http://prod-api-$TARGET_COLOR:8080/actuator/health' || true)
 
                 if echo \\"\\$response\\" | grep -q '\\"status\\":\\"UP\\"'; then
                   echo verify success
                 else
                   echo verify failed. rollback to \\$rollback_color
-                  printf 'upstream api_upstream_stg {\\\\n  server stg-api-%s:8080;\\\\n}\\\\n' \\$rollback_color > /home/ubuntu/deploy/nginx/upstreams/active-stg.conf
+                  printf 'upstream api_upstream_prod {\\\\n  server prod-api-%s:8080;\\\\n}\\\\n' \\$rollback_color > /home/ubuntu/deploy/nginx/upstreams/active-prod.conf
                   docker exec ingress-nginx-1 nginx -s reload
                   exit 1
                 fi
@@ -258,12 +258,12 @@ EOSSH
 
   post {
     success {
-      echo "Deploy success: ${env.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
+      echo "PROD deploy success: ${env.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
     }
     failure {
       script {
         def rollbackColor = env.ACTIVE_COLOR ?: 'unknown'
-        echo "Deploy failed. Rollback target(keep current active): ${rollbackColor}"
+        echo "PROD deploy failed. Rollback target(keep current active): ${rollbackColor}"
       }
     }
   }

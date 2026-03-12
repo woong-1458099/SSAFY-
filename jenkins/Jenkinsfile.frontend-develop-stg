@@ -49,7 +49,7 @@ pipeline {
           def changed = raw ? raw.split('\n') as List : []
           def frontendChanged = changed.any {
             it ==~ /^FrontEnd\\/ssafy-maker\\/.+/ ||
-            it == 'jenkins/Jenkinsfile.frontend-develop-mr-ci-dev-deploy'
+            it == 'jenkins/Jenkinsfile.frontend-develop-stg'
           }
 
           echo "frontendChanged=${frontendChanged}"
