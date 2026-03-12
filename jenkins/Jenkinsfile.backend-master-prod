@@ -34,6 +34,21 @@ pipeline {
       }
     }
 
+    stage('Validate Target Branch') {
+      steps {
+        script {
+          def targetBranch = env.gitlabTargetBranch ?: ''
+          echo "gitlabTargetBranch=${targetBranch}"
+
+          if (targetBranch && targetBranch != 'master') {
+            currentBuild.description = "Skip: target branch is ${targetBranch}"
+            currentBuild.result = 'NOT_BUILT'
+            error("Skip pipeline. Expected target branch=master, actual=${targetBranch}")
+          }
+        }
+      }
+    }
+
     stage('Detect Changes') {
       steps {
         script {
@@ -42,15 +57,11 @@ pipeline {
             return
           }
 
-          def changed = []
-          for (changeLog in currentBuild.changeSets) {
-            for (entry in changeLog.items) {
-              for (file in entry.affectedFiles) {
-                changed << file.path
-              }
-            }
-          }
-
+          def raw = sh(
+            returnStdout: true,
+            script: "git rev-parse --verify HEAD~1 >/dev/null 2>&1 && git diff --name-only HEAD~1..HEAD || git show --pretty='' --name-only HEAD"
+          ).trim()
+          def changed = raw ? raw.split('\n') as List : []
           changed = changed.unique()
 
           def backendChanged = changed.any {
