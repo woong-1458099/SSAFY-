@@ -1,151 +1,205 @@
 ﻿# CI/CD Runbook
 
 ## 1. 목적
-이 문서는 현재 E206 프로젝트의 Jenkins / GitLab / Cloudflare 기반 CI/CD 운영 기준을 정리한다.
+이 문서는 E206 프로젝트의 Jenkins / GitLab / Cloudflare 기반 CI/CD 운영 기준을 정리한다.
 
 ## 2. Jenkins Job 목록
-- `frontend-develop-mr-ci-dev-deploy`
-  - 프론트 STG 배포
-  - Script Path: `jenkins/Jenkinsfile.frontend-develop-mr-ci-dev-deploy`
-- `develop-mr-ci-dev-deploy`
-  - 백엔드 STG 배포
-  - Script Path: `jenkins/Jenkinsfile.develop-mr-ci-dev-deploy`
-- `master-merge-cd`
-  - 운영 배포
-  - Script Path: `jenkins/Jenkinsfile.master-merge-cd`
+
+### STG
+- `backend-develop-stg`
+  - develop 브랜치 기준 STG 백엔드 CI/CD
+  - Script Path: `jenkins/Jenkinsfile.backend-develop-stg`
+
+- `frontend-develop-stg`
+  - develop 브랜치 기준 STG 프론트엔드 CI/CD
+  - Script Path: `jenkins/Jenkinsfile.frontend-develop-stg`
+
+### PROD
+- `backend-master-prod`
+  - master 브랜치 기준 PROD 백엔드 CI/CD
+  - Script Path: `jenkins/Jenkinsfile.backend-master-prod`
+
+- `frontend-master-prod`
+  - master 브랜치 기준 PROD 프론트엔드 CI/CD
+  - Script Path: `jenkins/Jenkinsfile.frontend-master-prod`
+
+### 기타
 - `nightly-deploy`
-  - 예약 배포
+  - 예약 배포 / 실험용
   - Script Path: `jenkins/Jenkinsfile.nightly-deploy`
 
 ## 3. GitLab / Jenkins 연결 기준
+
 ### GitLab Connection
 - Connection name: `E206`
 - GitLab host URL: `https://lab.ssafy.com`
 
 ### Jenkins URL
-- 외부 접근 주소 기준으로 설정한다.
+- 외부 접근 주소 기준으로 설정
 - `localhost` 사용 금지
 
-## 4. 현재 운영 이벤트 기준
-기본 방향은 `merge 완료 후 처리` 중심으로 가져간다.
+### Webhook URL 목록
+- `https://jenkins.ssafymaker.cloud/project/backend-develop-stg`
+- `https://jenkins.ssafymaker.cloud/project/frontend-develop-stg`
+- `https://jenkins.ssafymaker.cloud/project/backend-master-prod`
+- `https://jenkins.ssafymaker.cloud/project/frontend-master-prod`
 
-권장:
-- `Accepted Merge Request Events`
+### Webhook 이벤트
+- `Merge request events`
+- `SSL Verification: enabled`
 
-필요 시 수동 검증:
-- `SKIP_PATH_FILTER=true`
+## 4. 브랜치 / 환경 기준
+- `develop` -> STG
+- `master` -> PROD
 
-## 5. 프론트 파이프라인 기준
+각 Jenkinsfile은 아래 두 기준으로 동작한다.
+1. 대상 브랜치 가드
+2. path filter
+
+즉 관련 없는 MR 이벤트가 들어와도 branch guard 또는 path filter에서 `NOT_BUILT`로 종료된다.
+
+## 5. STG 프론트 파이프라인 기준
 
 ### Jenkinsfile
-- `jenkins/Jenkinsfile.frontend-develop-mr-ci-dev-deploy`
+- `jenkins/Jenkinsfile.frontend-develop-stg`
 
-### 현재 핵심 값
-- `FRONTEND_LIVE_DIR=/home/ubuntu/deploy/frontend/live`
-- `FRONTEND_RELEASES_DIR=/home/ubuntu/deploy/frontend/releases`
-- `NGINX_CONTAINER=stg-app-nginx-1`
+### 핵심 값
+- `FRONTEND_RELEASES_DIR=/home/ubuntu/deploy/frontend/stg/releases`
+- `FRONTEND_LIVE_DIR=/home/ubuntu/deploy/frontend/stg/live`
+- `NGINX_CONTAINER=ingress-nginx-1`
+- `FRONTEND_DOMAIN=stg.ssafymaker.cloud`
 
-### 현재 반영 확인된 줄
-- line 25:
-  - `FRONTEND_LIVE_DIR = '/home/ubuntu/deploy/frontend/live'`
-- line 119~120:
-  - `mkdir -p $FRONTEND_LIVE_DIR`
-  - `rsync -a --delete $FRONTEND_RELEASES_DIR/$RELEASE_TAG/ $FRONTEND_LIVE_DIR/`
-- line 167:
-  - `stage('Purge Cloudflare Cache')`
-- line 170:
-  - `string(credentialsId: 'cloudflare-api-token', variable: 'CF_API_TOKEN')`
-- line 198~199:
-  - rollback 시 `rsync -a --delete $PREV_CURRENT_TARGET/ $FRONTEND_LIVE_DIR/`
-
-### 프론트 배포 흐름
-1. checkout
-2. detect changes
-3. resolve release tag
-4. frontend ci
-5. upload release to EC2
-6. sync release to live
-7. nginx config test / reload
-8. health/smoke check
-9. Cloudflare purge
-
-### 프론트 path filter 기준
+### path filter 기준
 - `FrontEnd/ssafy-maker/**`
-- `jenkins/Jenkinsfile.frontend-develop-mr-ci-dev-deploy`
+- `jenkins/Jenkinsfile.frontend-develop-stg`
 
-### Cloudflare purge
-Jenkins Credentials:
-- `cloudflare-api-token`
-- `cloudflare-zone-id`
+### 배포 흐름
+1. checkout
+2. validate target branch
+3. detect changes
+4. resolve release tag
+5. frontend ci
+6. upload release to EC2
+7. sync release to live
+8. nginx config test / reload
+9. health / smoke check
+10. Cloudflare purge
 
-현재 purge 방식:
-- `prefixes`
+### smoke check 기준
+- root: `200|301|302|304`
+- api: `200|401`
+
+### Cloudflare purge prefixes
+- `stg.ssafymaker.cloud/assets/game/`
+- `stg.ssafymaker.cloud/assets/`
+
+## 6. PROD 프론트 파이프라인 기준
+
+### Jenkinsfile
+- `jenkins/Jenkinsfile.frontend-master-prod`
+
+### 핵심 값
+- `FRONTEND_RELEASES_DIR=/home/ubuntu/deploy/frontend/prod/releases`
+- `FRONTEND_LIVE_DIR=/home/ubuntu/deploy/frontend/prod/live`
+- `NGINX_CONTAINER=ingress-nginx-1`
+- `FRONTEND_DOMAIN=ssafymaker.cloud`
+
+### path filter 기준
+- `FrontEnd/ssafy-maker/**`
+- `jenkins/Jenkinsfile.frontend-master-prod`
+
+### Cloudflare purge prefixes
 - `ssafymaker.cloud/assets/game/`
 - `ssafymaker.cloud/assets/`
 
-## 6. 백엔드 파이프라인 기준
+## 7. STG 백엔드 파이프라인 기준
 
 ### Jenkinsfile
-- `jenkins/Jenkinsfile.develop-mr-ci-dev-deploy`
+- `jenkins/Jenkinsfile.backend-develop-stg`
 
-### 현재 확인된 detect changes 관련 줄
-- line 11:
-  - `SKIP_PATH_FILTER`
-- line 37:
-  - `stage('Detect Changes')`
-- line 40~41:
-  - `SKIP_PATH_FILTER=true -> backend path filter skipped`
-- line 56~58:
-  - `backendChanged` 조건 안에 `jenkins/Jenkinsfile.develop-mr-ci-dev-deploy` 포함
-- line 69:
-  - `if (!backendChanged)`
-
-### 백엔드 path filter 기준
+### path filter 기준
 - `BackEnd/**`
-- `jenkins/Jenkinsfile.develop-mr-ci-dev-deploy`
+- `jenkins/Jenkinsfile.backend-develop-stg`
 
-### 백엔드 STG 기준 값
+### 핵심 값
 - STG 서버: `13.125.26.13`
-- 원격 프로젝트 경로: `/home/ubuntu/apps/S14P21E206`
+- 원격 경로: `/home/ubuntu/apps/S14P21E206`
 - compose args:
   - `-p stg-app --env-file docker/.env.stg -f docker/compose.app.yml`
-- nginx 컨테이너:
-  - `stg-app-nginx-1`
+- nginx container:
+  - `ingress-nginx-1`
+- upstream file:
+  - `/home/ubuntu/deploy/nginx/upstreams/active-stg.conf`
 
-### 백엔드 현재 컨테이너
-- `stg-app-api-green-1`
-- `stg-app-api-blue-1`
+### blue-green 대상
+- `stg-api-blue`
+- `stg-api-green`
 
-현재 이미지 상태:
-- `stg-app-api-green-1 -> s14p21e206-backend:d4bf9b6a61be`
-- `stg-app-api-blue-1 -> 6accf561d7af`
+### 배포 흐름
+1. checkout
+2. validate target branch
+3. detect changes
+4. resolve image tag
+5. test
+6. build jar
+7. build docker image on EC2
+8. detect active color
+9. deploy target color
+10. health check
+11. switch nginx upstream
+12. verify and rollback
 
-## 7. Jenkins Credentials 기준
+## 8. PROD 백엔드 파이프라인 기준
+
+### Jenkinsfile
+- `jenkins/Jenkinsfile.backend-master-prod`
+
+### path filter 기준
+- `BackEnd/**`
+- `jenkins/Jenkinsfile.backend-master-prod`
+
+### 핵심 값
+- PROD 서버: `13.125.26.13`
+- 원격 경로: `/home/ubuntu/apps/S14P21E206`
+- compose args:
+  - `-p prod-app --env-file docker/.env.prod -f docker/compose.app.yml`
+- nginx container:
+  - `ingress-nginx-1`
+- upstream file:
+  - `/home/ubuntu/deploy/nginx/upstreams/active-prod.conf`
+
+### blue-green 대상
+- `prod-api-blue`
+- `prod-api-green`
+
+## 9. Jenkins Credentials 기준
 - `ec2-deploy-ssh-v2`
 - `cloudflare-api-token`
 - `cloudflare-zone-id`
 
-## 8. 현재 운영 도메인
-- 메인 서비스: `ssafymaker.cloud`
+## 10. 현재 운영 도메인
+- PROD: `ssafymaker.cloud`
+- STG: `stg.ssafymaker.cloud`
 - Jenkins: `jenkins.ssafymaker.cloud`
 - n8n: `n8n.ssafymaker.cloud`
 - auth: `auth.ssafymaker.cloud`
 - 운영자 점검용: `j14e206.p.ssafy.io`
 
-## 9. 장애 대응 메모
+## 11. 장애 대응 메모
 
 ### 프론트
-- 정적 에셋 경로는 `public/assets/game` 기준으로 관리
-- Cloudflare가 예전 fallback HTML을 캐시할 수 있으므로 배포 후 purge 필요
-- `current` symlink mount 방식은 사용하지 않는다
-- `live` 고정 디렉터리 + rsync 구조 사용
+- 정적 파일은 environment별 live 디렉터리를 사용
+- symlink 기반 current mount는 사용하지 않음
+- 배포 후 nginx reload + smoke check + Cloudflare purge 수행
 
 ### 백엔드
-- health check는 반드시 EC2 내부 실행
-- JSON `"status":"UP"` 기준 판정
-- `TARGET_COLOR` 전달 여부 확인
+- health check는 반드시 EC2 내부에서 수행
+- health check 기준은 JSON `"status":"UP"`
+- nginx upstream 전환 후 verify / rollback 수행
+- verify / rollback은 ssh heredoc 방식으로 실행하여 Jenkins 로컬 shell 평가 문제를 피함
 
-## 10. 다음 작업
-1. 백엔드 health check / switch / rollback 절차 안정화
-2. merge 완료 기준 운영 정책 고정
-3. 문서 최신화 유지
+## 12. 다음 작업
+1. PROD 프론트 수동 검증 마무리
+2. PROD 백엔드 수동 검증 마무리
+3. 기존 구 job disable
+4. 문서 최신화 유지

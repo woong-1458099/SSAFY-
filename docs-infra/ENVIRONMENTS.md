@@ -3,24 +3,35 @@
 ## 1. env 파일 역할
 - `docker/.env.local`
   - 로컬 개발자용
-  - SSH 터널 기준 DB/Redis/RabbitMQ 연결
+  - SSH 터널 기준 DB / Redis / RabbitMQ 연결
+
 - `docker/.env.stg`
-  - STG 앱 배포용
+  - STG app 배포용
+  - backend alias
+    - `API_BLUE_ALIAS=stg-api-blue`
+    - `API_GREEN_ALIAS=stg-api-green`
+
 - `docker/.env.prod`
-  - PROD 앱 배포용
+  - PROD app 배포용
+  - backend alias
+    - `API_BLUE_ALIAS=prod-api-blue`
+    - `API_GREEN_ALIAS=prod-api-green`
+
 - `docker/.env.ops`
   - Jenkins / n8n / 모니터링용
 
 ## 2. 환경 분리 원칙
 1. local / stg / prod / ops env를 섞지 않는다.
 2. 비밀값은 저장소에 커밋하지 않는다.
-3. stg / prod는 `-p` 기준 compose project를 명확히 분리한다.
-4. 외부 인바운드는 Nginx 단일 진입을 기준으로 한다.
+3. STG / PROD는 `-p` 기준 compose project를 명확히 분리한다.
+4. 외부 인바운드는 공용 nginx 1대를 기준으로 받는다.
+5. STG / PROD backend는 Docker network alias로 내부 식별을 분리한다.
 
 ## 3. compose project 기준
 - STG app: `stg-app`
 - STG data: `stg-data`
 - PROD app: `prod-app`
+- ingress nginx: `ingress`
 
 ## 4. 로컬 개발 기준
 - Docker data stack을 기본으로 띄우지 않는다.
@@ -40,20 +51,47 @@ ssh -L 15432:127.0.0.1:5432 -L 16379:127.0.0.1:6379 -L 15673:127.0.0.1:5672 <use
 - 원격 프로젝트 경로: `/home/ubuntu/apps/S14P21E206`
 - compose project: `stg-app`
 - data compose project: `stg-data`
+- domain: `stg.ssafymaker.cloud`
 
 내부 서비스명 기준 연결:
 - postgres
 - redis
 - rabbitmq
 
-## 6. 도메인 기준
-- 메인 서비스: `ssafymaker.cloud`
+내부 backend alias:
+- `stg-api-blue`
+- `stg-api-green`
+
+## 6. PROD 기준
+- 원격 프로젝트 경로: `/home/ubuntu/apps/S14P21E206`
+- compose project: `prod-app`
+- domain: `ssafymaker.cloud`
+
+내부 서비스명 기준 연결:
+- postgres
+- redis
+- rabbitmq
+
+내부 backend alias:
+- `prod-api-blue`
+- `prod-api-green`
+
+## 7. 도메인 기준
+- PROD 메인 서비스: `ssafymaker.cloud`
+- STG 서비스: `stg.ssafymaker.cloud`
 - Jenkins: `jenkins.ssafymaker.cloud`
 - n8n: `n8n.ssafymaker.cloud`
 - auth: `auth.ssafymaker.cloud`
 - 운영자 점검용: `j14e206.p.ssafy.io`
 
-## 7. 비밀값 관리 기준
+## 8. 데이터 / 인증 운영 기준
+- data stack은 현재 단일 운영 기준으로 유지
+- STG / PROD backend는 같은 postgres / redis / rabbitmq를 사용할 수 있음
+- 단기 프로젝트 기준으로 auth는 단일 인스턴스 유지
+- 외부 인증 도메인은 `auth.ssafymaker.cloud` 기준으로 사용
+
+## 9. 비밀값 관리 기준
 - STG / PROD 실제 값은 Git에 커밋하지 않는다.
 - Jenkins Credentials 또는 별도 비밀 저장소로 관리한다.
+- webhook secret, GitLab access token, EC2 SSH key는 역할을 구분해 관리한다.
 - 문서에는 예시 또는 운영 기준만 적는다.
