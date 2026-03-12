@@ -87,11 +87,11 @@ pipeline {
 
     stage('Test') {
       steps {
-          sh '''
-            set -eu
-            chmod +x BackEnd/gradlew
-            ./BackEnd/gradlew test --no-daemon -p BackEnd
-          '''
+        sh '''
+          set -eu
+          chmod +x BackEnd/gradlew
+          ./BackEnd/gradlew test --no-daemon -p BackEnd
+        '''
       }
     }
 
@@ -129,9 +129,9 @@ pipeline {
                 set -eu
                 ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
                   cd ${REMOTE_PROJECT_DIR} &&
-                  if grep -q 'api-green:8080' /home/ubuntu/deploy/nginx/upstreams/active.conf; then
+                  if grep -q 'stg-api-green:8080' /home/ubuntu/deploy/nginx/upstreams/active-stg.conf; then
                     echo green
-                  elif grep -q 'api-blue:8080' /home/ubuntu/deploy/nginx/upstreams/active.conf; then
+                  elif grep -q 'stg-api-blue:8080' /home/ubuntu/deploy/nginx/upstreams/active-stg.conf; then
                     echo blue
                   else
                     echo unknown
@@ -141,7 +141,7 @@ pipeline {
             ).trim()
 
             if (activeColor == 'unknown') {
-              error('Cannot detect active color from active.conf')
+              error('Cannot detect active color from active-stg.conf')
             }
 
             env.ACTIVE_COLOR = activeColor
@@ -183,7 +183,7 @@ cd $REMOTE_PROJECT_DIR
 docker compose -p stg-app --env-file docker/.env.stg -f docker/compose.app.yml ps api-$TARGET_COLOR
 
 for i in $(seq 1 20); do
-  body=$(docker exec stg-app-nginx-1 sh -c "wget -qO- http://api-$TARGET_COLOR:8080/actuator/health" || true)
+  body=$(docker exec ingress-nginx-1 sh -c "wget -qO- http://stg-api-$TARGET_COLOR:8080/actuator/health" || true)
   echo "health[$i]=$body"
   echo "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"' && exit 0
   sleep 3
@@ -209,8 +209,8 @@ EOSSH
             set -eu
             ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
-              printf 'upstream api_upstream {\\n  server api-${env.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active.conf &&
-              docker exec stg-app-nginx-1 nginx -s reload
+              printf 'upstream api_upstream_stg {\\n  server stg-api-${env.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active-stg.conf &&
+              docker exec ingress-nginx-1 nginx -s reload
             "
           """
         }
@@ -238,14 +238,14 @@ EOSSH
               ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
                 set -eu
                 cd $REMOTE_PROJECT_DIR
-                response=\\$(docker exec stg-app-nginx-1 sh -c 'wget -qO- http://api-$TARGET_COLOR:8080/actuator/health' || true)
+                response=\$(docker exec ingress-nginx-1 sh -c 'wget -qO- http://stg-api-$TARGET_COLOR:8080/actuator/health' || true)
 
                 if echo \\"\\$response\\" | grep -q '\\"status\\":\\"UP\\"'; then
                   echo verify success
                 else
                   echo verify failed. rollback to \\$rollback_color
-                  printf 'upstream api_upstream {\\\\n  server api-%s:8080;\\\\n}\\\\n' \\$rollback_color > /home/ubuntu/deploy/nginx/upstreams/active.conf
-                  docker exec stg-app-nginx-1 nginx -s reload
+                  printf 'upstream api_upstream_stg {\\\\n  server stg-api-%s:8080;\\\\n}\\\\n' \\$rollback_color > /home/ubuntu/deploy/nginx/upstreams/active-stg.conf
+                  docker exec ingress-nginx-1 nginx -s reload
                   exit 1
                 fi
               "
@@ -255,6 +255,7 @@ EOSSH
       }
     }
   }
+
   post {
     success {
       echo "Deploy success: ${env.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
