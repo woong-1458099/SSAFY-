@@ -13,23 +13,23 @@ export type HudState = {
 };
 
 const HUD_COLORS = {
-  panelBg: 0xe8dcc2,
-  panelBorder: 0x8d6b3c,
-  textMain: "#3e2d1a",
-  textSoft: "#6c5434",
-  hpBg: 0xcfbea1,
-  hpFill: 0x7ab35f,
-  stressBg: 0xcfbea1,
-  stressFill: 0xcb7a59,
-  coin: 0xe6c45c,
-  coinEdge: 0x8f6c3c,
-  hintBg: 0x3e2d1a,
-  hintText: "#f8e8c7"
+  panelBg: 0x1f3b63,
+  panelBorder: 0x6ab8ff,
+  textMain: "#e6f3ff",
+  textSoft: "#b9d6f6",
+  hpBg: 0x2b4b75,
+  hpFill: 0x66d1c2,
+  stressBg: 0x2b4b75,
+  stressFill: 0x76a4ff,
+  coin: 0x9ad6ff,
+  coinEdge: 0x4d9be3,
+  hintBg: 0x102a49,
+  hintText: "#e6f3ff"
 } as const;
 
 export class GameHud {
   private readonly scene: Phaser.Scene;
-  private readonly fontFamily = "\"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
+  private readonly fontFamily = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 
   private readonly root: Phaser.GameObjects.Container;
   private readonly leftGroup: Phaser.GameObjects.Container;
@@ -69,7 +69,7 @@ export class GameHud {
     this.scene = scene;
 
     this.root = scene.add.container(0, 0);
-    this.root.setDepth(700);
+    this.root.setDepth(950);
     this.root.setScrollFactor(0);
 
     this.leftGroup = scene.add.container(0, 0);
@@ -164,7 +164,7 @@ export class GameHud {
     const hpRatio = hp / hpMax;
     this.hpBarFill.width = Math.round((this.hpBarMaxWidth - 4) * hpRatio);
     this.hpText.setText(`${hp} / ${hpMax}`);
-    this.hpBarFill.setFillStyle(hpRatio <= 0.3 ? 0xc66d54 : HUD_COLORS.hpFill, 1);
+    this.hpBarFill.setFillStyle(hpRatio <= 0.3 ? 0xe37a7a : HUD_COLORS.hpFill, 1);
 
     this.moneyText.setText(`${Math.max(0, Math.round(this.state.money)).toLocaleString("ko-KR")} G`);
 

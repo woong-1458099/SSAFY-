@@ -1,7 +1,7 @@
 export type PlayerStats = {
   health: number;
-  coding: number;
-  presentation: number;
+  fe: number;
+  be: number;
   teamwork: number;
   luck: number;
   stress: number;
