@@ -37,6 +37,7 @@
 - backend Jenkinsfile에서 nginx upstream 파일을 환경별로 분리
 - backend health check / switch / verify / rollback 구조를 STG / PROD 공통 패턴으로 통일
 - verify/rollback 단계는 ssh heredoc 방식으로 정리하여 로컬 Jenkins shell 평가 문제 제거
+- DB는 STG / PROD가 `stg_app` DB를 공용으로 사용하는 기준으로 정리
 
 ### Jenkins / GitLab webhook
 - Jenkinsfile 이름을 역할 기준으로 재정리
@@ -113,13 +114,11 @@
 - `stg.ssafymaker.cloud` root health 정상
 - `stg.ssafymaker.cloud/api/public/checks`는 인증 정책 기준 `401` 응답 정상
 - Cloudflare purge 정상
+- branch guard / path filter / webhook 분기 동작 정상
 
 ## 지금 남은 작업
-1. PROD 프론트 수동 배포 1회 검증
-2. PROD 백엔드 수동 배포 1회 검증
-3. GitLab webhook 4개 최종 점검
-4. 기존 구 job disable 처리
-5. 관련 문서 최신화 유지
+1. n8n 연동
+2. 모니터링 프로그램
 
 ## 다음에 작업할 때 먼저 볼 것
 1. `WORK_GUIDE.md`
