@@ -2,6 +2,11 @@ import Phaser from "phaser";
 import { SCENE_REGISTRY } from "@app/registry/scenes";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 
+const loaderBaseUrl =
+  typeof window === "undefined"
+    ? import.meta.env.BASE_URL
+    : new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: GAME_CONSTANTS.WIDTH,
@@ -25,6 +30,9 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       gravity: { x: 0, y: 0 },
       debug: false
     }
+  },
+  loader: {
+    baseURL: loaderBaseUrl
   },
   scene: SCENE_REGISTRY,
   scale: {
