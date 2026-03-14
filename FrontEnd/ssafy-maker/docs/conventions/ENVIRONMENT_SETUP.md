@@ -4,8 +4,8 @@
 
 ## 1. 필수 버전
 
-- Node.js: `20.x`
-- npm: `10.x`
+- Node.js: `25.x`
+- npm: `11.x`
 
 `package.json`의 `engines` 및 `.npmrc(engine-strict=true)` 기준을 따릅니다.
 

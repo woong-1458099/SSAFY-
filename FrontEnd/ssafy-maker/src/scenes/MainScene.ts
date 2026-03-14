@@ -7,6 +7,13 @@ import { SaveManager, type SaveSlotData } from "@core/managers/SaveManager";
 import { EventBus } from "@core/events/EventBus";
 import { createBaseModal } from "@features/ui/components/BaseModal";
 import { GameHud, type HudState } from "@features/ui/components/game-hud";
+import {
+  createPanelActionButton,
+  createPanelCloseButton,
+  createPanelOuterBorder,
+  UI_PANEL_INNER_BORDER_COLOR,
+  UI_PANEL_OUTER_BORDER_COLOR
+} from "@features/ui/components/uiPrimitives";
 import { PLACE_BACKGROUND_KEYS } from "@shared/constants/placeBackgroundKeys";
 import {
   NPC_DIALOGUE_SCRIPTS,
@@ -16,6 +23,7 @@ import {
   type NpcDialogueId,
   type StoryStatKey
 } from "@features/story/npcDialogueScripts";
+import type { EndingFlowPayload } from "@features/progression/types/ending";
 
 type TabKey = "inventory" | "stats" | "settings" | "save";
 type EquipmentSlotKey = "keyboard" | "mouse";
@@ -29,6 +37,8 @@ type WorldPlaceNode = {
   label: string;
   x: number;
   y: number;
+  zoneWidth: number;
+  zoneHeight: number;
   movable: boolean;
 };
 
@@ -112,11 +122,11 @@ const STARTER_ITEM_TEMPLATES: InventoryItemTemplate[] = [
 ];
 
 const WORLD_PLACE_NODES: WorldPlaceNode[] = [
-  { id: "home", label: "\uC9D1", x: 190, y: 180, movable: false },
-  { id: "downtown", label: "\uBC88\uD654\uAC00", x: 500, y: 210, movable: true },
-  { id: "campus", label: "\uCEA0\uD37C\uC2A4", x: 830, y: 250, movable: true },
-  { id: "cafe", label: "\uCE74\uD398", x: 420, y: 520, movable: false },
-  { id: "store", label: "\uD3B8\uC758\uC810", x: 760, y: 520, movable: false }
+  { id: "campus", label: "\uCEA0\uD37C\uC2A4", x: 190, y: 180, zoneWidth: 190, zoneHeight: 150, movable: true },
+  { id: "home", label: "\uC9D1", x: 500, y: 210, zoneWidth: 180, zoneHeight: 150, movable: false },
+  { id: "store", label: "\uD3B8\uC758\uC810", x: 830, y: 250, zoneWidth: 150, zoneHeight: 120, movable: false },
+  { id: "cafe", label: "\uCE74\uD398", x: 420, y: 520, zoneWidth: 150, zoneHeight: 120, movable: false },
+  { id: "downtown", label: "\uBC88\uD654\uAC00", x: 730, y: 180, zoneWidth: 170, zoneHeight: 140, movable: true }
 ];
 
 const AREA_LABEL: Record<AreaId, string> = {
@@ -131,10 +141,10 @@ const AREA_ENTRY_POINT: Record<Exclude<AreaId, "world">, { x: number; y: number 
 };
 
 const DOWNTOWN_BUILDINGS: Array<{ id: DowntownBuildingId; label: string; x: number; y: number; w: number; h: number; color: number }> = [
-  { id: "ramenthings", label: "라멘띵스", x: 290, y: 278, w: 150, h: 106, color: 0xd4a875 },
-  { id: "gym", label: "\uD5EC\uC2A4\uC7A5", x: 492, y: 262, w: 166, h: 108, color: 0xb79f86 },
-  { id: "karaoke", label: "\uB178\uB798\uBC29", x: 712, y: 286, w: 160, h: 108, color: 0xc495a3 },
-  { id: "hof", label: "\uD638\uD504", x: 454, y: 406, w: 174, h: 116, color: 0xb48a66 },
+  { id: "gym", label: "\uD5EC\uC2A4\uC7A5", x: 290, y: 278, w: 150, h: 106, color: 0xb79f86 },
+  { id: "ramenthings", label: "라멘띵스", x: 492, y: 262, w: 166, h: 108, color: 0xd4a875 },
+  { id: "hof", label: "\uD638\uD504", x: 712, y: 286, w: 160, h: 108, color: 0xb48a66 },
+  { id: "karaoke", label: "\uB178\uB798\uBC29", x: 454, y: 406, w: 174, h: 116, color: 0xc495a3 },
   { id: "lottery", label: "\uBCF5\uAD8C\uD310\uB9E4\uC810", x: 696, y: 412, w: 190, h: 116, color: 0xbfad77 }
 ];
 
@@ -189,7 +199,15 @@ type SaveSlotView = {
 
 type ParsedTmxLayer = {
   name: string;
+  visible: boolean;
   data: number[][];
+};
+
+type TmxSemanticCode = 0 | 1 | 2;
+
+type TmxSemanticRule = {
+  layerNames: string[];
+  code: TmxSemanticCode;
 };
 
 type TmxRegion = {
@@ -200,6 +218,13 @@ type TmxRegion = {
   area: number;
   centerX: number;
   centerY: number;
+};
+
+type InteractionZone = {
+  centerX: number;
+  centerY: number;
+  width: number;
+  height: number;
 };
 
 type ParsedTmxMap = {
@@ -219,12 +244,26 @@ type AreaCollisionConfig = {
   mapHeight: number;
   tileWidth: number;
   tileHeight: number;
+  tileCodes: TmxSemanticCode[][];
   blocked: boolean[][];
 };
 
 type SerializedInventoryStack = {
   templateId: string;
   quantity: number;
+};
+
+type PlayerAvatarData = {
+  gender: "male" | "female";
+  hair: number;
+  cloth: number;
+};
+
+type PlayerVisualParts = {
+  root: Phaser.GameObjects.Container;
+  base: Phaser.GameObjects.Sprite;
+  clothes: Phaser.GameObjects.Sprite;
+  hair: Phaser.GameObjects.Sprite;
 };
 
 type MainSavePayload = {
@@ -301,18 +340,48 @@ const AREA_TMX_TEXT_KEYS: Record<AreaId, string> = {
 };
 
 const AREA_COLLISION_LAYER_NAMES: Record<AreaId, string[]> = {
-  world: ["col", "obj"],
-  downtown: ["tile layer 3", "tile layer 4"],
-  campus: ["tile layer 2", "tile layer 3"]
+  world: ["tree", "build"],
+  downtown: ["tile layer 5(4)", "tile layer 3"],
+  campus: ["tile layer 4(2)", "tile layer 3"]
 };
 
+const AREA_INTERACTION_LAYER_NAMES: Record<AreaId, string[]> = {
+  world: ["build"],
+  downtown: ["tile layer 4", "tile layer 5(4)"],
+  campus: ["tile layer 2", "tile layer 4(2)"]
+};
+
+const PLAYER_SPRITE_CONFIG = {
+  frameWidth: 16,
+  frameHeight: 32
+} as const;
+const PLAYER_DISPLAY_SCALE = 2.4;
+const PLAYER_WALK_FRAME_COUNT = 4;
+const PLAYER_WALK_FRAME_DURATION = 120;
+
+const DOWNTOWN_TMX_SEMANTIC_RULES: TmxSemanticRule[] = [
+  { layerNames: ["collision building"], code: 2 }
+];
+
+const CAMPUS_TMX_SEMANTIC_RULES: TmxSemanticRule[] = [
+  { layerNames: ["collision building"], code: 2 }
+];
+
 export class MainScene extends Phaser.Scene {
-  private player!: Phaser.Physics.Arcade.Image;
+  private player!: Phaser.Physics.Arcade.Sprite;
+  private playerAvatar: PlayerAvatarData = {
+    gender: "male",
+    hair: 1,
+    cloth: 1
+  };
+  private playerVisual?: PlayerVisualParts;
+  private playerFacing: "left" | "right" | "up" | "down" = "down";
   private interactionTarget!: Phaser.GameObjects.Rectangle;
   private interactionLabel!: Phaser.GameObjects.Text;
   private worldMapRoot?: Phaser.GameObjects.Container;
   private downtownMapRoot?: Phaser.GameObjects.Container;
   private campusMapRoot?: Phaser.GameObjects.Container;
+  private worldPlaceInteractionZones: Partial<Record<WorldPlaceId, Phaser.Geom.Rectangle>> = {};
   private areaCollisionConfigs: Partial<Record<AreaId, AreaCollisionConfig>> = {};
   private lastSafePlayerPosition: { x: number; y: number } | null = null;
   private worldPlaceViews: Partial<Record<WorldPlaceId, { marker: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }>> = {};
@@ -328,6 +397,8 @@ export class MainScene extends Phaser.Scene {
   private mapKey?: Phaser.Input.Keyboard.Key;
   private upKey?: Phaser.Input.Keyboard.Key;
   private downKey?: Phaser.Input.Keyboard.Key;
+  private endingDebugKey?: Phaser.Input.Keyboard.Key;
+  private endingFlowStarted = false;
   private readonly saveManager = new SaveManager(6);
   private saveSlots: Record<string, SaveSlotData | null> = {};
   private saveSlotViews: SaveSlotView[] = [];
@@ -335,6 +406,8 @@ export class MainScene extends Phaser.Scene {
   private selectedSaveSlotId = "slot-1";
   private readonly uiFontFamily = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
   private readonly audioManager = new AudioManager();
+  private readonly uiPanelInnerBorderColor = UI_PANEL_INNER_BORDER_COLOR;
+  private readonly uiPanelOuterBorderColor = UI_PANEL_OUTER_BORDER_COLOR;
   private systemToastRoot?: Phaser.GameObjects.Container;
   private systemToastTimer?: Phaser.Time.TimerEvent;
   private tooltipRoot?: Phaser.GameObjects.Container;
@@ -406,6 +479,10 @@ export class MainScene extends Phaser.Scene {
     super(SceneKey.Main);
   }
 
+  preload(): void {
+    this.preloadPlayerAvatarAssets();
+  }
+
   create(): void {
     this.cameras.main.setBackgroundColor("#3e7d4a");
     this.cameras.main.roundPixels = true;
@@ -413,17 +490,8 @@ export class MainScene extends Phaser.Scene {
 
     this.buildAreaMaps();
 
-    if (!this.textures.exists("player-core")) {
-      const g = this.add.graphics();
-      g.fillStyle(0xffdd91, 1);
-      g.fillRect(0, 0, 28, 28);
-      g.generateTexture("player-core", 28, 28);
-      g.destroy();
-    }
-
-    this.player = this.physics.add.image(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), "player-core");
-    this.player.setCollideWorldBounds(true);
-    this.player.setDepth(30);
+    this.playerAvatar = this.getSelectedPlayerAvatar();
+    this.createPlayerAvatar();
 
     this.interactionTarget = this.add.rectangle(0, 0, 28, 34, 0x6e4f2b, 1);
     this.interactionTarget.setStrokeStyle(2, 0x4b351b, 1);
@@ -444,6 +512,8 @@ export class MainScene extends Phaser.Scene {
     this.mapKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.upKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
     this.downKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+    // Development shortcut for verifying the ending flow without waiting for week 6.
+    this.endingDebugKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F8);
 
     this.buildEscapeMenu();
     this.buildShop();
@@ -458,8 +528,10 @@ export class MainScene extends Phaser.Scene {
       this.updateCarriedItemPosition(pointer.worldX, pointer.worldY);
     });
     this.input.on("wheel", this.handleMenuWheel, this);
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, this.syncPlayerAvatarVisuals, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.syncPlayerAvatarVisuals, this);
       this.input.off("wheel", this.handleMenuWheel, this);
       this.hud.destroy();
       this.pendingInventoryPickup?.timer.destroy();
@@ -481,6 +553,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   update(): void {
+    if (this.endingDebugKey && Phaser.Input.Keyboard.JustDown(this.endingDebugKey)) {
+      this.startEndingFlow();
+      return;
+    }
+
     if (this.escapeKey && Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
       if (this.dialogueOpen) {
         this.closeDialogue();
@@ -491,7 +568,6 @@ export class MainScene extends Phaser.Scene {
         return;
       }
       if (this.placePopupOpen) {
-        this.closePlacePopup();
         return;
       }
       this.toggleMenu();
@@ -500,6 +576,7 @@ export class MainScene extends Phaser.Scene {
 
     if (this.dialogueOpen) {
       this.player.setVelocity(0, 0);
+      this.updatePlayerAvatarAnimation({ x: 0, y: 0 });
       this.hud.setInteractionPrompt("E \uB300\uD654 \uC9C4\uD589 / \uC120\uD0DD  |  ESC \uC885\uB8CC");
       this.handleDialogueInput();
       return;
@@ -507,19 +584,30 @@ export class MainScene extends Phaser.Scene {
 
     if (this.menuOpen) {
       this.player.setVelocity(0, 0);
+      this.updatePlayerAvatarAnimation({ x: 0, y: 0 });
       this.hud.setInteractionPrompt(null);
       return;
     }
 
     if (this.shopOpen) {
       this.player.setVelocity(0, 0);
-      this.hud.setInteractionPrompt(null);
+      this.updatePlayerAvatarAnimation({ x: 0, y: 0 });
+      if (this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+        this.closeShop();
+        return;
+      }
+      this.hud.setInteractionPrompt("E / ESC 닫기");
       return;
     }
 
     if (this.placePopupOpen) {
       this.player.setVelocity(0, 0);
-      this.hud.setInteractionPrompt(null);
+      this.updatePlayerAvatarAnimation({ x: 0, y: 0 });
+      if (this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+        this.closePlacePopup();
+        return;
+      }
+      this.hud.setInteractionPrompt("E 닫기");
       return;
     }
 
@@ -534,6 +622,7 @@ export class MainScene extends Phaser.Scene {
 
     if (this.currentArea === "world") {
       this.player.setVelocity(move.x * GAME_CONSTANTS.PLAYER_SPEED, move.y * GAME_CONSTANTS.PLAYER_SPEED);
+      this.updatePlayerAvatarAnimation(move);
       const nearbyPlace = this.getNearestWorldPlace(74);
       this.highlightWorldPlace(nearbyPlace?.id ?? null);
       this.hud.setInteractionPrompt(
@@ -544,11 +633,13 @@ export class MainScene extends Phaser.Scene {
       if (nearbyPlace && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
         this.handleWorldPlaceInteraction(nearbyPlace);
       }
+      this.enforceAreaCollision();
       return;
     }
 
     this.highlightWorldPlace(null);
     this.player.setVelocity(move.x * GAME_CONSTANTS.PLAYER_SPEED, move.y * GAME_CONSTANTS.PLAYER_SPEED);
+    this.updatePlayerAvatarAnimation(move);
 
     const areaNpcConfig = this.getAreaNpcConfig(this.currentArea);
     const nearNpc = this.isNearPoint(this.interactionTarget.x, this.interactionTarget.y, 74);
@@ -598,6 +689,17 @@ export class MainScene extends Phaser.Scene {
       worldObjects.push(worldBg, worldBoard, horizontalRoad, verticalRoad);
     }
 
+    const tmxWorldZones = worldTmxBounds
+      ? this.buildInteractionZonesFromTmx(
+          AREA_TMX_TEXT_KEYS.world,
+          worldTmxBounds,
+          AREA_INTERACTION_LAYER_NAMES.world,
+          WORLD_PLACE_NODES.map((node) => ({ id: node.id, x: node.x, y: node.y })),
+          4,
+          128
+        )
+      : null;
+
     const title = this.add.text(
       this.px(GAME_CONSTANTS.WIDTH / 2),
       86,
@@ -609,15 +711,30 @@ export class MainScene extends Phaser.Scene {
 
     WORLD_PLACE_NODES.forEach((place) => {
       const mapped = this.mapPointToAreaBounds(place.x, place.y, worldTmxBounds);
+      const zone = tmxWorldZones?.[place.id];
+      const mappedZoneSize = zone
+        ? { width: zone.width, height: zone.height }
+        : this.mapSizeToAreaBounds(place.zoneWidth, place.zoneHeight, worldTmxBounds);
+      const zoneCenter = zone ? { x: zone.centerX, y: zone.centerY } : mapped;
       const markerSize = this.mapSizeToAreaBounds(40, 28, worldTmxBounds);
-      const marker = this.add.rectangle(mapped.x, mapped.y, markerSize.width, markerSize.height, place.movable ? 0xe7d593 : 0xc9a67f, 1);
+      const marker = this.add.rectangle(zoneCenter.x, zoneCenter.y, markerSize.width, markerSize.height, place.movable ? 0xe7d593 : 0xc9a67f, 1);
       marker.setStrokeStyle(2, 0x5d4426, 1);
+      marker.setVisible(false);
 
-      const mappedLabel = this.mapPointToAreaBounds(place.x, place.y + 28, worldTmxBounds);
+      const mappedLabel = zone
+        ? { x: zone.centerX, y: zone.centerY + mappedZoneSize.height / 2 + 8 }
+        : this.mapPointToAreaBounds(place.x, place.y + 28, worldTmxBounds);
       const label = this.add.text(mappedLabel.x, mappedLabel.y, place.label, this.getBodyStyle(18, "#3d2d1d", "bold"));
       label.setOrigin(0.5, 0);
+      label.setVisible(false);
 
       this.worldPlaceViews[place.id] = { marker, label };
+      this.worldPlaceInteractionZones[place.id] = new Phaser.Geom.Rectangle(
+        this.px(zoneCenter.x - mappedZoneSize.width / 2),
+        this.px(zoneCenter.y - mappedZoneSize.height / 2),
+        this.px(mappedZoneSize.width),
+        this.px(mappedZoneSize.height)
+      );
       worldObjects.push(marker, label);
     });
 
@@ -631,7 +748,16 @@ export class MainScene extends Phaser.Scene {
     this.areaCollisionConfigs.downtown = downtownTmxBounds
       ? this.buildAreaCollisionConfigFromTmx(AREA_TMX_TEXT_KEYS.downtown, downtownTmxBounds, AREA_COLLISION_LAYER_NAMES.downtown) ?? undefined
       : undefined;
-    const downtownZones = downtownUsesTmx ? this.buildDowntownInteractionZonesFromTmx(AREA_TMX_TEXT_KEYS.downtown, downtownTmxBounds) : null;
+    const downtownZones = downtownTmxBounds
+      ? this.buildInteractionZonesFromTmx(
+          AREA_TMX_TEXT_KEYS.downtown,
+          downtownTmxBounds,
+          AREA_INTERACTION_LAYER_NAMES.downtown,
+          DOWNTOWN_BUILDINGS.map((building) => ({ id: building.id, x: building.x, y: building.y })),
+          4,
+          96
+        )
+      : null;
     const areaTitle = this.add.text(
       this.px(GAME_CONSTANTS.WIDTH / 2),
       82,
@@ -663,10 +789,10 @@ export class MainScene extends Phaser.Scene {
     DOWNTOWN_BUILDINGS.forEach((building) => {
       const zone = downtownZones?.[building.id];
       const mappedCenter = zone
-        ? { x: this.px(zone.centerX), y: this.px(zone.centerY) }
+        ? { x: zone.centerX, y: zone.centerY }
         : this.mapPointToAreaBounds(building.x, building.y, downtownTmxBounds);
       const mappedSize = zone
-        ? { width: this.px(zone.width), height: this.px(zone.height) }
+        ? { width: zone.width, height: zone.height }
         : this.mapSizeToAreaBounds(building.w, building.h, downtownTmxBounds);
 
       const hitBox = this.add.rectangle(
@@ -735,6 +861,103 @@ export class MainScene extends Phaser.Scene {
     this.campusMapRoot = campusRoot;
   }
 
+  private preloadPlayerAvatarAssets(): void {
+    this.load.spritesheet("base_male", "../../assets/game/character/base_male.png", PLAYER_SPRITE_CONFIG);
+    this.load.spritesheet("base_female", "../../assets/game/character/base_female.png", PLAYER_SPRITE_CONFIG);
+
+    for (let i = 1; i <= 3; i += 1) {
+      this.load.spritesheet(`male_hair_${i}`, `../../assets/game/character/male_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
+      this.load.spritesheet(`female_hair_${i}`, `../../assets/game/character/female_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
+      this.load.spritesheet(`male_clothes_${i}`, `../../assets/game/character/male_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
+      this.load.spritesheet(`female_clothes_${i}`, `../../assets/game/character/female_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
+    }
+  }
+
+  private getSelectedPlayerAvatar(): PlayerAvatarData {
+    const raw = this.registry.get("playerData");
+    const playerData = raw as Partial<PlayerAvatarData> | undefined;
+    const gender = playerData?.gender === "female" ? "female" : "male";
+    const hair = Phaser.Math.Clamp(Math.round(playerData?.hair ?? 1), 1, 3);
+    const cloth = Phaser.Math.Clamp(Math.round(playerData?.cloth ?? 1), 1, 3);
+    return { gender, hair, cloth };
+  }
+
+  private createPlayerAvatar(): void {
+    const x = this.px(GAME_CONSTANTS.WIDTH / 2);
+    const y = this.px(GAME_CONSTANTS.HEIGHT / 2);
+    const baseKey = `base_${this.playerAvatar.gender}`;
+
+    this.player = this.physics.add.sprite(x, y, baseKey, 0);
+    this.player.setCollideWorldBounds(true);
+    this.player.setDepth(29);
+    this.player.setAlpha(0.01);
+    this.player.setScale(1);
+    this.player.setOrigin(0.5, 0.72);
+    this.player.setSize(18, 12);
+    this.player.setOffset(7, 20);
+    this.player.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    this.playerVisual = this.buildPlayerVisual(x, y);
+    this.syncPlayerAvatarVisuals();
+    this.updatePlayerAvatarAnimation({ x: 0, y: 0 });
+  }
+
+  private syncPlayerAvatarVisuals(): void {
+    if (!this.player || !this.playerVisual) return;
+
+    this.playerVisual.root.setPosition(this.player.x, this.player.y + 10);
+    this.playerVisual.root.setVisible(this.player.visible);
+  }
+
+  private updatePlayerAvatarAnimation(move: { x: number; y: number }): void {
+    if (!this.playerVisual) return;
+
+    const isMoving = Math.abs(move.x) > 0.01 || Math.abs(move.y) > 0.01;
+    if (Math.abs(move.x) > Math.abs(move.y) && Math.abs(move.x) > 0.01) {
+      this.playerFacing = move.x < 0 ? "left" : "right";
+    } else if (Math.abs(move.y) > 0.01) {
+      this.playerFacing = move.y < 0 ? "up" : "down";
+    }
+
+    const visual = this.playerVisual;
+
+    visual.root.setScale(this.playerFacing === "left" ? -PLAYER_DISPLAY_SCALE : PLAYER_DISPLAY_SCALE, PLAYER_DISPLAY_SCALE);
+    const frame = isMoving ? Math.floor(this.time.now / PLAYER_WALK_FRAME_DURATION) % PLAYER_WALK_FRAME_COUNT : 0;
+    visual.base.setFrame(frame);
+    visual.clothes.setFrame(frame);
+    visual.hair.setFrame(frame);
+  }
+
+  private buildPlayerVisual(x: number, y: number): PlayerVisualParts {
+    const gender = this.playerAvatar.gender;
+    const base = this.add.sprite(0, 0, `base_${gender}`, 0).setOrigin(0.5, 1);
+    const clothes = this.add
+      .sprite(0, 0, `${gender}_clothes_${this.playerAvatar.cloth}`, 0)
+      .setOrigin(0.5, 1);
+    const hair = this.add
+      .sprite(0, 0, `${gender}_hair_${this.playerAvatar.hair}`, 0)
+      .setOrigin(0.5, 1);
+
+    base.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    clothes.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    hair.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    base.name = "base";
+    clothes.name = "clothes";
+    hair.name = "hair";
+
+    const root = this.add.container(x, y + 10, [base, clothes, hair]);
+    root.setDepth(32);
+    root.setScale(PLAYER_DISPLAY_SCALE);
+
+    return {
+      root,
+      base,
+      clothes,
+      hair,
+    };
+  }
+
   private buildAreaTmxBackground(root: Phaser.GameObjects.Container, textKey: string): AreaRenderBounds {
     const tmxText = this.cache.text.get(textKey);
     if (typeof tmxText !== "string" || tmxText.length === 0) {
@@ -749,7 +972,7 @@ export class MainScene extends Phaser.Scene {
       return null;
     }
 
-    const layersToRender = parsed.layers;
+    const layersToRender = parsed.layers.filter((layer) => layer.visible);
     if (layersToRender.length === 0) {
       return null;
     }
@@ -863,6 +1086,7 @@ export class MainScene extends Phaser.Scene {
 
       layers.push({
         name: layerNode.getAttribute("name") ?? `layer_${idx + 1}`,
+        visible: layerNode.getAttribute("visible") !== "0",
         data: rowData
       });
     });
@@ -871,10 +1095,14 @@ export class MainScene extends Phaser.Scene {
     return { width, height, tileWidth, tileHeight, tilesets, layers };
   }
 
-  private buildDowntownInteractionZonesFromTmx(
+  private buildInteractionZonesFromTmx<T extends string>(
     textKey: string,
-    bounds: AreaRenderBounds
-  ): Partial<Record<DowntownBuildingId, { centerX: number; centerY: number; width: number; height: number }>> | null {
+    bounds: AreaRenderBounds,
+    layerNames: string[],
+    targets: Array<{ id: T; x: number; y: number }>,
+    minAreaTiles: number,
+    maxAreaTiles: number
+  ): Partial<Record<T, InteractionZone>> | null {
     if (!bounds) return null;
     const tmxText = this.cache.text.get(textKey);
     if (typeof tmxText !== "string" || tmxText.length === 0) return null;
@@ -882,30 +1110,32 @@ export class MainScene extends Phaser.Scene {
     const parsed = this.parseTmxMap(tmxText);
     if (!parsed) return null;
 
-    const combined = this.combineLayersByNames(parsed, AREA_COLLISION_LAYER_NAMES.downtown);
+    const combined = this.combineLayersByNames(parsed, layerNames);
     if (!combined) return null;
-    const regions = this.extractTmxConnectedRegions(combined, 6).filter((region) => region.area >= 8 && region.area <= 48);
+    const targetIds = targets.map((target) => target.id);
+    const baseTargets = targets.reduce(
+      (acc, target) => {
+        acc[target.id] = this.screenPointToMapTile(target.x, target.y, bounds, parsed);
+        return acc;
+      },
+      {} as Record<T, { tileX: number; tileY: number }>
+    );
+
+    const regions = this.expandInteractionRegions(
+      this.extractTmxConnectedRegions(combined, minAreaTiles).filter((region) => region.area >= minAreaTiles && region.area <= maxAreaTiles),
+      baseTargets
+    );
     if (regions.length === 0) return null;
 
     const mapPixelWidth = parsed.width * parsed.tileWidth;
     const mapPixelHeight = parsed.height * parsed.tileHeight;
     const scaleX = bounds.width / mapPixelWidth;
     const scaleY = bounds.height / mapPixelHeight;
-    const idOrder: DowntownBuildingId[] = ["ramenthings", "gym", "karaoke", "hof", "lottery"];
-    const baseTargets = DOWNTOWN_BUILDINGS
-      .filter((building) => idOrder.includes(building.id))
-      .reduce(
-        (acc, building) => {
-          acc[building.id] = this.screenPointToMapTile(building.x, building.y, bounds, parsed);
-          return acc;
-        },
-        {} as Record<DowntownBuildingId, { tileX: number; tileY: number }>
-      );
 
     const remaining = [...regions];
-    const zones: Partial<Record<DowntownBuildingId, { centerX: number; centerY: number; width: number; height: number }>> = {};
+    const zones: Partial<Record<T, InteractionZone>> = {};
 
-    idOrder.forEach((id) => {
+    targetIds.forEach((id) => {
       const target = baseTargets[id];
       if (!target || remaining.length === 0) return;
       let bestIdx = 0;
@@ -942,6 +1172,54 @@ export class MainScene extends Phaser.Scene {
     return zones;
   }
 
+  private expandInteractionRegions<T extends string>(
+    regions: TmxRegion[],
+    targets: Record<T, { tileX: number; tileY: number }>
+  ): TmxRegion[] {
+    const expanded: TmxRegion[] = [];
+
+    regions.forEach((region) => {
+      const targetValues = Object.values(targets) as Array<{ tileX: number; tileY: number }>;
+      const containedTargets = targetValues
+        .filter(
+          (target) =>
+            target.tileX >= region.minX &&
+            target.tileX <= region.maxX &&
+            target.tileY >= region.minY &&
+            target.tileY <= region.maxY
+        )
+        .sort((a, b) => a.tileX - b.tileX);
+
+      if (containedTargets.length <= 1 || region.maxX <= region.minX) {
+        expanded.push(region);
+        return;
+      }
+
+      const splitEdges = [region.minX];
+      for (let i = 0; i < containedTargets.length - 1; i += 1) {
+        splitEdges.push(Math.floor((containedTargets[i].tileX + containedTargets[i + 1].tileX) / 2));
+      }
+      splitEdges.push(region.maxX + 1);
+
+      for (let i = 0; i < containedTargets.length; i += 1) {
+        const minX = splitEdges[i];
+        const maxX = splitEdges[i + 1] - 1;
+        const centerX = (minX + maxX) / 2;
+        expanded.push({
+          minX,
+          maxX,
+          minY: region.minY,
+          maxY: region.maxY,
+          area: Math.max(1, (maxX - minX + 1) * (region.maxY - region.minY + 1)),
+          centerX,
+          centerY: region.centerY
+        });
+      }
+    });
+
+    return expanded;
+  }
+
   private combineLayersByNames(parsed: ParsedTmxMap, layerNames: string[]): number[][] | null {
     const names = new Set(layerNames.map((name) => name.trim().toLowerCase()));
     const layers = parsed.layers.filter((layer) => names.has(layer.name.trim().toLowerCase()));
@@ -955,6 +1233,63 @@ export class MainScene extends Phaser.Scene {
       }
     });
     return combined;
+  }
+
+  private buildTmxSemanticGrid(parsed: ParsedTmxMap, rules: TmxSemanticRule[]): TmxSemanticCode[][] | null {
+    const grid = Array.from({ length: parsed.height }, () =>
+      Array.from({ length: parsed.width }, () => 0 as TmxSemanticCode)
+    );
+    let matchedLayer = false;
+
+    rules.forEach((rule) => {
+      const combined = this.combineLayersByNames(parsed, rule.layerNames);
+      if (!combined) return;
+      matchedLayer = true;
+
+      for (let y = 0; y < parsed.height; y += 1) {
+        for (let x = 0; x < parsed.width; x += 1) {
+          if (combined[y]?.[x]) {
+            grid[y][x] = rule.code;
+          }
+        }
+      }
+    });
+
+    return matchedLayer ? grid : null;
+  }
+
+  private createAreaCollisionConfigFromSemanticGrid(
+    bounds: Phaser.Geom.Rectangle,
+    parsed: ParsedTmxMap,
+    tileCodes: TmxSemanticCode[][],
+    blockedCodes: TmxSemanticCode[]
+  ): AreaCollisionConfig {
+    const blockedCodeSet = new Set<TmxSemanticCode>(blockedCodes);
+
+    return {
+      bounds,
+      mapWidth: parsed.width,
+      mapHeight: parsed.height,
+      tileWidth: parsed.tileWidth,
+      tileHeight: parsed.tileHeight,
+      tileCodes,
+      blocked: tileCodes.map((row) => row.map((cell) => blockedCodeSet.has(cell)))
+    };
+  }
+
+  private buildAreaCollisionConfigFromTmxSemanticRules(
+    textKey: string,
+    bounds: Phaser.Geom.Rectangle,
+    rules: TmxSemanticRule[],
+    blockedCodes: TmxSemanticCode[]
+  ): AreaCollisionConfig | null {
+    const tmxText = this.cache.text.get(textKey);
+    if (typeof tmxText !== "string" || tmxText.length === 0) return null;
+    const parsed = this.parseTmxMap(tmxText);
+    if (!parsed) return null;
+    const tileCodes = this.buildTmxSemanticGrid(parsed, rules);
+    if (!tileCodes) return null;
+    return this.createAreaCollisionConfigFromSemanticGrid(bounds, parsed, tileCodes, blockedCodes);
   }
 
   private buildAreaCollisionConfigFromTmx(textKey: string, bounds: Phaser.Geom.Rectangle, layerNames: string[]): AreaCollisionConfig | null {
@@ -971,6 +1306,7 @@ export class MainScene extends Phaser.Scene {
       mapHeight: parsed.height,
       tileWidth: parsed.tileWidth,
       tileHeight: parsed.tileHeight,
+      tileCodes: combined.map((row) => row.map((cell) => (cell !== 0 ? 1 : 0 as TmxSemanticCode))),
       blocked: combined.map((row) => row.map((cell) => cell !== 0))
     };
   }
@@ -989,6 +1325,41 @@ export class MainScene extends Phaser.Scene {
       tileX: Math.floor(localX / parsed.tileWidth),
       tileY: Math.floor(localY / parsed.tileHeight)
     };
+  }
+
+  private findNearestWalkablePoint(area: AreaId, desiredX: number, desiredY: number): { x: number; y: number } {
+    const config = this.areaCollisionConfigs[area];
+    if (!config) {
+      return { x: this.px(desiredX), y: this.px(desiredY) };
+    }
+
+    const desiredTile = this.screenPointToMapTile(desiredX, desiredY, config.bounds, {
+      width: config.mapWidth,
+      height: config.mapHeight,
+      tileWidth: config.tileWidth,
+      tileHeight: config.tileHeight
+    });
+
+    const clampTileX = Phaser.Math.Clamp(desiredTile.tileX, 0, config.mapWidth - 1);
+    const clampTileY = Phaser.Math.Clamp(desiredTile.tileY, 0, config.mapHeight - 1);
+    if (!config.blocked[clampTileY]?.[clampTileX]) {
+      return { x: this.px(desiredX), y: this.px(desiredY) };
+    }
+
+    const maxRadius = Math.max(config.mapWidth, config.mapHeight);
+    for (let radius = 1; radius <= maxRadius; radius += 1) {
+      for (let tileY = Math.max(0, clampTileY - radius); tileY <= Math.min(config.mapHeight - 1, clampTileY + radius); tileY += 1) {
+        for (let tileX = Math.max(0, clampTileX - radius); tileX <= Math.min(config.mapWidth - 1, clampTileX + radius); tileX += 1) {
+          if (config.blocked[tileY]?.[tileX]) continue;
+
+          const screenX = config.bounds.x + ((tileX + 0.5) * config.tileWidth * config.bounds.width) / (config.mapWidth * config.tileWidth);
+          const screenY = config.bounds.y + ((tileY + 0.5) * config.tileHeight * config.bounds.height) / (config.mapHeight * config.tileHeight);
+          return { x: this.px(screenX), y: this.px(screenY) };
+        }
+      }
+    }
+
+    return { x: this.px(desiredX), y: this.px(desiredY) };
   }
 
   private isBlockedByAreaCollision(area: AreaId, x: number, y: number): boolean {
@@ -1122,10 +1493,11 @@ export class MainScene extends Phaser.Scene {
     if (area === "world") {
       const spawnFrom = WORLD_PLACE_NODES.find((node) => node.id === worldPlace) ?? WORLD_PLACE_NODES[1];
       this.lastSelectedWorldPlace = spawnFrom.id;
-      this.player.setPosition(this.px(spawnFrom.x), this.px(spawnFrom.y + 52));
       this.player.setVisible(true);
       const worldBody = this.player.body;
       if (worldBody) worldBody.enable = true;
+      const worldSpawn = this.buildWorldSpawnPoint(spawnFrom.id, spawnFrom.x, spawnFrom.y + 52);
+      this.player.setPosition(worldSpawn.x, worldSpawn.y);
       this.highlightWorldPlace(spawnFrom.id);
       this.interactionTarget.setVisible(false);
       this.interactionLabel.setVisible(false);
@@ -1140,7 +1512,8 @@ export class MainScene extends Phaser.Scene {
     this.player.setVisible(true);
     const areaBody = this.player.body;
     if (areaBody) areaBody.enable = true;
-    this.player.setPosition(this.px(spawn.x), this.px(spawn.y));
+    const resolvedSpawn = this.findNearestWalkablePoint(area, spawn.x, spawn.y);
+    this.player.setPosition(resolvedSpawn.x, resolvedSpawn.y);
     this.highlightWorldPlace(null);
     this.controlHintText?.setText("WASD / Arrow: \uC774\uB3D9  |  E: \uC0C1\uD638\uC791\uC6A9  |  Q: \uC804\uCCB4 \uC9C0\uB3C4  |  ESC: \uBA54\uB274");
     this.updateHudState({ locationLabel: AREA_LABEL[area] });
@@ -1163,12 +1536,31 @@ export class MainScene extends Phaser.Scene {
     this.interactionLabel.setVisible(true);
   }
 
+  private buildWorldSpawnPoint(placeId: WorldPlaceId, fallbackX: number, fallbackY: number): { x: number; y: number } {
+    const zone = this.worldPlaceInteractionZones[placeId];
+    if (zone) {
+      const centerX = zone.centerX;
+      const belowZoneY = zone.bottom + this.px(28);
+      return this.findNearestWalkablePoint("world", centerX, belowZoneY);
+    }
+
+    return this.findNearestWalkablePoint("world", this.px(fallbackX), this.px(fallbackY));
+  }
+
   private getNearestWorldPlace(maxDistance: number): WorldPlaceNode | null {
     let nearest: WorldPlaceNode | null = null;
     let nearestDistance = Number.POSITIVE_INFINITY;
 
     WORLD_PLACE_NODES.forEach((place) => {
-      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, place.x, place.y);
+      const zone = this.worldPlaceInteractionZones[place.id];
+      const distance = zone
+        ? Phaser.Math.Distance.Between(
+            this.player.x,
+            this.player.y,
+            Phaser.Math.Clamp(this.player.x, zone.left, zone.right),
+            Phaser.Math.Clamp(this.player.y, zone.top, zone.bottom)
+          )
+        : Phaser.Math.Distance.Between(this.player.x, this.player.y, place.x, place.y);
       if (distance <= maxDistance && distance < nearestDistance) {
         nearest = place;
         nearestDistance = distance;
@@ -1236,8 +1628,6 @@ export class MainScene extends Phaser.Scene {
       0x000000,
       placeBackgroundImage ? 0.42 : 0.36
     );
-    overlay.setInteractive({ useHandCursor: true }).on("pointerdown", () => this.closePlacePopup());
-
     let title = "";
     let description = "";
     let actionText = "";
@@ -1252,8 +1642,9 @@ export class MainScene extends Phaser.Scene {
       actionText = "\uC0C1\uC810 \uC5F4\uAE30";
     }
 
+    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 530, 290);
     const panel = this.add.rectangle(centerX, centerY, 530, 290, 0x1a375c, 0.95);
-    panel.setStrokeStyle(3, 0x66b6ff, 1);
+    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
     const titleText = this.add.text(centerX, centerY - 92, title, this.getBodyStyle(34, "#e6f3ff", "bold"));
     titleText.setOrigin(0.5);
     const descText = this.add.text(centerX, centerY - 16, description, this.getBodyStyle(21, "#b6d6fb"));
@@ -1278,7 +1669,7 @@ export class MainScene extends Phaser.Scene {
       onClick: () => this.closePlacePopup()
     });
 
-    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panel, titleText, descText, actionBtn, closeBtn];
+    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, titleText, descText, actionBtn, closeBtn];
     if (placeBackgroundImage) {
       popupObjects.unshift(placeBackgroundImage);
     }
@@ -1359,10 +1750,9 @@ export class MainScene extends Phaser.Scene {
       0x000000,
       homeBackgroundImage ? 0.42 : 0.36
     );
-    overlay.setInteractive({ useHandCursor: true }).on("pointerdown", () => this.closePlacePopup());
-
+    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 560, 460);
     const panel = this.add.rectangle(centerX, centerY, 560, 460, 0x1a375c, 0.95);
-    panel.setStrokeStyle(3, 0x66b6ff, 1);
+    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
     const title = this.add.text(centerX, centerY - 190, "\uC9D1 \uD589\uB3D9", this.getBodyStyle(34, "#e6f3ff", "bold"));
     title.setOrigin(0.5);
     const apText = this.add.text(
@@ -1406,7 +1796,7 @@ export class MainScene extends Phaser.Scene {
       onClick: () => this.closePlacePopup()
     });
 
-    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panel, title, apText, sleepBtn, studyBtn, gameBtn, closeBtn];
+    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, apText, sleepBtn, studyBtn, gameBtn, closeBtn];
     if (homeBackgroundImage) {
       popupObjects.unshift(homeBackgroundImage);
     }
@@ -1457,11 +1847,10 @@ export class MainScene extends Phaser.Scene {
       0x000000,
       buildingBackgroundImage ? 0.42 : 0.36
     );
-    overlay.setInteractive({ useHandCursor: true }).on("pointerdown", () => this.closePlacePopup());
-
     const config = this.getDowntownBuildingConfig(buildingId);
+    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 540, 296);
     const panel = this.add.rectangle(centerX, centerY, 540, 296, 0x1a375c, 0.95);
-    panel.setStrokeStyle(3, 0x66b6ff, 1);
+    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
     const title = this.add.text(centerX, centerY - 90, config.title, this.getBodyStyle(34, "#e6f3ff", "bold"));
     title.setOrigin(0.5);
     const desc = this.add.text(centerX, centerY - 12, config.description, this.getBodyStyle(21, "#b6d6fb"));
@@ -1486,7 +1875,7 @@ export class MainScene extends Phaser.Scene {
       onClick: () => this.closePlacePopup()
     });
 
-    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panel, title, desc, actionBtn, closeBtn];
+    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, desc, actionBtn, closeBtn];
     if (buildingBackgroundImage) {
       popupObjects.unshift(buildingBackgroundImage);
     }
@@ -1611,6 +2000,11 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private closeMenu(): void {
+    if (!this.menuOpen) return;
+    this.toggleMenu();
+  }
+
   private buildEscapeMenu(): void {
     const menuWidth = 900;
     const menuHeight = 530;
@@ -1624,6 +2018,7 @@ export class MainScene extends Phaser.Scene {
     this.menuRoot = modal.root;
     this.menuRoot.setDepth(1000);
     this.menuRoot.setVisible(false);
+    this.menuRoot.add(this.createPanelCloseButton(centerX, centerY, menuWidth, menuHeight, () => this.closeMenu()));
 
     const tabWidth = 170;
     const tabHeight = 50;
@@ -1651,9 +2046,15 @@ export class MainScene extends Phaser.Scene {
         0x0f2947,
         1
       )
-      .setStrokeStyle(2, 0x4f98df, 1);
+      .setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
+    const contentOuterFrame = this.createPanelOuterBorder(
+      this.px(contentX + contentWidth / 2),
+      this.px(contentY + contentHeight / 2),
+      contentWidth,
+      contentHeight
+    );
 
-    this.menuRoot.add(contentFrame);
+    this.menuRoot.add([contentOuterFrame, contentFrame]);
 
     this.menuContentBounds = new Phaser.Geom.Rectangle(contentX, contentY, contentWidth, contentHeight);
     this.pageRoot = this.add.container(0, 0);
@@ -1983,10 +2384,12 @@ export class MainScene extends Phaser.Scene {
     const inventoryPanelW = this.px(bounds.width - (inventoryPanelX - bounds.x) - 24);
     const inventoryPanelCenterX = this.px(inventoryPanelX + inventoryPanelW / 2);
 
+    const equipPanelOuter = this.createPanelOuterBorder(equipPanelCenterX, panelY + panelH / 2, equipPanelW, panelH);
     const equipPanel = this.add.rectangle(equipPanelCenterX, panelY + panelH / 2, equipPanelW, panelH, 0x17355a, 0.86);
-    equipPanel.setStrokeStyle(2, 0x4f98df, 1);
+    equipPanel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
+    const inventoryPanelOuter = this.createPanelOuterBorder(inventoryPanelCenterX, panelY + panelH / 2, inventoryPanelW, panelH);
     const inventoryPanel = this.add.rectangle(inventoryPanelCenterX, panelY + panelH / 2, inventoryPanelW, panelH, 0x17355a, 0.86);
-    inventoryPanel.setStrokeStyle(2, 0x4f98df, 1);
+    inventoryPanel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
 
     const equipLabel = this.add.text(
       equipPanelCenterX,
@@ -2098,7 +2501,9 @@ export class MainScene extends Phaser.Scene {
     };
 
     container.add([
+      equipPanelOuter,
       equipPanel,
+      inventoryPanelOuter,
       inventoryPanel,
       equipLabel,
       inventoryLabel,
@@ -2460,24 +2865,29 @@ export class MainScene extends Phaser.Scene {
     text: string;
     onClick: () => void;
   }): Phaser.GameObjects.Container {
-    const bg = this.add.rectangle(options.x, options.y, options.width, options.height, 0x2f5684, 1);
-    bg.setStrokeStyle(2, 0x71c0ff, 1);
-
-    const label = this.add.text(options.x, options.y, options.text, {
-      fontFamily: this.uiFontFamily,
-      fontSize: "22px",
-      fontStyle: "bold",
-      color: "#e8f4ff",
-      resolution: 2
+    return createPanelActionButton(this, {
+      ...options,
+      textStyle: this.getBodyStyle(22, "#e8f4ff", "bold")
     });
-    label.setOrigin(0.5);
+  }
 
-    bg.setInteractive({ useHandCursor: true });
-    bg.on("pointerdown", options.onClick);
-    bg.on("pointerover", () => bg.setFillStyle(0x3a699f, 1));
-    bg.on("pointerout", () => bg.setFillStyle(0x2f5684, 1));
+  private createPanelCloseButton(
+    centerX: number,
+    centerY: number,
+    panelWidth: number,
+    panelHeight: number,
+    onClick: () => void
+  ): Phaser.GameObjects.Container {
+    return createPanelCloseButton(this, centerX, centerY, panelWidth, panelHeight, onClick);
+  }
 
-    return this.add.container(0, 0, [bg, label]);
+  private createPanelOuterBorder(
+    centerX: number,
+    centerY: number,
+    panelWidth: number,
+    panelHeight: number
+  ): Phaser.GameObjects.Rectangle {
+    return createPanelOuterBorder(this, centerX, centerY, panelWidth, panelHeight);
   }
 
   private buildDialogueUi(): void {
@@ -2488,8 +2898,9 @@ export class MainScene extends Phaser.Scene {
     const panelLeft = this.px(centerX - panelWidth / 2);
     const panelTop = this.px(panelCenterY - panelHeight / 2);
 
+    const panelOuter = this.createPanelOuterBorder(centerX, panelCenterY, panelWidth, panelHeight);
     const panel = this.add.rectangle(centerX, panelCenterY, panelWidth, panelHeight, 0x132e4f, 0.94);
-    panel.setStrokeStyle(3, 0x66b6ff, 1);
+    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
 
     const speaker = this.add.text(panelLeft + 22, panelTop + 16, "", this.getBodyStyle(21, "#e8f4ff", "bold"));
     speaker.setOrigin(0, 0);
@@ -2521,7 +2932,7 @@ export class MainScene extends Phaser.Scene {
     const hint = this.add.text(panelLeft + panelWidth - 20, panelTop + panelHeight - 68, "", this.getBodyStyle(14, "#99c4f3"));
     hint.setOrigin(1, 1);
 
-    this.dialogueRoot = this.add.container(0, 0, [panel, speaker, body, actionButtonBg, actionButtonText, hint]);
+    this.dialogueRoot = this.add.container(0, 0, [panelOuter, panel, speaker, body, actionButtonBg, actionButtonText, hint]);
     this.dialogueRoot.setDepth(1150);
     this.dialogueRoot.setVisible(false);
     this.dialogueSpeakerText = speaker;
@@ -2797,14 +3208,14 @@ export class MainScene extends Phaser.Scene {
     }
 
     const overlay = this.add.rectangle(centerX, centerY, GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT, 0x000000, 0.35);
-    overlay.setInteractive({ useHandCursor: true }).on("pointerdown", () => this.closeShop());
 
+    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 760, 430);
     const panel = this.add.rectangle(centerX, centerY, 760, 430, 0x163357, 0.96);
-    panel.setStrokeStyle(3, 0x66b6ff, 1);
+    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
 
     const title = this.add.text(centerX, centerY - 190, "NPC \uC0C1\uC810", this.getBodyStyle(30, "#e6f3ff", "bold"));
     title.setOrigin(0.5);
-    const hint = this.add.text(centerX, centerY + 176, "ESC \uB610\uB294 \uBC30\uACBD \uD074\uB9AD\uC73C\uB85C \uB2EB\uAE30", this.getBodyStyle(16, "#a8c9ef"));
+    const hint = this.add.text(centerX, centerY + 176, "E / ESC\uB85C \uB2EB\uAE30", this.getBodyStyle(16, "#a8c9ef"));
     hint.setOrigin(0.5);
 
     const cards: Phaser.GameObjects.GameObject[] = [];
@@ -2846,7 +3257,7 @@ export class MainScene extends Phaser.Scene {
       cards.push(card, icon, iconLabel, name, price, buyHint);
     });
 
-    const objects: Phaser.GameObjects.GameObject[] = [overlay, panel, title, hint, ...cards];
+    const objects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, hint, ...cards];
     if (backgroundImage) {
       objects.unshift(backgroundImage);
     }
@@ -3263,19 +3674,23 @@ export class MainScene extends Phaser.Scene {
 
   private showSystemToast(message: string): void {
     if (!this.systemToastRoot) {
+      const outer = this.add.rectangle(0, 0, 228, 42, 0x000000, 0);
+      outer.setStrokeStyle(3, this.uiPanelOuterBorderColor, 1);
       const bg = this.add.rectangle(0, 0, 220, 34, 0x163357, 0.95);
-      bg.setStrokeStyle(2, 0x66b6ff, 1);
+      bg.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
       const text = this.add.text(0, 0, "", this.getBodyStyle(17, "#e8f4ff"));
       text.setOrigin(0.5);
 
-      this.systemToastRoot = this.add.container(0, 0, [bg, text]);
+      this.systemToastRoot = this.add.container(0, 0, [outer, bg, text]);
       this.systemToastRoot.setDepth(1300);
     }
 
-    const bg = this.systemToastRoot.list[0] as Phaser.GameObjects.Rectangle;
-    const text = this.systemToastRoot.list[1] as Phaser.GameObjects.Text;
+    const outer = this.systemToastRoot.list[0] as Phaser.GameObjects.Rectangle;
+    const bg = this.systemToastRoot.list[1] as Phaser.GameObjects.Rectangle;
+    const text = this.systemToastRoot.list[2] as Phaser.GameObjects.Text;
     text.setText(message);
     bg.width = Math.max(180, Math.ceil(text.width + 26));
+    outer.width = bg.width + 8;
 
     this.systemToastRoot.setPosition(this.px(GAME_CONSTANTS.WIDTH / 2), 62);
     this.systemToastRoot.setVisible(true);
@@ -3347,6 +3762,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     let dayPassed = false;
+    let shouldStartEndingAfterUpdate = false;
     this.actionPoint = Phaser.Math.Clamp(this.actionPoint - 1, 0, this.maxActionPoint);
     this.timeCycleIndex = (this.timeCycleIndex + 1) % TIME_CYCLE.length;
 
@@ -3360,7 +3776,11 @@ export class MainScene extends Phaser.Scene {
       this.dayCycleIndex = (this.dayCycleIndex + 1) % DAY_CYCLE.length;
       patch.dayLabel = DAY_CYCLE[this.dayCycleIndex];
       if (this.dayCycleIndex === 0) {
-        patch.week = this.hudState.week + 1;
+        if (this.hudState.week >= 6) {
+          shouldStartEndingAfterUpdate = true;
+        } else {
+          patch.week = this.hudState.week + 1;
+        }
       }
       this.time.delayedCall(180, () => {
         this.showSystemToast("\uD558\uB8E8\uAC00 \uC9C0\uB0AC\uC2B5\uB2C8\uB2E4");
@@ -3370,8 +3790,40 @@ export class MainScene extends Phaser.Scene {
     this.updateHudState(patch);
     if (dayPassed) {
       this.saveGameToSlot("auto", true);
+      if (shouldStartEndingAfterUpdate || this.shouldTriggerEndingFlow(patch.week)) {
+        this.time.delayedCall(240, () => {
+          this.startEndingFlow();
+        });
+      }
     }
     return true;
   }
-}
 
+  private shouldTriggerEndingFlow(nextWeek?: number): boolean {
+    return typeof nextWeek === "number" && this.hudState.week <= 6 && nextWeek > 6;
+  }
+
+  private buildEndingPayload(): EndingFlowPayload {
+    return {
+      fe: this.statsState.fe,
+      be: this.statsState.be,
+      teamwork: this.statsState.teamwork,
+      luck: this.statsState.luck,
+      hp: this.hudState.hp,
+      week: this.hudState.week,
+      dayLabel: this.hudState.dayLabel,
+      timeLabel: this.hudState.timeLabel
+    };
+  }
+
+  private startEndingFlow(): void {
+    if (this.endingFlowStarted) {
+      return;
+    }
+
+    this.endingFlowStarted = true;
+    this.player.setVelocity(0, 0);
+    this.saveGameToSlot("auto", true);
+    this.scene.start(SceneKey.FinalSummary, this.buildEndingPayload());
+  }
+}

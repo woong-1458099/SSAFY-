@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
+import { AudioManager } from "@core/managers/AudioManager";
 
 export class NewCharacterScene extends Phaser.Scene {
+  private readonly audioManager = new AudioManager();
   private userName: string = "싸피생";
   private gender: 'male' | 'female' = 'male';
   private hairIndex: number = 1;
@@ -32,29 +34,29 @@ export class NewCharacterScene extends Phaser.Scene {
 
   preload(): void {
     // 1. 공통 UI 리소스
-    this.load.image('title_bg', 'assets/game/backgrounds/title_background.png');
-    this.load.image('ui_box', 'assets/game/ui/medium_ui_box.png');
-    this.load.image('male_button', 'assets/game/ui/male.png');
-    this.load.image('female_button', 'assets/game/ui/female.png');
-    this.load.audio('create_bgm', 'assets/game/audio/BGM/bye.mp3');
-    this.load.audio('click_sfx', 'assets/game/audio/SoundEffect/click.wav');
+    this.load.image('title_bg', '../../assets/game/backgrounds/title_background.png');
+    this.load.image('ui_box', '../../assets/game/ui/medium_ui_box.png');
+    this.load.image('male_button', '../../assets/game/ui/male.png');
+    this.load.image('female_button', '../../assets/game/ui/female.png');
+    this.load.audio('create_bgm', '../../assets/game/audio/BGM/bye.mp3');
+    this.load.audio('click_sfx', '../../assets/game/audio/SoundEffect/click.wav');
 
     const spriteConfig = { frameWidth: this.FRAME_WIDTH, frameHeight: this.FRAME_HEIGHT };
     
     // 2. 캐릭터 베이스 로드
-    this.load.spritesheet('base_male', 'assets/game/character/base_male.png', spriteConfig);
-    this.load.spritesheet('base_female', 'assets/game/character/base_female.png', spriteConfig);
+    this.load.spritesheet('base_male', '../../assets/game/character/base_male.png', spriteConfig);
+    this.load.spritesheet('base_female', '../../assets/game/character/base_female.png', spriteConfig);
 
     // 3. 성별별 헤어 리소스 로드 (male_hair_1~3, female_hair_1~3)
     for (let i = 1; i <= this.MAX_HAIR; i++) {
-      this.load.spritesheet(`male_hair_${i}`, `assets/game/character/male_hair_${i}.png`, spriteConfig);
-      this.load.spritesheet(`female_hair_${i}`, `assets/game/character/female_hair_${i}.png`, spriteConfig);
+      this.load.spritesheet(`male_hair_${i}`, `../../assets/game/character/male_hair_${i}.png`, spriteConfig);
+      this.load.spritesheet(`female_hair_${i}`, `../../assets/game/character/female_hair_${i}.png`, spriteConfig);
     }
 
     // 4. 성별별 의상 리소스 로드 (male_clothes_1~3, female_clothes_1~3)
     for (let i = 1; i <= this.MAX_CLOTH; i++) {
-      this.load.spritesheet(`male_clothes_${i}`, `assets/game/character/male_clothes_${i}.png`, spriteConfig);
-      this.load.spritesheet(`female_clothes_${i}`, `assets/game/character/female_clothes_${i}.png`, spriteConfig);
+      this.load.spritesheet(`male_clothes_${i}`, `../../assets/game/character/male_clothes_${i}.png`, spriteConfig);
+      this.load.spritesheet(`female_clothes_${i}`, `../../assets/game/character/female_clothes_${i}.png`, spriteConfig);
     }
   }
 
@@ -69,8 +71,11 @@ export class NewCharacterScene extends Phaser.Scene {
     uiBox.setDisplaySize(width * 0.9, height * 0.8).setAlpha(0.9);
 
     if (this.cache.audio.exists('create_bgm')) {
-      this.bgm = this.sound.add('create_bgm', { loop: true, volume: 0.8 });
-      this.bgm.play();
+      const bgm = this.audioManager.add(this, 'create_bgm', 'bgm', { loop: true, volume: 0.8 });
+      if (bgm) {
+        this.bgm = bgm;
+        this.bgm.play();
+      }
     }
     
     this.add.text(width / 2, height * 0.18, "캐릭터 생성", {
@@ -227,7 +232,9 @@ export class NewCharacterScene extends Phaser.Scene {
     buttons.forEach((btn, i) => btn.setBackgroundColor(i + 1 === current ? '#e67e22' : '#444'));
   }
 
-  private playClick() { if (this.cache.audio.exists('click_sfx')) this.sound.play('click_sfx'); }
+  private playClick() {
+    this.audioManager.play(this, 'click_sfx', 'sfx');
+  }
 
   private selectGender(gender: 'male' | 'female') {
     if (this.gender !== gender) {
