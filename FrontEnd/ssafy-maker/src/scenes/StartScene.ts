@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
+import { AudioManager } from "@core/managers/AudioManager";
 
 export class StartScene extends Phaser.Scene {
+  private readonly audioManager = new AudioManager();
   private enterKey?: Phaser.Input.Keyboard.Key;
   private startArmed = false;
   private bgm?: Phaser.Sound.BaseSound;
@@ -69,7 +71,7 @@ export class StartScene extends Phaser.Scene {
     button.on("pointerover", () => button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04));
     button.on("pointerout", () => button.setDisplaySize(baseWidth, baseHeight));
     button.on("pointerdown", () => {
-      this.sound.play("start-click");
+      this.audioManager.play(this, "start-click", "sfx");
       button.setDisplaySize(baseWidth * 0.98, baseHeight * 0.98);
       onClick();
     });
@@ -94,7 +96,10 @@ export class StartScene extends Phaser.Scene {
       return;
     }
 
-    this.bgm = this.sound.add("start-bgm", { loop: true, volume: 0.45 });
+    this.bgm = this.audioManager.add(this, "start-bgm", "bgm", { loop: true, volume: 0.45 }) ?? undefined;
+    if (!this.bgm) {
+      return;
+    }
     if (!this.sound.locked) {
       this.bgm.play();
       return;
