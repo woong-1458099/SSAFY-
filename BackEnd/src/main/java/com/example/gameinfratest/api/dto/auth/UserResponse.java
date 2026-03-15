@@ -8,9 +8,12 @@ import java.util.UUID;
 public record UserResponse(
         UUID id,
         String email,
+        String username,
+        boolean emailVerified,
         String phone,
         LocalDate birthday,
         String provider,
+        Instant lastLoginAt,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -18,9 +21,12 @@ public record UserResponse(
         return new UserResponse(
                 user.getId(),
                 user.getEmail(),
+                user.getUsername(),
+                user.isEmailVerified(),
                 user.getPhone(),
                 user.getBirthday(),
                 user.getProvider(),
+                user.getLastLoginAt(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );

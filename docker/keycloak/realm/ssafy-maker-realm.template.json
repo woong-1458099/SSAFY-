@@ -1,0 +1,51 @@
+{
+  "realm": "ssafy-maker",
+  "enabled": true,
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "clients": [
+    {
+      "clientId": "ssafy-maker-public",
+      "name": "SSAFY Maker Game Client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "redirectUris": [
+        "https://ssafymaker.cloud/*",
+        "https://stg.ssafymaker.cloud/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "https://ssafymaker.cloud",
+        "https://stg.ssafymaker.cloud",
+        "http://localhost:5173"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "player"
+      },
+      {
+        "name": "admin"
+      }
+    ]
+  }
+}

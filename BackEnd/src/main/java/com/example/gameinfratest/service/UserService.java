@@ -35,8 +35,11 @@ public class UserService {
             user.setId(UUID.randomUUID());
         }
         user.setEmail(identity.email());
+        user.setUsername(identity.username());
+        user.setEmailVerified(identity.emailVerified());
         user.setProvider(PROVIDER);
         user.setProviderId(identity.subject());
+        user.setLastLoginAt(Instant.now());
 
         return UserResponse.from(userRepository.save(user));
     }
@@ -70,6 +73,8 @@ public class UserService {
 
         String subject = jwt.getSubject();
         String email = jwt.getClaimAsString("email");
+        String username = jwt.getClaimAsString("preferred_username");
+        Boolean emailVerified = jwt.getClaimAsBoolean("email_verified");
 
         if (subject == null || subject.isBlank()) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "token subject is missing");
@@ -78,7 +83,12 @@ public class UserService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "EMAIL_REQUIRED", "token email claim is missing");
         }
 
-        return new JwtIdentity(subject, email.trim().toLowerCase(Locale.ROOT));
+        return new JwtIdentity(
+                subject,
+                email.trim().toLowerCase(Locale.ROOT),
+                username == null || username.isBlank() ? null : username.trim(),
+                Boolean.TRUE.equals(emailVerified)
+        );
     }
 
     private void blockDeletedUser(JwtIdentity identity) {
@@ -94,6 +104,6 @@ public class UserService {
         }
     }
 
-    private record JwtIdentity(String subject, String email) {
+    private record JwtIdentity(String subject, String email, String username, boolean emailVerified) {
     }
 }

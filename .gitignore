@@ -8,4 +8,5 @@
 !**/.env.example
 n8n_n8n_data.tgz
 jenkins_jenkins_home.tgz
+AI_LONG/
 /.idea/

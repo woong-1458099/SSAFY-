@@ -20,6 +20,12 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(length = 255)
+    private String username;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
     @Column(length = 50)
     private String phone;
 
@@ -30,6 +36,9 @@ public class User {
 
     @Column(name = "provider_id", nullable = false, unique = true)
     private String providerId;
+
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -72,6 +81,22 @@ public class User {
         return phone;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
     public void setPhone(String phone) {
         this.phone = phone;
     }
@@ -98,6 +123,14 @@ public class User {
 
     public void setProviderId(String providerId) {
         this.providerId = providerId;
+    }
+
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(Instant lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
     }
 
     public Instant getCreatedAt() {

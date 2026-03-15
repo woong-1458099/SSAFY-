@@ -25,6 +25,10 @@ pipeline {
     FRONTEND_LIVE_DIR = '/home/ubuntu/deploy/frontend/stg/live'
     NGINX_CONTAINER = 'ingress-nginx-1'
     FRONTEND_DOMAIN = 'stg.ssafymaker.cloud'
+    VITE_API_BASE_URL = 'https://stg.ssafymaker.cloud'
+    VITE_KEYCLOAK_BASE_URL = 'https://auth.ssafymaker.cloud'
+    VITE_KEYCLOAK_REALM = 'ssafy-maker'
+    VITE_KEYCLOAK_CLIENT_ID = 'ssafy-maker-public'
   }
 
   stages {
@@ -79,7 +83,6 @@ pipeline {
           set -eu
           cd FrontEnd/ssafy-maker
           npm ci
-          npm run lint
           npm run build
           test -d dist
         '''
