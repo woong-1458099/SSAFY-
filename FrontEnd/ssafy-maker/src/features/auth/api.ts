@@ -17,11 +17,22 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "");
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
 async function request<T>(path: string, init: RequestInit): Promise<T> {
+  console.log("[auth-api] request", {
+    url: `${API_BASE_URL}${path}`,
+    method: init.method ?? "GET",
+    hasAuthorization: Boolean(init.headers && "Authorization" in (init.headers as Record<string, string>))
+  });
   const response = await fetch(`${API_BASE_URL}${path}`, init);
   const raw = await response.text();
+  console.log("[auth-api] response", {
+    url: `${API_BASE_URL}${path}`,
+    status: response.status,
+    ok: response.ok,
+    raw
+  });
 
   let payload: ApiResponse<T>;
   try {
@@ -38,6 +49,7 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
 }
 
 export function bootstrapCurrentUser(accessToken: string): Promise<UserProfile> {
+  console.log("[auth-api] bootstrapCurrentUser");
   return request<UserProfile>("/api/users/me/bootstrap", {
     method: "POST",
     headers: {
@@ -47,6 +59,7 @@ export function bootstrapCurrentUser(accessToken: string): Promise<UserProfile> 
 }
 
 export function fetchCurrentUser(accessToken: string): Promise<UserProfile> {
+  console.log("[auth-api] fetchCurrentUser");
   return request<UserProfile>("/api/users/me", {
     method: "GET",
     headers: {

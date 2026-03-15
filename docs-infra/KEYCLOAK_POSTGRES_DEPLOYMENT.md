@@ -83,10 +83,17 @@ JWT_ENABLED=true
 JWT_ISSUER_URI=https://auth.ssafymaker.cloud/realms/app
 KEYCLOAK_ENABLED=true
 KEYCLOAK_BASE_URL=https://auth.ssafymaker.cloud
+KEYCLOAK_PUBLIC_BASE_URL=https://auth.ssafymaker.cloud
+KEYCLOAK_INTERNAL_BASE_URL=http://stg-keycloak:8080
 KEYCLOAK_REALM=app
 KEYCLOAK_CLIENT_ID=ssafy-maker-public
+KEYCLOAK_CLIENT_SECRET=
 CORS_ALLOWED_ORIGINS=https://ssafymaker.cloud,https://stg.ssafymaker.cloud,http://localhost:5173
 ```
+
+- 브라우저 리다이렉트는 `KEYCLOAK_PUBLIC_BASE_URL` 을 사용한다.
+- 백엔드와 Keycloak 간 서버 통신은 `KEYCLOAK_INTERNAL_BASE_URL` 을 사용한다.
+- public client 대신 confidential client 로 운영하면 `KEYCLOAK_CLIENT_SECRET` 을 함께 주입한다.
 
 백엔드는 토큰에서 다음 클레임을 읽는다.
 - `sub`

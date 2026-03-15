@@ -6,18 +6,38 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record KeycloakAuthProperties(
         boolean enabled,
         String baseUrl,
+        String publicBaseUrl,
+        String internalBaseUrl,
         String realm,
         String clientId,
         String clientSecret,
         String adminClientId,
         String adminClientSecret
 ) {
-    public String realmUrl() {
-        return trimTrailingSlash(baseUrl) + "/realms/" + realm;
+    public String browserRealmUrl() {
+        return trimTrailingSlash(resolvePublicBaseUrl()) + "/realms/" + realm;
+    }
+
+    public String serverRealmUrl() {
+        return trimTrailingSlash(resolveInternalBaseUrl()) + "/realms/" + realm;
     }
 
     public String adminRealmUrl() {
-        return trimTrailingSlash(baseUrl) + "/admin/realms/" + realm;
+        return trimTrailingSlash(resolveInternalBaseUrl()) + "/admin/realms/" + realm;
+    }
+
+    private String resolvePublicBaseUrl() {
+        if (publicBaseUrl != null && !publicBaseUrl.isBlank()) {
+            return publicBaseUrl;
+        }
+        return baseUrl;
+    }
+
+    private String resolveInternalBaseUrl() {
+        if (internalBaseUrl != null && !internalBaseUrl.isBlank()) {
+            return internalBaseUrl;
+        }
+        return resolvePublicBaseUrl();
     }
 
     private String trimTrailingSlash(String value) {
