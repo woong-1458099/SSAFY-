@@ -90,6 +90,9 @@ export class LoginScene extends Phaser.Scene {
           <div id="auth-msg" style="margin-top:12px;padding:12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;">Use the hosted auth page to authenticate.</div>
           <div id="auth-form" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:6px;scrollbar-width:thin;"></div>
           <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">Login</button>
+          
+          <!-- 로컬 우회 테스트용 버튼 -->
+          <button id="auth-bypass" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[ 개발용 ] 백엔드 없이 바로 접속하기</button>
         </section>
       </div>
     `;
@@ -102,8 +105,9 @@ export class LoginScene extends Phaser.Scene {
     const message = node.querySelector<HTMLElement>("#auth-msg");
     const form = node.querySelector<HTMLElement>("#auth-form");
     const submit = node.querySelector<HTMLButtonElement>("#auth-submit");
+    const bypassBtn = node.querySelector<HTMLButtonElement>("#auth-bypass"); // 우회 버튼
 
-    if (!title || !message || !form || !submit) {
+    if (!title || !message || !form || !submit || !bypassBtn) {
       return;
     }
 
@@ -294,12 +298,30 @@ export class LoginScene extends Phaser.Scene {
     });
     submit.addEventListener("click", onSubmitClick);
 
+    // 로컬 접속 기능 바인딩
+    const onBypassClick = () => {
+      setMessage("백엔드 인증 없이 더미 계정으로 게임에 진입합니다.", "success");
+      
+      this.registry.set("authToken", "dummy-bypass-token");
+      this.registry.set("authRefreshToken", "dummy-refresh-token");
+      this.registry.set("authIdToken", "dummy-id-token");
+      this.registry.set("authUser", {
+        id: "local_test_user_001",
+        email: "tester@ssafy.com",
+        nickname: "테스터"
+      });
+
+      this.time.delayedCall(250, () => this.scene.start(SceneKey.Start));
+    };
+    bypassBtn.addEventListener("click", onBypassClick);
+
     this.submitHandler = onSubmitClick;
     renderView("login");
     void initializeSession();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       submit.removeEventListener("click", onSubmitClick);
+      bypassBtn.removeEventListener("click", onBypassClick);
       this.root?.destroy();
       this.root = undefined;
       this.submitHandler = undefined;
