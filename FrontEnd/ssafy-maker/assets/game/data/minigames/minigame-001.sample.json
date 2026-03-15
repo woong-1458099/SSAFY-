@@ -1,0 +1,11 @@
+{
+  "id": "minigame-001",
+  "name": "Typing Rush",
+  "roundTimeSec": 30,
+  "targetScore": 120,
+  "reward": {
+    "coding": 5,
+    "stress": 2
+  }
+}
+
