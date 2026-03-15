@@ -279,6 +279,10 @@ type MainSavePayload = {
   equippedSlots: Record<EquipmentSlotKey, string | null>;
 };
 
+type MainSceneInitData = {
+  saveSlotId?: string;
+};
+
 const STAT_ROW_DEFS: Array<{ key: StatKey; label: string }> = [
   { key: "fe", label: "FE" },
   { key: "be", label: "BE" },
@@ -368,6 +372,7 @@ const CAMPUS_TMX_SEMANTIC_RULES: TmxSemanticRule[] = [
 ];
 
 export class MainScene extends Phaser.Scene {
+  private initialSaveSlotId: string | null = null;
   private player!: Phaser.Physics.Arcade.Sprite;
   private playerAvatar: PlayerAvatarData = {
     gender: "male",
@@ -479,6 +484,10 @@ export class MainScene extends Phaser.Scene {
     super(SceneKey.Main);
   }
 
+  init(data: MainSceneInitData): void {
+    this.initialSaveSlotId = typeof data?.saveSlotId === "string" ? data.saveSlotId : null;
+  }
+
   preload(): void {
     this.preloadPlayerAvatarAssets();
   }
@@ -519,10 +528,14 @@ export class MainScene extends Phaser.Scene {
     this.buildShop();
     this.buildDialogueUi();
     this.buildHud();
-    this.seedDemoItems();
     this.createItemTooltip();
     this.createCarriedItemPreview();
-    this.enterArea("world", "downtown");
+
+    const initialSaveApplied = this.tryApplyInitialSave();
+    if (!initialSaveApplied) {
+      this.seedDemoItems();
+      this.enterArea("world", "downtown");
+    }
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       this.updateCarriedItemPosition(pointer.worldX, pointer.worldY);
@@ -550,6 +563,24 @@ export class MainScene extends Phaser.Scene {
     });
 
     EventBus.emit("scene:entered", { scene: SceneKey.Main });
+  }
+
+  private tryApplyInitialSave(): boolean {
+    if (!this.initialSaveSlotId) {
+      return false;
+    }
+
+    const slotData = this.saveManager.loadSlot(this.initialSaveSlotId);
+    if (!slotData) {
+      this.initialSaveSlotId = null;
+      return false;
+    }
+
+    this.selectedSaveSlotId = this.initialSaveSlotId;
+    const applied = this.applyGameSavePayload(slotData.payload);
+    this.refreshSaveSlotUi();
+    this.initialSaveSlotId = null;
+    return applied;
   }
 
   update(): void {

@@ -45,6 +45,7 @@ npm run preview
 
 ## 문서
 
+- 프론트 구현 맵: `docs/FRONTEND_IMPLEMENTATION_MAP.md`
 - 규칙: `docs/conventions/RULES.md`
 - 브랜치 전략: `docs/conventions/BRANCH_STRATEGY.md`
 - 폴더 소유권: `docs/conventions/FOLDER_OWNERSHIP.md`
