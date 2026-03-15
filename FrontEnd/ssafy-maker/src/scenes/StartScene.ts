@@ -1,14 +1,25 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
+import { SaveManager, type SaveSlotData } from "@core/managers/SaveManager";
 import { beginLogout, readStoredSession } from "@features/auth/authSession";
+
+type ContinueSlotView = {
+  slotId: string;
+  data: SaveSlotData;
+};
 
 export class StartScene extends Phaser.Scene {
   private readonly audioManager = new AudioManager();
+  private readonly saveManager = new SaveManager(6);
   private enterKey?: Phaser.Input.Keyboard.Key;
   private startArmed = false;
   private bgm?: Phaser.Sound.BaseSound;
   private logoutLabel?: Phaser.GameObjects.Text;
+  private continueButton?: Phaser.GameObjects.Image;
+  private continueSlots: ContinueSlotView[] = [];
+  private continueModal?: Phaser.GameObjects.Container;
+  private continueModalOpen = false;
 
   constructor() {
     super(SceneKey.Start);
@@ -41,9 +52,10 @@ export class StartScene extends Phaser.Scene {
 
     this.playBackgroundMusic();
     this.createLogoutButton(width);
+    this.continueSlots = this.getAvailableContinueSlots();
 
     this.createImageButton(width / 2, 430, "start-btn-new", () => this.startIntro());
-    this.createImageButton(width / 2, 550, "start-btn-old", () => this.startIntro());
+    this.continueButton = this.createImageButton(width / 2, 550, "start-btn-old", () => this.openContinueModal(), this.continueSlots.length > 0);
 
     this.enterKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     this.input.on("pointerup", this.handlePointerUp, this);
@@ -56,6 +68,9 @@ export class StartScene extends Phaser.Scene {
       this.stopBackgroundMusic();
       this.logoutLabel?.destroy();
       this.logoutLabel = undefined;
+      this.continueModal?.destroy(true);
+      this.continueModal = undefined;
+      this.continueButton = undefined;
     });
   }
 
@@ -74,12 +89,19 @@ export class StartScene extends Phaser.Scene {
     }
   }
 
-  private createImageButton(x: number, y: number, key: string, onClick: () => void): void {
-    const button = this.add.image(x, y, key).setInteractive({ useHandCursor: true });
+  private createImageButton(x: number, y: number, key: string, onClick: () => void, enabled = true): Phaser.GameObjects.Image {
+    const button = this.add.image(x, y, key);
     const baseWidth = 360;
     const baseHeight = 92;
 
     button.setDisplaySize(baseWidth, baseHeight);
+    if (!enabled) {
+      button.setAlpha(0.42);
+      button.setTint(0x555555);
+      return button;
+    }
+
+    button.setInteractive({ useHandCursor: true });
     button.on("pointerover", () => button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04));
     button.on("pointerout", () => button.setDisplaySize(baseWidth, baseHeight));
     button.on("pointerdown", () => {
@@ -88,6 +110,7 @@ export class StartScene extends Phaser.Scene {
       onClick();
     });
     button.on("pointerup", () => button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04));
+    return button;
   }
 
   private createLogoutButton(width: number): void {
@@ -116,6 +139,147 @@ export class StartScene extends Phaser.Scene {
     });
 
     this.logoutLabel = label;
+  }
+
+  private getAvailableContinueSlots(): ContinueSlotView[] {
+    const slots = this.saveManager.loadSlots();
+    return this.saveManager
+      .getSlotIds()
+      .map((slotId) => {
+        const data = slots[slotId];
+        return data ? { slotId, data } : null;
+      })
+      .filter((entry): entry is ContinueSlotView => entry !== null);
+  }
+
+  private openContinueModal(): void {
+    if (!this.startArmed || this.continueSlots.length === 0 || this.continueModalOpen) {
+      return;
+    }
+
+    this.continueModalOpen = true;
+    this.audioManager.play(this, "start-click", "sfx");
+
+    const { width, height } = this.scale;
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.62);
+    overlay.setInteractive();
+    overlay.on("pointerdown", () => this.closeContinueModal());
+
+    const panel = this.add.rectangle(width / 2, height / 2, 720, 430, 0x11263d, 0.96);
+    panel.setStrokeStyle(3, 0x7dc9ff, 1);
+
+    const title = this.add.text(width / 2, height / 2 - 160, "Continue", {
+      fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "34px",
+      color: "#f4fbff"
+    }).setOrigin(0.5);
+
+    const subtitle = this.add.text(width / 2, height / 2 - 122, "저장된 슬롯을 선택하세요", {
+      fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "18px",
+      color: "#b9d6f6"
+    }).setOrigin(0.5);
+
+    const closeLabel = this.add.text(width / 2 + 304, height / 2 - 180, "X", {
+      fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "24px",
+      color: "#f4fbff",
+      backgroundColor: "#1a4467",
+      padding: { left: 10, right: 10, top: 6, bottom: 6 }
+    }).setOrigin(0.5);
+    closeLabel.setInteractive({ useHandCursor: true });
+    closeLabel.on("pointerdown", () => this.closeContinueModal());
+
+    const slotNodes: Phaser.GameObjects.GameObject[] = [];
+    const startY = height / 2 - 62;
+    const rowHeight = 72;
+    this.continueSlots.slice(0, 5).forEach((slot, index) => {
+      const y = startY + index * rowHeight;
+      const row = this.add.rectangle(width / 2, y, 620, 56, 0x1c3f64, 0.96);
+      row.setStrokeStyle(2, 0x4f98df, 1);
+      row.setInteractive({ useHandCursor: true });
+      row.on("pointerover", () => row.setFillStyle(0x28547f, 1));
+      row.on("pointerout", () => row.setFillStyle(0x1c3f64, 0.96));
+      row.on("pointerdown", () => this.continueFromSlot(slot.slotId));
+
+      const slotLabel = this.add.text(width / 2 - 284, y - 14, this.getSaveSlotLabel(slot.slotId), {
+        fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "22px",
+        color: "#f4fbff"
+      });
+
+      const metaLabel = this.add.text(width / 2 - 284, y + 10, this.getSaveSlotMetaText(slot.data), {
+        fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+        fontSize: "14px",
+        color: "#b9d6f6"
+      });
+
+      slotNodes.push(row, slotLabel, metaLabel);
+    });
+
+    this.continueModal = this.add.container(0, 0, [overlay, panel, title, subtitle, closeLabel, ...slotNodes]);
+    this.continueModal.setDepth(1000);
+  }
+
+  private closeContinueModal(): void {
+    if (!this.continueModalOpen) {
+      return;
+    }
+
+    this.continueModalOpen = false;
+    this.continueModal?.destroy(true);
+    this.continueModal = undefined;
+  }
+
+  private continueFromSlot(slotId: string): void {
+    if (!this.startArmed) {
+      return;
+    }
+
+    this.closeContinueModal();
+    this.startArmed = false;
+    this.input.enabled = false;
+    this.cameras.main.fadeOut(280, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.start(SceneKey.Main, { saveSlotId: slotId });
+    });
+  }
+
+  private getSaveSlotLabel(slotId: string): string {
+    if (slotId === "auto") {
+      return "auto";
+    }
+
+    const index = Number(slotId.replace("slot-", ""));
+    return Number.isFinite(index) ? `저장 슬롯 ${index}` : slotId;
+  }
+
+  private getSaveSlotMetaText(slotData: SaveSlotData): string {
+    const payload = slotData.payload as {
+      hudState?: { week?: number; dayLabel?: string; timeLabel?: string; locationLabel?: string };
+    };
+    const hud = payload.hudState;
+    const weekText = typeof hud?.week === "number" ? `${hud.week}주차` : "";
+    const dayText = typeof hud?.dayLabel === "string" ? hud.dayLabel : "";
+    const timeText = typeof hud?.timeLabel === "string" ? hud.timeLabel : "";
+    const locationText = typeof hud?.locationLabel === "string" ? hud.locationLabel : "";
+    const summary = [weekText, dayText, timeText].filter((entry) => entry.length > 0).join(" ");
+    const savedAt = this.formatSaveTime(slotData.savedAt);
+    return [summary, locationText, savedAt].filter((entry) => entry.length > 0).join(" | ");
+  }
+
+  private formatSaveTime(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+      return "저장 데이터";
+    }
+
+    return date.toLocaleString("ko-KR", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
 
   private startIntro(): void {
