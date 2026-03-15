@@ -7,9 +7,12 @@ export interface ApiResponse<T> {
 export interface UserProfile {
   id: string;
   email: string;
+  username: string | null;
+  emailVerified: boolean;
   phone: string | null;
   birthday: string | null;
   provider: string;
+  lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
