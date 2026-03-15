@@ -1,13 +1,14 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
-import { readStoredSession } from "@features/auth/keycloakPkce";
+import { beginLogout, readStoredSession } from "@features/auth/authSession";
 
 export class StartScene extends Phaser.Scene {
   private readonly audioManager = new AudioManager();
   private enterKey?: Phaser.Input.Keyboard.Key;
   private startArmed = false;
   private bgm?: Phaser.Sound.BaseSound;
+  private logoutLabel?: Phaser.GameObjects.Text;
 
   constructor() {
     super(SceneKey.Start);
@@ -39,6 +40,7 @@ export class StartScene extends Phaser.Scene {
     logo.setScale(0.72);
 
     this.playBackgroundMusic();
+    this.createLogoutButton(width);
 
     this.createImageButton(width / 2, 430, "start-btn-new", () => this.startIntro());
     this.createImageButton(width / 2, 550, "start-btn-old", () => this.startIntro());
@@ -52,6 +54,8 @@ export class StartScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.off("pointerup", this.handlePointerUp, this);
       this.stopBackgroundMusic();
+      this.logoutLabel?.destroy();
+      this.logoutLabel = undefined;
     });
   }
 
@@ -84,6 +88,34 @@ export class StartScene extends Phaser.Scene {
       onClick();
     });
     button.on("pointerup", () => button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04));
+  }
+
+  private createLogoutButton(width: number): void {
+    const label = this.add.text(width - 64, 48, "Logout", {
+      fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontSize: "20px",
+      color: "#f4fbff",
+      backgroundColor: "#143149",
+      padding: {
+        left: 14,
+        right: 14,
+        top: 8,
+        bottom: 8
+      }
+    });
+
+    label.setOrigin(1, 0.5);
+    label.setInteractive({ useHandCursor: true });
+    label.on("pointerover", () => label.setStyle({ backgroundColor: "#1b496d" }));
+    label.on("pointerout", () => label.setStyle({ backgroundColor: "#143149" }));
+    label.on("pointerdown", () => {
+      this.audioManager.play(this, "start-click", "sfx");
+      this.startArmed = false;
+      this.input.enabled = false;
+      void beginLogout();
+    });
+
+    this.logoutLabel = label;
   }
 
   private startIntro(): void {
