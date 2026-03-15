@@ -28,7 +28,7 @@ type AuthAction = "login" | "signup";
 
 const config = {
   baseUrl: (import.meta.env.VITE_KEYCLOAK_BASE_URL ?? "http://localhost:8081").replace(/\/$/, ""),
-  realm: import.meta.env.VITE_KEYCLOAK_REALM ?? "master",
+  realm: import.meta.env.VITE_KEYCLOAK_REALM ?? "app",
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? "ssafy-maker-public"
 };
 

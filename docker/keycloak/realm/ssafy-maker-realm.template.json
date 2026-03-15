@@ -1,5 +1,5 @@
 {
-  "realm": "ssafy-maker",
+  "realm": "app",
   "enabled": true,
   "registrationAllowed": true,
   "loginWithEmailAllowed": true,

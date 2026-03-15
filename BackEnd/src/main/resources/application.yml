@@ -37,7 +37,7 @@ app:
   keycloak:
     enabled: ${KEYCLOAK_ENABLED:false}
     base-url: ${KEYCLOAK_BASE_URL:http://localhost:8081}
-    realm: ${KEYCLOAK_REALM:master}
+    realm: ${KEYCLOAK_REALM:app}
     client-id: ${KEYCLOAK_CLIENT_ID:ssafy-maker-public}
     client-secret: ${KEYCLOAK_CLIENT_SECRET:}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}

@@ -52,11 +52,11 @@ docker compose -p auth --env-file docker/.env.auth -f docker/compose.auth.yml up
 주의:
 - `KEYCLOAK_DB_URL` 의 호스트는 Docker network 안에서 접근 가능한 PostgreSQL 서비스명 또는 내부 DNS여야 한다.
 - `docker/keycloak/realm/ssafy-maker-realm.template.json` 을 시작점으로 realm/client 설정을 import 한다.
-- 운영에서는 realm 이름을 `master` 대신 `ssafy-maker` 같은 전용 realm 으로 분리한다.
+- 운영에서는 realm 이름을 `master` 대신 `app` 같은 전용 realm 으로 분리한다.
 
 ## Keycloak 필수 설정
 - Realm
-  - `ssafy-maker`
+  - `app`
   - `Verify email = ON`
   - `User registration = ON`
   - `Reset password = ON`
@@ -80,10 +80,10 @@ STG/PROD env 에 최소한 아래 값이 필요하다.
 
 ```env
 JWT_ENABLED=true
-JWT_ISSUER_URI=https://auth.ssafymaker.cloud/realms/ssafy-maker
+JWT_ISSUER_URI=https://auth.ssafymaker.cloud/realms/app
 KEYCLOAK_ENABLED=true
 KEYCLOAK_BASE_URL=https://auth.ssafymaker.cloud
-KEYCLOAK_REALM=ssafy-maker
+KEYCLOAK_REALM=app
 KEYCLOAK_CLIENT_ID=ssafy-maker-public
 CORS_ALLOWED_ORIGINS=https://ssafymaker.cloud,https://stg.ssafymaker.cloud,http://localhost:5173
 ```
@@ -106,7 +106,7 @@ PostgreSQL `users` 테이블에는 다음 운영 필드를 저장한다.
 ```env
 VITE_API_BASE_URL=https://ssafymaker.cloud
 VITE_KEYCLOAK_BASE_URL=https://auth.ssafymaker.cloud
-VITE_KEYCLOAK_REALM=ssafy-maker
+VITE_KEYCLOAK_REALM=app
 VITE_KEYCLOAK_CLIENT_ID=ssafy-maker-public
 ```
 

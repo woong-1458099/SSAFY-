@@ -6,7 +6,6 @@ import { SceneKey } from "@shared/enums/sceneKey";
 
 type AuthView = "login" | "signup" | "findId" | "findPw";
 type MessageTone = "info" | "success" | "error";
-type FieldTone = "default" | "error" | "valid";
 
 export class LoginScene extends Phaser.Scene {
   private enterKey?: Phaser.Input.Keyboard.Key;
@@ -90,7 +89,7 @@ export class LoginScene extends Phaser.Scene {
           </div>
           <div id="auth-msg" style="margin-top:12px;padding:12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;">Use the Keycloak hosted page to authenticate.</div>
           <div id="auth-form" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:6px;scrollbar-width:thin;"></div>
-          <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">Continue</button>
+          <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">Login with Keycloak</button>
         </section>
       </div>
     `;
@@ -149,53 +148,38 @@ export class LoginScene extends Phaser.Scene {
       if (view === "login") {
         form.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:10px;">
-            <label style="display:flex;flex-direction:column;gap:6px;color:#d2deea;font-size:14px;">
-              Login ID
-              <input id="login-id" type="text" autocomplete="username" maxlength="50" placeholder="6 characters or more" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(120,193,231,0.16);background:rgba(9,18,28,0.95);color:#f4fbff;outline:none;" />
-            </label>
-            <div id="login-id-feedback" style="min-height:18px;color:#8fb0c6;font-size:12px;">Login ID must be at least 6 characters.</div>
-            <label style="display:flex;flex-direction:column;gap:6px;color:#d2deea;font-size:14px;">
-              Password
-              <input id="login-password" type="password" autocomplete="current-password" maxlength="100" placeholder="8 characters or more" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(120,193,231,0.16);background:rgba(9,18,28,0.95);color:#f4fbff;outline:none;" />
-            </label>
-            <div id="login-password-feedback" style="min-height:18px;color:#8fb0c6;font-size:12px;">Password must be at least 8 characters.</div>
             <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;">
-              The final credential check is handled on the Keycloak hosted login page.
+              Login immediately redirects to the Keycloak hosted page. Credentials are entered and verified there, not inside the game client.
+            </div>
+            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(8,18,29,0.92);color:#cfe0eb;line-height:1.6;">
+              Click the top <strong style="color:#f4fbff;">Login</strong> button or the action button below to start OIDC Authorization Code with PKCE.
             </div>
           </div>
         `;
-        submit.textContent = "Continue to Login";
-        setMessage("Enter a valid login ID and password format, then continue to Keycloak.", "info");
-        attachLoginValidation();
+        submit.textContent = "Login with Keycloak";
+        submit.disabled = false;
+        submit.style.opacity = "1";
+        submit.style.cursor = "pointer";
+        setMessage("Login starts immediately on the Keycloak hosted page.", "info");
         return;
       }
 
       if (view === "signup") {
         form.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:10px;">
-            <label style="display:flex;flex-direction:column;gap:6px;color:#d2deea;font-size:14px;">
-              Login ID
-              <input id="signup-id" type="text" autocomplete="username" maxlength="50" placeholder="6 characters or more" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(120,193,231,0.16);background:rgba(9,18,28,0.95);color:#f4fbff;outline:none;" />
-            </label>
-            <div id="signup-id-feedback" style="min-height:18px;color:#8fb0c6;font-size:12px;">Login ID must be at least 6 characters.</div>
-            <label style="display:flex;flex-direction:column;gap:6px;color:#d2deea;font-size:14px;">
-              Password
-              <input id="signup-password" type="password" autocomplete="new-password" maxlength="100" placeholder="8 characters or more" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(120,193,231,0.16);background:rgba(9,18,28,0.95);color:#f4fbff;outline:none;" />
-            </label>
-            <div id="signup-password-feedback" style="min-height:18px;color:#8fb0c6;font-size:12px;">Password must be at least 8 characters.</div>
-            <label style="display:flex;flex-direction:column;gap:6px;color:#d2deea;font-size:14px;">
-              Confirm Password
-              <input id="signup-password-confirm" type="password" autocomplete="new-password" maxlength="100" placeholder="Enter password again" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(120,193,231,0.16);background:rgba(9,18,28,0.95);color:#f4fbff;outline:none;" />
-            </label>
-            <div id="signup-password-confirm-feedback" style="min-height:18px;color:#8fb0c6;font-size:12px;">Password confirmation is required.</div>
             <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;">
-              Account creation and JWT issuance are finalized on the Keycloak hosted registration page.
+              Signup immediately redirects to the Keycloak hosted registration page. Account creation, email verification, and token issuance are all handled there.
+            </div>
+            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(8,18,29,0.92);color:#cfe0eb;line-height:1.6;">
+              Click the top <strong style="color:#f4fbff;">Signup</strong> button or the action button below to open the Keycloak registration flow.
             </div>
           </div>
         `;
-        submit.textContent = "Continue to Signup";
-        setMessage("Enter a valid login ID and password format, then continue to Keycloak.", "info");
-        attachSignupValidation();
+        submit.textContent = "Signup with Keycloak";
+        submit.disabled = false;
+        submit.style.opacity = "1";
+        submit.style.cursor = "pointer";
+        setMessage("Signup starts immediately on the Keycloak hosted page.", "info");
         return;
       }
 
@@ -211,125 +195,6 @@ export class LoginScene extends Phaser.Scene {
       submit.disabled = false;
       submit.style.opacity = "1";
       submit.style.cursor = "pointer";
-    };
-
-    const setFieldFeedback = (
-      input: HTMLInputElement | null,
-      feedback: HTMLElement | null,
-      tone: FieldTone,
-      text: string
-    ): void => {
-      if (feedback) {
-        feedback.textContent = text;
-        feedback.style.color =
-          tone === "error" ? "#ff96ad" : tone === "valid" ? "#8ff0c7" : "#8fb0c6";
-      }
-      if (input) {
-        input.style.borderColor =
-          tone === "error" ? "rgba(255,120,148,0.65)" : tone === "valid" ? "rgba(91,229,177,0.65)" : "rgba(120,193,231,0.16)";
-      }
-    };
-
-    const loginIdError = (value: string): string | null => {
-      if (!value.trim()) {
-        return "Login ID is required.";
-      }
-      if (value.trim().length < 6) {
-        return "Login ID must be at least 6 characters.";
-      }
-      return null;
-    };
-
-    const passwordError = (value: string): string | null => {
-      if (!value) {
-        return "Password is required.";
-      }
-      if (value.length < 8) {
-        return "Password must be at least 8 characters.";
-      }
-      return null;
-    };
-
-    const attachLoginValidation = (): void => {
-      const loginIdInput = form.querySelector<HTMLInputElement>("#login-id");
-      const passwordInput = form.querySelector<HTMLInputElement>("#login-password");
-      const loginIdFeedback = form.querySelector<HTMLElement>("#login-id-feedback");
-      const passwordFeedback = form.querySelector<HTMLElement>("#login-password-feedback");
-
-      const sync = (): void => {
-        const loginIdIssue = loginIdError(loginIdInput?.value ?? "");
-        const passwordIssue = passwordError(passwordInput?.value ?? "");
-
-        setFieldFeedback(
-          loginIdInput,
-          loginIdFeedback,
-          loginIdIssue ? "error" : "valid",
-          loginIdIssue ?? "Login ID format looks good."
-        );
-        setFieldFeedback(
-          passwordInput,
-          passwordFeedback,
-          passwordIssue ? "error" : "valid",
-          passwordIssue ?? "Password format looks good."
-        );
-
-        submit.disabled = Boolean(loginIdIssue || passwordIssue);
-        submit.style.opacity = submit.disabled ? "0.52" : "1";
-        submit.style.cursor = submit.disabled ? "not-allowed" : "pointer";
-      };
-
-      loginIdInput?.addEventListener("input", sync);
-      passwordInput?.addEventListener("input", sync);
-      sync();
-    };
-
-    const attachSignupValidation = (): void => {
-      const signupIdInput = form.querySelector<HTMLInputElement>("#signup-id");
-      const passwordInput = form.querySelector<HTMLInputElement>("#signup-password");
-      const confirmInput = form.querySelector<HTMLInputElement>("#signup-password-confirm");
-      const signupIdFeedback = form.querySelector<HTMLElement>("#signup-id-feedback");
-      const passwordFeedback = form.querySelector<HTMLElement>("#signup-password-feedback");
-      const confirmFeedback = form.querySelector<HTMLElement>("#signup-password-confirm-feedback");
-
-      const sync = (): void => {
-        const signupIdIssue = loginIdError(signupIdInput?.value ?? "");
-        const passwordIssue = passwordError(passwordInput?.value ?? "");
-        const confirmValue = confirmInput?.value ?? "";
-        const confirmIssue =
-          !confirmValue
-            ? "Password confirmation is required."
-            : confirmValue !== (passwordInput?.value ?? "")
-              ? "Password confirmation does not match."
-              : null;
-
-        setFieldFeedback(
-          signupIdInput,
-          signupIdFeedback,
-          signupIdIssue ? "error" : "valid",
-          signupIdIssue ?? "Login ID format looks good."
-        );
-        setFieldFeedback(
-          passwordInput,
-          passwordFeedback,
-          passwordIssue ? "error" : "valid",
-          passwordIssue ?? "Password format looks good."
-        );
-        setFieldFeedback(
-          confirmInput,
-          confirmFeedback,
-          confirmIssue ? "error" : "valid",
-          confirmIssue ?? "Password confirmation matches."
-        );
-
-        submit.disabled = Boolean(signupIdIssue || passwordIssue || confirmIssue);
-        submit.style.opacity = submit.disabled ? "0.52" : "1";
-        submit.style.cursor = submit.disabled ? "not-allowed" : "pointer";
-      };
-
-      signupIdInput?.addEventListener("input", sync);
-      passwordInput?.addEventListener("input", sync);
-      confirmInput?.addEventListener("input", sync);
-      sync();
     };
 
     const applySession = (accessToken: string, refreshToken: string, user: { id: string; email: string }): void => {
@@ -373,43 +238,29 @@ export class LoginScene extends Phaser.Scene {
       }
     };
 
-    const handleSubmit = async (): Promise<void> => {
-      if (this.currentView === "findId" || this.currentView === "findPw") {
-        setMessage("Only PKCE login and signup are wired right now.", "info");
-        return;
-      }
-
-      const loginHint =
-        this.currentView === "signup"
-          ? form.querySelector<HTMLInputElement>("#signup-id")?.value ?? ""
-          : form.querySelector<HTMLInputElement>("#login-id")?.value ?? "";
-
-      const loginIdIssue = loginIdError(loginHint);
-      const passwordValue =
-        this.currentView === "signup"
-          ? form.querySelector<HTMLInputElement>("#signup-password")?.value ?? ""
-          : form.querySelector<HTMLInputElement>("#login-password")?.value ?? "";
-      const passwordIssue = passwordError(passwordValue);
-      if (loginIdIssue || passwordIssue) {
-        setMessage(loginIdIssue ?? passwordIssue ?? "Invalid credentials format", "error");
-        return;
-      }
-
-      if (this.currentView === "signup") {
-        const confirmValue = form.querySelector<HTMLInputElement>("#signup-password-confirm")?.value ?? "";
-        if (!confirmValue || confirmValue !== passwordValue) {
-          setMessage("Password confirmation does not match.", "error");
-          return;
-        }
-      }
-
+    const startAuth = async (action: "login" | "signup"): Promise<void> => {
       setSubmitting(true);
       try {
-        await beginPkceAuth(this.currentView === "signup" ? "signup" : "login", loginHint);
+        setMessage(
+          action === "signup"
+            ? "Redirecting to the Keycloak hosted registration page."
+            : "Redirecting to the Keycloak hosted login page.",
+          "info"
+        );
+        await beginPkceAuth(action);
       } catch (error) {
         setSubmitting(false);
         setMessage(error instanceof Error ? error.message : "Failed to start PKCE login", "error");
       }
+    };
+
+    const handleSubmit = async (): Promise<void> => {
+      if (this.currentView === "findId" || this.currentView === "findPw") {
+        setMessage("Only Keycloak login and signup are available in the client right now.", "info");
+        return;
+      }
+
+      await startAuth(this.currentView === "signup" ? "signup" : "login");
     };
 
     const onSubmitClick = (): void => {
@@ -418,7 +269,12 @@ export class LoginScene extends Phaser.Scene {
 
     tabs.forEach((tab) => {
       const view = tab.dataset.view as AuthView;
-      tab.addEventListener("click", () => renderView(view));
+      tab.addEventListener("click", () => {
+        renderView(view);
+        if (view === "login" || view === "signup") {
+          void startAuth(view);
+        }
+      });
     });
     submit.addEventListener("click", onSubmitClick);
 
