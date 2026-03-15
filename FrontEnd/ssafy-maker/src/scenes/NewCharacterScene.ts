@@ -1,245 +1,252 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
-
-type RoleType = "backend" | "frontend" | "ai";
-type TraitType = "focus" | "team" | "challenge";
-
-const ROLE_LABEL: Record<RoleType, string> = {
-  backend: "백엔드형",
-  frontend: "프론트형",
-  ai: "AI형"
-};
-
-const TRAIT_LABEL: Record<TraitType, string> = {
-  focus: "집중형",
-  team: "협업형",
-  challenge: "도전형"
-};
-
-const ROLE_ORDER: RoleType[] = ["backend", "frontend", "ai"];
-const TRAIT_ORDER: TraitType[] = ["focus", "team", "challenge"];
+import { AudioManager } from "@core/managers/AudioManager";
 
 export class NewCharacterScene extends Phaser.Scene {
-  private readonly fontFamily = "\"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
-  private readonly defaultName = "싸피생";
+  private readonly audioManager = new AudioManager();
+  private userName: string = "싸피생";
+  private gender: 'male' | 'female' = 'male';
+  private hairIndex: number = 1;
+  private clothIndex: number = 1;
 
-  private nickname = this.defaultName;
-  private roleIndex = 0;
-  private traitIndex = 0;
+  private readonly MAX_HAIR = 3;
+  private readonly MAX_CLOTH = 3;
+  private readonly FONT_FAMILY = 'PFStardustBold';
 
-  private previewBody?: Phaser.GameObjects.Rectangle;
-  private previewHead?: Phaser.GameObjects.Ellipse;
-  private previewAccent?: Phaser.GameObjects.Rectangle;
-  private nameText?: Phaser.GameObjects.Text;
-  private roleValueText?: Phaser.GameObjects.Text;
-  private traitValueText?: Phaser.GameObjects.Text;
-  private helperText?: Phaser.GameObjects.Text;
+  private readonly FRAME_WIDTH = 16; 
+  private readonly FRAME_HEIGHT = 32;
+
+  private characterPreview!: Phaser.GameObjects.Container;
+  private charBase!: Phaser.GameObjects.Sprite;
+  private charCloth!: Phaser.GameObjects.Sprite; 
+  private charHair!: Phaser.GameObjects.Sprite; 
+  
+  private bgm!: Phaser.Sound.BaseSound;
+  private nameText!: Phaser.GameObjects.Text;
+  private maleBtn!: Phaser.GameObjects.Image;
+  private femaleBtn!: Phaser.GameObjects.Image;
+  private hairButtons: Phaser.GameObjects.Text[] = [];
+  private clothButtons: Phaser.GameObjects.Text[] = [];
 
   constructor() {
-    super(SceneKey.NewCharacter);
+    super(SceneKey.NewCharacter || 'NewCharacterScene');
   }
 
   preload(): void {
-    this.load.image("char-create-bg", "assets/game/backgrounds/title_background.png");
-    this.load.audio("char-create-click", "assets/game/audio/SoundEffect/click.wav");
-    this.load.audio("char-create-bgm", "assets/game/audio/BGM/bye.mp3");
+    // 1. 공통 UI 리소스
+    this.load.image('title_bg', '../../assets/game/backgrounds/title_background.png');
+    this.load.image('ui_box', '../../assets/game/ui/medium_ui_box.png');
+    this.load.image('male_button', '../../assets/game/ui/male.png');
+    this.load.image('female_button', '../../assets/game/ui/female.png');
+    this.load.audio('create_bgm', '../../assets/game/audio/BGM/bye.mp3');
+    this.load.audio('click_sfx', '../../assets/game/audio/SoundEffect/click.wav');
+
+    const spriteConfig = { frameWidth: this.FRAME_WIDTH, frameHeight: this.FRAME_HEIGHT };
+    
+    // 2. 캐릭터 베이스 로드
+    this.load.spritesheet('base_male', '../../assets/game/character/base_male.png', spriteConfig);
+    this.load.spritesheet('base_female', '../../assets/game/character/base_female.png', spriteConfig);
+
+    // 3. 성별별 헤어 리소스 로드 (male_hair_1~3, female_hair_1~3)
+    for (let i = 1; i <= this.MAX_HAIR; i++) {
+      this.load.spritesheet(`male_hair_${i}`, `../../assets/game/character/male_hair_${i}.png`, spriteConfig);
+      this.load.spritesheet(`female_hair_${i}`, `../../assets/game/character/female_hair_${i}.png`, spriteConfig);
+    }
+
+    // 4. 성별별 의상 리소스 로드 (male_clothes_1~3, female_clothes_1~3)
+    for (let i = 1; i <= this.MAX_CLOTH; i++) {
+      this.load.spritesheet(`male_clothes_${i}`, `../../assets/game/character/male_clothes_${i}.png`, spriteConfig);
+      this.load.spritesheet(`female_clothes_${i}`, `../../assets/game/character/female_clothes_${i}.png`, spriteConfig);
+    }
   }
 
   create(): void {
-    const { width, height } = this.scale;
-    const authUser = this.registry.get("authUser") as { nickname?: string } | undefined;
-    if (authUser?.nickname?.trim()) {
-      this.nickname = authUser.nickname.trim().slice(0, 8);
+    const { width, height } = this.sys.canvas;
+    this.cameras.main.setRoundPixels(true);
+
+    const bg = this.add.image(width / 2, height / 2, 'title_bg');
+    bg.setScale(Math.max(width / bg.width, height / bg.height)).setScrollFactor(0);
+    
+    const uiBox = this.add.image(width / 2, height / 2, 'ui_box');
+    uiBox.setDisplaySize(width * 0.9, height * 0.8).setAlpha(0.9);
+
+    if (this.cache.audio.exists('create_bgm')) {
+      const bgm = this.audioManager.add(this, 'create_bgm', 'bgm', { loop: true, volume: 0.8 });
+      if (bgm) {
+        this.bgm = bgm;
+        this.bgm.play();
+      }
     }
+    
+    this.add.text(width / 2, height * 0.18, "캐릭터 생성", {
+      fontSize: "42px", fontFamily: this.FONT_FAMILY, color: "#ffffff", stroke: "#000", strokeThickness: 6
+    }).setOrigin(0.5);
 
-    this.cameras.main.setBackgroundColor("#101923");
-    this.drawBackground(width, height);
-    this.drawPanel(width, height);
-    this.drawPreview(width, height);
-    this.drawControls(width, height);
-    this.refreshTexts();
+    this.characterPreview = this.add.container(Math.floor(width * 0.35), Math.floor(height * 0.5));
+    
+    const uiX = width * 0.65;
+    this.setupUI(uiX, width, height);
+    this.updateCharacterPreview();
+  }
 
-    if (this.cache.audio.exists("char-create-bgm")) {
-      const bgm = this.sound.add("char-create-bgm", { loop: true, volume: 0.4 });
-      bgm.play();
-      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-        bgm.stop();
-        bgm.destroy();
+  private setupUI(uiX: number, width: number, height: number) {
+    // 1. 이름 입력
+    this.nameText = this.add.text(uiX, height * 0.35, `이름: ${this.userName} [수정]`, {
+      fontSize: "24px", fontFamily: this.FONT_FAMILY, backgroundColor: "#333", padding: {x:15, y:10}
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    
+    this.nameText.on('pointerdown', () => {
+      this.playClick();
+      const input = prompt("이름을 입력해주세요", this.userName);
+      if (input) {
+        this.userName = input.trim().substring(0, 6) || "싸피생";
+        this.nameText.setText(`이름: ${this.userName} [수정]`);
+      }
+    });
+
+    // 2. 성별 버튼
+    this.add.text(uiX - 130, height * 0.47, "성별", { fontSize: "22px", fontFamily: this.FONT_FAMILY }).setOrigin(0.5);
+    this.maleBtn = this.add.image(uiX - 20, height * 0.47, 'male_button').setInteractive({ useHandCursor: true }).setScale(1.2);
+    this.femaleBtn = this.add.image(uiX + 60, height * 0.47, 'female_button').setInteractive({ useHandCursor: true }).setScale(1.2);
+    
+    this.maleBtn.on('pointerdown', () => { this.playClick(); this.selectGender('male'); });
+    this.femaleBtn.on('pointerdown', () => { this.playClick(); this.selectGender('female'); });
+    this.updateGenderButtonUI();
+
+    // 3. 헤어 선택
+    this.add.text(uiX - 130, height * 0.57, "헤어", { fontSize: "22px", fontFamily: this.FONT_FAMILY }).setOrigin(0.5);
+    this.hairButtons = this.createNumberButtons(uiX - 40, height * 0.57, this.MAX_HAIR, (idx) => {
+      this.hairIndex = idx;
+      this.updateButtonColors(this.hairButtons, this.hairIndex);
+      this.updateCharacterPreview();
+    });
+
+    // 4. 의상 선택 (선택 시 성별에 맞는 의상 적용)
+    this.add.text(uiX - 130, height * 0.67, "의상", { fontSize: "22px", fontFamily: this.FONT_FAMILY }).setOrigin(0.5);
+    this.clothButtons = this.createNumberButtons(uiX - 40, height * 0.67, this.MAX_CLOTH, (idx) => {
+      this.clothIndex = idx;
+      this.updateButtonColors(this.clothButtons, this.clothIndex);
+      this.updateCharacterPreview();
+    });
+
+    // 5. 생성하기 버튼
+    const startBtnBg = this.add.image(0, 0, 'ui_box').setDisplaySize(200, 60).setInteractive({ useHandCursor: true });
+    const startBtnText = this.add.text(0, 0, "생성하기", {
+      fontSize: "28px", fontFamily: this.FONT_FAMILY, color: "#fff"
+    }).setOrigin(0.5);
+    const startBtnContainer = this.add.container(width / 2, height * 0.94, [startBtnBg, startBtnText]);
+
+    startBtnBg.on('pointerdown', () => {
+      this.playClick();
+      this.tweens.add({
+        targets: startBtnContainer, scale: 0.95, duration: 80, yoyo: true,
+        onComplete: () => {
+          this.registry.set('playerData', { name: this.userName, gender: this.gender, hair: this.hairIndex, cloth: this.clothIndex });
+          this.scene.start(SceneKey.Main);
+        }
+      });
+    });
+
+    this.updateButtonColors(this.hairButtons, this.hairIndex);
+    this.updateButtonColors(this.clothButtons, this.clothIndex);
+  }
+
+  /**
+   * 베이스 + 성별 맞춤 의상 + 성별 맞춤 헤어 레이어링 업데이트
+   */
+  private updateCharacterPreview() {
+    this.characterPreview.removeAll(true);
+    const g = this.gender;
+
+    // 1. 캐릭터 몸체 생성
+    this.charBase = this.add.sprite(0, 0, `base_${g}`).setScale(4).setOrigin(0.5);
+    this.charBase.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    // 2. 의상 생성 (성별에 따른 리소스 선택)
+    const clothKey = `${g}_clothes_${this.clothIndex}`;
+    this.charCloth = this.add.sprite(0, 0, clothKey).setScale(4).setOrigin(0.5);
+    this.charCloth.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    // 3. 헤어 생성 (성별에 따른 리소스 선택)
+    const hairKey = `${g}_hair_${this.hairIndex}`;
+    this.charHair = this.add.sprite(0, 0, hairKey).setScale(4).setOrigin(0.5);
+    this.charHair.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    // 레이어 순서: 베이스 -> 의상 -> 헤어 (머리카락이 가장 위)
+    this.characterPreview.add([this.charBase, this.charCloth, this.charHair]);
+
+    // 4. 애니메이션 처리
+    const baseAnimKey = `base_${g}_idle_anim`;
+    const clothAnimKey = `${g}_clothes_${this.clothIndex}_idle_anim`; // 의상 애니메이션 키 수정
+    const hairAnimKey = `${g}_hair_${this.hairIndex}_idle_anim`;
+
+    // 몸체 애니메이션
+    if (!this.anims.exists(baseAnimKey)) {
+      this.anims.create({
+        key: baseAnimKey,
+        frames: this.anims.generateFrameNumbers(`base_${g}`, { start: 0, end: 3 }),
+        frameRate: 8,
+        repeat: -1
       });
     }
-  }
 
-  private drawBackground(width: number, height: number): void {
-    if (this.textures.exists("char-create-bg")) {
-      const bg = this.add.image(width / 2, height / 2, "char-create-bg");
-      bg.setDisplaySize(width, height);
-      bg.setAlpha(0.7);
+    // 의상 애니메이션 (성별+인덱스 조합으로 고유 키 생성)
+    if (!this.anims.exists(clothAnimKey)) {
+      this.anims.create({
+        key: clothAnimKey,
+        frames: this.anims.generateFrameNumbers(clothKey, { start: 0, end: 3 }),
+        frameRate: 8,
+        repeat: -1
+      });
     }
 
-    this.add.rectangle(width / 2, height / 2, width, height, 0x0b121a, 0.46);
-  }
-
-  private drawPanel(width: number, height: number): void {
-    this.add.rectangle(width / 2, height / 2, 960, 600, 0x08111a, 0.92).setStrokeStyle(2, 0x5a8db1, 0.85);
-    this.add.text(width / 2, 120, "캐릭터 생성", {
-      fontFamily: this.fontFamily,
-      fontSize: "40px",
-      color: "#f2f8ff"
-    }).setOrigin(0.5);
-  }
-
-  private drawPreview(width: number, height: number): void {
-    const previewX = width * 0.34;
-    const previewY = height * 0.53;
-
-    this.add.text(previewX, 192, "미리보기", {
-      fontFamily: this.fontFamily,
-      fontSize: "24px",
-      color: "#a7d7f5"
-    }).setOrigin(0.5);
-
-    this.add.rectangle(previewX, previewY, 310, 390, 0x0e2031, 0.88).setStrokeStyle(2, 0x2f5f84, 0.9);
-    this.previewBody = this.add.rectangle(previewX, previewY + 54, 112, 160, 0x4f8dbd, 1);
-    this.previewHead = this.add.ellipse(previewX, previewY - 70, 110, 112, 0xf0d4b6, 1);
-    this.previewAccent = this.add.rectangle(previewX, previewY + 4, 118, 24, 0x2c4d7b, 1);
-  }
-
-  private drawControls(width: number, height: number): void {
-    const x = width * 0.66;
-    const baseY = height * 0.36;
-
-    this.nameText = this.add.text(x, baseY, "", {
-      fontFamily: this.fontFamily,
-      fontSize: "24px",
-      color: "#ffffff",
-      backgroundColor: "#1a344a",
-      padding: { left: 14, right: 14, top: 10, bottom: 10 }
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    this.nameText.on("pointerdown", () => this.editNickname());
-
-    this.add.text(x - 140, baseY + 110, "타입", {
-      fontFamily: this.fontFamily,
-      fontSize: "24px",
-      color: "#c9e7ff"
-    }).setOrigin(0.5);
-    this.roleValueText = this.add.text(x + 10, baseY + 110, "", {
-      fontFamily: this.fontFamily,
-      fontSize: "24px",
-      color: "#ffffff"
-    }).setOrigin(0.5);
-    this.createTextButton(x + 160, baseY + 110, "변경", () => {
-      this.roleIndex = (this.roleIndex + 1) % ROLE_ORDER.length;
-      this.refreshTexts();
-    });
-
-    this.add.text(x - 140, baseY + 190, "성향", {
-      fontFamily: this.fontFamily,
-      fontSize: "24px",
-      color: "#c9e7ff"
-    }).setOrigin(0.5);
-    this.traitValueText = this.add.text(x + 10, baseY + 190, "", {
-      fontFamily: this.fontFamily,
-      fontSize: "24px",
-      color: "#ffffff"
-    }).setOrigin(0.5);
-    this.createTextButton(x + 160, baseY + 190, "변경", () => {
-      this.traitIndex = (this.traitIndex + 1) % TRAIT_ORDER.length;
-      this.refreshTexts();
-    });
-
-    this.helperText = this.add.text(x, baseY + 265, "이름을 눌러 수정하고 시작하세요.", {
-      fontFamily: this.fontFamily,
-      fontSize: "18px",
-      color: "#9fbdd2"
-    }).setOrigin(0.5);
-
-    const startBtn = this.createTextButton(x, baseY + 345, "게임 시작", () => this.startGame(), true);
-    startBtn.setScale(1.15);
-
-  }
-
-  private createTextButton(
-    x: number,
-    y: number,
-    label: string,
-    onClick: () => void,
-    emphasized = false
-  ): Phaser.GameObjects.Text {
-    const bgColor = emphasized ? "#2f9050" : "#2e4f6d";
-    const hoverColor = emphasized ? "#38aa5e" : "#3e6588";
-    const text = this.add.text(x, y, label, {
-      fontFamily: this.fontFamily,
-      fontSize: emphasized ? "28px" : "20px",
-      color: "#ffffff",
-      backgroundColor: bgColor,
-      padding: { left: 20, right: 20, top: 10, bottom: 10 }
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    text.on("pointerover", () => text.setBackgroundColor(hoverColor));
-    text.on("pointerout", () => text.setBackgroundColor(bgColor));
-    text.on("pointerdown", () => {
-      if (this.cache.audio.exists("char-create-click")) {
-        this.sound.play("char-create-click");
-      }
-      onClick();
-    });
-
-    return text;
-  }
-
-  private editNickname(): void {
-    const input = prompt("이름을 입력하세요 (최대 8자)", this.nickname);
-    if (input === null) {
-      return;
+    // 헤어 애니메이션 (성별+인덱스 조합으로 고유 키 생성)
+    if (!this.anims.exists(hairAnimKey)) {
+      this.anims.create({
+        key: hairAnimKey,
+        frames: this.anims.generateFrameNumbers(hairKey, { start: 0, end: 3 }),
+        frameRate: 8,
+        repeat: -1
+      });
     }
 
-    const trimmed = input.trim().slice(0, 8);
-    this.nickname = trimmed || this.defaultName;
-    this.refreshTexts();
+    // 모든 레이어 동시 재생
+    this.charBase.play(baseAnimKey);
+    this.charCloth.play(clothAnimKey);
+    this.charHair.play(hairAnimKey);
   }
 
-  private refreshTexts(): void {
-    this.nameText?.setText(`이름: ${this.nickname} (클릭 수정)`);
-    this.roleValueText?.setText(ROLE_LABEL[ROLE_ORDER[this.roleIndex]]);
-    this.traitValueText?.setText(TRAIT_LABEL[TRAIT_ORDER[this.traitIndex]]);
-    this.applyPreviewTheme();
-  }
-
-  private applyPreviewTheme(): void {
-    if (!this.previewBody || !this.previewAccent) {
-      return;
+  private createNumberButtons(x: number, y: number, count: number, callback: (i: number) => void) {
+    const btns: Phaser.GameObjects.Text[] = [];
+    for (let i = 1; i <= count; i++) {
+      const btn = this.add.text(x + (i - 1) * 60, y, ` ${i} `, {
+        fontSize: "20px", fontFamily: this.FONT_FAMILY, backgroundColor: "#444", padding: { x: 10, y: 5 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      btn.on('pointerdown', () => { this.playClick(); callback(i); });
+      btns.push(btn);
     }
-
-    const role = ROLE_ORDER[this.roleIndex];
-    const trait = TRAIT_ORDER[this.traitIndex];
-
-    const bodyColorByRole: Record<RoleType, number> = {
-      backend: 0x4a7db4,
-      frontend: 0xbc6ea9,
-      ai: 0x6b8a5f
-    };
-    const accentColorByTrait: Record<TraitType, number> = {
-      focus: 0x354f78,
-      team: 0x7a4a72,
-      challenge: 0x5a7437
-    };
-
-    this.previewBody.setFillStyle(bodyColorByRole[role], 1);
-    this.previewAccent.setFillStyle(accentColorByTrait[trait], 1);
+    return btns;
   }
 
-  private startGame(): void {
-    const role = ROLE_ORDER[this.roleIndex];
-    const trait = TRAIT_ORDER[this.traitIndex];
-    this.registry.set("playerData", {
-      name: this.nickname,
-      role,
-      trait
-    });
+  private updateButtonColors(buttons: Phaser.GameObjects.Text[], current: number) {
+    buttons.forEach((btn, i) => btn.setBackgroundColor(i + 1 === current ? '#e67e22' : '#444'));
+  }
 
-    this.cameras.main.fadeOut(280, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start(SceneKey.Main);
-    });
+  private playClick() {
+    this.audioManager.play(this, 'click_sfx', 'sfx');
+  }
+
+  private selectGender(gender: 'male' | 'female') {
+    if (this.gender !== gender) {
+      this.gender = gender;
+      this.updateGenderButtonUI();
+      // 성별 변경 시 헤어와 의상 리소스도 자동으로 성별에 맞게 교체됨
+      this.updateCharacterPreview(); 
+    }
+  }
+
+  private updateGenderButtonUI() {
+    this.maleBtn.setAlpha(this.gender === 'male' ? 1 : 0.5);
+    this.femaleBtn.setAlpha(this.gender === 'female' ? 1 : 0.5);
   }
 }

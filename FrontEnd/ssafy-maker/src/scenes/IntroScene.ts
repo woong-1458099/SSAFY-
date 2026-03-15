@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
+import { AudioManager, type AudioCategory } from "@core/managers/AudioManager";
 
 export class IntroScene extends Phaser.Scene {
+  private readonly audioManager = new AudioManager();
   private allElements: Phaser.GameObjects.GameObject[] = [];
   private dimOverlay!: Phaser.GameObjects.Rectangle;
   private skipText!: Phaser.GameObjects.Text;
@@ -43,9 +45,9 @@ export class IntroScene extends Phaser.Scene {
     this.load.image('victory_bg', 'assets/game/backgrounds/pass_SF2.png');
   }
 
-  private safePlay(key: string, config?: Phaser.Types.Sound.SoundConfig) {
+  private safePlay(key: string, category: AudioCategory, config?: Phaser.Types.Sound.SoundConfig) {
     if (this.cache.audio.exists(key)) {
-      this.sound.play(key, config);
+      this.audioManager.play(this, key, category, config);
     } else {
       console.warn(`Sound key "${key}" not found in cache.`);
     }
@@ -53,6 +55,7 @@ export class IntroScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.sys.canvas;
+    this.introEnded = false;
     this.sound.stopAll();
 
     const skipToIntro = () => {
@@ -117,7 +120,7 @@ export class IntroScene extends Phaser.Scene {
         this.tweens.add({
           targets: cursor, alpha: 1, x: width * 0.8, y: height * 0.2, duration: 1500, ease: 'Cubic.easeInOut',
           onComplete: () => {
-            this.safePlay('click_snd');
+            this.safePlay('click_snd', 'sfx');
             this.tweens.add({
               targets: cursor, scale: 1, duration: 100, yoyo: true,
               onComplete: () => {
@@ -151,7 +154,7 @@ export class IntroScene extends Phaser.Scene {
     this.allElements.forEach(el => el && el.destroy());
     this.allElements = [];
 
-    this.safePlay('victory_bgm', { loop: true, volume: 0.6 });
+    this.safePlay('victory_bgm', 'bgm', { loop: true, volume: 0.6 });
 
     const victoryBg = this.add.image(width / 2, height / 2, 'victory_bg')
       .setOrigin(0.5).setDepth(2).setAlpha(0).setScale(1.2);
@@ -284,7 +287,11 @@ export class IntroScene extends Phaser.Scene {
     const fg = this.add.image(width / 2, (height / 2) + 20, 'subway_fg').setOrigin(0.5).setDepth(3);
     this.allElements.push(bg, train, fg);
     if (this.cache.audio.exists('subway_arrival')) {
-        const arrivalSound = this.sound.add('subway_arrival', { volume: 0.6 });
+        const arrivalSound = this.audioManager.add(this, 'subway_arrival', 'sfx', { volume: 0.6 });
+        if (!arrivalSound) {
+          this.moveTrain(train, width);
+          return;
+        }
         arrivalSound.once('complete', () => this.moveTrain(train, width));
         arrivalSound.play();
     } else { this.moveTrain(train, width); }
@@ -292,10 +299,10 @@ export class IntroScene extends Phaser.Scene {
 
   private moveTrain(train: Phaser.GameObjects.Image, width: number) {
     const trainSoundKey = 'subway_train_snd';
-    let trainSound: any = null;
+    let trainSound: Phaser.Sound.BaseSound | null = null;
     if (this.cache.audio.exists(trainSoundKey)) {
-        trainSound = this.sound.add(trainSoundKey, { volume: 0.6 });
-        trainSound.play();
+        trainSound = this.audioManager.add(this, trainSoundKey, 'sfx', { volume: 0.6 });
+        trainSound?.play();
     }
     this.tweens.add({
       targets: train, x: width / 2, duration: 8000, ease: 'Cubic.out',
@@ -309,8 +316,9 @@ export class IntroScene extends Phaser.Scene {
 
   private handleDoorOpen(train: Phaser.GameObjects.Image) {
     const { width, height } = this.sys.canvas;
-    this.safePlay('door_open_snd');
-    if (this.cache.audio.exists('crowded_snd')) this.sound.add('crowded_snd', { loop: true, volume: 0.5 }).play();
+    this.safePlay('door_open_snd', 'sfx');
+    const crowdedSound = this.audioManager.add(this, 'crowded_snd', 'ambience', { loop: true, volume: 0.5 });
+    crowdedSound?.play();
     train.setTexture('subway_train_open');
     ['crowd1', 'crowd2', 'crowd3'].forEach((key, i) => {
       this.time.delayedCall(500 * (i + 1), () => {
@@ -321,13 +329,16 @@ export class IntroScene extends Phaser.Scene {
     });
     this.time.delayedCall(2500, () => { 
         this.drawShoutBubble(width / 2 + 150, height / 2 + 50, "잠시만요! 내릴게요!!", true, 20, () => {
-            this.time.delayedCall(3000, () => { this.cleanupAndNextStep(this.sound.get('crowded_snd')); });
+            this.time.delayedCall(3000, () => { this.cleanupAndNextStep(crowdedSound); });
         });
     });
   }
 
   private startInterviewPanic(width: number, height: number, narrativeLabel: Phaser.GameObjects.Text) {
-    const roomtone = this.sound.add('roomtone', { loop: true, volume: 0.5 });
+    const roomtone = this.audioManager.add(this, 'roomtone', 'ambience', { loop: true, volume: 0.5 });
+    if (!roomtone) {
+      return;
+    }
     roomtone.play();
     const questions = ["지원자분은 왜 SSAFY에 지원하셨죠?", "자신의 가장 큰 단점이 뭐라고 생각하세요?", "백준 레벨이 어떻게 되시나요?", "갈등 상황 해결 방법은?", "팀 프로젝트 경험은?", "본인의 기술적 강점은?", "협업 시 중요한 점은?", "본인이 생각하는 10년 후 모습은?"];
     const gridPositions = [{ x: width * 0.25, y: height * 0.2 }, { x: width * 0.75, y: height * 0.2 }, { x: width * 0.2, y: height * 0.45 }, { x: width * 0.8, y: height * 0.45 }, { x: width * 0.5, y: height * 0.15 }, { x: width * 0.5, y: height * 0.55 }, { x: width * 0.15, y: height * 0.7 }, { x: width * 0.85, y: height * 0.7 }];
@@ -338,7 +349,7 @@ export class IntroScene extends Phaser.Scene {
         const voiceKey = count % 2 === 0 ? 'voice_male' : 'voice_female';
         this.cameras.main.shake(200, 0.003);
         const pos = gridPositions[count];
-        this.safePlay(voiceKey, { volume: 0.6 });
+        this.safePlay(voiceKey, 'sfx', { volume: 0.6 });
         this.drawShoutBubble(pos.x, pos.y, questions[count], false, 18);
         count++;
         if (count >= 8) {
@@ -352,7 +363,7 @@ export class IntroScene extends Phaser.Scene {
                   narrativeLabel.text = "";
                   this.typewriteText("어떡하지...? 망쳤나?", narrativeLabel, () => {
                     this.time.delayedCall(3000, () => {
-                      this.safePlay('thump_snd', { volume: 1.0 });
+                      this.safePlay('thump_snd', 'sfx', { volume: 1.0 });
                       this.cameras.main.shake(500, 0.02);
                       const finalBlackBg = this.add.rectangle(0, 0, width, height, 0x000000).setOrigin(0).setDepth(100).setAlpha(0);
                       this.tweens.add({ targets: finalBlackBg, alpha: 1, duration: 2500, onComplete: () => {
@@ -442,8 +453,11 @@ export class IntroScene extends Phaser.Scene {
     if (oldBg) this.tweens.add({ targets: oldBg, alpha: 0, duration: 800, onComplete: () => oldBg.destroy() });
     const newBg = this.add.image(width / 2, height / 2, textureKey).setOrigin(0.5).setAlpha(0).setDepth(0).setScale(0.6).setName('current_bg');
     if (textureKey === 'yeoksam_outside' && this.cache.audio.exists('street_bgm')) {
-        const bgm = this.sound.add('street_bgm', { loop: true, volume: 0 }); bgm.play();
-        this.tweens.add({ targets: bgm, volume: 0.5, duration: 2000 });
+        const bgm = this.audioManager.add(this, 'street_bgm', 'bgm', { loop: true, volume: 0 });
+        if (bgm) {
+          bgm.play();
+          this.tweens.add({ targets: bgm, volume: this.audioManager.getEffectiveVolume('bgm', 0.5), duration: 2000 });
+        }
     }
     this.tweens.add({ targets: newBg, alpha: 1, duration: 1500 });
   }
@@ -466,7 +480,7 @@ export class IntroScene extends Phaser.Scene {
     this.time.addEvent({
       callback: () => {
         label.text += text[i];
-        if (text[i] !== " " && text[i] !== "\n") this.safePlay('type_sound', { volume: 0.3 });
+        if (text[i] !== " " && text[i] !== "\n") this.safePlay('type_sound', 'sfx', { volume: 0.3 });
         i++; if (i === text.length) onComplete();
       },
       repeat: text.length - 1, delay: 100

@@ -1,0 +1,19 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../Infra/infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /home/ubuntu/deploy/nginx/upstreams:/etc/nginx/upstreams:ro
+      - /home/ubuntu/certs/cloudflare:/etc/nginx/certs:ro
+      - /home/ubuntu/deploy/frontend:/usr/share/nginx/frontend:ro
+    networks:
+      - core-net
+
+networks:
+  core-net:
+    external: true
+    name: s14p21e206_core_net

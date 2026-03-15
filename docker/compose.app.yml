@@ -27,8 +27,9 @@ services:
       JWT_ENABLED: ${JWT_ENABLED}
       JWT_ISSUER_URI: ${JWT_ISSUER_URI}
     networks:
-      - core-net
-
+      core-net:
+        aliases:
+          - ${API_BLUE_ALIAS}
   api-green:
     image: ${BACKEND_IMAGE}
     restart: unless-stopped
@@ -57,25 +58,10 @@ services:
       JWT_ENABLED: ${JWT_ENABLED}
       JWT_ISSUER_URI: ${JWT_ISSUER_URI}
     networks:
-      - core-net
-
-  nginx:
-    image: nginx:1.27-alpine
-    restart: unless-stopped
-    depends_on:
-      - api-blue
-      - api-green
-    ports:
-      - "${NGINX_PORT}:80"
-      - "${NGINX_SSL_PORT}:443"
-    volumes:
-      - ../Infra/infra/nginx/conf.d:/etc/nginx/conf.d:ro
-      - /home/ubuntu/deploy/nginx/upstreams:/etc/nginx/upstreams:ro
-      - /home/ubuntu/certs/cloudflare:/etc/nginx/certs:ro
-      - /home/ubuntu/deploy/frontend/current:/usr/share/nginx/frontend:ro
-    networks:
-      - core-net
-
+      core-net:
+        aliases:
+          - ${API_GREEN_ALIAS}
 networks:
   core-net:
+    external: true
     name: s14p21e206_core_net

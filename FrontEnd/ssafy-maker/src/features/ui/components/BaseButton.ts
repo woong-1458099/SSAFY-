@@ -10,10 +10,10 @@ export type BaseButtonOptions = {
 };
 
 export function createBaseButton(scene: Phaser.Scene, options: BaseButtonOptions): Phaser.GameObjects.Container {
-  const bg = scene.add.rectangle(options.x, options.y, options.width, options.height, 0xc8b084, 1);
-  bg.setStrokeStyle(2, 0x8f6c3c, 1);
+  const bg = scene.add.rectangle(options.x, options.y, options.width, options.height, 0x29507f, 1);
+  bg.setStrokeStyle(2, 0x66b6ff, 1);
   const label = scene.add.text(options.x - options.width * 0.28, options.y - 12, options.text, {
-    color: "#3e2d1a",
+    color: "#e6f3ff",
     fontSize: "22px"
   });
 
