@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
+import { readStoredSession } from "@features/auth/keycloakPkce";
 
 export class StartScene extends Phaser.Scene {
   private readonly audioManager = new AudioManager();
@@ -22,6 +23,13 @@ export class StartScene extends Phaser.Scene {
   }
 
   create(): void {
+    const authToken = this.registry.get("authToken");
+    const storedSession = readStoredSession();
+    if (!authToken && !storedSession) {
+      this.scene.start(SceneKey.Login);
+      return;
+    }
+
     const { width, height } = this.scale;
 
     const bg = this.add.image(width / 2, height / 2, "start-bg");

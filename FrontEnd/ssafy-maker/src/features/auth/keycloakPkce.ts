@@ -131,7 +131,7 @@ export function clearStoredSession(): void {
   localStorage.removeItem(storageKeys.user);
 }
 
-export async function beginPkceAuth(action: AuthAction): Promise<void> {
+export async function beginPkceAuth(action: AuthAction, loginHint?: string): Promise<void> {
   const state = randomString(48);
   const verifier = randomString(96);
   const challenge = await sha256(verifier);
@@ -146,6 +146,9 @@ export async function beginPkceAuth(action: AuthAction): Promise<void> {
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
+  if (loginHint && loginHint.trim()) {
+    url.searchParams.set("login_hint", loginHint.trim());
+  }
 
   if (action === "signup") {
     url.searchParams.set("prompt", "create");
