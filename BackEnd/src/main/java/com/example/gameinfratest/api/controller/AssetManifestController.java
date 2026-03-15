@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/public/assets")
+@RequestMapping
 public class AssetManifestController {
 
     private final AssetManifestService assetManifestService;
@@ -17,8 +17,13 @@ public class AssetManifestController {
         this.assetManifestService = assetManifestService;
     }
 
-    @GetMapping("/manifest")
+    @GetMapping("/api/public/assets/manifest")
     public ApiResponse<AssetManifestResponse> manifest() {
+        return ApiResponse.ok("asset manifest success", assetManifestService.getManifest());
+    }
+
+    @GetMapping("/public/assets/manifest")
+    public ApiResponse<AssetManifestResponse> publicManifest() {
         return ApiResponse.ok("asset manifest success", assetManifestService.getManifest());
     }
 }
