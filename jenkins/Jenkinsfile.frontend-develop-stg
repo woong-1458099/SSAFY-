@@ -29,7 +29,6 @@ pipeline {
     VITE_KEYCLOAK_BASE_URL = 'https://auth.ssafymaker.cloud'
     VITE_KEYCLOAK_REALM = 'app'
     VITE_KEYCLOAK_CLIENT_ID = 'ssafy-maker-public'
-    N8N_DEPLOY_TOKEN = credentials('n8n-deploy-token')
   }
 
   stages {
@@ -183,21 +182,6 @@ EOSSH
   post {
     success {
       echo "Frontend STG deploy success: release=${env.RELEASE_TAG}"
-      sh """
-        curl -sS -X POST 'https://n8n.ssafymaker.cloud/webhook/jenkins/deploy-notify' \
-          -H 'Content-Type: application/json' \
-          -H 'X-Deploy-Token: ${N8N_DEPLOY_TOKEN}' \
-          --data '{
-            "jobName":"frontend-develop-stg",
-            "buildNumber":"'"${env.BUILD_NUMBER}"'",
-            "result":"SUCCESS",
-            "buildUrl":"'"${env.BUILD_URL}"'",
-            "branch":"develop",
-            "service":"frontend",
-            "environment":"stg",
-            "releaseTag":"'"${env.RELEASE_TAG}"'"
-          }'
-      """
     }
 
     failure {
@@ -220,22 +204,6 @@ EOSSH
         } else {
           echo 'Rollback skipped: previous live dir missing or switch not completed.'
         }
-
-        sh """
-          curl -sS -X POST 'https://n8n.ssafymaker.cloud/webhook/jenkins/deploy-notify' \
-            -H 'Content-Type: application/json' \
-            -H 'X-Deploy-Token: ${N8N_DEPLOY_TOKEN}' \
-            --data '{
-              "jobName":"frontend-develop-stg",
-              "buildNumber":"'"${env.BUILD_NUMBER}"'",
-              "result":"FAILURE",
-              "buildUrl":"'"${env.BUILD_URL}"'",
-              "branch":"develop",
-              "service":"frontend",
-              "environment":"stg",
-              "releaseTag":"'"${env.RELEASE_TAG}"'"
-            }'
-        """
       }
     }
   }
