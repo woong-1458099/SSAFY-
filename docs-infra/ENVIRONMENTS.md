@@ -56,6 +56,9 @@ ssh -L 15432:127.0.0.1:5432 -L 16379:127.0.0.1:6379 -L 15673:127.0.0.1:5672 <use
 - compose project: `stg-app`
 - data compose project: `stg-data`
 - domain: `stg.ssafymaker.cloud`
+- 필수 앱 URL 변수:
+  - `APP_PUBLIC_BASE_URL=https://stg.ssafymaker.cloud`
+  - `APP_FRONTEND_BASE_URL=https://stg.ssafymaker.cloud`
 
 내부 서비스명 기준 연결:
 - postgres
@@ -70,6 +73,9 @@ ssh -L 15432:127.0.0.1:5432 -L 16379:127.0.0.1:6379 -L 15673:127.0.0.1:5672 <use
 - 원격 프로젝트 경로: `/home/ubuntu/apps/S14P21E206`
 - compose project: `prod-app`
 - domain: `ssafymaker.cloud`
+- 필수 앱 URL 변수:
+  - `APP_PUBLIC_BASE_URL=https://ssafymaker.cloud`
+  - `APP_FRONTEND_BASE_URL=https://ssafymaker.cloud`
 
 내부 서비스명 기준 연결:
 - postgres

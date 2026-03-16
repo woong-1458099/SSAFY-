@@ -60,6 +60,8 @@ If role-based authorization is used, include:
 ```env
 JWT_ENABLED=true
 JWT_ISSUER_URI=http://localhost:8081/realms/app
+APP_PUBLIC_BASE_URL=http://localhost:8080
+APP_FRONTEND_BASE_URL=http://localhost:5173
 KEYCLOAK_ENABLED=true
 KEYCLOAK_BASE_URL=http://localhost:8081
 KEYCLOAK_PUBLIC_BASE_URL=http://localhost:8081
@@ -75,6 +77,8 @@ SERVER_SESSION_TIMEOUT=30m
 ```
 
 For staging and production:
+- `APP_PUBLIC_BASE_URL` should be the public backend origin that receives `/api/auth/callback`
+- `APP_FRONTEND_BASE_URL` should be the public frontend origin used after logout
 - `KEYCLOAK_PUBLIC_BASE_URL` should be the public auth domain
 - `KEYCLOAK_INTERNAL_BASE_URL` should be the internal network address if backend and Keycloak are on the same private network
 - `SESSION_COOKIE_SECURE=true`
