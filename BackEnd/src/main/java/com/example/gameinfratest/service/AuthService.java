@@ -44,6 +44,7 @@ public class AuthService {
     private static final String SESSION_STATE_KEY = "auth.bff.state";
     private static final String SESSION_VERIFIER_KEY = "auth.bff.verifier";
     private static final String SESSION_ACTION_KEY = "auth.bff.action";
+    private static final String OIDC_SCOPE = "openid profile email";
 
     private final AppUrlProperties appUrlProperties;
     private final KeycloakAuthProperties keycloakAuthProperties;
@@ -69,6 +70,10 @@ public class AuthService {
         if (!keycloakAuthProperties.enabled()) {
             return;
         }
+        if (keycloakAuthProperties.requireClientSecret()
+                && (keycloakAuthProperties.clientSecret() == null || keycloakAuthProperties.clientSecret().isBlank())) {
+            throw new IllegalStateException("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
+        }
         appUrlProperties.validatedPublicBaseUri();
         appUrlProperties.validatedFrontendBaseUri();
     }
@@ -90,12 +95,13 @@ public class AuthService {
                 .queryParam("client_id", keycloakAuthProperties.clientId())
                 .queryParam("redirect_uri", callbackUri)
                 .queryParam("response_type", "code")
-                .queryParam("scope", "openid profile email")
+                .queryParam("scope", OIDC_SCOPE)
                 .queryParam("state", state)
                 .queryParam("code_challenge", challenge)
                 .queryParam("code_challenge_method", "S256");
 
-        String authorizationUrl = builder.build(true).toUriString();
+        // Query param values must be raw values here; UriComponentsBuilder performs the percent-encoding.
+        String authorizationUrl = builder.build().encode().toUriString();
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
         return authorizationUrl;
@@ -175,7 +181,8 @@ public class AuthService {
             builder.queryParam("id_token_hint", resolvedIdTokenHint);
         }
 
-        String logoutUrl = builder.build(true).toUriString();
+        // Query param values must be raw values here; UriComponentsBuilder performs the percent-encoding.
+        String logoutUrl = builder.build().encode().toUriString();
         log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);
     }
