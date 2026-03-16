@@ -23,10 +23,14 @@
 ### 운영 도구 스택
 - 파일: `docker/compose.ops.yml`
 - 서비스:
-  - `jenkins`
-  - `n8n`
-  - `prometheus`
-  - `grafana`
+    - `jenkins`
+    - `n8n`
+    - `prometheus`
+    - `grafana`
+    - `node-exporter`
+    - `cadvisor`
+    - `loki`
+    - `promtail`
 
 ### 인증 스택
 - 파일: `docker/compose.auth.yml`
@@ -159,8 +163,34 @@ server prod-api-blue:8080;
 - `docker-grafana-1`
 - `docker-prometheus-1`
 - `stg-keycloak`
+- `docker-node-exporter-1`
+- `docker-cadvisor-1`
+- `docker-loki-1`
+- `docker-promtail-1`
 
-## 10. 주의사항
+## 10. monitoring 설정 구조
+
+### 설정 파일 경로
+- Prometheus:
+    - `Infra/monitoring/prometheus.yml`
+- Loki:
+    - `Infra/monitoring/loki-config.yml`
+- Promtail:
+    - `Infra/monitoring/promtail-config.yml`
+- Grafana datasource provisioning:
+    - `Infra/monitoring/grafana/provisioning/datasources/monitoring.yml`
+
+### 역할
+- `node-exporter`
+    - EC2 호스트 메트릭 수집
+- `cadvisor`
+    - Docker 컨테이너 메트릭 수집
+- `loki`
+    - 로그 저장 / 검색
+- `promtail`
+    - Docker 컨테이너 로그를 Loki로 전달
+
+## 11. 주의사항
 - `compose.app.yml`에 nginx를 다시 넣지 않는다.
 - 공용 nginx는 `docker/compose.nginx.yml` 기준으로만 운영한다.
 - backend app container는 외부 포트를 직접 publish하지 않는다.
