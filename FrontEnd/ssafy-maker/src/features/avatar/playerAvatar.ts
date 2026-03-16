@@ -29,6 +29,14 @@ const PLAYER_DIRECTION_FRAMES = {
   down: { idle: 9, walk: [10, 11, 12, 11] },
 } as const;
 
+export function getAvatarDataFromRegistry(registry: Phaser.Data.DataManager): PlayerAvatarData {
+  const raw = registry.get("playerData") as Partial<PlayerAvatarData> | undefined;
+  const gender = raw?.gender === "female" ? "female" : "male";
+  const hair = Phaser.Math.Clamp(Math.round(raw?.hair ?? 1), 1, 3);
+  const cloth = Phaser.Math.Clamp(Math.round(raw?.cloth ?? 1), 1, 3);
+  return { gender, hair, cloth };
+}
+
 export function preloadPlayerAvatarAssets(scene: Phaser.Scene): void {
   scene.load.spritesheet("base_male", "../../assets/game/character/base_male.png", PLAYER_SPRITE_CONFIG);
   scene.load.spritesheet("base_female", "../../assets/game/character/base_female.png", PLAYER_SPRITE_CONFIG);
