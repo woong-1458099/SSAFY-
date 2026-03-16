@@ -17,20 +17,12 @@ public class AppUrlProperties {
         this.frontendBaseUrl = frontendBaseUrl;
     }
 
-    public String publicBaseUrl() {
-        return publicBaseUrl;
-    }
-
     public String getPublicBaseUrl() {
         return publicBaseUrl;
     }
 
     public void setPublicBaseUrl(String publicBaseUrl) {
         this.publicBaseUrl = publicBaseUrl;
-    }
-
-    public String frontendBaseUrl() {
-        return frontendBaseUrl;
     }
 
     public String getFrontendBaseUrl() {

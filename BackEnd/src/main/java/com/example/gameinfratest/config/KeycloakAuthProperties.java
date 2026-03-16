@@ -42,10 +42,6 @@ public class KeycloakAuthProperties {
         this.adminClientSecret = adminClientSecret;
     }
 
-    public boolean enabled() {
-        return enabled;
-    }
-
     public boolean isEnabled() {
         return enabled;
     }
@@ -54,20 +50,12 @@ public class KeycloakAuthProperties {
         this.enabled = enabled;
     }
 
-    public boolean requireClientSecret() {
-        return requireClientSecret;
-    }
-
-    public boolean isRequireClientSecret() {
+    public boolean getRequireClientSecret() {
         return requireClientSecret;
     }
 
     public void setRequireClientSecret(boolean requireClientSecret) {
         this.requireClientSecret = requireClientSecret;
-    }
-
-    public String baseUrl() {
-        return baseUrl;
     }
 
     public String getBaseUrl() {
@@ -78,20 +66,12 @@ public class KeycloakAuthProperties {
         this.baseUrl = baseUrl;
     }
 
-    public String publicBaseUrl() {
-        return publicBaseUrl;
-    }
-
     public String getPublicBaseUrl() {
         return publicBaseUrl;
     }
 
     public void setPublicBaseUrl(String publicBaseUrl) {
         this.publicBaseUrl = publicBaseUrl;
-    }
-
-    public String internalBaseUrl() {
-        return internalBaseUrl;
     }
 
     public String getInternalBaseUrl() {
@@ -102,20 +82,12 @@ public class KeycloakAuthProperties {
         this.internalBaseUrl = internalBaseUrl;
     }
 
-    public String realm() {
-        return realm;
-    }
-
     public String getRealm() {
         return realm;
     }
 
     public void setRealm(String realm) {
         this.realm = realm;
-    }
-
-    public String clientId() {
-        return clientId;
     }
 
     public String getClientId() {
@@ -126,10 +98,6 @@ public class KeycloakAuthProperties {
         this.clientId = clientId;
     }
 
-    public String clientSecret() {
-        return clientSecret;
-    }
-
     public String getClientSecret() {
         return clientSecret;
     }
@@ -138,20 +106,12 @@ public class KeycloakAuthProperties {
         this.clientSecret = clientSecret;
     }
 
-    public String adminClientId() {
-        return adminClientId;
-    }
-
     public String getAdminClientId() {
         return adminClientId;
     }
 
     public void setAdminClientId(String adminClientId) {
         this.adminClientId = adminClientId;
-    }
-
-    public String adminClientSecret() {
-        return adminClientSecret;
     }
 
     public String getAdminClientSecret() {
