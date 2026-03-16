@@ -161,6 +161,16 @@ class AuthServiceTest {
         assertThat(queryParams.get("next")).isNull();
     }
 
+    @Test
+    void queryParamTestHelperTreatsOnlyTopLevelAmpersandsAsSeparators() {
+        String url = "https://auth.example.com/test?outer=one%26two&scope=openid%20profile%20email";
+
+        MultiValueMap<String, String> queryParams = queryParams(url);
+
+        assertThat(queryParams.get("outer")).containsExactly("one&two");
+        assertThat(queryParams.get("scope")).containsExactly("openid profile email");
+    }
+
     private MultiValueMap<String, String> queryParams(String url) {
         LinkedMultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
         String rawQuery = URI.create(url).getRawQuery();
@@ -168,7 +178,8 @@ class AuthServiceTest {
             return queryParams;
         }
 
-        // These tests validate URLs produced by UriComponentsBuilder, which uses '&' as the top-level query separator.
+        // These tests validate URLs produced by UriComponentsBuilder, so only top-level '&' separators are supported here.
+        // Any '&' that belongs to a nested URI value must already be percent-encoded as '%26'.
         for (String pair : rawQuery.split("&")) {
             String[] parts = pair.split("=", 2);
             String key = decode(parts[0], pair, "key");
