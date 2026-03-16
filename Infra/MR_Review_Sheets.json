@@ -1,0 +1,760 @@
+{
+  "name": "MR 리뷰 코멘트 Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gitlab/mr-review",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "21aecda2-3c2f-4b3a-ac10-288447a15ea1",
+      "name": "GitLab MR Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2160,
+        80
+      ],
+      "webhookId": "gitlab-mr-review",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mcPMklgmfDtfQJ2P",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.object_kind}}",
+              "operation": "equal",
+              "value2": "merge_request"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4eaa5a61-0218-45e3-b081-7c400a7f58cf",
+      "name": "Is Merge Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1920,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "mr_iid",
+              "value": "={{$json.body.object_attributes.iid}}"
+            },
+            {
+              "name": "mr_title",
+              "value": "={{$json.body.object_attributes.title}}"
+            },
+            {
+              "name": "gitlab_mr_url",
+              "value": "={{$json.body.object_attributes.url}}"
+            },
+            {
+              "name": "author",
+              "value": "={{$json.body.user.username}}"
+            },
+            {
+              "name": "source_branch",
+              "value": "={{$json.body.object_attributes.source_branch}}"
+            },
+            {
+              "name": "target_branch",
+              "value": "={{$json.body.object_attributes.target_branch}}"
+            },
+            {
+              "name": "commit_sha",
+              "value": "={{$json.body.object_attributes.last_commit.id}}"
+            },
+            {
+              "name": "mr_action",
+              "value": "={{$json.body.object_attributes.action}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "99c9f0e1-d705-4887-98ff-e568848a9261",
+      "name": "Normalize MR Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -1680,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://lab.ssafy.com/api/v4/projects/1273736/merge_requests/{{$json.mr_iid}}/changes",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gitlabApi",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "id": "43fb4930-f0c1-48c3-bf7a-73c95cb1c974",
+      "name": "Fetch MR Changes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1424,
+        288
+      ],
+      "credentials": {
+        "gitlabApi": {
+          "id": "7Xaw2VOsiLGYHPLs",
+          "name": "GitLab account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "d890f6e9-0af0-46c6-8058-5564f76d3127",
+      "name": "Merge MR Meta + Changes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -1200,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const rawAuthor = $json.author;\nconst author =\n  typeof rawAuthor === 'string'\n    ? rawAuthor\n    : rawAuthor?.username || rawAuthor?.name || '';\n\nconst mrTitle = $json.mr_title || '';\nconst source = $json.source_branch || '';\nconst target = $json.target_branch || '';\nconst changes = JSON.stringify($json.changes || []).slice(0, 12000);\n\nconst prompt = `\nYou are a strict senior code reviewer for a web game platform.\n\nProject context:\n- Frontend: Phaser-based web game client\n- Backend: Spring Boot 4 API server\n- Authentication and authorization are managed by Keycloak\n- Merge request diffs may include frontend, backend, or both\n\nYour task:\nReview the merge request changes and return ONLY valid UTF-8 JSON.\nDo not include markdown fences, prose outside JSON, or any extra keys.\n\nReturn a JSON object with exactly these keys:\nmr_type, summary, overall_risk, findings, comment_markdown\n\nRules:\n- mr_type must be one of: fix, feat, docs, refactor, test, chore\n- overall_risk must be one of: low, medium, high\n- findings must be an array\n- each finding must contain exactly these keys: severity, file, line_hint, issue, suggestion\n- severity must be one of: high, medium, low\n- All human-readable text values must be written in Korean\n- summary must be Korean\n- findings.issue must be Korean\n- findings.suggestion must be Korean\n- comment_markdown must be Korean\n\nReview priorities:\n1. Bug risk and behavioral regression\n2. Security issues, especially auth/authz, token handling, trust boundaries, insecure defaults\n3. Runtime stability, null handling, exception flow, async issues\n4. Performance or resource waste\n5. Maintainability and readability\n\nFrontend review guidance:\n- Check Phaser scene lifecycle, scene transitions, duplicate event listeners, cleanup leaks, asset loading risks\n- Check async API handling, race conditions, stale state, browser-side auth assumptions, broken redirects or callback handling\n- Check whether UI code can break on missing API fields or partial responses\n\nBackend review guidance:\n- Check Spring Boot 4 controller, service, config, and security changes for regressions\n- Check request validation, exception handling, null safety, startup risks, and operational assumptions\n- Assume Keycloak manages tokens, so focus on whether the application validates and uses identity safely\n- Flag risky public endpoint exposure, incorrect trust of headers or client state, and fragile environment assumptions\n\nClassification guidance:\n- Use feat for new user-facing capability\n- Use fix for bug fixes\n- Use refactor for structural changes without intended behavior change\n- Use docs for documentation-only changes\n- Use test for test-only changes\n- Use chore for maintenance or mixed changes that do not fit better\n\nOutput requirements:\n- Keep summary concise, 1 to 3 sentences\n- findings should include only meaningful issues, not trivial style comments\n- If no important issues are found, findings must be []\n- comment_markdown must be a concise Korean GitLab MR review comment\n- comment_markdown should include a short overall assessment, risk level, key findings if any, and a brief conclusion\n\nInput:\n- MR title: ${mrTitle}\n- Author: ${author}\n- Branches: ${source} -> ${target}\n- Changes JSON: ${changes}\n`;\n\nreturn {\n  json: {\n    ...$json,\n    prompt\n  }\n};"
+      },
+      "id": "d883f36b-5662-4dfd-b165-8c07fe0b2ed7",
+      "name": "Build Review Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: $json.selected_model,\n  input: $json.prompt,\n  text: {\n    format: {\n      type: \"json_object\"\n    }\n  }\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "86549e79-61aa-40de-9b1e-4f146d65394c",
+      "name": "Request Codex Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -720,
+        272
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "teingDU7iDThD7Mi",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $input.item.json;\nconst fallback = {\n  mr_type: 'chore',\n  summary: '리뷰 생성은 완료되었지만 파서 fallback이 사용되었습니다.',\n  overall_risk: 'medium',\n  findings: [],\n  comment_markdown: '자동 리뷰는 완료되었지만 응답 파싱이 완전하지 않았습니다. 원본 출력은 실행 로그를 확인해주세요.'\n};\n\nlet text = '';\nif (raw.output_text) text = raw.output_text;\nelse if (Array.isArray(raw.output)) {\n  const chunks = [];\n  for (const o of raw.output) {\n    if (Array.isArray(o.content)) {\n      for (const c of o.content) {\n        if (c.type === 'output_text' && c.text) chunks.push(c.text);\n      }\n    }\n  }\n  text = chunks.join('\\n');\n}\n\nlet parsed = fallback;\ntry {\n  parsed = JSON.parse(text);\n} catch (e) {\n  parsed = {\n    ...fallback,\n    comment_markdown: `자동 리뷰 원문 출력:\\n\\n\\`\\`\\`\\n${text.slice(0, 3500)}\\n\\`\\`\\``\n  };\n}\n\nreturn {\n  json: {\n    ...$json,\n    mr_type: parsed.mr_type || 'chore',\n    summary: parsed.summary || fallback.summary,\n    overall_risk: parsed.overall_risk || 'medium',\n    findings: Array.isArray(parsed.findings) ? parsed.findings : [],\n    findings_count: Array.isArray(parsed.findings) ? parsed.findings.length : 0,\n    comment_markdown: parsed.comment_markdown || fallback.comment_markdown\n  }\n};"
+      },
+      "id": "ed7ac55e-b83a-499c-bddc-505d90d6b2b1",
+      "name": "Parse Review JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "0eb8e47d-6402-45e6-a04c-e0b4e61a330f",
+      "name": "Merge MR + Review",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -256,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://lab.ssafy.com/api/v4/projects/1273736/merge_requests/{{$json.mr_iid}}/notes",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gitlabApi",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{$json.comment_markdown}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "523fe2c7-3dd6-4d0a-9e22-e9a979ce406f",
+      "name": "Post GitLab Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        -96
+      ],
+      "credentials": {
+        "gitlabApi": {
+          "id": "7Xaw2VOsiLGYHPLs",
+          "name": "GitLab account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11L5h4iASQjJpndTZ7H8hbkGhzvm6psI-qP7W8YXXJF0",
+          "mode": "list",
+          "cachedResultName": "mr_reviews",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11L5h4iASQjJpndTZ7H8hbkGhzvm6psI-qP7W8YXXJF0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "시트1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11L5h4iASQjJpndTZ7H8hbkGhzvm6psI-qP7W8YXXJF0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{$json.status || 'success'}}",
+            "mr_title": "={{$json.mr_title}}",
+            "author": "={{$json.author}}",
+            "source_branch": "={{$json.source_branch}}",
+            "target_branch": "={{$json.target_branch}}",
+            "mr_type": "={{$json.mr_type}}",
+            "overall_risk": "={{$json.overall_risk}}",
+            "summary": "={{$json.summary}}",
+            "timestamp": "={{$json.timestamp || $now}}",
+            "findings_count": "={{$json.findings_count || 0}}",
+            "mr_iid": "={{$json.mr_iid}}",
+            "commit_sha": "={{$json.commit_sha}}",
+            "jenkins_ci_url": "={{$json.jenkins_ci_url || ''}}",
+            "jenkins_cd_url": "={{$json.jenkins_cd_url || ''}}",
+            "gitlab_mr_url": "={{$json.gitlab_mr_url || ''}}",
+            "error_message": "={{$json.error_message || ''}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mr_title",
+              "displayName": "mr_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "author",
+              "displayName": "author",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_branch",
+              "displayName": "source_branch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "target_branch",
+              "displayName": "target_branch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mr_type",
+              "displayName": "mr_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "overall_risk",
+              "displayName": "overall_risk",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "findings_count",
+              "displayName": "findings_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mr_iid",
+              "displayName": "mr_iid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "commit_sha",
+              "displayName": "commit_sha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "jenkins_ci_url",
+              "displayName": "jenkins_ci_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "jenkins_cd_url",
+              "displayName": "jenkins_cd_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "gitlab_mr_url",
+              "displayName": "gitlab_mr_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "error_message",
+              "displayName": "error_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "ab67514b-3150-40e1-acff-3be0b133a7e0",
+      "name": "Append row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "avEppTP9q2wQXNLL",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "id": "1f466de5-b553-4095-971f-a19d17396814",
+      "name": "Merge Delivery Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        448,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, mr_iid: $json.mr_iid, mr_type: $json.mr_type, findings_count: $json.findings_count, overall_risk: $json.overall_risk } }}",
+        "options": {}
+      },
+      "id": "fe65e5b5-01c5-4c67-ab18-9a7f9de13d98",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, skipped: true, reason: 'not-merge-request-event' } }}",
+        "options": {}
+      },
+      "id": "93f873c4-61ac-4f4b-8718-94d5d30b347e",
+      "name": "Skip Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        -1680,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const changes = $json.changes || [];\n\nconst totalDiffLength = changes.reduce((sum, change) => {\n  return sum + ((change.diff || '').length);\n}, 0);\n\nconst fileCount = changes.length;\n\nconst changedFiles = changes.map(change =>\n  `${change.new_path || ''} ${change.old_path || ''}`.toLowerCase()\n);\n\nconst highRiskKeywords = [\n  'auth',\n  'security',\n  'jwt',\n  'token',\n  'keycloak',\n  'oauth',\n  'login',\n  'signup',\n  'password',\n  'session',\n  'cookie',\n  'permission',\n  'role',\n  'admin'\n];\n\nconst hasHighRiskFile = changedFiles.some(file =>\n  highRiskKeywords.some(keyword => file.includes(keyword))\n);\n\nconst hasLargeDiff = totalDiffLength > 12000 || fileCount >= 8;\n\nconst selected_model =\n  hasHighRiskFile || hasLargeDiff\n    ? 'gpt-5.3-codex'\n    : 'gpt-5.1-codex-mini';\n\nreturn {\n  json: {\n    ...$json,\n    total_diff_length: totalDiffLength,\n    changed_file_count: fileCount,\n    has_high_risk_file: hasHighRiskFile,\n    has_large_diff: hasLargeDiff,\n    selected_model\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        272
+      ],
+      "id": "8fe0dfc5-a095-4301-b68c-2d8a596c8ed5",
+      "name": "Choose Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawAuthor = $json.author;\nconst author =\n  typeof rawAuthor === 'string'\n    ? rawAuthor\n    : rawAuthor?.username || rawAuthor?.name || 'unknown';\n\nconst selectedModel =\n  $json.selected_model ||\n  $('Choose Model').first().json.selected_model ||\n  'unknown';\n\nreturn {\n  json: {\n    status: 'success',\n    mr_iid: $json.mr_iid,\n    mr_title: $json.mr_title || '',\n    author,\n    source_branch: $json.source_branch || '',\n    target_branch: $json.target_branch || '',\n    mr_type: $json.mr_type || 'chore',\n    overall_risk: $json.overall_risk || 'medium',\n    summary: $json.summary || '',\n    findings: Array.isArray($json.findings) ? $json.findings : [],\n    findings_count: $json.findings_count || 0,\n    comment_markdown: $json.comment_markdown || '',\n    commit_sha: $json.commit_sha || '',\n    selected_model: selectedModel,\n    gitlab_mr_url: $json.gitlab_mr_url || '',\n    timestamp: $json.timestamp || new Date().toISOString(),\n    error_message: ''\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        96
+      ],
+      "id": "f1561754-021f-4ccd-9c11-4998f25ba220",
+      "name": "Build Final Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://meeting.ssafy.com/hooks/jscsuk663tr8bnkzxgw9xzpo7h",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  text:\n    \"### :shark_cheer2: MR 자동 리뷰 :shark_cheer2:\\n\\n\" +\n    \"**MR**\\n\" +\n    \"[!\" + $json.mr_iid + \" \" + $json.mr_title + \"](\" + ($json.gitlab_mr_url || \"\") + \")\\n\\n\" +\n    \"**작성자**: \" + $json.author + \"\\n\" +\n    \"**브랜치**: `\" + $json.source_branch + \" -> \" + $json.target_branch + \"`\\n\" +\n    \"**모델**: `\" + ($json.selected_model || \"unknown\") + \"`\\n\" +\n    \"**위험도**: `\" + ($json.overall_risk || \"unknown\") + \"`\\n\" +\n    \"**발견 수**: \" + ($json.findings_count || 0) + \"\\n\\n\" +\n    \"**요약**\\n\" +\n    ($json.summary || \"요약 없음\") + \"\\n\\n\" +\n    \"[GitLab에서 보기](\" + ($json.gitlab_mr_url || \"\") + \")\"\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        272
+      ],
+      "id": "a59131cb-490d-40b5-9084-546b13885c77",
+      "name": "Mattermost"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "GitLab MR Webhook": {
+      "main": [
+        [
+          {
+            "node": "Is Merge Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Merge Request?": {
+      "main": [
+        [
+          {
+            "node": "Normalize MR Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize MR Data": {
+      "main": [
+        [
+          {
+            "node": "Fetch MR Changes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge MR Meta + Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch MR Changes": {
+      "main": [
+        [
+          {
+            "node": "Merge MR Meta + Changes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge MR Meta + Changes": {
+      "main": [
+        [
+          {
+            "node": "Build Review Prompt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge MR + Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Review Prompt": {
+      "main": [
+        [
+          {
+            "node": "Choose Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Codex Review": {
+      "main": [
+        [
+          {
+            "node": "Parse Review JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Review JSON": {
+      "main": [
+        [
+          {
+            "node": "Merge MR + Review",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge MR + Review": {
+      "main": [
+        [
+          {
+            "node": "Build Final Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post GitLab Comment": {
+      "main": [
+        [
+          {
+            "node": "Merge Delivery Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge Delivery Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Delivery Results": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose Model": {
+      "main": [
+        [
+          {
+            "node": "Request Codex Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Final Payload": {
+      "main": [
+        [
+          {
+            "node": "Post GitLab Comment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mattermost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mattermost": {
+      "main": [
+        [
+          {
+            "node": "Merge Delivery Results",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "19270403-522b-458e-aa90-c52d151037e8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1724212fa31da5ecc6153aad16e3128ee2b6c5786d1822338bebacaf7a629f82"
+  },
+  "id": "k75Muvma5S2QCWdN",
+  "tags": []
+}
