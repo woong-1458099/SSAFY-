@@ -1,5 +1,6 @@
 package com.example.gameinfratest.config;
 
+import com.example.gameinfratest.auth.BffSessionAuthenticationFilter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,11 +33,17 @@ public class SecurityConfig {
 
     @Value("${app.keycloak.client-id:ssafy-maker-public}")
     private String keycloakClientId;
+    private final BffSessionAuthenticationFilter bffSessionAuthenticationFilter;
+
+    public SecurityConfig(BffSessionAuthenticationFilter bffSessionAuthenticationFilter) {
+        this.bffSessionAuthenticationFilter = bffSessionAuthenticationFilter;
+    }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http)throws Exception{
         http.csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults());
+                .cors(Customizer.withDefaults())
+                .addFilterBefore(bffSessionAuthenticationFilter, AnonymousAuthenticationFilter.class);
 
         if (jwtEnabled) {
             http.authorizeHttpRequests(auth -> auth
