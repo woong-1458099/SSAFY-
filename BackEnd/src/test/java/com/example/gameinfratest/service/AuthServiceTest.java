@@ -63,7 +63,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void buildAuthorizationUrlEncodesScopeAndRedirectUri() {
+    void buildAuthorizationUrlEncodesScopeAndPreservesRawRedirectUriValue() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
@@ -89,11 +89,12 @@ class AuthServiceTest {
         );
 
         assertThat(authorizationUrl).contains("scope=openid%20profile%20email");
-        assertThat(authorizationUrl).contains("redirect_uri=https%3A%2F%2Fapi.example.com%2Fapi%2Fauth%2Fcallback");
+        assertThat(authorizationUrl).contains("redirect_uri=https://api.example.com/api/auth/callback");
+        assertThat(authorizationUrl).doesNotContain("scope=openid profile email");
     }
 
     @Test
-    void logoutUrlEncodesPostLogoutRedirectUri() {
+    void logoutUrlPreservesRawPostLogoutRedirectUriValue() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com/app"),
                 new KeycloakAuthProperties(
@@ -114,6 +115,6 @@ class AuthServiceTest {
 
         String logoutUrl = authService.logout(new MockHttpServletRequest(), new MockHttpSession(), null).logoutUrl();
 
-        assertThat(logoutUrl).contains("post_logout_redirect_uri=https%3A%2F%2Fapp.example.com%2Fapp%2F");
+        assertThat(logoutUrl).contains("post_logout_redirect_uri=https://app.example.com/app/");
     }
 }
