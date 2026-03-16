@@ -231,12 +231,22 @@ public class AuthService {
 
     private void validateAuthorizationConfiguration() {
         validateClientSecretConfiguration();
+        validateKeycloakConfiguration(true);
         validateConfiguredUrl(appUrlProperties::validatedPublicBaseUri, "AUTH_PUBLIC_URL_MISSING");
         validateConfiguredUrl(appUrlProperties::validatedFrontendBaseUri, "AUTH_FRONTEND_URL_MISSING");
     }
 
     private void validateLogoutConfiguration() {
+        validateKeycloakConfiguration(false);
         validateConfiguredUrl(appUrlProperties::validatedFrontendBaseUri, "AUTH_FRONTEND_URL_MISSING");
+    }
+
+    private void validateKeycloakConfiguration(boolean includeServerUrl) {
+        validateConfiguredValue(keycloakAuthProperties::validatedClientId, "AUTH_CLIENT_ID_MISSING");
+        validateConfiguredUrl(keycloakAuthProperties::validatedBrowserRealmUri, "AUTH_KEYCLOAK_PUBLIC_URL_INVALID");
+        if (includeServerUrl) {
+            validateConfiguredUrl(keycloakAuthProperties::validatedServerRealmUri, "AUTH_KEYCLOAK_INTERNAL_URL_INVALID");
+        }
     }
 
     private void validateClientSecretConfiguration() {
@@ -251,6 +261,15 @@ public class AuthService {
     }
 
     private void validateConfiguredUrl(Runnable validator, String errorCode) {
+        try {
+            validator.run();
+        } catch (IllegalStateException exception) {
+            log.error("auth configuration invalid errorCode={} message={}", errorCode, exception.getMessage());
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, errorCode, exception.getMessage());
+        }
+    }
+
+    private void validateConfiguredValue(Runnable validator, String errorCode) {
         try {
             validator.run();
         } catch (IllegalStateException exception) {

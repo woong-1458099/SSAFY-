@@ -1,5 +1,7 @@
 package com.example.gameinfratest.config;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.keycloak")
@@ -134,6 +136,21 @@ public class KeycloakAuthProperties {
         return trimTrailingSlash(resolveInternalBaseUrl()) + "/admin/realms/" + realm;
     }
 
+    public URI validatedBrowserRealmUri() {
+        return toValidatedUri(browserRealmUrl(), "app.keycloak.public-base-url");
+    }
+
+    public URI validatedServerRealmUri() {
+        return toValidatedUri(serverRealmUrl(), "app.keycloak.internal-base-url");
+    }
+
+    public String validatedClientId() {
+        if (clientId == null || clientId.isBlank()) {
+            throw new IllegalStateException("app.keycloak.client-id must not be blank");
+        }
+        return clientId;
+    }
+
     private String resolvePublicBaseUrl() {
         if (publicBaseUrl != null && !publicBaseUrl.isBlank()) {
             return publicBaseUrl;
@@ -153,5 +170,20 @@ public class KeycloakAuthProperties {
             return "";
         }
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+    }
+
+    private URI toValidatedUri(String value, String propertyName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(propertyName + " must not be blank");
+        }
+        try {
+            URI uri = new URI(value);
+            if (uri.getScheme() == null || uri.getHost() == null) {
+                throw new IllegalStateException(propertyName + " must be an absolute URL");
+            }
+            return uri;
+        } catch (URISyntaxException exception) {
+            throw new IllegalStateException(propertyName + " must be a valid URL", exception);
+        }
     }
 }
