@@ -50,7 +50,7 @@ public class KeycloakAuthProperties {
         this.enabled = enabled;
     }
 
-    public boolean getRequireClientSecret() {
+    public boolean isRequireClientSecret() {
         return requireClientSecret;
     }
 
