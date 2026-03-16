@@ -7,9 +7,11 @@ import static org.mockito.Mockito.mock;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
+import com.example.gameinfratest.support.ApiException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.util.LinkedMultiValueMap;
@@ -21,7 +23,7 @@ import org.springframework.web.util.UriUtils;
 class AuthServiceTest {
 
     @Test
-    void validateRequiredUrlsFailsWhenClientSecretMissing() {
+    void buildAuthorizationUrlFailsWhenClientSecretMissing() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
@@ -40,13 +42,22 @@ class AuthServiceTest {
                 mock(JwtDecoder.class)
         );
 
-        assertThatThrownBy(authService::validateRequiredUrls)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
+        assertThatThrownBy(() -> authService.buildAuthorizationUrl(
+                new MockHttpSession(),
+                new MockHttpServletRequest(),
+                AuthAction.LOGIN
+        ))
+                .isInstanceOf(ApiException.class)
+                .extracting("status", "code", "message")
+                .containsExactly(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "AUTH_CLIENT_SECRET_MISSING",
+                        "app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled"
+                );
     }
 
     @Test
-    void validateRequiredUrlsAllowsMissingClientSecretWhenDisabledByConfig() {
+    void buildAuthorizationUrlAllowsMissingClientSecretWhenDisabledByConfig() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
@@ -65,7 +76,13 @@ class AuthServiceTest {
                 mock(JwtDecoder.class)
         );
 
-        authService.validateRequiredUrls();
+        String authorizationUrl = authService.buildAuthorizationUrl(
+                new MockHttpSession(),
+                new MockHttpServletRequest(),
+                AuthAction.LOGIN
+        );
+
+        assertThat(authorizationUrl).contains("/protocol/openid-connect/auth");
     }
 
     @Test
