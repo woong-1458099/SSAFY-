@@ -172,6 +172,10 @@
 - `prod-api-blue`
 - `prod-api-green`
 
+### DB 기준
+- PROD 앱도 현재는 단일 DB 구조 기준으로 `stg_app` DB를 공용으로 사용
+- 즉 `.env.prod`의 DB 연결은 `stg_app` 기준으로 맞춘다
+
 ## 9. Jenkins Credentials 기준
 - `ec2-deploy-ssh-v2`
 - `cloudflare-api-token`
@@ -199,7 +203,4 @@
 - verify / rollback은 ssh heredoc 방식으로 실행하여 Jenkins 로컬 shell 평가 문제를 피함
 
 ## 12. 다음 작업
-1. PROD 프론트 수동 검증 마무리
-2. PROD 백엔드 수동 검증 마무리
-3. 기존 구 job disable
-4. 문서 최신화 유지
+1. 문서 최신화 유지
