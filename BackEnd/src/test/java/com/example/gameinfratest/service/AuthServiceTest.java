@@ -8,7 +8,6 @@ import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import java.net.URI;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -17,6 +16,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 
 class AuthServiceTest {
 
@@ -180,7 +180,8 @@ class AuthServiceTest {
 
     private String decode(String value, String pair, String partName) {
         try {
-            return URLDecoder.decode(value, StandardCharsets.UTF_8);
+            // These tests validate RFC 3986-style query values, so '+' must remain a literal plus.
+            return UriUtils.decode(value, StandardCharsets.UTF_8);
         } catch (IllegalArgumentException exception) {
             throw new AssertionError("failed to decode query " + partName + " from pair: " + pair, exception);
         }
