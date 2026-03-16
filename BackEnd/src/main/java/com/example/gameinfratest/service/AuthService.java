@@ -70,7 +70,7 @@ public class AuthService {
         session.setAttribute(SESSION_VERIFIER_KEY, verifier);
         session.setAttribute(SESSION_ACTION_KEY, action.name());
 
-        ServletUriComponentsBuilder builder = ServletUriComponentsBuilder
+        ServletUriComponentsBuilder builder = (ServletUriComponentsBuilder) ServletUriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
                 .queryParam("client_id", keycloakAuthProperties.clientId())
                 .queryParam("redirect_uri", callbackUri)
@@ -133,7 +133,7 @@ public class AuthService {
     public LogoutResponse buildLogoutResponse(HttpServletRequest request, String idTokenHint) {
         ensureAuthEnabled();
 
-        ServletUriComponentsBuilder builder = ServletUriComponentsBuilder
+        ServletUriComponentsBuilder builder = (ServletUriComponentsBuilder) ServletUriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
                 .queryParam("post_logout_redirect_uri", frontendRootUri(request))
                 .queryParam("client_id", keycloakAuthProperties.clientId());
