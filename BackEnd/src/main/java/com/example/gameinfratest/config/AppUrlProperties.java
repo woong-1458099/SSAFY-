@@ -21,11 +21,19 @@ public class AppUrlProperties {
         return publicBaseUrl;
     }
 
+    public String getPublicBaseUrl() {
+        return publicBaseUrl;
+    }
+
     public void setPublicBaseUrl(String publicBaseUrl) {
         this.publicBaseUrl = publicBaseUrl;
     }
 
     public String frontendBaseUrl() {
+        return frontendBaseUrl;
+    }
+
+    public String getFrontendBaseUrl() {
         return frontendBaseUrl;
     }
 

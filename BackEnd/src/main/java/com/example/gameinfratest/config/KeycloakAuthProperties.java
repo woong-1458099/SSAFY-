@@ -46,11 +46,19 @@ public class KeycloakAuthProperties {
         return enabled;
     }
 
+    public boolean isEnabled() {
+        return enabled;
+    }
+
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     public boolean requireClientSecret() {
+        return requireClientSecret;
+    }
+
+    public boolean isRequireClientSecret() {
         return requireClientSecret;
     }
 
@@ -62,11 +70,19 @@ public class KeycloakAuthProperties {
         return baseUrl;
     }
 
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
     public void setBaseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
     }
 
     public String publicBaseUrl() {
+        return publicBaseUrl;
+    }
+
+    public String getPublicBaseUrl() {
         return publicBaseUrl;
     }
 
@@ -78,11 +94,19 @@ public class KeycloakAuthProperties {
         return internalBaseUrl;
     }
 
+    public String getInternalBaseUrl() {
+        return internalBaseUrl;
+    }
+
     public void setInternalBaseUrl(String internalBaseUrl) {
         this.internalBaseUrl = internalBaseUrl;
     }
 
     public String realm() {
+        return realm;
+    }
+
+    public String getRealm() {
         return realm;
     }
 
@@ -94,11 +118,19 @@ public class KeycloakAuthProperties {
         return clientId;
     }
 
+    public String getClientId() {
+        return clientId;
+    }
+
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
     public String clientSecret() {
+        return clientSecret;
+    }
+
+    public String getClientSecret() {
         return clientSecret;
     }
 
@@ -110,11 +142,19 @@ public class KeycloakAuthProperties {
         return adminClientId;
     }
 
+    public String getAdminClientId() {
+        return adminClientId;
+    }
+
     public void setAdminClientId(String adminClientId) {
         this.adminClientId = adminClientId;
     }
 
     public String adminClientSecret() {
+        return adminClientSecret;
+    }
+
+    public String getAdminClientSecret() {
         return adminClientSecret;
     }
 
