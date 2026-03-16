@@ -24,6 +24,10 @@
 ### docker compose / nginx mount / volume / 네트워크 / 운영 명령
 - `docs-infra/DOCKER_OVERVIEW.md`
 
+### monitoring 설정 / 로그 / 메트릭 구성
+- `Infra/monitoring/MONITORING_STACK_PLAN.md`
+- `Infra/monitoring/README.md`
+
 ### env 파일 역할 / 환경별 변수 운영 원칙
 - `docs-infra/ENVIRONMENTS.md`
 
@@ -35,9 +39,11 @@
 - 원격 프로젝트 경로: `/home/ubuntu/apps/S14P21E206`
 - STG app project: `stg-app`
 - STG data project: `stg-data`
-- nginx container: `stg-app-nginx-1`
-- 프론트 release 경로: `/home/ubuntu/deploy/frontend/releases`
-- 프론트 live 경로: `/home/ubuntu/deploy/frontend/live`
+- nginx container: `ingress-nginx-1`
+- STG 프론트 release 경로: `/home/ubuntu/deploy/frontend/stg/releases`
+- STG 프론트 live 경로: `/home/ubuntu/deploy/frontend/stg/live`
+- PROD 프론트 release 경로: `/home/ubuntu/deploy/frontend/prod/releases`
+- PROD 프론트 live 경로: `/home/ubuntu/deploy/frontend/prod/live`
 - 메인 도메인: `ssafymaker.cloud`
 - Jenkins 도메인: `jenkins.ssafymaker.cloud`
 - n8n 도메인: `n8n.ssafymaker.cloud`
@@ -45,10 +51,15 @@
 
 ### 운영 모니터링 계획
 - `docs-infra/OBSERVABILITY_PLAN.md`
+- `Infra/monitoring/MONITORING_STACK_PLAN.md`
+- `Infra/monitoring/README.md`
 - node_exporter
 - cAdvisor
+- Loki
+- Promtail
 - Prometheus scrape
 - Grafana 대시보드
+- Grafana 로그 조회
 - Nginx access log 운영 기준
 
 ## 작업 규칙
