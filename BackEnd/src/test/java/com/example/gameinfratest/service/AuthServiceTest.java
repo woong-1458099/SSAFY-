@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.util.UriComponentsBuilder;
 
 class AuthServiceTest {
 
@@ -63,7 +65,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void buildAuthorizationUrlEncodesScopeAndPreservesRawRedirectUriValue() {
+    void buildAuthorizationUrlEncodesScopeAndKeepsRedirectUriAsSingleQueryParamValue() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
@@ -87,14 +89,17 @@ class AuthServiceTest {
                 new MockHttpServletRequest(),
                 AuthAction.LOGIN
         );
+        MultiValueMap<String, String> queryParams = queryParams(authorizationUrl);
 
-        assertThat(authorizationUrl).contains("scope=openid%20profile%20email");
-        assertThat(authorizationUrl).contains("redirect_uri=https://api.example.com/api/auth/callback");
+        assertThat(queryParams.getFirst("scope")).isEqualTo("openid profile email");
+        assertThat(queryParams.get("redirect_uri")).containsExactly("https://api.example.com/api/auth/callback");
+        assertThat(queryParams.getFirst("state")).isNotBlank();
+        assertThat(queryParams.getFirst("code_challenge")).isNotBlank();
         assertThat(authorizationUrl).doesNotContain("scope=openid profile email");
     }
 
     @Test
-    void logoutUrlPreservesRawPostLogoutRedirectUriValue() {
+    void logoutUrlKeepsPostLogoutRedirectUriAsSingleQueryParamValue() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com/app"),
                 new KeycloakAuthProperties(
@@ -114,7 +119,45 @@ class AuthServiceTest {
         );
 
         String logoutUrl = authService.logout(new MockHttpServletRequest(), new MockHttpSession(), null).logoutUrl();
+        MultiValueMap<String, String> queryParams = queryParams(logoutUrl);
 
-        assertThat(logoutUrl).contains("post_logout_redirect_uri=https://app.example.com/app/");
+        assertThat(queryParams.get("post_logout_redirect_uri")).containsExactly("https://app.example.com/app/");
+        assertThat(queryParams.getFirst("client_id")).isEqualTo("ssafy-maker-bff");
+    }
+
+    @Test
+    void uriComponentEncodingKeepsNestedRedirectUriQueryStringInsideSingleParam() {
+        String encodedUrl = UriComponentsBuilder.fromUriString("https://auth.example.com/realms/app/protocol/openid-connect/auth")
+                // AppUrlProperties validates base URLs as absolute roots, so redirect targets are supplied as raw URI values here.
+                .queryParam("redirect_uri", "https://api.example.com/api/auth/callback?next=/lobby&lang=ko")
+                .build()
+                .encode()
+                .toUriString();
+
+        MultiValueMap<String, String> queryParams = queryParams(encodedUrl);
+
+        assertThat(queryParams.get("redirect_uri"))
+                .containsExactly("https://api.example.com/api/auth/callback?next=/lobby&lang=ko");
+        assertThat(queryParams.get("lang")).isNull();
+        assertThat(queryParams.get("next")).isNull();
+    }
+
+    @Test
+    void uriComponentEncodingKeepsNestedPostLogoutRedirectUriQueryAndFragmentInsideSingleParam() {
+        String encodedUrl = UriComponentsBuilder.fromUriString("https://auth.example.com/realms/app/protocol/openid-connect/logout")
+                .queryParam("post_logout_redirect_uri", "https://app.example.com/app/?next=/lobby#signed-out")
+                .build()
+                .encode()
+                .toUriString();
+
+        MultiValueMap<String, String> queryParams = queryParams(encodedUrl);
+
+        assertThat(queryParams.get("post_logout_redirect_uri"))
+                .containsExactly("https://app.example.com/app/?next=/lobby#signed-out");
+        assertThat(queryParams.get("next")).isNull();
+    }
+
+    private MultiValueMap<String, String> queryParams(String url) {
+        return UriComponentsBuilder.fromUriString(url).build(true).getQueryParams();
     }
 }
