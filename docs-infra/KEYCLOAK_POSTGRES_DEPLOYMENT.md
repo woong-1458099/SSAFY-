@@ -61,7 +61,7 @@ docker compose -p auth --env-file docker/.env.auth -f docker/compose.auth.yml up
   - `User registration = ON`
   - `Reset password = ON`
 - Client
-  - `Client ID = ssafy-maker-public`
+  - `Client ID = ssafy-maker-bff`
   - `Access Type = public`
   - `Standard Flow = ON`
   - `Direct Access Grants = OFF`
@@ -86,7 +86,7 @@ KEYCLOAK_BASE_URL=https://auth.ssafymaker.cloud
 KEYCLOAK_PUBLIC_BASE_URL=https://auth.ssafymaker.cloud
 KEYCLOAK_INTERNAL_BASE_URL=http://stg-keycloak:8080
 KEYCLOAK_REALM=app
-KEYCLOAK_CLIENT_ID=ssafy-maker-public
+KEYCLOAK_CLIENT_ID=ssafy-maker-bff
 KEYCLOAK_CLIENT_SECRET=
 CORS_ALLOWED_ORIGINS=https://ssafymaker.cloud,https://stg.ssafymaker.cloud,http://localhost:5173
 ```
@@ -114,7 +114,7 @@ PostgreSQL `users` 테이블에는 다음 운영 필드를 저장한다.
 VITE_API_BASE_URL=https://ssafymaker.cloud
 VITE_KEYCLOAK_BASE_URL=https://auth.ssafymaker.cloud
 VITE_KEYCLOAK_REALM=app
-VITE_KEYCLOAK_CLIENT_ID=ssafy-maker-public
+VITE_KEYCLOAK_CLIENT_ID=ssafy-maker-bff
 ```
 
 STG 는 `ssafymaker.cloud` 대신 `stg.ssafymaker.cloud` 로 맞춘다.

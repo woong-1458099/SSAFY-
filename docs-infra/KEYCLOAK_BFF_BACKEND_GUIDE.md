@@ -106,3 +106,7 @@ For staging and production:
 ## Notes
 - The current backend still keeps OAuth tokens in the server session so it can support future refresh or Keycloak logout integration.
 - Browser-side storage of `access_token` or `refresh_token` should be removed to keep the flow as a real BFF.
+
+## Troubleshooting
+- `Invalid character ' ' for QUERY_PARAM in "openid profile email"` means the backend built the authorization URL without encoding query parameter values. The authorization URL must be created with encoded query params.
+- A `400` from `.../protocol/openid-connect/auth` with the same redirect URI can also indicate the wrong `client_id`. This backend flow is standardized on `ssafy-maker-bff`.

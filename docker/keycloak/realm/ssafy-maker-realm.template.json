@@ -9,8 +9,8 @@
   "verifyEmail": true,
   "clients": [
     {
-      "clientId": "ssafy-maker-public",
-      "name": "SSAFY Maker Game Client",
+      "clientId": "ssafy-maker-bff",
+      "name": "SSAFY Maker BFF Client",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
