@@ -10,6 +10,7 @@ import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -61,7 +62,19 @@ public class AuthService {
         this.userService = userService;
         this.jwtDecoder = jwtDecoder;
         this.restClient = RestClient.builder().build();
-        validateRequiredUrls();
+    }
+
+    @PostConstruct
+    void validateRequiredUrls() {
+        if (!keycloakAuthProperties.enabled()) {
+            return;
+        }
+        if (appUrlProperties.normalizedPublicBaseUrl().isBlank()) {
+            throw new IllegalStateException("app.urls.public-base-url must be configured when keycloak auth is enabled");
+        }
+        if (appUrlProperties.normalizedFrontendBaseUrl().isBlank()) {
+            throw new IllegalStateException("app.urls.frontend-base-url must be configured when keycloak auth is enabled");
+        }
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -241,18 +254,6 @@ public class AuthService {
             return null;
         }
         return sessionState.idToken();
-    }
-
-    private void validateRequiredUrls() {
-        if (!keycloakAuthProperties.enabled()) {
-            return;
-        }
-        if (appUrlProperties.normalizedPublicBaseUrl().isBlank()) {
-            throw new IllegalStateException("app.urls.public-base-url must be configured when keycloak auth is enabled");
-        }
-        if (appUrlProperties.normalizedFrontendBaseUrl().isBlank()) {
-            throw new IllegalStateException("app.urls.frontend-base-url must be configured when keycloak auth is enabled");
-        }
     }
 
     @SuppressWarnings("unchecked")
