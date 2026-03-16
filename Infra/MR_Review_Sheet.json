@@ -14,8 +14,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -2160,
-        80
+        -2336,
+        -208
       ],
       "webhookId": "gitlab-mr-review",
       "credentials": {
@@ -43,8 +43,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -1920,
-        80
+        -2128,
+        -208
       ]
     },
     {
@@ -93,8 +93,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        -1680,
-        64
+        -1872,
+        -224
       ]
     },
     {
@@ -113,8 +113,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -1424,
-        288
+        -1344,
+        -64
       ],
       "credentials": {
         "gitlabApi": {
@@ -134,8 +134,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        -1200,
-        80
+        -1152,
+        -208
       ]
     },
     {
@@ -148,8 +148,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1040,
-        272
+        -912,
+        32
       ]
     },
     {
@@ -174,8 +174,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -720,
-        272
+        -560,
+        32
       ],
       "credentials": {
         "openAiApi": {
@@ -194,8 +194,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -560,
-        272
+        -384,
+        32
       ]
     },
     {
@@ -209,8 +209,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        -256,
-        96
+        -176,
+        -208
       ]
     },
     {
@@ -242,8 +242,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        224,
-        -96
+        240,
+        -384
       ],
       "credentials": {
         "gitlabApi": {
@@ -446,8 +446,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        224,
-        96
+        240,
+        -208
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -468,8 +468,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        448,
-        80
+        496,
+        -224
       ]
     },
     {
@@ -483,8 +483,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
       "position": [
-        672,
-        80
+        736,
+        -208
       ]
     },
     {
@@ -498,8 +498,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
       "position": [
-        -1680,
-        288
+        -1360,
+        272
       ]
     },
     {
@@ -509,8 +509,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -880,
-        272
+        -736,
+        32
       ],
       "id": "8fe0dfc5-a095-4301-b68c-2d8a596c8ed5",
       "name": "Choose Model"
@@ -522,8 +522,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -32,
-        96
+        16,
+        -208
       ],
       "id": "f1561754-021f-4ccd-9c11-4998f25ba220",
       "name": "Build Final Payload"
@@ -540,14 +540,239 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        224,
-        272
+        240,
+        0
       ],
       "id": "a59131cb-490d-40b5-9084-546b13885c77",
       "name": "Mattermost"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "8203fbc8-ca3a-4903-ada1-1258acdb6841",
+              "leftValue": "={{$json.mr_action}}",
+              "rightValue": "open",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "76698009-a2c6-4a6e-a8fc-02d61d720630",
+              "leftValue": "={{$json.mr_action}}",
+              "rightValue": "update",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "2663df41-5ae4-4f7f-8401-59d81ec944c0",
+      "name": "Action Filter1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1616,
+        -48
+      ]
     }
   ],
-  "pinData": {},
+  "pinData": {
+    "GitLab MR Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.ssafymaker.cloud",
+            "x-forwarded-proto": "https",
+            "x-forwarded-port": "443",
+            "x-forwarded-for": "52.231.25.158, 141.101.84.190",
+            "x-forwarded-host": "n8n.ssafymaker.cloud",
+            "connection": "upgrade",
+            "content-length": "4806",
+            "x-gitlab-instance": "https://lab.ssafy.com",
+            "x-gitlab-token": "ssafymaker_gitlab_mr_review_2026_very_long_random",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cf-ray": "9dd1553349dba7c6-ICN",
+            "x-gitlab-event-uuid": "5697aa1c-6a65-4d88-99f1-343d826599d0",
+            "content-type": "application/json",
+            "user-agent": "GitLab/18.6.2",
+            "idempotency-key": "a27d99d9-be4f-478a-af11-f9d07f4391ec",
+            "x-gitlab-event": "Merge Request Hook",
+            "x-gitlab-webhook-uuid": "8bee1acf-4220-4745-ae85-fd1df7707553",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "52.231.25.158",
+            "cf-ipcountry": "KR",
+            "cf-visitor": "{\"scheme\":\"https\"}"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "object_kind": "merge_request",
+            "event_type": "merge_request",
+            "user": {
+              "id": 28713,
+              "name": "김민수",
+              "username": "tkatnsdl1996",
+              "avatar_url": "https://secure.gravatar.com/avatar/feda049a757c453eb5e5674ff1ed9517d11eeb6639f21c0800f768bddff00c6b?s=80&d=identicon",
+              "email": "[REDACTED]"
+            },
+            "project": {
+              "id": 1273736,
+              "name": "S14P21E206",
+              "description": "",
+              "web_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206",
+              "avatar_url": null,
+              "git_ssh_url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+              "git_http_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206.git",
+              "namespace": "s14-ai-image-sub1",
+              "visibility_level": 0,
+              "path_with_namespace": "s14-ai-image-sub1/S14P21E206",
+              "default_branch": "develop",
+              "ci_config_path": null,
+              "homepage": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206",
+              "url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+              "ssh_url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+              "http_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206.git"
+            },
+            "object_attributes": {
+              "assignee_id": 28712,
+              "author_id": 28712,
+              "created_at": "2026-03-16T14:07:00.646+09:00",
+              "description": "## 📌 관련 이슈\n- Jira: S14P21E206-\n\n## 🔧 작업 내용\n<!-- 어떤 작업을 했는지 간단히 설명 -->\n- \n\n## ✅ 체크리스트\n- [ ] 코드 자체 리뷰 완료\n- [ ] 불필요한 console.log 제거\n- [ ] 충돌(Conflict) 없음 확인\n\n## 📷 스크린샷 (선택)\n<!-- UI 변경사항이 있으면 첨부 -->\n\n## 💬 리뷰어에게\n<!-- 리뷰 시 중점적으로 봐줬으면 하는 부분 -->",
+              "draft": false,
+              "head_pipeline_id": null,
+              "id": 860203,
+              "iid": 108,
+              "last_edited_at": null,
+              "last_edited_by_id": null,
+              "merge_commit_sha": "61010f4faa42f9ad36e7d3fa5da334645cb9f922",
+              "merge_error": null,
+              "merge_params": {
+                "force_remove_source_branch": "1",
+                "should_remove_source_branch": true
+              },
+              "merge_status": "can_be_merged",
+              "merge_user_id": null,
+              "merge_when_pipeline_succeeds": false,
+              "milestone_id": null,
+              "source_branch": "fix/jacksonConfig",
+              "source_project_id": 1273736,
+              "state_id": 3,
+              "target_branch": "develop",
+              "target_project_id": 1273736,
+              "time_estimate": 0,
+              "title": "fix: Jackson Config 파일 수정",
+              "updated_at": "2026-03-16T14:23:55.904+09:00",
+              "updated_by_id": null,
+              "prepared_at": "2026-03-16T14:07:23.006+09:00",
+              "assignee_ids": [
+                28712
+              ],
+              "blocking_discussions_resolved": true,
+              "detailed_merge_status": "not_open",
+              "first_contribution": false,
+              "human_time_change": null,
+              "human_time_estimate": null,
+              "human_total_time_spent": null,
+              "labels": [],
+              "last_commit": {
+                "id": "17640dcea0b56c3ce49130f8c0369467df1146c5",
+                "message": "fix: Jackson Config 파일 수정\n",
+                "title": "fix: Jackson Config 파일 수정",
+                "timestamp": "2026-03-16T14:06:14+09:00",
+                "url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206/-/commit/17640dcea0b56c3ce49130f8c0369467df1146c5",
+                "author": {
+                  "name": "김명진",
+                  "email": "usbdhffo112@naver.com"
+                }
+              },
+              "reviewer_ids": [],
+              "source": {
+                "id": 1273736,
+                "name": "S14P21E206",
+                "description": "",
+                "web_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206",
+                "avatar_url": null,
+                "git_ssh_url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+                "git_http_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206.git",
+                "namespace": "s14-ai-image-sub1",
+                "visibility_level": 0,
+                "path_with_namespace": "s14-ai-image-sub1/S14P21E206",
+                "default_branch": "develop",
+                "ci_config_path": null,
+                "homepage": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206",
+                "url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+                "ssh_url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+                "http_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206.git"
+              },
+              "state": "merged",
+              "system": false,
+              "target": {
+                "id": 1273736,
+                "name": "S14P21E206",
+                "description": "",
+                "web_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206",
+                "avatar_url": null,
+                "git_ssh_url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+                "git_http_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206.git",
+                "namespace": "s14-ai-image-sub1",
+                "visibility_level": 0,
+                "path_with_namespace": "s14-ai-image-sub1/S14P21E206",
+                "default_branch": "develop",
+                "ci_config_path": null,
+                "homepage": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206",
+                "url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+                "ssh_url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+                "http_url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206.git"
+              },
+              "time_change": 0,
+              "total_time_spent": 0,
+              "url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206/-/merge_requests/108",
+              "work_in_progress": false,
+              "action": "open"
+            },
+            "labels": [],
+            "changes": {},
+            "repository": {
+              "name": "S14P21E206",
+              "url": "git@lab.ssafy.com:s14-ai-image-sub1/S14P21E206.git",
+              "description": "",
+              "homepage": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206"
+            },
+            "assignees": [
+              {
+                "id": 28712,
+                "name": "김명진",
+                "username": "usbdhffo112",
+                "avatar_url": "https://secure.gravatar.com/avatar/c5bdab70e7abe8fae35439b76b38cb6eb481b0e048b8404291ae38d382d3962e?s=80&d=identicon",
+                "email": "[REDACTED]"
+              }
+            ]
+          },
+          "webhookUrl": "https://n8n.ssafymaker.cloud/webhook/gitlab/mr-review",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
   "connections": {
     "GitLab MR Webhook": {
       "main": [
@@ -582,7 +807,7 @@
       "main": [
         [
           {
-            "node": "Fetch MR Changes",
+            "node": "Action Filter1",
             "type": "main",
             "index": 0
           },
@@ -740,6 +965,24 @@
           }
         ]
       ]
+    },
+    "Action Filter1": {
+      "main": [
+        [
+          {
+            "node": "Fetch MR Changes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -750,7 +993,7 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "19270403-522b-458e-aa90-c52d151037e8",
+  "versionId": "a2da0d05-4b66-474a-ae9f-403154790333",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "1724212fa31da5ecc6153aad16e3128ee2b6c5786d1822338bebacaf7a629f82"

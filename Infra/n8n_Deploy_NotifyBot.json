@@ -1,0 +1,313 @@
+{
+  "name": "n8n Deploy Notify Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jenkins/deploy-notify",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "cb49544b-eb89-4dcb-a3dd-7f38ea5377f7",
+      "name": "Jenkins Deploy Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        -16
+      ],
+      "webhookId": "jenkins-deploy-notify",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "N8N_HEADER_AUTH_CREDENTIAL_ID",
+          "name": "N8N_HEADER_AUTH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || {};\n\nconst rawResult = String(body.result || body.status || body.buildResult || 'UNKNOWN').toUpperCase();\nconst result = ['SUCCESS', 'FAILURE', 'UNSTABLE', 'ABORTED', 'NOT_BUILT'].includes(rawResult)\n  ? rawResult\n  : 'UNKNOWN';\n\nconst service = String(body.service || body.component || 'unknown');\nconst environment = String(body.environment || body.env || 'unknown');\nconst jobName = String(body.jobName || body.job_name || body.pipeline || 'unknown-job');\nconst buildNumber = String(body.buildNumber || body.build_number || body.number || '');\nconst buildUrl = String(body.buildUrl || body.build_url || body.url || '');\nconst branch = String(body.branch || body.gitBranch || body.branchName || '');\nconst releaseTag = String(body.releaseTag || body.release_tag || body.version || '');\nconst image = String(body.image || body.imageTag || body.image_tag || '');\nconst targetColor = String(body.targetColor || body.target_color || '');\nconst activeColor = String(body.activeColor || body.active_color || '');\nconst failedStage = String(body.failedStage || body.failed_stage || body.stage || '');\nconst triggeredBy = String(body.triggeredBy || body.triggered_by || '');\nconst message = String(body.message || '');\nconst finishedAt = String(body.finishedAt || body.finished_at || new Date().toISOString());\n\nconst statusMap = {\n  SUCCESS: { emoji: ':shark_no2:', label: '배포 성공' },\n  FAILURE: { emoji: ':shark_exclamation_mark:', label: '배포 실패' },\n  UNSTABLE: { emoji: ':shark_confuse:', label: '배포 불안정' },\n  ABORTED: { emoji: ':shark_exclamation_mark:', label: '배포 중단' },\n  NOT_BUILT: { emoji: ':shark_dotdotdot:', label: '배포 스킵' },\n  UNKNOWN: { emoji: ':shark_question_mark:', label: '배포 상태 미확인' }\n};\n\nconst meta = statusMap[result] || statusMap.UNKNOWN;\nconst serviceLabel = service.toUpperCase();\nconst environmentLabel = environment.toUpperCase();\n\nconst lines = [\n  `### ${meta.emoji} [${serviceLabel}][${environmentLabel}][${result}]`,\n  `**잡**: ${jobName}${buildNumber ? ` #${buildNumber}` : ''}`\n];\n\nif (branch) lines.push(`**브랜치**: \\`${branch}\\``);\nif (releaseTag) lines.push(`**릴리즈 태그**: \\`${releaseTag}\\``);\nif (image) lines.push(`**이미지**: \\`${image}\\``);\nif (targetColor) lines.push(`**배포 색상**: \\`${targetColor}\\``);\nif (activeColor) lines.push(`**현재 활성 색상**: \\`${activeColor}\\``);\nif (failedStage) lines.push(`**실패 단계**: ${failedStage}`);\nif (triggeredBy) lines.push(`**실행자**: ${triggeredBy}`);\nif (finishedAt) lines.push(`**완료 시각**: \\`${finishedAt}\\``);\nif (message) lines.push(`**메시지**: ${message}`);\nif (buildUrl) lines.push(`[Jenkins 빌드 열기](${buildUrl})`);\n\nreturn {\n  json: {\n    result,\n    service,\n    environment,\n    jobName,\n    buildNumber,\n    buildUrl,\n    branch,\n    releaseTag,\n    image,\n    targetColor,\n    activeColor,\n    failedStage,\n    triggeredBy,\n    finishedAt,\n    message,\n    mattermostText: lines.join('\\n')\n  }\n};"
+      },
+      "id": "7d9a9b95-a8cc-485a-b580-aac704d63bcd",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "MATTERMOST_FRONT_WEBHOOK_URL",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{$json.mattermostText}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        640,
+        -112
+      ],
+      "id": "74d66fa2-0d0e-4ba2-99cd-9c56aa65b10b",
+      "name": "Send Frontend Mattermost"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "MATTERMOST_BACK_WEBHOOK_URL",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{$json.mattermostText}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        640,
+        112
+      ],
+      "id": "c636ae47-b2d0-4ba3-a924-96f2c40d994e",
+      "name": "Send Backend Mattermost"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7ec84523-3dda-4030-a696-87bb11f89f48",
+              "leftValue": "={{$json.service}}",
+              "rightValue": "frontend",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        -32
+      ],
+      "id": "69562ca8-0dea-4668-8b0b-f79d2b268e87",
+      "name": "Is_Front"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=={{ { ok: true, channel: \"frontend\", result: $json.result, jobName: $json.jobName, buildNumber: $json.buildNumber } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        -112
+      ],
+      "id": "c9b55352-3626-4ef1-b8d6-32912d9b289d",
+      "name": "Respond Frontend",
+      "executeOnce": false,
+      "notesInFlow": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ef10206e-9546-4155-9ff4-194fb6d22b4e",
+              "leftValue": "={{$json.result}}",
+              "rightValue": "NOT_BUILT",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "f8be8e4e-70e3-4488-b4fc-8d271953ac4f",
+      "name": "Should Notify"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=={{ { ok: true, channel: \"backend\", result: $json.result, jobName: $json.jobName, buildNumber: $json.buildNumber } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        112
+      ],
+      "id": "35f86d9a-b0a6-4ee2-b502-c24c6c34a94a",
+      "name": "Respond Backend",
+      "executeOnce": false,
+      "notesInFlow": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=={{ { ok: true, skipped: true, reason: \"not-built\", result: $json.result, jobName: $json.jobName, buildNumber: $json.buildNumber } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        400,
+        144
+      ],
+      "id": "4b855069-f87c-4e8f-bb58-e3d0a3b22f35",
+      "name": "Respond Skip",
+      "executeOnce": false,
+      "notesInFlow": false,
+      "alwaysOutputData": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Jenkins Deploy Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Payload": {
+      "main": [
+        [
+          {
+            "node": "Should Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is_Front": {
+      "main": [
+        [
+          {
+            "node": "Send Frontend Mattermost",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Backend Mattermost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Frontend Mattermost": {
+      "main": [
+        [
+          {
+            "node": "Respond Frontend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Backend Mattermost": {
+      "main": [
+        [
+          {
+            "node": "Respond Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Frontend": {
+      "main": [
+        []
+      ]
+    },
+    "Should Notify": {
+      "main": [
+        [
+          {
+            "node": "Is_Front",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "18e1b262-0b6a-4f8b-a34b-df4c2552021e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1724212fa31da5ecc6153aad16e3128ee2b6c5786d1822338bebacaf7a629f82"
+  },
+  "id": "DYcDBIu4Xm8JMUVb",
+  "tags": []
+}
