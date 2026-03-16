@@ -5,8 +5,7 @@ import com.example.gameinfratest.api.dto.auth.AuthSessionResponse;
 import com.example.gameinfratest.api.dto.auth.LogoutRequest;
 import com.example.gameinfratest.api.dto.auth.LogoutResponse;
 import com.example.gameinfratest.auth.AuthAction;
-import com.example.gameinfratest.auth.AuthCallbackResult;
-import com.example.gameinfratest.auth.AuthSessionPayload;
+import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -53,33 +52,37 @@ public class AuthController {
     ) {
         log.info("GET /api/auth/callback sessionId={} codePresent={} statePresent={}",
                 session.getId(), code != null && !code.isBlank(), state != null && !state.isBlank());
-        AuthCallbackResult result = authService.handleCallback(session, request, code, state);
+        authService.handleCallback(session, request, code, state);
         String redirectUrl = ServletUriComponentsBuilder.fromRequestUri(request)
                 .replacePath("/")
-                .replaceQuery("auth_ticket=" + result.ticket())
+                .replaceQuery("auth=success")
                 .build()
                 .toUriString();
         return redirect(redirectUrl);
     }
 
     @GetMapping("/session")
-    public ApiResponse<AuthSessionResponse> session(@RequestParam("ticket") String ticket) {
-        log.info("GET /api/auth/session ticket={}", ticket);
-        AuthSessionPayload payload = authService.consumeTicket(ticket);
+    public ApiResponse<AuthSessionResponse> session(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        BffSessionState sessionState = authService.getSessionState(session);
+        boolean authenticated = sessionState != null;
+        log.info("GET /api/auth/session sessionId={} authenticated={}", session == null ? "none" : session.getId(), authenticated);
         return ApiResponse.ok("auth session fetch success", new AuthSessionResponse(
-                payload.accessToken(),
-                payload.refreshToken(),
-                payload.idToken(),
-                payload.expiresAt(),
-                payload.user()
+                authenticated,
+                authenticated ? sessionState.expiresAt() : 0L,
+                authenticated ? sessionState.user() : null
         ));
     }
 
     @PostMapping("/logout")
-    public ApiResponse<LogoutResponse> logout(HttpServletRequest request, @RequestBody(required = false) LogoutRequest logoutRequest) {
+    public ApiResponse<LogoutResponse> logout(
+            HttpServletRequest request,
+            @RequestBody(required = false) LogoutRequest logoutRequest
+    ) {
+        HttpSession session = request.getSession(false);
         String idTokenHint = logoutRequest == null ? null : logoutRequest.idTokenHint();
         log.info("POST /api/auth/logout idTokenHintPresent={}", idTokenHint != null && !idTokenHint.isBlank());
-        return ApiResponse.ok("logout url build success", authService.buildLogoutResponse(request, idTokenHint));
+        return ApiResponse.ok("logout url build success", authService.logout(request, session, idTokenHint));
     }
 
     private ResponseEntity<Void> redirect(String location) {

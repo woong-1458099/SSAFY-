@@ -1,6 +1,7 @@
 package com.example.gameinfratest.api.dto.auth;
 
 import com.example.gameinfratest.user.User;
+import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -16,7 +17,7 @@ public record UserResponse(
         Instant lastLoginAt,
         Instant createdAt,
         Instant updatedAt
-) {
+) implements Serializable {
     public static UserResponse from(User user) {
         return new UserResponse(
                 user.getId(),

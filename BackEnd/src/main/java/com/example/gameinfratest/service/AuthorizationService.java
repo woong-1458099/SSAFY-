@@ -1,5 +1,6 @@
 package com.example.gameinfratest.service;
 
+import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.support.ApiException;
 import java.util.UUID;
@@ -18,8 +19,25 @@ public class AuthorizationService {
         this.userService = userService;
     }
 
-    public UserResponse requireUserAccess(UUID userId, Jwt jwt) {
-        UserResponse currentUser = userService.getCurrentUser(jwt);
+    public UserResponse requireAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "authentication is required");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof BffSessionState sessionState) {
+            return userService.getCurrentUser(sessionState.user().id());
+        }
+        if (principal instanceof Jwt jwt) {
+            return userService.getCurrentUser(jwt);
+        }
+
+        throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "unsupported authentication principal");
+    }
+
+    public UserResponse requireUserAccess(UUID userId) {
+        UserResponse currentUser = requireAuthenticatedUser();
         if (currentUser.id().equals(userId) || hasSystemAuthority()) {
             return currentUser;
         }
