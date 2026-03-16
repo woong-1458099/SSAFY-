@@ -83,6 +83,7 @@ STG/PROD env 에 최소한 아래 값이 필요하다.
 JWT_ENABLED=true
 JWT_ISSUER_URI=https://auth.ssafymaker.cloud/realms/app
 KEYCLOAK_ENABLED=true
+KEYCLOAK_REQUIRE_CLIENT_SECRET=true
 KEYCLOAK_BASE_URL=https://auth.ssafymaker.cloud
 KEYCLOAK_PUBLIC_BASE_URL=https://auth.ssafymaker.cloud
 KEYCLOAK_INTERNAL_BASE_URL=http://stg-keycloak:8080
@@ -96,6 +97,7 @@ CORS_ALLOWED_ORIGINS=https://ssafymaker.cloud,https://stg.ssafymaker.cloud,http:
 - 백엔드와 Keycloak 간 서버 통신은 `KEYCLOAK_INTERNAL_BASE_URL` 을 사용한다.
 - BFF 전용 confidential client 이므로 `KEYCLOAK_CLIENT_SECRET` 을 함께 주입한다.
 - realm template import 후 Keycloak Admin Console에서 `ssafy-maker-bff` client secret을 확인하거나 재생성한 뒤 backend env와 동일하게 맞춘다.
+- 로컬/테스트에서 public client 호환 구성이 꼭 필요하면 `KEYCLOAK_REQUIRE_CLIENT_SECRET=false` 로 완화할 수 있다. STG/PROD 에서는 `true`를 유지한다.
 
 백엔드는 토큰에서 다음 클레임을 읽는다.
 - `sub`
@@ -120,6 +122,14 @@ VITE_KEYCLOAK_CLIENT_ID=ssafy-maker-bff
 ```
 
 STG 는 `ssafymaker.cloud` 대신 `stg.ssafymaker.cloud` 로 맞춘다.
+
+## 배포 전 체크리스트
+- Keycloak realm `app` 에 `ssafy-maker-bff` client 가 존재하는지 확인한다.
+- `ssafy-maker-bff` client 의 `Client authentication = ON`, `Access Type = confidential` 이 적용됐는지 확인한다.
+- backend `KEYCLOAK_CLIENT_ID` 와 Keycloak client id 가 모두 `ssafy-maker-bff` 로 일치하는지 확인한다.
+- backend `KEYCLOAK_CLIENT_SECRET` 와 Keycloak client secret 이 동일한지 확인한다.
+- `redirectUris` 에 `https://ssafymaker.cloud/api/auth/callback`, `https://stg.ssafymaker.cloud/api/auth/callback`, `http://localhost:8080/api/auth/callback` 흐름이 커버되는지 확인한다.
+- 브라우저 진입 도메인에 맞는 `webOrigins` 가 남아 있는지 확인한다.
 
 ## 실제 로그인/회원가입 흐름
 1. 프론트가 Keycloak Authorization Code with PKCE 요청을 시작한다.

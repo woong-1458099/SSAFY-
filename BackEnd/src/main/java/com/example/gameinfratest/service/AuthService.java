@@ -70,8 +70,9 @@ public class AuthService {
         if (!keycloakAuthProperties.enabled()) {
             return;
         }
-        if (keycloakAuthProperties.clientSecret() == null || keycloakAuthProperties.clientSecret().isBlank()) {
-            throw new IllegalStateException("app.keycloak.client-secret must not be blank when keycloak auth is enabled");
+        if (keycloakAuthProperties.requireClientSecret()
+                && (keycloakAuthProperties.clientSecret() == null || keycloakAuthProperties.clientSecret().isBlank())) {
+            throw new IllegalStateException("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
         }
         appUrlProperties.validatedPublicBaseUri();
         appUrlProperties.validatedFrontendBaseUri();
@@ -99,6 +100,7 @@ public class AuthService {
                 .queryParam("code_challenge", challenge)
                 .queryParam("code_challenge_method", "S256");
 
+        // Query param values must be raw values here; UriComponentsBuilder performs the percent-encoding.
         String authorizationUrl = builder.build().encode().toUriString();
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
@@ -179,6 +181,7 @@ public class AuthService {
             builder.queryParam("id_token_hint", resolvedIdTokenHint);
         }
 
+        // Query param values must be raw values here; UriComponentsBuilder performs the percent-encoding.
         String logoutUrl = builder.build().encode().toUriString();
         log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);

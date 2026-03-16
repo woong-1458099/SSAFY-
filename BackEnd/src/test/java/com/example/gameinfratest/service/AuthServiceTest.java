@@ -20,6 +20,7 @@ class AuthServiceTest {
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
                         true,
+                        true,
                         "https://auth.example.com",
                         "https://auth.example.com",
                         "https://auth.example.com",
@@ -35,7 +36,30 @@ class AuthServiceTest {
 
         assertThatThrownBy(authService::validateRequiredUrls)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("app.keycloak.client-secret must not be blank when keycloak auth is enabled");
+                .hasMessage("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
+    }
+
+    @Test
+    void validateRequiredUrlsAllowsMissingClientSecretWhenDisabledByConfig() {
+        AuthService authService = new AuthService(
+                new AppUrlProperties("https://api.example.com", "https://app.example.com"),
+                new KeycloakAuthProperties(
+                        true,
+                        false,
+                        "https://auth.example.com",
+                        "https://auth.example.com",
+                        "https://auth.example.com",
+                        "app",
+                        "ssafy-maker-bff",
+                        "",
+                        null,
+                        null
+                ),
+                mock(UserService.class),
+                mock(JwtDecoder.class)
+        );
+
+        authService.validateRequiredUrls();
     }
 
     @Test
@@ -43,6 +67,7 @@ class AuthServiceTest {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
+                        true,
                         true,
                         "https://auth.example.com",
                         "https://auth.example.com",
@@ -65,5 +90,30 @@ class AuthServiceTest {
 
         assertThat(authorizationUrl).contains("scope=openid%20profile%20email");
         assertThat(authorizationUrl).contains("redirect_uri=https%3A%2F%2Fapi.example.com%2Fapi%2Fauth%2Fcallback");
+    }
+
+    @Test
+    void logoutUrlEncodesPostLogoutRedirectUri() {
+        AuthService authService = new AuthService(
+                new AppUrlProperties("https://api.example.com", "https://app.example.com/app"),
+                new KeycloakAuthProperties(
+                        true,
+                        true,
+                        "https://auth.example.com",
+                        "https://auth.example.com",
+                        "https://auth.example.com",
+                        "app",
+                        "ssafy-maker-bff",
+                        "secret",
+                        null,
+                        null
+                ),
+                mock(UserService.class),
+                mock(JwtDecoder.class)
+        );
+
+        String logoutUrl = authService.logout(new MockHttpServletRequest(), new MockHttpSession(), null).logoutUrl();
+
+        assertThat(logoutUrl).contains("post_logout_redirect_uri=https%3A%2F%2Fapp.example.com%2Fapp%2F");
     }
 }
