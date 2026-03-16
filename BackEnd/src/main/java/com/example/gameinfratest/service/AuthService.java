@@ -35,7 +35,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
 public class AuthService {
@@ -200,7 +199,7 @@ public class AuthService {
     }
 
     private String callbackUri(HttpServletRequest request) {
-        return ServletUriComponentsBuilder.fromRequestUri(request)
+        return UriComponentsBuilder.fromUriString(request.getRequestURL().toString())
                 .replacePath("/api/auth/callback")
                 .replaceQuery(null)
                 .build()
@@ -208,7 +207,7 @@ public class AuthService {
     }
 
     private String frontendRootUri(HttpServletRequest request) {
-        return ServletUriComponentsBuilder.fromRequestUri(request)
+        return UriComponentsBuilder.fromUriString(request.getRequestURL().toString())
                 .replacePath("/")
                 .replaceQuery(null)
                 .build()
