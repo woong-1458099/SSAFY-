@@ -1,6 +1,7 @@
 package com.example.gameinfratest.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import com.example.gameinfratest.auth.AuthAction;
@@ -12,6 +13,30 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 
 class AuthServiceTest {
+
+    @Test
+    void validateRequiredUrlsFailsWhenClientSecretMissing() {
+        AuthService authService = new AuthService(
+                new AppUrlProperties("https://api.example.com", "https://app.example.com"),
+                new KeycloakAuthProperties(
+                        true,
+                        "https://auth.example.com",
+                        "https://auth.example.com",
+                        "https://auth.example.com",
+                        "app",
+                        "ssafy-maker-bff",
+                        "",
+                        null,
+                        null
+                ),
+                mock(UserService.class),
+                mock(JwtDecoder.class)
+        );
+
+        assertThatThrownBy(authService::validateRequiredUrls)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("app.keycloak.client-secret must not be blank when keycloak auth is enabled");
+    }
 
     @Test
     void buildAuthorizationUrlEncodesScopeAndRedirectUri() {
