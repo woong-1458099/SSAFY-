@@ -20,8 +20,8 @@
       "webhookId": "gitlab-mr-review",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "mcPMklgmfDtfQJ2P",
-          "name": "Header Auth account"
+          "id": "N8N_MR_HEADER_AUTH_CREDENTIAL_ID",
+          "name": "N8N_MR_HEADER_AUTH_CREDENTIAL_NAME"
         }
       }
     },
@@ -118,8 +118,8 @@
       ],
       "credentials": {
         "gitlabApi": {
-          "id": "7Xaw2VOsiLGYHPLs",
-          "name": "GitLab account"
+          "id": "GITLAB_API_CREDENTIAL_ID",
+          "name": "GITLAB_API_CREDENTIAL_NAME"
         }
       }
     },
@@ -141,7 +141,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const rawAuthor = $json.author;\nconst author =\n  typeof rawAuthor === 'string'\n    ? rawAuthor\n    : rawAuthor?.username || rawAuthor?.name || '';\n\nconst mrTitle = $json.mr_title || '';\nconst source = $json.source_branch || '';\nconst target = $json.target_branch || '';\nconst changes = JSON.stringify($json.changes || []).slice(0, 12000);\n\nconst prompt = `\nYou are a strict senior code reviewer for a web game platform.\n\nProject context:\n- Frontend: Phaser-based web game client\n- Backend: Spring Boot 4 API server\n- Authentication and authorization are managed by Keycloak\n- Merge request diffs may include frontend, backend, or both\n\nYour task:\nReview the merge request changes and return ONLY valid UTF-8 JSON.\nDo not include markdown fences, prose outside JSON, or any extra keys.\n\nReturn a JSON object with exactly these keys:\nmr_type, summary, overall_risk, findings, comment_markdown\n\nRules:\n- mr_type must be one of: fix, feat, docs, refactor, test, chore\n- overall_risk must be one of: low, medium, high\n- findings must be an array\n- each finding must contain exactly these keys: severity, file, line_hint, issue, suggestion\n- severity must be one of: high, medium, low\n- All human-readable text values must be written in Korean\n- summary must be Korean\n- findings.issue must be Korean\n- findings.suggestion must be Korean\n- comment_markdown must be Korean\n\nReview priorities:\n1. Bug risk and behavioral regression\n2. Security issues, especially auth/authz, token handling, trust boundaries, insecure defaults\n3. Runtime stability, null handling, exception flow, async issues\n4. Performance or resource waste\n5. Maintainability and readability\n\nFrontend review guidance:\n- Check Phaser scene lifecycle, scene transitions, duplicate event listeners, cleanup leaks, asset loading risks\n- Check async API handling, race conditions, stale state, browser-side auth assumptions, broken redirects or callback handling\n- Check whether UI code can break on missing API fields or partial responses\n\nBackend review guidance:\n- Check Spring Boot 4 controller, service, config, and security changes for regressions\n- Check request validation, exception handling, null safety, startup risks, and operational assumptions\n- Assume Keycloak manages tokens, so focus on whether the application validates and uses identity safely\n- Flag risky public endpoint exposure, incorrect trust of headers or client state, and fragile environment assumptions\n\nClassification guidance:\n- Use feat for new user-facing capability\n- Use fix for bug fixes\n- Use refactor for structural changes without intended behavior change\n- Use docs for documentation-only changes\n- Use test for test-only changes\n- Use chore for maintenance or mixed changes that do not fit better\n\nOutput requirements:\n- Keep summary concise, 1 to 3 sentences\n- findings should include only meaningful issues, not trivial style comments\n- If no important issues are found, findings must be []\n- comment_markdown must be a concise Korean GitLab MR review comment\n- comment_markdown should include a short overall assessment, risk level, key findings if any, and a brief conclusion\n\nInput:\n- MR title: ${mrTitle}\n- Author: ${author}\n- Branches: ${source} -> ${target}\n- Changes JSON: ${changes}\n`;\n\nreturn {\n  json: {\n    ...$json,\n    prompt\n  }\n};"
+        "jsCode": "const rawAuthor = $json.author;\nconst author =\n  typeof rawAuthor === 'string'\n    ? rawAuthor\n    : rawAuthor?.username || rawAuthor?.name || '';\n\nconst mrTitle = $json.mr_title || '';\nconst source = $json.source_branch || '';\nconst target = $json.target_branch || '';\nconst changes = JSON.stringify($json.changes || []).slice(0, 7000);\n\nconst prompt = `\nYou are a strict senior code reviewer for a web game platform.\n\nProject context:\n- Frontend: Phaser-based web game client\n- Backend: Spring Boot API server\n- Auth is managed by Keycloak\n\nTask:\nReview the merge request changes and return ONLY valid UTF-8 JSON.\nDo not include markdown fences, prose outside JSON, or extra keys.\n\nReturn exactly this JSON shape:\n{\n  \"mr_type\": \"fix|feat|docs|refactor|test|chore\",\n  \"summary\": \"Korean summary\",\n  \"overall_risk\": \"low|medium|high\",\n  \"findings\": [\n    {\n      \"severity\": \"high|medium|low\",\n      \"file\": \"path\",\n      \"line_hint\": \"location or symbol\",\n      \"issue\": \"Korean issue\",\n      \"suggestion\": \"Korean suggestion\"\n    }\n  ]\n}\n\nRules:\n- All human-readable text must be in Korean\n- Summary must be concise, 1 to 3 sentences\n- Findings must contain only meaningful issues\n- If no important issues exist, findings must be []\n- Prefer concrete, actionable findings over broad advice\n\nReview priorities:\n1. Bug risk or behavioral regression\n2. Security and trust boundary issues\n3. Runtime stability and null/exception handling\n4. Performance or resource waste\n5. Maintainability\n\nFrontend focus:\n- Phaser lifecycle, scene transitions, duplicate listeners, cleanup leaks\n- Async API handling, race conditions, stale state, broken redirects/callbacks\n- Missing or partial API field handling\n\nBackend focus:\n- Controller/service/config/security regressions\n- Validation, exception handling, null safety, startup risks\n- Unsafe trust of headers, client state, insecure defaults\n\nInput:\n- MR title: ${mrTitle}\n- Author: ${author}\n- Branches: ${source} -> ${target}\n- Changes JSON: ${changes}\n`;\n\nreturn {\n  json: {\n    ...$json,\n    prompt\n  }\n};"
       },
       "id": "d883f36b-5662-4dfd-b165-8c07fe0b2ed7",
       "name": "Build Review Prompt",
@@ -179,15 +179,15 @@
       ],
       "credentials": {
         "openAiApi": {
-          "id": "teingDU7iDThD7Mi",
-          "name": "OpenAi account"
+          "id": "OPENAI_API_CREDENTIAL_ID",
+          "name": "OPENAI_API_CREDENTIAL_NAME"
         }
       }
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const raw = $input.item.json;\nconst fallback = {\n  mr_type: 'chore',\n  summary: '리뷰 생성은 완료되었지만 파서 fallback이 사용되었습니다.',\n  overall_risk: 'medium',\n  findings: [],\n  comment_markdown: '자동 리뷰는 완료되었지만 응답 파싱이 완전하지 않았습니다. 원본 출력은 실행 로그를 확인해주세요.'\n};\n\nlet text = '';\nif (raw.output_text) text = raw.output_text;\nelse if (Array.isArray(raw.output)) {\n  const chunks = [];\n  for (const o of raw.output) {\n    if (Array.isArray(o.content)) {\n      for (const c of o.content) {\n        if (c.type === 'output_text' && c.text) chunks.push(c.text);\n      }\n    }\n  }\n  text = chunks.join('\\n');\n}\n\nlet parsed = fallback;\ntry {\n  parsed = JSON.parse(text);\n} catch (e) {\n  parsed = {\n    ...fallback,\n    comment_markdown: `자동 리뷰 원문 출력:\\n\\n\\`\\`\\`\\n${text.slice(0, 3500)}\\n\\`\\`\\``\n  };\n}\n\nreturn {\n  json: {\n    ...$json,\n    mr_type: parsed.mr_type || 'chore',\n    summary: parsed.summary || fallback.summary,\n    overall_risk: parsed.overall_risk || 'medium',\n    findings: Array.isArray(parsed.findings) ? parsed.findings : [],\n    findings_count: Array.isArray(parsed.findings) ? parsed.findings.length : 0,\n    comment_markdown: parsed.comment_markdown || fallback.comment_markdown\n  }\n};"
+        "jsCode": "const raw = $input.item.json;\nconst fallback = {\n  mr_type: 'chore',\n  summary: '리뷰 생성은 완료되었지만 파서 fallback이 사용되었습니다.',\n  overall_risk: 'medium',\n  findings: []\n};\n\nlet text = '';\nif (raw.output_text) {\n  text = raw.output_text;\n} else if (Array.isArray(raw.output)) {\n  const chunks = [];\n  for (const o of raw.output) {\n    if (Array.isArray(o.content)) {\n      for (const c of o.content) {\n        if (c.type === 'output_text' && c.text) {\n          chunks.push(c.text);\n        }\n      }\n    }\n  }\n  text = chunks.join('\\n');\n}\n\nlet parsed = fallback;\ntry {\n  parsed = JSON.parse(text);\n} catch (e) {\n  parsed = fallback;\n}\n\nconst findings = Array.isArray(parsed.findings) ? parsed.findings : [];\n\nreturn {\n  json: {\n    ...$json,\n    mr_type: parsed.mr_type || 'chore',\n    summary: parsed.summary || fallback.summary,\n    overall_risk: parsed.overall_risk || 'medium',\n    findings,\n    findings_count: findings.length\n  }\n};"
       },
       "id": "ed7ac55e-b83a-499c-bddc-505d90d6b2b1",
       "name": "Parse Review JSON",
@@ -209,8 +209,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        -176,
-        -208
+        -256,
+        -192
       ]
     },
     {
@@ -242,13 +242,13 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        240,
-        -384
+        304,
+        -368
       ],
       "credentials": {
         "gitlabApi": {
-          "id": "7Xaw2VOsiLGYHPLs",
-          "name": "GitLab account"
+          "id": "GITLAB_API_CREDENTIAL_ID",
+          "name": "GITLAB_API_CREDENTIAL_NAME"
         }
       }
     },
@@ -257,17 +257,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "11L5h4iASQjJpndTZ7H8hbkGhzvm6psI-qP7W8YXXJF0",
+          "value": "GOOGLE_SHEETS_DOCUMENT_ID",
           "mode": "list",
           "cachedResultName": "mr_reviews",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11L5h4iASQjJpndTZ7H8hbkGhzvm6psI-qP7W8YXXJF0/edit?usp=drivesdk"
+          "cachedResultUrl": "GOOGLE_SHEETS_DOCUMENT_URL"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "시트1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11L5h4iASQjJpndTZ7H8hbkGhzvm6psI-qP7W8YXXJF0/edit#gid=0"
+          "cachedResultUrl": "GOOGLE_SHEETS_DOCUMENT_URL"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -446,13 +446,13 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        240,
-        -208
+        304,
+        -192
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "avEppTP9q2wQXNLL",
-          "name": "Google Sheets account"
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "GOOGLE_SHEETS_CREDENTIAL_NAME"
         }
       }
     },
@@ -468,8 +468,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        496,
-        -224
+        576,
+        -208
       ]
     },
     {
@@ -483,8 +483,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
       "position": [
-        736,
-        -208
+        752,
+        -192
       ]
     },
     {
@@ -517,13 +517,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const rawAuthor = $json.author;\nconst author =\n  typeof rawAuthor === 'string'\n    ? rawAuthor\n    : rawAuthor?.username || rawAuthor?.name || 'unknown';\n\nconst selectedModel =\n  $json.selected_model ||\n  $('Choose Model').first().json.selected_model ||\n  'unknown';\n\nreturn {\n  json: {\n    status: 'success',\n    mr_iid: $json.mr_iid,\n    mr_title: $json.mr_title || '',\n    author,\n    source_branch: $json.source_branch || '',\n    target_branch: $json.target_branch || '',\n    mr_type: $json.mr_type || 'chore',\n    overall_risk: $json.overall_risk || 'medium',\n    summary: $json.summary || '',\n    findings: Array.isArray($json.findings) ? $json.findings : [],\n    findings_count: $json.findings_count || 0,\n    comment_markdown: $json.comment_markdown || '',\n    commit_sha: $json.commit_sha || '',\n    selected_model: selectedModel,\n    gitlab_mr_url: $json.gitlab_mr_url || '',\n    timestamp: $json.timestamp || new Date().toISOString(),\n    error_message: ''\n  }\n};"
+        "jsCode": "const rawAuthor = $json.author;\nconst author =\n  typeof rawAuthor === 'string'\n    ? rawAuthor\n    : rawAuthor?.username || rawAuthor?.name || 'unknown';\n\nconst selectedModel =\n  $json.selected_model ||\n  $('Choose Model').first().json.selected_model ||\n  'unknown';\n\nconst findings = Array.isArray($json.findings) ? $json.findings : [];\n\nreturn {\n  json: {\n    status: 'success',\n    mr_iid: $json.mr_iid,\n    mr_title: $json.mr_title || '',\n    author,\n    source_branch: $json.source_branch || '',\n    target_branch: $json.target_branch || '',\n    mr_type: $json.mr_type || 'chore',\n    overall_risk: $json.overall_risk || 'medium',\n    summary: $json.summary || '',\n    findings,\n    findings_count: findings.length,\n    comment_markdown: $json.comment_markdown || '',\n    commit_sha: $json.commit_sha || '',\n    selected_model: selectedModel,\n    gitlab_mr_url: $json.gitlab_mr_url || '',\n    timestamp: $json.timestamp || new Date().toISOString(),\n    error_message: ''\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        16,
-        -208
+        64,
+        -192
       ],
       "id": "f1561754-021f-4ccd-9c11-4998f25ba220",
       "name": "Build Final Payload"
@@ -531,7 +531,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://meeting.ssafy.com/hooks/jscsuk663tr8bnkzxgw9xzpo7h",
+        "url": "MATTERMOST_MR_REVIEW_WEBHOOK_URL",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  text:\n    \"### :shark_cheer2: MR 자동 리뷰 :shark_cheer2:\\n\\n\" +\n    \"**MR**\\n\" +\n    \"[!\" + $json.mr_iid + \" \" + $json.mr_title + \"](\" + ($json.gitlab_mr_url || \"\") + \")\\n\\n\" +\n    \"**작성자**: \" + $json.author + \"\\n\" +\n    \"**브랜치**: `\" + $json.source_branch + \" -> \" + $json.target_branch + \"`\\n\" +\n    \"**모델**: `\" + ($json.selected_model || \"unknown\") + \"`\\n\" +\n    \"**위험도**: `\" + ($json.overall_risk || \"unknown\") + \"`\\n\" +\n    \"**발견 수**: \" + ($json.findings_count || 0) + \"\\n\\n\" +\n    \"**요약**\\n\" +\n    ($json.summary || \"요약 없음\") + \"\\n\\n\" +\n    \"[GitLab에서 보기](\" + ($json.gitlab_mr_url || \"\") + \")\"\n}) }}",
@@ -540,7 +540,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        240,
+        304,
         0
       ],
       "id": "a59131cb-490d-40b5-9084-546b13885c77",
@@ -589,6 +589,19 @@
         -1616,
         -48
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $json.summary || '요약 정보가 없습니다.';\nconst overallRisk = $json.overall_risk || 'medium';\nconst findings = Array.isArray($json.findings) ? $json.findings : [];\n\nconst riskLabelMap = {\n  low: 'low',\n  medium: 'medium',\n  high: 'high'\n};\n\nconst lines = [\n  '## 요약',\n  summary,\n  '',\n  '## 위험도',\n  riskLabelMap[overallRisk] || overallRisk,\n  '',\n  '## 주요 이슈'\n];\n\nif (findings.length === 0) {\n  lines.push('- 중요한 이슈 없음');\n} else {\n  for (const finding of findings) {\n    const severity = finding?.severity || 'unknown';\n    const file = finding?.file || 'unknown-file';\n    const lineHint = finding?.line_hint || 'line unknown';\n    const issue = finding?.issue || '문제 설명 없음';\n    const suggestion = finding?.suggestion || '개선 제안 없음';\n\n    lines.push(`- [${severity}] ${file} (${lineHint})`);\n    lines.push(`  - 문제: ${issue}`);\n    lines.push(`  - 제안: ${suggestion}`);\n  }\n}\n\nlines.push('');\nlines.push('## 결론');\n\nif (findings.length === 0) {\n  lines.push('중요한 문제는 보이지 않습니다. 현재 변경은 이 방향으로 진행해도 됩니다.');\n} else {\n  lines.push(`확인된 이슈 ${findings.length}건을 반영한 뒤 다시 검토하는 것이 안전합니다.`);\n}\n\nreturn {\n  json: {\n    ...$json,\n    comment_markdown: lines.join('\\n')\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -192
+      ],
+      "id": "232ad7cd-bc0c-48d2-b110-310834e35566",
+      "name": "Render GitLab Comment"
     }
   ],
   "pinData": {
@@ -597,27 +610,12 @@
         "json": {
           "headers": {
             "host": "n8n.ssafymaker.cloud",
-            "x-forwarded-proto": "https",
-            "x-forwarded-port": "443",
-            "x-forwarded-for": "52.231.25.158, 141.101.84.190",
-            "x-forwarded-host": "n8n.ssafymaker.cloud",
-            "connection": "upgrade",
             "content-length": "4806",
             "x-gitlab-instance": "https://lab.ssafy.com",
-            "x-gitlab-token": "ssafymaker_gitlab_mr_review_2026_very_long_random",
-            "accept": "*/*",
-            "accept-encoding": "gzip, br",
-            "cf-ray": "9dd1553349dba7c6-ICN",
-            "x-gitlab-event-uuid": "5697aa1c-6a65-4d88-99f1-343d826599d0",
+            "x-gitlab-token": "GITLAB_WEBHOOK_SECRET",
             "content-type": "application/json",
             "user-agent": "GitLab/18.6.2",
-            "idempotency-key": "a27d99d9-be4f-478a-af11-f9d07f4391ec",
-            "x-gitlab-event": "Merge Request Hook",
-            "x-gitlab-webhook-uuid": "8bee1acf-4220-4745-ae85-fd1df7707553",
-            "cdn-loop": "cloudflare; loops=1",
-            "cf-connecting-ip": "52.231.25.158",
-            "cf-ipcountry": "KR",
-            "cf-visitor": "{\"scheme\":\"https\"}"
+            "x-gitlab-event": "Merge Request Hook"
           },
           "params": {},
           "query": {},
@@ -625,11 +623,8 @@
             "object_kind": "merge_request",
             "event_type": "merge_request",
             "user": {
-              "id": 28713,
-              "name": "김민수",
-              "username": "tkatnsdl1996",
-              "avatar_url": "https://secure.gravatar.com/avatar/feda049a757c453eb5e5674ff1ed9517d11eeb6639f21c0800f768bddff00c6b?s=80&d=identicon",
-              "email": "[REDACTED]"
+              "name": "REDACTED_USER",
+              "username": "redacted_user"
             },
             "project": {
               "id": 1273736,
@@ -697,8 +692,8 @@
                 "timestamp": "2026-03-16T14:06:14+09:00",
                 "url": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206/-/commit/17640dcea0b56c3ce49130f8c0369467df1146c5",
                 "author": {
-                  "name": "김명진",
-                  "email": "usbdhffo112@naver.com"
+                  "name": "REDACTED_AUTHOR",
+                  "email": "REDACTED_EMAIL"
                 }
               },
               "reviewer_ids": [],
@@ -754,17 +749,9 @@
               "description": "",
               "homepage": "https://lab.ssafy.com/s14-ai-image-sub1/S14P21E206"
             },
-            "assignees": [
-              {
-                "id": 28712,
-                "name": "김명진",
-                "username": "usbdhffo112",
-                "avatar_url": "https://secure.gravatar.com/avatar/c5bdab70e7abe8fae35439b76b38cb6eb481b0e048b8404291ae38d382d3962e?s=80&d=identicon",
-                "email": "[REDACTED]"
-              }
-            ]
+            "assignees": []
           },
-          "webhookUrl": "https://n8n.ssafymaker.cloud/webhook/gitlab/mr-review",
+          "webhookUrl": "N8N_GITLAB_MR_WEBHOOK_URL",
           "executionMode": "production"
         },
         "pairedItem": {
@@ -883,7 +870,7 @@
       "main": [
         [
           {
-            "node": "Build Final Payload",
+            "node": "Render GitLab Comment",
             "type": "main",
             "index": 0
           }
@@ -983,6 +970,17 @@
           }
         ]
       ]
+    },
+    "Render GitLab Comment": {
+      "main": [
+        [
+          {
+            "node": "Build Final Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -993,7 +991,7 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "a2da0d05-4b66-474a-ae9f-403154790333",
+  "versionId": "5c744dde-aa31-4a52-8218-afd22676d373",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "1724212fa31da5ecc6153aad16e3128ee2b6c5786d1822338bebacaf7a629f82"
