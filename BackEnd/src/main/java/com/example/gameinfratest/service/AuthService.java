@@ -70,6 +70,9 @@ public class AuthService {
         if (!keycloakAuthProperties.enabled()) {
             return;
         }
+        if (keycloakAuthProperties.clientSecret() == null || keycloakAuthProperties.clientSecret().isBlank()) {
+            throw new IllegalStateException("app.keycloak.client-secret must not be blank when keycloak auth is enabled");
+        }
         appUrlProperties.validatedPublicBaseUri();
         appUrlProperties.validatedFrontendBaseUri();
     }
