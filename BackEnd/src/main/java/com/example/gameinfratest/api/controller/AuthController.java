@@ -54,7 +54,7 @@ public class AuthController {
                 session.getId(), code != null && !code.isBlank(), state != null && !state.isBlank());
         authService.handleCallback(session, request, code, state);
         String redirectUrl = UriComponentsBuilder.fromUriString(authService.frontendRootUri())
-                .replaceQuery("auth=success")
+                .queryParam("auth", "success")
                 .build()
                 .toUriString();
         return redirect(redirectUrl);
