@@ -1,6 +1,11 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
+import {
+  buildPlayerVisual,
+  getAvatarDataFromRegistry,
+  type PlayerVisualParts,
+} from "@features/avatar/playerAvatar";
 
 type MiniGameData = {
   returnSceneKey?: SceneKey;
@@ -17,6 +22,7 @@ export class MiniGameTypingScene extends Phaser.Scene {
   private timerText?: Phaser.GameObjects.Text;
   private finishText?: Phaser.GameObjects.Text;
   private timerEvent?: Phaser.Time.TimerEvent;
+  private playerVisual?: PlayerVisualParts;
   private currentWord = "";
   private typed = "";
   private score = 0;
@@ -85,9 +91,17 @@ export class MiniGameTypingScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown", this.handleKeyDown);
     this.escKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
 
+    // 플레이어 캐릭터 표시
+    const avatarData = getAvatarDataFromRegistry(this.registry);
+    const charX = GAME_CONSTANTS.WIDTH - 68;
+    const charY = GAME_CONSTANTS.HEIGHT - 32;
+    this.playerVisual = buildPlayerVisual(this, charX, charY, avatarData);
+    this.playerVisual.root.setDepth(100);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off("keydown", this.handleKeyDown);
       this.timerEvent?.destroy();
+      this.playerVisual?.root.destroy(true);
     });
   }
 
