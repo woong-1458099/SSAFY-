@@ -3,18 +3,125 @@ package com.example.gameinfratest.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.keycloak")
-public record KeycloakAuthProperties(
-        boolean enabled,
-        boolean requireClientSecret,
-        String baseUrl,
-        String publicBaseUrl,
-        String internalBaseUrl,
-        String realm,
-        String clientId,
-        String clientSecret,
-        String adminClientId,
-        String adminClientSecret
-) {
+public class KeycloakAuthProperties {
+    private boolean enabled;
+    private boolean requireClientSecret;
+    private String baseUrl;
+    private String publicBaseUrl;
+    private String internalBaseUrl;
+    private String realm;
+    private String clientId;
+    private String clientSecret;
+    private String adminClientId;
+    private String adminClientSecret;
+
+    public KeycloakAuthProperties() {
+    }
+
+    public KeycloakAuthProperties(
+            boolean enabled,
+            boolean requireClientSecret,
+            String baseUrl,
+            String publicBaseUrl,
+            String internalBaseUrl,
+            String realm,
+            String clientId,
+            String clientSecret,
+            String adminClientId,
+            String adminClientSecret
+    ) {
+        this.enabled = enabled;
+        this.requireClientSecret = requireClientSecret;
+        this.baseUrl = baseUrl;
+        this.publicBaseUrl = publicBaseUrl;
+        this.internalBaseUrl = internalBaseUrl;
+        this.realm = realm;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
+        this.adminClientId = adminClientId;
+        this.adminClientSecret = adminClientSecret;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public boolean isRequireClientSecret() {
+        return requireClientSecret;
+    }
+
+    public void setRequireClientSecret(boolean requireClientSecret) {
+        this.requireClientSecret = requireClientSecret;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
+    }
+
+    public String getPublicBaseUrl() {
+        return publicBaseUrl;
+    }
+
+    public void setPublicBaseUrl(String publicBaseUrl) {
+        this.publicBaseUrl = publicBaseUrl;
+    }
+
+    public String getInternalBaseUrl() {
+        return internalBaseUrl;
+    }
+
+    public void setInternalBaseUrl(String internalBaseUrl) {
+        this.internalBaseUrl = internalBaseUrl;
+    }
+
+    public String getRealm() {
+        return realm;
+    }
+
+    public void setRealm(String realm) {
+        this.realm = realm;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    public String getClientSecret() {
+        return clientSecret;
+    }
+
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
+    }
+
+    public String getAdminClientId() {
+        return adminClientId;
+    }
+
+    public void setAdminClientId(String adminClientId) {
+        this.adminClientId = adminClientId;
+    }
+
+    public String getAdminClientSecret() {
+        return adminClientSecret;
+    }
+
+    public void setAdminClientSecret(String adminClientSecret) {
+        this.adminClientSecret = adminClientSecret;
+    }
+
     public String browserRealmUrl() {
         return trimTrailingSlash(resolvePublicBaseUrl()) + "/realms/" + realm;
     }

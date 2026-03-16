@@ -5,10 +5,34 @@ import java.net.URISyntaxException;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.urls")
-public record AppUrlProperties(
-        String publicBaseUrl,
-        String frontendBaseUrl
-) {
+public class AppUrlProperties {
+    private String publicBaseUrl;
+    private String frontendBaseUrl;
+
+    public AppUrlProperties() {
+    }
+
+    public AppUrlProperties(String publicBaseUrl, String frontendBaseUrl) {
+        this.publicBaseUrl = publicBaseUrl;
+        this.frontendBaseUrl = frontendBaseUrl;
+    }
+
+    public String getPublicBaseUrl() {
+        return publicBaseUrl;
+    }
+
+    public void setPublicBaseUrl(String publicBaseUrl) {
+        this.publicBaseUrl = publicBaseUrl;
+    }
+
+    public String getFrontendBaseUrl() {
+        return frontendBaseUrl;
+    }
+
+    public void setFrontendBaseUrl(String frontendBaseUrl) {
+        this.frontendBaseUrl = frontendBaseUrl;
+    }
+
     public String normalizedPublicBaseUrl() {
         return trimTrailingSlash(publicBaseUrl);
     }
