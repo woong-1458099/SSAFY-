@@ -67,11 +67,11 @@ public class AuthService {
 
     @PostConstruct
     void validateRequiredUrls() {
-        if (!keycloakAuthProperties.enabled()) {
+        if (!keycloakAuthProperties.isEnabled()) {
             return;
         }
-        if (keycloakAuthProperties.requireClientSecret()
-                && (keycloakAuthProperties.clientSecret() == null || keycloakAuthProperties.clientSecret().isBlank())) {
+        if (keycloakAuthProperties.getRequireClientSecret()
+                && (keycloakAuthProperties.getClientSecret() == null || keycloakAuthProperties.getClientSecret().isBlank())) {
             throw new IllegalStateException("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
         }
         appUrlProperties.validatedPublicBaseUri();
@@ -92,7 +92,7 @@ public class AuthService {
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
-                .queryParam("client_id", keycloakAuthProperties.clientId())
+                .queryParam("client_id", keycloakAuthProperties.getClientId())
                 .queryParam("redirect_uri", callbackUri)
                 .queryParam("response_type", "code")
                 .queryParam("scope", OIDC_SCOPE)
@@ -175,7 +175,7 @@ public class AuthService {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
                 .queryParam("post_logout_redirect_uri", frontendRootUri())
-                .queryParam("client_id", keycloakAuthProperties.clientId());
+                .queryParam("client_id", keycloakAuthProperties.getClientId());
 
         if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
             builder.queryParam("id_token_hint", resolvedIdTokenHint);
@@ -194,20 +194,20 @@ public class AuthService {
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
-        body.add("client_id", keycloakAuthProperties.clientId());
+        body.add("client_id", keycloakAuthProperties.getClientId());
         body.add("code", code);
         body.add("redirect_uri", callbackUri);
         body.add("code_verifier", verifier);
-        if (keycloakAuthProperties.clientSecret() != null && !keycloakAuthProperties.clientSecret().isBlank()) {
-            body.add("client_secret", keycloakAuthProperties.clientSecret());
+        if (keycloakAuthProperties.getClientSecret() != null && !keycloakAuthProperties.getClientSecret().isBlank()) {
+            body.add("client_secret", keycloakAuthProperties.getClientSecret());
         }
 
         try {
             log.info("keycloak token exchange start serverRealmUrl={} clientId={} redirectUri={} clientSecretPresent={}",
                     keycloakAuthProperties.serverRealmUrl(),
-                    keycloakAuthProperties.clientId(),
+                    keycloakAuthProperties.getClientId(),
                     callbackUri,
-                    keycloakAuthProperties.clientSecret() != null && !keycloakAuthProperties.clientSecret().isBlank());
+                    keycloakAuthProperties.getClientSecret() != null && !keycloakAuthProperties.getClientSecret().isBlank());
             return restClient.post()
                     .uri(keycloakAuthProperties.serverRealmUrl() + "/protocol/openid-connect/token")
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -234,7 +234,7 @@ public class AuthService {
     }
 
     private void ensureAuthEnabled() {
-        if (!keycloakAuthProperties.enabled()) {
+        if (!keycloakAuthProperties.isEnabled()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "AUTH_DISABLED", "keycloak auth is disabled");
         }
     }
@@ -275,7 +275,7 @@ public class AuthService {
 
         Object resourceAccessClaim = jwt.getClaim("resource_access");
         if (resourceAccessClaim instanceof Map<?, ?> resourceAccess) {
-            Object clientAccess = resourceAccess.get(keycloakAuthProperties.clientId());
+            Object clientAccess = resourceAccess.get(keycloakAuthProperties.getClientId());
             if (clientAccess instanceof Map<?, ?> clientMap) {
                 Object clientRoles = clientMap.get("roles");
                 if (clientRoles instanceof Collection<?> collection) {
