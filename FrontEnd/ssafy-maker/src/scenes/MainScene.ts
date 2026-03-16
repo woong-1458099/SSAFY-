@@ -360,8 +360,13 @@ const PLAYER_SPRITE_CONFIG = {
   frameHeight: 32
 } as const;
 const PLAYER_DISPLAY_SCALE = 2.4;
-const PLAYER_WALK_FRAME_COUNT = 4;
 const PLAYER_WALK_FRAME_DURATION = 120;
+const PLAYER_DIRECTION_FRAMES = {
+  right: { idle: 0, walk: [1, 2] },
+  up: { idle: 3, walk: [4, 5, 6, 5] },
+  left: { idle: 7, walk: [7, 8] },
+  down: { idle: 9, walk: [10, 11, 12, 11] }
+} as const;
 
 const DOWNTOWN_TMX_SEMANTIC_RULES: TmxSemanticRule[] = [
   { layerNames: ["collision building"], code: 2 }
@@ -895,12 +900,18 @@ export class MainScene extends Phaser.Scene {
   private preloadPlayerAvatarAssets(): void {
     this.load.spritesheet("base_male", "../../assets/game/character/base_male.png", PLAYER_SPRITE_CONFIG);
     this.load.spritesheet("base_female", "../../assets/game/character/base_female.png", PLAYER_SPRITE_CONFIG);
+    this.load.spritesheet("base_male_walk", "../../assets/game/character/base_male_walk.png", PLAYER_SPRITE_CONFIG);
+    this.load.spritesheet("base_female_walk", "../../assets/game/character/base_female_walk.png", PLAYER_SPRITE_CONFIG);
 
     for (let i = 1; i <= 3; i += 1) {
       this.load.spritesheet(`male_hair_${i}`, `../../assets/game/character/male_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
       this.load.spritesheet(`female_hair_${i}`, `../../assets/game/character/female_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
       this.load.spritesheet(`male_clothes_${i}`, `../../assets/game/character/male_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
       this.load.spritesheet(`female_clothes_${i}`, `../../assets/game/character/female_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
+      this.load.spritesheet(`male_hair_${i}_walk`, `../../assets/game/character/male_hair_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
+      this.load.spritesheet(`female_hair_${i}_walk`, `../../assets/game/character/female_hair_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
+      this.load.spritesheet(`male_clothes_${i}_walk`, `../../assets/game/character/male_clothes_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
+      this.load.spritesheet(`female_clothes_${i}_walk`, `../../assets/game/character/female_clothes_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
     }
   }
 
@@ -944,6 +955,7 @@ export class MainScene extends Phaser.Scene {
     if (!this.playerVisual) return;
 
     const isMoving = Math.abs(move.x) > 0.01 || Math.abs(move.y) > 0.01;
+    const gender = this.playerAvatar.gender;
     if (Math.abs(move.x) > Math.abs(move.y) && Math.abs(move.x) > 0.01) {
       this.playerFacing = move.x < 0 ? "left" : "right";
     } else if (Math.abs(move.y) > 0.01) {
@@ -951,12 +963,33 @@ export class MainScene extends Phaser.Scene {
     }
 
     const visual = this.playerVisual;
+    const walkBaseKey = `base_${gender}_walk`;
+    const walkClothesKey = `${gender}_clothes_${this.playerAvatar.cloth}_walk`;
+    const walkHairKey = `${gender}_hair_${this.playerAvatar.hair}_walk`;
+    const facingFrames = PLAYER_DIRECTION_FRAMES[this.playerFacing];
+    const walkFrame =
+      facingFrames.walk.length === 1
+        ? facingFrames.walk[0]
+        : facingFrames.walk[Math.floor(this.time.now / PLAYER_WALK_FRAME_DURATION) % facingFrames.walk.length];
+    const targetFrame = isMoving ? walkFrame : facingFrames.idle;
 
-    visual.root.setScale(this.playerFacing === "left" ? -PLAYER_DISPLAY_SCALE : PLAYER_DISPLAY_SCALE, PLAYER_DISPLAY_SCALE);
-    const frame = isMoving ? Math.floor(this.time.now / PLAYER_WALK_FRAME_DURATION) % PLAYER_WALK_FRAME_COUNT : 0;
-    visual.base.setFrame(frame);
-    visual.clothes.setFrame(frame);
-    visual.hair.setFrame(frame);
+    visual.root.setScale(PLAYER_DISPLAY_SCALE);
+
+    if (visual.base.texture.key !== walkBaseKey) {
+      visual.base.setTexture(walkBaseKey, targetFrame);
+    } else {
+      visual.base.setFrame(targetFrame);
+    }
+    if (visual.clothes.texture.key !== walkClothesKey) {
+      visual.clothes.setTexture(walkClothesKey, targetFrame);
+    } else {
+      visual.clothes.setFrame(targetFrame);
+    }
+    if (visual.hair.texture.key !== walkHairKey) {
+      visual.hair.setTexture(walkHairKey, targetFrame);
+    } else {
+      visual.hair.setFrame(targetFrame);
+    }
   }
 
   private buildPlayerVisual(x: number, y: number): PlayerVisualParts {
