@@ -168,16 +168,21 @@ class AuthServiceTest {
             return queryParams;
         }
 
+        // These tests validate URLs produced by UriComponentsBuilder, which uses '&' as the top-level query separator.
         for (String pair : rawQuery.split("&")) {
             String[] parts = pair.split("=", 2);
-            String key = decode(parts[0]);
-            String value = parts.length > 1 ? decode(parts[1]) : "";
+            String key = decode(parts[0], pair, "key");
+            String value = parts.length > 1 ? decode(parts[1], pair, "value") : "";
             queryParams.add(key, value);
         }
         return queryParams;
     }
 
-    private String decode(String value) {
-        return URLDecoder.decode(value, StandardCharsets.UTF_8);
+    private String decode(String value, String pair, String partName) {
+        try {
+            return URLDecoder.decode(value, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException exception) {
+            throw new AssertionError("failed to decode query " + partName + " from pair: " + pair, exception);
+        }
     }
 }
