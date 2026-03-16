@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
 import { SaveManager, type SaveSlotData } from "@core/managers/SaveManager";
-import { beginLogout, clearStoredSession, readStoredSession } from "@features/auth/authSession";
+import { beginLogout, clearStoredSession, fetchExistingSession, readStoredSession } from "@features/auth/authSession";
 import { DialogBox } from "@features/ui/components/DialogBox";
 import { DUMMY_DIALOGS } from "@features/ui/types/dialog";
 
@@ -41,7 +41,7 @@ export class StartScene extends Phaser.Scene {
     const authToken = this.registry.get("authToken");
     const storedSession = readStoredSession();
     if (!authToken && !storedSession) {
-      this.scene.start(SceneKey.Login);
+      void this.recoverSessionOrRedirect();
       return;
     }
 
@@ -153,13 +153,7 @@ export class StartScene extends Phaser.Scene {
     this.startArmed = false;
     this.input.enabled = false;
 
-    const storedSession = readStoredSession();
     this.clearAuthRegistry();
-
-    if (!storedSession) {
-      this.scene.start(SceneKey.Login);
-      return;
-    }
 
     try {
       await beginLogout();
@@ -172,9 +166,23 @@ export class StartScene extends Phaser.Scene {
 
   private clearAuthRegistry(): void {
     this.registry.remove("authToken");
-    this.registry.remove("authRefreshToken");
-    this.registry.remove("authIdToken");
     this.registry.remove("authUser");
+  }
+
+  private async recoverSessionOrRedirect(): Promise<void> {
+    const existingSession = await fetchExistingSession();
+    if (!existingSession) {
+      this.scene.start(SceneKey.Login);
+      return;
+    }
+
+    this.registry.set("authToken", "bff-session");
+    this.registry.set("authUser", {
+      id: existingSession.user.id,
+      email: existingSession.user.email,
+      nickname: existingSession.user.email.split("@")[0]?.slice(0, 8) ?? "player"
+    });
+    this.scene.restart();
   }
 
   private getAvailableContinueSlots(): ContinueSlotView[] {
