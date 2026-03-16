@@ -113,9 +113,7 @@ export function updatePlayerAvatarAnimation(params: {
   const walkHairKey = `${avatar.gender}_hair_${avatar.hair}_walk`;
   const facingFrames = PLAYER_DIRECTION_FRAMES[nextFacing];
   const walkFrame =
-    facingFrames.walk.length === 1
-      ? facingFrames.walk[0]
-      : facingFrames.walk[Math.floor(timeNow / PLAYER_WALK_FRAME_DURATION) % facingFrames.walk.length];
+    facingFrames.walk[Math.floor(timeNow / PLAYER_WALK_FRAME_DURATION) % facingFrames.walk.length];
   const targetFrame = isMoving ? walkFrame : facingFrames.idle;
 
   visual.root.setScale(PLAYER_DISPLAY_SCALE);
