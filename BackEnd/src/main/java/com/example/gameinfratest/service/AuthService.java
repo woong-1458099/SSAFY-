@@ -31,7 +31,6 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class AuthService {
@@ -71,7 +70,7 @@ public class AuthService {
         session.setAttribute(SESSION_VERIFIER_KEY, verifier);
         session.setAttribute(SESSION_ACTION_KEY, action.name());
 
-        UriComponentsBuilder builder = UriComponentsBuilder
+        ServletUriComponentsBuilder builder = (ServletUriComponentsBuilder) ServletUriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
                 .queryParam("client_id", keycloakAuthProperties.clientId())
                 .queryParam("redirect_uri", callbackUri)
@@ -81,11 +80,7 @@ public class AuthService {
                 .queryParam("code_challenge", challenge)
                 .queryParam("code_challenge_method", "S256");
 
-        if (action == AuthAction.SIGNUP) {
-            builder.queryParam("prompt", "create");
-        }
-
-        String authorizationUrl = builder.encode().build().toUriString();
+        String authorizationUrl = builder.build(true).toUriString();
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
         return authorizationUrl;
@@ -138,7 +133,7 @@ public class AuthService {
     public LogoutResponse buildLogoutResponse(HttpServletRequest request, String idTokenHint) {
         ensureAuthEnabled();
 
-        UriComponentsBuilder builder = UriComponentsBuilder
+        ServletUriComponentsBuilder builder = (ServletUriComponentsBuilder) ServletUriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
                 .queryParam("post_logout_redirect_uri", frontendRootUri(request))
                 .queryParam("client_id", keycloakAuthProperties.clientId());
@@ -147,7 +142,7 @@ public class AuthService {
             builder.queryParam("id_token_hint", idTokenHint);
         }
 
-        String logoutUrl = builder.encode().build().toUriString();
+        String logoutUrl = builder.build(true).toUriString();
         log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(request), idTokenHint != null && !idTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);
     }
