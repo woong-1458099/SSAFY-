@@ -10,6 +10,7 @@ import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -64,9 +65,21 @@ public class AuthService {
         this.restClient = RestClient.builder().build();
     }
 
+    @PostConstruct
+    void validateRequiredUrls() {
+        if (!keycloakAuthProperties.enabled()) {
+            return;
+        }
+        if (keycloakAuthProperties.requireClientSecret()
+                && (keycloakAuthProperties.clientSecret() == null || keycloakAuthProperties.clientSecret().isBlank())) {
+            throw new IllegalStateException("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
+        }
+        appUrlProperties.validatedPublicBaseUri();
+        appUrlProperties.validatedFrontendBaseUri();
+    }
+
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
         ensureAuthEnabled();
-        validateAuthorizationConfiguration();
 
         String state = UUID.randomUUID().toString().replace("-", "");
         String verifier = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
@@ -79,7 +92,7 @@ public class AuthService {
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
-                .queryParam("client_id", keycloakAuthProperties.getClientId())
+                .queryParam("client_id", keycloakAuthProperties.clientId())
                 .queryParam("redirect_uri", callbackUri)
                 .queryParam("response_type", "code")
                 .queryParam("scope", OIDC_SCOPE)
@@ -96,7 +109,6 @@ public class AuthService {
 
     public void handleCallback(HttpSession session, HttpServletRequest request, String code, String state) {
         ensureAuthEnabled();
-        validateAuthorizationConfiguration();
 
         String expectedState = (String) session.getAttribute(SESSION_STATE_KEY);
         String verifier = (String) session.getAttribute(SESSION_VERIFIER_KEY);
@@ -151,7 +163,6 @@ public class AuthService {
 
     public LogoutResponse logout(HttpServletRequest request, HttpSession session, String idTokenHint) {
         ensureAuthEnabled();
-        validateLogoutConfiguration();
         BffSessionState sessionState = getSessionState(session);
         String resolvedIdTokenHint = resolveIdTokenHint(idTokenHint, sessionState);
 
@@ -164,7 +175,7 @@ public class AuthService {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
                 .queryParam("post_logout_redirect_uri", frontendRootUri())
-                .queryParam("client_id", keycloakAuthProperties.getClientId());
+                .queryParam("client_id", keycloakAuthProperties.clientId());
 
         if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
             builder.queryParam("id_token_hint", resolvedIdTokenHint);
@@ -177,27 +188,26 @@ public class AuthService {
     }
 
     public String frontendRootUri() {
-        appUrlProperties.validatedFrontendBaseUri();
         return appUrlProperties.normalizedFrontendBaseUrl() + "/";
     }
 
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
-        body.add("client_id", keycloakAuthProperties.getClientId());
+        body.add("client_id", keycloakAuthProperties.clientId());
         body.add("code", code);
         body.add("redirect_uri", callbackUri);
         body.add("code_verifier", verifier);
-        if (keycloakAuthProperties.getClientSecret() != null && !keycloakAuthProperties.getClientSecret().isBlank()) {
-            body.add("client_secret", keycloakAuthProperties.getClientSecret());
+        if (keycloakAuthProperties.clientSecret() != null && !keycloakAuthProperties.clientSecret().isBlank()) {
+            body.add("client_secret", keycloakAuthProperties.clientSecret());
         }
 
         try {
             log.info("keycloak token exchange start serverRealmUrl={} clientId={} redirectUri={} clientSecretPresent={}",
                     keycloakAuthProperties.serverRealmUrl(),
-                    keycloakAuthProperties.getClientId(),
+                    keycloakAuthProperties.clientId(),
                     callbackUri,
-                    keycloakAuthProperties.getClientSecret() != null && !keycloakAuthProperties.getClientSecret().isBlank());
+                    keycloakAuthProperties.clientSecret() != null && !keycloakAuthProperties.clientSecret().isBlank());
             return restClient.post()
                     .uri(keycloakAuthProperties.serverRealmUrl() + "/protocol/openid-connect/token")
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -224,57 +234,8 @@ public class AuthService {
     }
 
     private void ensureAuthEnabled() {
-        if (!keycloakAuthProperties.isEnabled()) {
+        if (!keycloakAuthProperties.enabled()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "AUTH_DISABLED", "keycloak auth is disabled");
-        }
-    }
-
-    private void validateAuthorizationConfiguration() {
-        validateClientSecretConfiguration();
-        validateKeycloakConfiguration(true);
-        validateConfiguredUrl(appUrlProperties::validatedPublicBaseUri, "AUTH_PUBLIC_URL_MISSING");
-        validateConfiguredUrl(appUrlProperties::validatedFrontendBaseUri, "AUTH_FRONTEND_URL_MISSING");
-    }
-
-    private void validateLogoutConfiguration() {
-        validateKeycloakConfiguration(false);
-        validateConfiguredUrl(appUrlProperties::validatedFrontendBaseUri, "AUTH_FRONTEND_URL_MISSING");
-    }
-
-    private void validateKeycloakConfiguration(boolean includeServerUrl) {
-        validateConfiguredValue(keycloakAuthProperties::validatedClientId, "AUTH_CLIENT_ID_MISSING");
-        validateConfiguredUrl(keycloakAuthProperties::validatedBrowserRealmUri, "AUTH_KEYCLOAK_PUBLIC_URL_INVALID");
-        if (includeServerUrl) {
-            validateConfiguredUrl(keycloakAuthProperties::validatedServerRealmUri, "AUTH_KEYCLOAK_INTERNAL_URL_INVALID");
-        }
-    }
-
-    private void validateClientSecretConfiguration() {
-        if (keycloakAuthProperties.isRequireClientSecret()
-                && (keycloakAuthProperties.getClientSecret() == null || keycloakAuthProperties.getClientSecret().isBlank())) {
-            throw new ApiException(
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                    "AUTH_CLIENT_SECRET_MISSING",
-                    "app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled"
-            );
-        }
-    }
-
-    private void validateConfiguredUrl(Runnable validator, String errorCode) {
-        try {
-            validator.run();
-        } catch (IllegalStateException exception) {
-            log.error("auth configuration invalid errorCode={} message={}", errorCode, exception.getMessage());
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, errorCode, exception.getMessage());
-        }
-    }
-
-    private void validateConfiguredValue(Runnable validator, String errorCode) {
-        try {
-            validator.run();
-        } catch (IllegalStateException exception) {
-            log.error("auth configuration invalid errorCode={} message={}", errorCode, exception.getMessage());
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, errorCode, exception.getMessage());
         }
     }
 
@@ -314,7 +275,7 @@ public class AuthService {
 
         Object resourceAccessClaim = jwt.getClaim("resource_access");
         if (resourceAccessClaim instanceof Map<?, ?> resourceAccess) {
-            Object clientAccess = resourceAccess.get(keycloakAuthProperties.getClientId());
+            Object clientAccess = resourceAccess.get(keycloakAuthProperties.clientId());
             if (clientAccess instanceof Map<?, ?> clientMap) {
                 Object clientRoles = clientMap.get("roles");
                 if (clientRoles instanceof Collection<?> collection) {

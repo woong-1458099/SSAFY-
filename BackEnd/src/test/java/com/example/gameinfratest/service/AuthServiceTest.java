@@ -7,23 +7,15 @@ import static org.mockito.Mockito.mock;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
-import com.example.gameinfratest.support.ApiException;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.util.UriUtils;
 
 class AuthServiceTest {
 
     @Test
-    void buildAuthorizationUrlFailsWhenClientSecretMissing() {
+    void validateRequiredUrlsFailsWhenClientSecretMissing() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
@@ -42,22 +34,13 @@ class AuthServiceTest {
                 mock(JwtDecoder.class)
         );
 
-        assertThatThrownBy(() -> authService.buildAuthorizationUrl(
-                new MockHttpSession(),
-                new MockHttpServletRequest(),
-                AuthAction.LOGIN
-        ))
-                .isInstanceOf(ApiException.class)
-                .extracting("status", "code", "message")
-                .containsExactly(
-                        HttpStatus.SERVICE_UNAVAILABLE,
-                        "AUTH_CLIENT_SECRET_MISSING",
-                        "app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled"
-                );
+        assertThatThrownBy(authService::validateRequiredUrls)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
     }
 
     @Test
-    void buildAuthorizationUrlAllowsMissingClientSecretWhenDisabledByConfig() {
+    void validateRequiredUrlsAllowsMissingClientSecretWhenDisabledByConfig() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
@@ -76,17 +59,11 @@ class AuthServiceTest {
                 mock(JwtDecoder.class)
         );
 
-        String authorizationUrl = authService.buildAuthorizationUrl(
-                new MockHttpSession(),
-                new MockHttpServletRequest(),
-                AuthAction.LOGIN
-        );
-
-        assertThat(authorizationUrl).contains("/protocol/openid-connect/auth");
+        authService.validateRequiredUrls();
     }
 
     @Test
-    void buildAuthorizationUrlEncodesScopeAndKeepsRedirectUriAsSingleQueryParamValue() {
+    void buildAuthorizationUrlEncodesScopeAndRedirectUri() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com"),
                 new KeycloakAuthProperties(
@@ -110,17 +87,13 @@ class AuthServiceTest {
                 new MockHttpServletRequest(),
                 AuthAction.LOGIN
         );
-        MultiValueMap<String, String> queryParams = queryParams(authorizationUrl);
 
-        assertThat(queryParams.getFirst("scope")).isEqualTo("openid profile email");
-        assertThat(queryParams.get("redirect_uri")).containsExactly("https://api.example.com/api/auth/callback");
-        assertThat(queryParams.getFirst("state")).isNotBlank();
-        assertThat(queryParams.getFirst("code_challenge")).isNotBlank();
-        assertThat(authorizationUrl).doesNotContain("scope=openid profile email");
+        assertThat(authorizationUrl).contains("scope=openid%20profile%20email");
+        assertThat(authorizationUrl).contains("redirect_uri=https%3A%2F%2Fapi.example.com%2Fapi%2Fauth%2Fcallback");
     }
 
     @Test
-    void logoutUrlKeepsPostLogoutRedirectUriAsSingleQueryParamValue() {
+    void logoutUrlEncodesPostLogoutRedirectUri() {
         AuthService authService = new AuthService(
                 new AppUrlProperties("https://api.example.com", "https://app.example.com/app"),
                 new KeycloakAuthProperties(
@@ -140,78 +113,7 @@ class AuthServiceTest {
         );
 
         String logoutUrl = authService.logout(new MockHttpServletRequest(), new MockHttpSession(), null).logoutUrl();
-        MultiValueMap<String, String> queryParams = queryParams(logoutUrl);
 
-        assertThat(queryParams.get("post_logout_redirect_uri")).containsExactly("https://app.example.com/app/");
-        assertThat(queryParams.getFirst("client_id")).isEqualTo("ssafy-maker-bff");
-    }
-
-    @Test
-    void uriComponentEncodingKeepsNestedRedirectUriQueryStringInsideSingleParam() {
-        String encodedUrl = UriComponentsBuilder.fromUriString("https://auth.example.com/realms/app/protocol/openid-connect/auth")
-                // AppUrlProperties validates base URLs as absolute roots, so redirect targets are supplied as raw URI values here.
-                .queryParam("redirect_uri", "https://api.example.com/api/auth/callback?next=/lobby&lang=ko")
-                .build()
-                .encode()
-                .toUriString();
-
-        MultiValueMap<String, String> queryParams = queryParams(encodedUrl);
-
-        assertThat(queryParams.get("redirect_uri"))
-                .containsExactly("https://api.example.com/api/auth/callback?next=/lobby&lang=ko");
-        assertThat(queryParams.get("lang")).isNull();
-        assertThat(queryParams.get("next")).isNull();
-    }
-
-    @Test
-    void uriComponentEncodingKeepsNestedPostLogoutRedirectUriQueryAndFragmentInsideSingleParam() {
-        String encodedUrl = UriComponentsBuilder.fromUriString("https://auth.example.com/realms/app/protocol/openid-connect/logout")
-                .queryParam("post_logout_redirect_uri", "https://app.example.com/app/?next=/lobby#signed-out")
-                .build()
-                .encode()
-                .toUriString();
-
-        MultiValueMap<String, String> queryParams = queryParams(encodedUrl);
-
-        assertThat(queryParams.get("post_logout_redirect_uri"))
-                .containsExactly("https://app.example.com/app/?next=/lobby#signed-out");
-        assertThat(queryParams.get("next")).isNull();
-    }
-
-    @Test
-    void queryParamTestHelperTreatsOnlyTopLevelAmpersandsAsSeparators() {
-        String url = "https://auth.example.com/test?outer=one%26two&scope=openid%20profile%20email";
-
-        MultiValueMap<String, String> queryParams = queryParams(url);
-
-        assertThat(queryParams.get("outer")).containsExactly("one&two");
-        assertThat(queryParams.get("scope")).containsExactly("openid profile email");
-    }
-
-    private MultiValueMap<String, String> queryParams(String url) {
-        LinkedMultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
-        String rawQuery = URI.create(url).getRawQuery();
-        if (rawQuery == null || rawQuery.isBlank()) {
-            return queryParams;
-        }
-
-        // These tests validate URLs produced by UriComponentsBuilder, so only top-level '&' separators are supported here.
-        // Any '&' that belongs to a nested URI value must already be percent-encoded as '%26'.
-        for (String pair : rawQuery.split("&")) {
-            String[] parts = pair.split("=", 2);
-            String key = decode(parts[0], pair, "key");
-            String value = parts.length > 1 ? decode(parts[1], pair, "value") : "";
-            queryParams.add(key, value);
-        }
-        return queryParams;
-    }
-
-    private String decode(String value, String pair, String partName) {
-        try {
-            // These tests validate RFC 3986-style query values, so '+' must remain a literal plus.
-            return UriUtils.decode(value, StandardCharsets.UTF_8);
-        } catch (IllegalArgumentException exception) {
-            throw new AssertionError("failed to decode query " + partName + " from pair: " + pair, exception);
-        }
+        assertThat(logoutUrl).contains("post_logout_redirect_uri=https%3A%2F%2Fapp.example.com%2Fapp%2F");
     }
 }

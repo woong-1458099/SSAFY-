@@ -3,36 +3,14 @@ package com.example.gameinfratest.config;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
+@Component
 @ConfigurationProperties(prefix = "app.urls")
-public class AppUrlProperties {
-    private String publicBaseUrl;
-    private String frontendBaseUrl;
-
-    public AppUrlProperties() {
-    }
-
-    public AppUrlProperties(String publicBaseUrl, String frontendBaseUrl) {
-        this.publicBaseUrl = publicBaseUrl;
-        this.frontendBaseUrl = frontendBaseUrl;
-    }
-
-    public String getPublicBaseUrl() {
-        return publicBaseUrl;
-    }
-
-    public void setPublicBaseUrl(String publicBaseUrl) {
-        this.publicBaseUrl = publicBaseUrl;
-    }
-
-    public String getFrontendBaseUrl() {
-        return frontendBaseUrl;
-    }
-
-    public void setFrontendBaseUrl(String frontendBaseUrl) {
-        this.frontendBaseUrl = frontendBaseUrl;
-    }
-
+public record AppUrlProperties(
+        String publicBaseUrl,
+        String frontendBaseUrl
+) {
     public String normalizedPublicBaseUrl() {
         return trimTrailingSlash(publicBaseUrl);
     }
