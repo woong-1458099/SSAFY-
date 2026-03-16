@@ -97,8 +97,8 @@ public class AuthService {
                 .queryParam("code_challenge_method", "S256");
 
         String authorizationUrl = builder.build().encode().toUriString();
-        log.info("auth start action={} sessionId={} callbackUri={} authHost={} clientId={}",
-                action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl(), keycloakAuthProperties.clientId());
+        log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
+                action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
         return authorizationUrl;
     }
 
