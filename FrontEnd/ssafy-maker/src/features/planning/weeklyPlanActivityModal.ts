@@ -28,10 +28,12 @@ export function createWeeklyPlanActivityModal(scene: Phaser.Scene, options: {
     uiPanelOuterBorderColor
   } = options;
 
-  const width = 560;
-  const height = 360;
+  const width = 640;
+  const height = 430;
   const centerX = 640;
   const centerY = 360;
+  const imageWidth = 520;
+  const imageHeight = 248;
 
   const overlay = scene.add.rectangle(centerX, centerY, 1280, 720, 0x000000, 0.58);
   const panelOuter = createPanelOuterBorder(scene, centerX, centerY, width, height);
@@ -40,28 +42,32 @@ export function createWeeklyPlanActivityModal(scene: Phaser.Scene, options: {
   const panel = scene.add.rectangle(centerX, centerY, width, height, 0x10263f, 0.96);
   panel.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
 
-  const imageFrame = scene.add.rectangle(centerX, centerY - 56, 460, 176, 0x19324f, 1);
-  imageFrame.setStrokeStyle(2, accentColor, 1);
-  const imageShade = scene.add.rectangle(centerX, centerY - 56, 460, 176, accentColor, 0.16);
+  const imageFrame = scene.add.rectangle(centerX, centerY - 54, imageWidth, imageHeight, 0x19324f, 1);
+  imageFrame.setStrokeStyle(3, accentColor, 1);
+  const imageShade = scene.add.rectangle(centerX, centerY - 54, imageWidth, imageHeight, accentColor, 0.08);
 
   if (backgroundImage) {
-    backgroundImage.setPosition(centerX, centerY - 56);
-    backgroundImage.setDisplaySize(452, 168);
-    backgroundImage.setAlpha(0.88);
+    backgroundImage.setPosition(centerX, centerY - 54);
+    const fitScale = Math.min(
+      (imageWidth - 12) / Math.max(1, backgroundImage.width),
+      (imageHeight - 12) / Math.max(1, backgroundImage.height)
+    );
+    backgroundImage.setScale(fitScale);
+    backgroundImage.setAlpha(0.98);
   }
 
-  const badge = scene.add.rectangle(centerX, centerY - 152, 188, 30, accentColor, 1);
+  const badge = scene.add.rectangle(centerX, centerY - 194, 210, 34, accentColor, 1);
   badge.setStrokeStyle(2, 0xe8f3ff, 0.9);
-  const badgeText = scene.add.text(centerX, centerY - 152, title, getBodyStyle(15, "#f4fbff", "bold"));
+  const badgeText = scene.add.text(centerX, centerY - 194, title, getBodyStyle(16, "#f4fbff", "bold"));
   badgeText.setOrigin(0.5);
 
-  const status = scene.add.text(centerX, centerY + 70, statusText, getBodyStyle(28, "#f0f7ff", "bold"));
+  const status = scene.add.text(centerX, centerY + 104, statusText, getBodyStyle(28, "#f0f7ff", "bold"));
   status.setOrigin(0.5);
 
-  const body = scene.add.text(centerX, centerY + 118, description, getBodyStyle(18, "#c8dbef"));
+  const body = scene.add.text(centerX, centerY + 146, description, getBodyStyle(18, "#c8dbef"));
   body.setOrigin(0.5);
 
-  const hint = scene.add.text(centerX, centerY + 154, "일정 진행 후 다음 시간대로 이동합니다", getBodyStyle(15, "#90b3d4"));
+  const hint = scene.add.text(centerX, centerY + 180, "일정 진행 후 다음 시간대로 이동합니다.", getBodyStyle(15, "#90b3d4"));
   hint.setOrigin(0.5);
 
   const objects: Phaser.GameObjects.GameObject[] = [

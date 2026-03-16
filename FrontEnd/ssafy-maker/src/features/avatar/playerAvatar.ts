@@ -103,27 +103,34 @@ export function updatePlayerAvatarAnimation(params: {
   const walkBaseKey = `base_${avatar.gender}_walk`;
   const walkClothesKey = `${avatar.gender}_clothes_${avatar.cloth}_walk`;
   const walkHairKey = `${avatar.gender}_hair_${avatar.hair}_walk`;
+  const idleBaseKey = `base_${avatar.gender}`;
+  const idleClothesKey = `${avatar.gender}_clothes_${avatar.cloth}`;
+  const idleHairKey = `${avatar.gender}_hair_${avatar.hair}`;
   const facingFrames = PLAYER_DIRECTION_FRAMES[nextFacing];
   const walkFrame =
     facingFrames.walk.length === 1
       ? facingFrames.walk[0]
       : facingFrames.walk[Math.floor(timeNow / PLAYER_WALK_FRAME_DURATION) % facingFrames.walk.length];
-  const targetFrame = isMoving ? walkFrame : facingFrames.idle;
+  const idleFrame = Math.floor(timeNow / PLAYER_WALK_FRAME_DURATION) % 4;
+  const targetFrame = isMoving ? walkFrame : idleFrame;
+  const baseTextureKey = isMoving ? walkBaseKey : idleBaseKey;
+  const clothesTextureKey = isMoving ? walkClothesKey : idleClothesKey;
+  const hairTextureKey = isMoving ? walkHairKey : idleHairKey;
 
   visual.root.setScale(PLAYER_DISPLAY_SCALE);
 
-  if (visual.base.texture.key !== walkBaseKey) {
-    visual.base.setTexture(walkBaseKey, targetFrame);
+  if (visual.base.texture.key !== baseTextureKey) {
+    visual.base.setTexture(baseTextureKey, targetFrame);
   } else {
     visual.base.setFrame(targetFrame);
   }
-  if (visual.clothes.texture.key !== walkClothesKey) {
-    visual.clothes.setTexture(walkClothesKey, targetFrame);
+  if (visual.clothes.texture.key !== clothesTextureKey) {
+    visual.clothes.setTexture(clothesTextureKey, targetFrame);
   } else {
     visual.clothes.setFrame(targetFrame);
   }
-  if (visual.hair.texture.key !== walkHairKey) {
-    visual.hair.setTexture(walkHairKey, targetFrame);
+  if (visual.hair.texture.key !== hairTextureKey) {
+    visual.hair.setTexture(hairTextureKey, targetFrame);
   } else {
     visual.hair.setFrame(targetFrame);
   }

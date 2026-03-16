@@ -11,6 +11,11 @@ export type WeeklyPlanOption = {
 
 export const WEEKLY_PLAN_TIME_LABELS = ["오전", "오후"] as const;
 export const WEEKLY_PLAN_DAY_INDICES = [0, 1, 2, 3, 4] as const;
+export const WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS: Record<WeeklyPlanOptionId, string> = {
+  ui_practice: "weekly-plan-ui-practice",
+  rest_api_db: "weekly-plan-rest-api-db",
+  team_project: "weekly-plan-team-project",
+};
 export const WEEKLY_PLAN_OPTIONS: WeeklyPlanOption[] = [
   {
     id: "ui_practice",
@@ -63,4 +68,19 @@ export function getCurrentWeeklyPlanSlotKey(
   if (dayIndex < 0 || dayIndex >= WEEKLY_PLAN_DAY_INDICES.length) return null;
   if (timeIndex < 0 || timeIndex >= WEEKLY_PLAN_TIME_LABELS.length) return null;
   return `${week}-${dayIndex}-${timeIndex}`;
+}
+
+export function parseWeeklyPlanSlotKey(
+  value: string
+): { week: number; dayIndex: number; timeIndex: number } | null {
+  const [weekText, dayText, timeText] = value.split("-");
+  const week = Number.parseInt(weekText ?? "", 10);
+  const dayIndex = Number.parseInt(dayText ?? "", 10);
+  const timeIndex = Number.parseInt(timeText ?? "", 10);
+  if (!Number.isFinite(week) || !Number.isFinite(dayIndex) || !Number.isFinite(timeIndex)) {
+    return null;
+  }
+  if (dayIndex < 0 || dayIndex >= WEEKLY_PLAN_DAY_INDICES.length) return null;
+  if (timeIndex < 0 || timeIndex >= WEEKLY_PLAN_TIME_LABELS.length) return null;
+  return { week, dayIndex, timeIndex };
 }

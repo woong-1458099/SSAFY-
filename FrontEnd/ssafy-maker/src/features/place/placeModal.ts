@@ -24,6 +24,7 @@ export function createPlaceActionModal(params: {
   title: string;
   description: string;
   actionText: string;
+  showCloseButton?: boolean;
   backgroundImage: Phaser.GameObjects.Image | null;
   getBodyStyle: BodyStyleFn;
   createActionButton: ActionButtonFn;
@@ -39,6 +40,7 @@ export function createPlaceActionModal(params: {
     title,
     description,
     actionText,
+    showCloseButton = true,
     backgroundImage,
     getBodyStyle,
     createActionButton,
@@ -70,25 +72,30 @@ export function createPlaceActionModal(params: {
   descText.setLineSpacing(8);
 
   const actionBtn = createActionButton({
-    x: centerX - 96,
+    x: showCloseButton ? centerX - 96 : centerX,
     y: centerY + 92,
     width: 170,
     height: 52,
     text: actionText,
     onClick: onAction,
   });
-  const closeBtn = createActionButton({
-    x: centerX + 96,
-    y: centerY + 92,
-    width: 170,
-    height: 52,
-    text: "닫기",
-    onClick: onClose,
-  });
 
-  const objects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, titleText, descText, actionBtn, closeBtn];
+  const objects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, titleText, descText, actionBtn];
+  if (showCloseButton) {
+    const closeBtn = createActionButton({
+      x: centerX + 96,
+      y: centerY + 92,
+      width: 170,
+      height: 52,
+      text: "닫기",
+      onClick: onClose,
+    });
+    objects.push(closeBtn);
+  }
+
   if (backgroundImage) {
     objects.unshift(backgroundImage);
   }
+
   return scene.add.container(0, 0, objects);
 }
