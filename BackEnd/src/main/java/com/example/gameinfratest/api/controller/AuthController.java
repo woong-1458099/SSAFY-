@@ -53,7 +53,7 @@ public class AuthController {
         log.info("GET /api/auth/callback sessionId={} codePresent={} statePresent={}",
                 session.getId(), code != null && !code.isBlank(), state != null && !state.isBlank());
         authService.handleCallback(session, request, code, state);
-        String redirectUrl = UriComponentsBuilder.fromUriString(authService.frontendRootUri(request))
+        String redirectUrl = UriComponentsBuilder.fromUriString(authService.frontendRootUri())
                 .replaceQuery("auth=success")
                 .build()
                 .toUriString();
