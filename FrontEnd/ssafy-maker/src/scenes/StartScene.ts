@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
 import { SaveManager, type SaveSlotData } from "@core/managers/SaveManager";
-import { beginLogout, readStoredSession } from "@features/auth/authSession";
+import { beginLogout, clearStoredSession, readStoredSession } from "@features/auth/authSession";
 import { DialogBox } from "@features/ui/components/DialogBox";
 import { DUMMY_DIALOGS } from "@features/ui/types/dialog";
 
@@ -124,7 +124,7 @@ export class StartScene extends Phaser.Scene {
   }
 
   private createLogoutButton(width: number): void {
-    const label = this.add.text(width - 64, 48, "Logout", {
+    const label = this.add.text(width - 64, 48, "로그아웃", {
       fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
       fontSize: "20px",
       color: "#f4fbff",
@@ -143,12 +143,38 @@ export class StartScene extends Phaser.Scene {
     label.on("pointerout", () => label.setStyle({ backgroundColor: "#143149" }));
     label.on("pointerdown", () => {
       this.audioManager.play(this, "start-click", "sfx");
-      this.startArmed = false;
-      this.input.enabled = false;
-      void beginLogout();
+      void this.handleLogout();
     });
 
     this.logoutLabel = label;
+  }
+
+  private async handleLogout(): Promise<void> {
+    this.startArmed = false;
+    this.input.enabled = false;
+
+    const storedSession = readStoredSession();
+    this.clearAuthRegistry();
+
+    if (!storedSession) {
+      this.scene.start(SceneKey.Login);
+      return;
+    }
+
+    try {
+      await beginLogout();
+    } catch (error) {
+      console.error("[StartScene] logout failed, falling back to local logout", error);
+      clearStoredSession();
+      this.scene.start(SceneKey.Login);
+    }
+  }
+
+  private clearAuthRegistry(): void {
+    this.registry.remove("authToken");
+    this.registry.remove("authRefreshToken");
+    this.registry.remove("authIdToken");
+    this.registry.remove("authUser");
   }
 
   private getAvailableContinueSlots(): ContinueSlotView[] {
