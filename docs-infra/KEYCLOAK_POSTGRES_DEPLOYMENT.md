@@ -62,7 +62,8 @@ docker compose -p auth --env-file docker/.env.auth -f docker/compose.auth.yml up
   - `Reset password = ON`
 - Client
   - `Client ID = ssafy-maker-bff`
-  - `Access Type = public`
+  - `Client authentication = ON`
+  - `Access Type = confidential`
   - `Standard Flow = ON`
   - `Direct Access Grants = OFF`
   - `PKCE S256 required`
@@ -87,13 +88,14 @@ KEYCLOAK_PUBLIC_BASE_URL=https://auth.ssafymaker.cloud
 KEYCLOAK_INTERNAL_BASE_URL=http://stg-keycloak:8080
 KEYCLOAK_REALM=app
 KEYCLOAK_CLIENT_ID=ssafy-maker-bff
-KEYCLOAK_CLIENT_SECRET=
+KEYCLOAK_CLIENT_SECRET=<generated-client-secret>
 CORS_ALLOWED_ORIGINS=https://ssafymaker.cloud,https://stg.ssafymaker.cloud,http://localhost:5173
 ```
 
 - 브라우저 리다이렉트는 `KEYCLOAK_PUBLIC_BASE_URL` 을 사용한다.
 - 백엔드와 Keycloak 간 서버 통신은 `KEYCLOAK_INTERNAL_BASE_URL` 을 사용한다.
-- public client 대신 confidential client 로 운영하면 `KEYCLOAK_CLIENT_SECRET` 을 함께 주입한다.
+- BFF 전용 confidential client 이므로 `KEYCLOAK_CLIENT_SECRET` 을 함께 주입한다.
+- realm template import 후 Keycloak Admin Console에서 `ssafy-maker-bff` client secret을 확인하거나 재생성한 뒤 backend env와 동일하게 맞춘다.
 
 백엔드는 토큰에서 다음 클레임을 읽는다.
 - `sub`
