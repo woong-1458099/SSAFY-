@@ -70,7 +70,7 @@ public class AuthService {
         if (!keycloakAuthProperties.isEnabled()) {
             return;
         }
-        if (keycloakAuthProperties.getRequireClientSecret()
+        if (keycloakAuthProperties.isRequireClientSecret()
                 && (keycloakAuthProperties.getClientSecret() == null || keycloakAuthProperties.getClientSecret().isBlank())) {
             throw new IllegalStateException("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
         }
