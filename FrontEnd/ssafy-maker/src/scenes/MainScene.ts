@@ -1,4 +1,4 @@
-﻿import Phaser from "phaser";
+import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import { InputManager } from "@core/managers/InputManager";
@@ -968,9 +968,7 @@ export class MainScene extends Phaser.Scene {
     const walkHairKey = `${gender}_hair_${this.playerAvatar.hair}_walk`;
     const facingFrames = PLAYER_DIRECTION_FRAMES[this.playerFacing];
     const walkFrame =
-      facingFrames.walk.length === 1
-        ? facingFrames.walk[0]
-        : facingFrames.walk[Math.floor(this.time.now / PLAYER_WALK_FRAME_DURATION) % facingFrames.walk.length];
+      facingFrames.walk[Math.floor(this.time.now / PLAYER_WALK_FRAME_DURATION) % facingFrames.walk.length];
     const targetFrame = isMoving ? walkFrame : facingFrames.idle;
 
     visual.root.setScale(PLAYER_DISPLAY_SCALE);
