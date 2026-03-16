@@ -69,12 +69,8 @@ public class AuthService {
         if (!keycloakAuthProperties.enabled()) {
             return;
         }
-        if (appUrlProperties.normalizedPublicBaseUrl().isBlank()) {
-            throw new IllegalStateException("app.urls.public-base-url must be configured when keycloak auth is enabled");
-        }
-        if (appUrlProperties.normalizedFrontendBaseUrl().isBlank()) {
-            throw new IllegalStateException("app.urls.frontend-base-url must be configured when keycloak auth is enabled");
-        }
+        appUrlProperties.validatedPublicBaseUri();
+        appUrlProperties.validatedFrontendBaseUri();
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -83,7 +79,7 @@ public class AuthService {
         String state = UUID.randomUUID().toString().replace("-", "");
         String verifier = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
         String challenge = createCodeChallenge(verifier);
-        String callbackUri = callbackUri(request);
+        String callbackUri = callbackUri();
 
         session.setAttribute(SESSION_STATE_KEY, state);
         session.setAttribute(SESSION_VERIFIER_KEY, verifier);
@@ -123,8 +119,8 @@ public class AuthService {
         }
 
         log.info("auth callback received sessionId={} codePresent={} callbackUri={} keycloakServer={}",
-                session.getId(), true, callbackUri(request), keycloakAuthProperties.serverRealmUrl());
-        KeycloakTokenResponse tokenResponse = exchangeCode(code, verifier, callbackUri(request));
+                session.getId(), true, callbackUri(), keycloakAuthProperties.serverRealmUrl());
+        KeycloakTokenResponse tokenResponse = exchangeCode(code, verifier, callbackUri());
         Jwt jwt = jwtDecoder.decode(tokenResponse.accessToken());
         UserResponse user = userService.upsertFromJwt(jwt);
 
@@ -172,7 +168,7 @@ public class AuthService {
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
-                .queryParam("post_logout_redirect_uri", frontendRootUri(request))
+                .queryParam("post_logout_redirect_uri", frontendRootUri())
                 .queryParam("client_id", keycloakAuthProperties.clientId());
 
         if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
@@ -180,11 +176,11 @@ public class AuthService {
         }
 
         String logoutUrl = builder.build(true).toUriString();
-        log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(request), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
+        log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);
     }
 
-    public String frontendRootUri(HttpServletRequest request) {
+    public String frontendRootUri() {
         return appUrlProperties.normalizedFrontendBaseUrl() + "/";
     }
 
@@ -220,7 +216,7 @@ public class AuthService {
         }
     }
 
-    private String callbackUri(HttpServletRequest request) {
+    private String callbackUri() {
         return appUrlProperties.normalizedPublicBaseUrl() + "/api/auth/callback";
     }
 
