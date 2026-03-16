@@ -5,6 +5,20 @@
 
 ## 최근 완료 작업
 
+### 운영 모니터링
+- `docker/compose.ops.yml` 기준으로 모니터링 스택을 확장
+- 추가 컨테이너:
+    - `node-exporter`
+    - `cadvisor`
+    - `loki`
+    - `promtail`
+- Prometheus 설정 파일 경로를 `Infra/monitoring/prometheus.yml` 기준으로 정리
+- Loki 설정 파일 경로를 `Infra/monitoring/loki-config.yml` 기준으로 정리
+- Promtail 설정 파일 경로를 `Infra/monitoring/promtail-config.yml` 기준으로 정리
+- Grafana datasource provisioning 경로를 `Infra/monitoring/grafana/provisioning/datasources/monitoring.yml` 기준으로 정리
+- Grafana에서 Prometheus / Loki datasource를 함께 사용하는 구조로 정리
+- EC2 메트릭은 `node_exporter`, 컨테이너 메트릭은 `cAdvisor`, 컨테이너 로그는 `Promtail -> Loki` 기준으로 수집하도록 구성
+
 ### 인프라 / nginx
 - `docker/compose.app.yml`에서 nginx 서비스를 제거하고 app 전용 compose로 정리
 - `docker/compose.nginx.yml`를 추가하여 공용 nginx를 별도 compose로 분리
@@ -81,6 +95,13 @@
 - STG upstream file: `/home/ubuntu/deploy/nginx/upstreams/active-stg.conf`
 - PROD upstream file: `/home/ubuntu/deploy/nginx/upstreams/active-prod.conf`
 
+### monitoring
+- monitoring root dir: `Infra/monitoring`
+- prometheus config: `Infra/monitoring/prometheus.yml`
+- loki config: `Infra/monitoring/loki-config.yml`
+- promtail config: `Infra/monitoring/promtail-config.yml`
+- grafana datasource provisioning: `Infra/monitoring/grafana/provisioning/datasources/monitoring.yml`
+
 ### frontend path
 - STG releases: `/home/ubuntu/deploy/frontend/stg/releases`
 - STG live: `/home/ubuntu/deploy/frontend/stg/live`
@@ -105,6 +126,12 @@
 - `cloudflare-api-token`
 - `cloudflare-zone-id`
 
+### monitoring 설정 경로
+- Prometheus config: `Infra/monitoring/prometheus.yml`
+- Loki config: `Infra/monitoring/loki-config.yml`
+- Promtail config: `Infra/monitoring/promtail-config.yml`
+- Grafana datasource provisioning: `Infra/monitoring/grafana/provisioning/datasources/monitoring.yml`
+
 ## 현재 확인된 정상 동작
 - 공용 nginx 기동 정상
 - `ingress-nginx-1`에서 STG / PROD backend alias 해석 정상
@@ -115,10 +142,21 @@
 - `stg.ssafymaker.cloud/api/public/checks`는 인증 정책 기준 `401` 응답 정상
 - Cloudflare purge 정상
 - branch guard / path filter / webhook 분기 동작 정상
+- `docker-prometheus-1` 기동 정상
+- `docker-grafana-1` 기동 정상
+- `docker-node-exporter-1` 기동 정상
+- `docker-cadvisor-1` 기동 정상
+- `docker-loki-1` 기동 정상
+- `docker-promtail-1` 기동 정상
+- Prometheus target에서 `node-exporter`, `cadvisor` 수집 가능
+- Grafana datasource에서 `Prometheus`, `Loki` 확인 가능
+- Grafana Explore에서 Docker 컨테이너 로그 조회 가능
 
 ## 지금 남은 작업
 1. n8n 연동
-2. 모니터링 프로그램
+2. 모니터링 대시보드 정리
+3. nginx / backend 로그 운영 기준 문서화
+4. 필요 시 exporter / alerting 2차 확장 검토
 
 ## 다음에 작업할 때 먼저 볼 것
 1. `WORK_GUIDE.md`

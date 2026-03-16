@@ -35,7 +35,15 @@
 - SSH 터널 기준
 - 앱/데이터/ops 환경 구분
 
-### 5. 진행 계획 문서
+### 5. Monitoring 설정 문서
+- `../Infra/monitoring/MONITORING_STACK_PLAN.md`
+- `../Infra/monitoring/README.md`
+- monitoring stack 선택 이유
+- 설정 파일 위치
+- 메트릭 / 로그 구성
+- 기본 확인 포인트
+
+### 6. 진행 계획 문서
 - `PROGRESS_PLAN.md`
 - 완료 작업
 - 의사결정 메모
@@ -60,22 +68,33 @@
 - 운영자 점검용: `j14e206.p.ssafy.io`
 
 ### 컨테이너
-- nginx: `stg-app-nginx-1`
+- nginx: `ingress-nginx-1`
 - Jenkins: `docker-jenkins-1`
 - postgres: `stg-data-postgres-1`
 - redis: `stg-data-redis-1`
 - rabbitmq: `stg-data-rabbitmq-1`
+- node_exporter: `docker-node-exporter-1`
+- cadvisor: `docker-cadvisor-1`
+- loki: `docker-loki-1`
+- promtail: `docker-promtail-1`
 
 ### 프론트 배포 경로
-- releases: `/home/ubuntu/deploy/frontend/releases`
-- live: `/home/ubuntu/deploy/frontend/live`
+- STG releases: `/home/ubuntu/deploy/frontend/stg/releases`
+- STG live: `/home/ubuntu/deploy/frontend/stg/live`
+- PROD releases: `/home/ubuntu/deploy/frontend/prod/releases`
+- PROD live: `/home/ubuntu/deploy/frontend/prod/live`
 
 ### 운영 모니터링 계획
 - `docs-infra/OBSERVABILITY_PLAN.md`
-- node_exporter
-- cAdvisor
+- `../Infra/monitoring/MONITORING_STACK_PLAN.md`
+- `../Infra/monitoring/README.md`
+- `node_exporter`
+- `cAdvisor`
+- `Loki`
+- `Promtail`
 - Prometheus scrape
 - Grafana 대시보드
+- Grafana 로그 조회
 - Nginx access log 운영 기준
 
 ## 문서 관리 원칙

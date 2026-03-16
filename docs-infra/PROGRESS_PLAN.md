@@ -31,7 +31,10 @@
 
 ### 프론트
 - nginx mount:
-   - `/home/ubuntu/deploy/frontend/live:/usr/share/nginx/frontend:ro`
+    - `/home/ubuntu/deploy/frontend:/usr/share/nginx/frontend:ro`
+- environment별 live 경로 사용
+    - STG: `/usr/share/nginx/frontend/stg/live`
+    - PROD: `/usr/share/nginx/frontend/prod/live`
 - `live` 구조 정상 확인
 - origin / Cloudflare 이미지 응답 정상 확인
 
@@ -41,14 +44,16 @@
 
 ### 운영 도구
 - Jenkins / n8n / Grafana / Prometheus 정상 기동
+- monitoring stack 기준으로 `node_exporter`, `cAdvisor`, `Loki`, `Promtail` 추가
+- Grafana에서 Prometheus / Loki datasource를 함께 사용하는 구조로 정리
 
 ## 5. 현재 남은 작업
-1. 백엔드 health check 단계 안정화
-2. merge 완료 이벤트 기준으로 CI/CD 정책 정리
-3. 문서 재배치 완료
-4. TIL 정리
-5. n8n 자동화 이후 PROD 기준 observability(node_exporter, cAdvisor, Grafana, nginx access log) 작업 진행
-   - 세부 범위와 순서는 `docs-infra/OBSERVABILITY_PLAN.md` 참고
+- observability 1차 설치 이후 검증 및 운영 정리 진행
+    - Prometheus target 상태 점검
+    - Grafana datasource 및 Explore 로그 조회 점검
+    - 대시보드 정리
+    - nginx / backend 로그 운영 기준 문서화
+    - 필요 시 exporter / alerting 2차 확장 검토
 
 ## 6. 의사결정 메모
 - 루트에는 안내 문서만 둔다
