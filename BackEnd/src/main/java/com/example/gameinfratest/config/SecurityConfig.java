@@ -5,8 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,14 +39,13 @@ public class SecurityConfig {
 
         if (jwtEnabled) {
             http.authorizeHttpRequests(auth -> auth
-                    .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                     .requestMatchers(
                             "/actuator/health", "/actuator/info", "/actuator/prometheus",
                             "/api/public/**",
                             "/public/assets/manifest",
                             "/api/auth/**",
                             "/api/v3/api-docs/**", "/api/v3/api-docs.yaml",
-                            "/api/swagger-ui.html", "/swagger-ui/**"
+                            "/api/swagger-ui.html", "/swagger-ui/**", "/error"
                     ).permitAll()
                     .anyRequest().authenticated()
             ).oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
