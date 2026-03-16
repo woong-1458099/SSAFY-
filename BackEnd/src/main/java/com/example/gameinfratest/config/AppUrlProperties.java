@@ -19,6 +19,10 @@ public record AppUrlProperties(
         if (value == null || value.isBlank()) {
             return "";
         }
-        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+        String normalized = value;
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
     }
 }
