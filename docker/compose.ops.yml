@@ -62,10 +62,11 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
     ports:
       - "${PROMETHEUS_PORT}:9090"
     volumes:
-      - ../Infra/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../Infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     networks:
       - ops-net
@@ -75,13 +76,80 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
+      - loki
     environment:
+      TZ: ${TZ}
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
     ports:
       - "${GRAFANA_PORT}:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ../Infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - ops-net
+
+  node-exporter:
+    image: ${NODE_EXPORTER_IMAGE}
+    restart: unless-stopped
+    command:
+      - "--path.rootfs=/host"
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - ops-net
+
+  cadvisor:
+    image: ${CADVISOR_IMAGE}
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - ops-net
+
+  loki:
+    image: ${LOKI_IMAGE}
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      LOKI_HTTP_PORT: ${LOKI_HTTP_PORT}
+      LOKI_GRPC_PORT: ${LOKI_GRPC_PORT}
+      LOKI_RETENTION_PERIOD: ${LOKI_RETENTION_PERIOD}
+    command:
+      - "-config.file=/etc/loki/config.yml"
+      - "-config.expand-env=true"
+    volumes:
+      - ../Infra/monitoring/loki-config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    networks:
+      - ops-net
+
+  promtail:
+    image: ${PROMTAIL_IMAGE}
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      PROMTAIL_HTTP_PORT: ${PROMTAIL_HTTP_PORT}
+      PROMTAIL_REFRESH_INTERVAL: ${PROMTAIL_REFRESH_INTERVAL}
+      LOKI_PUSH_URL: ${LOKI_PUSH_URL}
+    command:
+      - "-config.file=/etc/promtail/config.yml"
+      - "-config.expand-env=true"
+    volumes:
+      - ../Infra/monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail_positions:/tmp
+    depends_on:
+      - loki
     networks:
       - ops-net
 
@@ -96,6 +164,10 @@ volumes:
     name: s14p21e206_prometheus_data
   grafana_data:
     name: s14p21e206_grafana_data
+  loki_data:
+    name: s14p21e206_loki_data
+  promtail_positions:
+    name: s14p21e206_promtail_positions
 
 networks:
   ops-net:
