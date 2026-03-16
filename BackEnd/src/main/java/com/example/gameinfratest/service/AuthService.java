@@ -34,6 +34,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
@@ -71,7 +72,7 @@ public class AuthService {
         session.setAttribute(SESSION_VERIFIER_KEY, verifier);
         session.setAttribute(SESSION_ACTION_KEY, action.name());
 
-        ServletUriComponentsBuilder builder = (ServletUriComponentsBuilder) ServletUriComponentsBuilder
+        UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
                 .queryParam("client_id", keycloakAuthProperties.clientId())
                 .queryParam("redirect_uri", callbackUri)
@@ -152,7 +153,7 @@ public class AuthService {
             session.invalidate();
         }
 
-        ServletUriComponentsBuilder builder = (ServletUriComponentsBuilder) ServletUriComponentsBuilder
+        UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
                 .queryParam("post_logout_redirect_uri", frontendRootUri(request))
                 .queryParam("client_id", keycloakAuthProperties.clientId());
