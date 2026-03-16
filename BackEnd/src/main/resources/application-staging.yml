@@ -23,6 +23,9 @@ spring:
 
 app:
   color: ${APP_COLOR:STAGING}
+  urls:
+    public-base-url: ${APP_PUBLIC_BASE_URL}
+    frontend-base-url: ${APP_FRONTEND_BASE_URL}
   security:
     jwt:
       enabled: ${JWT_ENABLED:true}

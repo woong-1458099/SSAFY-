@@ -61,6 +61,7 @@ public class AuthService {
         this.userService = userService;
         this.jwtDecoder = jwtDecoder;
         this.restClient = RestClient.builder().build();
+        validateRequiredUrls();
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -171,16 +172,7 @@ public class AuthService {
     }
 
     public String frontendRootUri(HttpServletRequest request) {
-        String configuredFrontendBaseUrl = appUrlProperties.normalizedFrontendBaseUrl();
-        if (!configuredFrontendBaseUrl.isBlank()) {
-            return configuredFrontendBaseUrl + "/";
-        }
-
-        return UriComponentsBuilder.fromUriString(request.getRequestURL().toString())
-                .replacePath("/")
-                .replaceQuery(null)
-                .build()
-                .toUriString();
+        return appUrlProperties.normalizedFrontendBaseUrl() + "/";
     }
 
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
@@ -216,16 +208,7 @@ public class AuthService {
     }
 
     private String callbackUri(HttpServletRequest request) {
-        String configuredPublicBaseUrl = appUrlProperties.normalizedPublicBaseUrl();
-        if (!configuredPublicBaseUrl.isBlank()) {
-            return configuredPublicBaseUrl + "/api/auth/callback";
-        }
-
-        return UriComponentsBuilder.fromUriString(request.getRequestURL().toString())
-                .replacePath("/api/auth/callback")
-                .replaceQuery(null)
-                .build()
-                .toUriString();
+        return appUrlProperties.normalizedPublicBaseUrl() + "/api/auth/callback";
     }
 
     private void clearPendingAuth(HttpSession session) {
@@ -258,6 +241,18 @@ public class AuthService {
             return null;
         }
         return sessionState.idToken();
+    }
+
+    private void validateRequiredUrls() {
+        if (!keycloakAuthProperties.enabled()) {
+            return;
+        }
+        if (appUrlProperties.normalizedPublicBaseUrl().isBlank()) {
+            throw new IllegalStateException("app.urls.public-base-url must be configured when keycloak auth is enabled");
+        }
+        if (appUrlProperties.normalizedFrontendBaseUrl().isBlank()) {
+            throw new IllegalStateException("app.urls.frontend-base-url must be configured when keycloak auth is enabled");
+        }
     }
 
     @SuppressWarnings("unchecked")
