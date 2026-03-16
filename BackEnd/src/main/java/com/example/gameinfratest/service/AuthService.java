@@ -10,7 +10,6 @@ import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -65,21 +64,9 @@ public class AuthService {
         this.restClient = RestClient.builder().build();
     }
 
-    @PostConstruct
-    void validateRequiredUrls() {
-        if (!keycloakAuthProperties.isEnabled()) {
-            return;
-        }
-        if (keycloakAuthProperties.isRequireClientSecret()
-                && (keycloakAuthProperties.getClientSecret() == null || keycloakAuthProperties.getClientSecret().isBlank())) {
-            throw new IllegalStateException("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
-        }
-        appUrlProperties.validatedPublicBaseUri();
-        appUrlProperties.validatedFrontendBaseUri();
-    }
-
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
         ensureAuthEnabled();
+        validateAuthorizationConfiguration();
 
         String state = UUID.randomUUID().toString().replace("-", "");
         String verifier = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
@@ -109,6 +96,7 @@ public class AuthService {
 
     public void handleCallback(HttpSession session, HttpServletRequest request, String code, String state) {
         ensureAuthEnabled();
+        validateAuthorizationConfiguration();
 
         String expectedState = (String) session.getAttribute(SESSION_STATE_KEY);
         String verifier = (String) session.getAttribute(SESSION_VERIFIER_KEY);
@@ -163,6 +151,7 @@ public class AuthService {
 
     public LogoutResponse logout(HttpServletRequest request, HttpSession session, String idTokenHint) {
         ensureAuthEnabled();
+        validateLogoutConfiguration();
         BffSessionState sessionState = getSessionState(session);
         String resolvedIdTokenHint = resolveIdTokenHint(idTokenHint, sessionState);
 
@@ -188,6 +177,7 @@ public class AuthService {
     }
 
     public String frontendRootUri() {
+        appUrlProperties.validatedFrontendBaseUri();
         return appUrlProperties.normalizedFrontendBaseUrl() + "/";
     }
 
@@ -236,6 +226,55 @@ public class AuthService {
     private void ensureAuthEnabled() {
         if (!keycloakAuthProperties.isEnabled()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "AUTH_DISABLED", "keycloak auth is disabled");
+        }
+    }
+
+    private void validateAuthorizationConfiguration() {
+        validateClientSecretConfiguration();
+        validateKeycloakConfiguration(true);
+        validateConfiguredUrl(appUrlProperties::validatedPublicBaseUri, "AUTH_PUBLIC_URL_MISSING");
+        validateConfiguredUrl(appUrlProperties::validatedFrontendBaseUri, "AUTH_FRONTEND_URL_MISSING");
+    }
+
+    private void validateLogoutConfiguration() {
+        validateKeycloakConfiguration(false);
+        validateConfiguredUrl(appUrlProperties::validatedFrontendBaseUri, "AUTH_FRONTEND_URL_MISSING");
+    }
+
+    private void validateKeycloakConfiguration(boolean includeServerUrl) {
+        validateConfiguredValue(keycloakAuthProperties::validatedClientId, "AUTH_CLIENT_ID_MISSING");
+        validateConfiguredUrl(keycloakAuthProperties::validatedBrowserRealmUri, "AUTH_KEYCLOAK_PUBLIC_URL_INVALID");
+        if (includeServerUrl) {
+            validateConfiguredUrl(keycloakAuthProperties::validatedServerRealmUri, "AUTH_KEYCLOAK_INTERNAL_URL_INVALID");
+        }
+    }
+
+    private void validateClientSecretConfiguration() {
+        if (keycloakAuthProperties.isRequireClientSecret()
+                && (keycloakAuthProperties.getClientSecret() == null || keycloakAuthProperties.getClientSecret().isBlank())) {
+            throw new ApiException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "AUTH_CLIENT_SECRET_MISSING",
+                    "app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled"
+            );
+        }
+    }
+
+    private void validateConfiguredUrl(Runnable validator, String errorCode) {
+        try {
+            validator.run();
+        } catch (IllegalStateException exception) {
+            log.error("auth configuration invalid errorCode={} message={}", errorCode, exception.getMessage());
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, errorCode, exception.getMessage());
+        }
+    }
+
+    private void validateConfiguredValue(Runnable validator, String errorCode) {
+        try {
+            validator.run();
+        } catch (IllegalStateException exception) {
+            log.error("auth configuration invalid errorCode={} message={}", errorCode, exception.getMessage());
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, errorCode, exception.getMessage());
         }
     }
 
