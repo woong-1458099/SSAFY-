@@ -28,6 +28,11 @@
   - `prometheus`
   - `grafana`
 
+### 인증 스택
+- 파일: `docker/compose.auth.yml`
+- 서비스:
+  - `keycloak`
+
 ## 2. compose project 이름
 - STG app: `stg-app`
 - STG data: `stg-data`
@@ -55,6 +60,11 @@ docker compose -p ingress -f docker/compose.nginx.yml up -d
 ### OPS
 ```bash
 docker compose -p docker --env-file docker/.env.ops -f docker/compose.ops.yml up -d
+```
+
+### AUTH
+```bash
+docker compose -p auth --env-file docker/.env.auth -f docker/compose.auth.yml up -d
 ```
 
 ## 4. 네트워크 기준
@@ -156,3 +166,4 @@ server prod-api-blue:8080;
 - backend app container는 외부 포트를 직접 publish하지 않는다.
 - 데이터 유지가 필요하면 `down -v`, `docker volume prune` 사용을 피한다.
 - nginx 설정 파일 저장 시 UTF-8 BOM 포함 여부를 확인한다.
+- Keycloak은 PostgreSQL 단일 인스턴스를 재사용하더라도 전용 DB 또는 schema 로 분리한다.

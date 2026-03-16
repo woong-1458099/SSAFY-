@@ -1,0 +1,88 @@
+{
+  "backgrounds": {
+    "cafe": "backgrounds/cafe.png",
+    "conv": "backgrounds/conv.png",
+    "crowd1": "backgrounds/crowd1.png",
+    "crowd2": "backgrounds/crowd2.png",
+    "crowd3": "backgrounds/crowd3.png",
+    "myRoom": "backgrounds/myroom.png",
+    "passSf": "backgrounds/pass_SF.png",
+    "passSf2": "backgrounds/pass_SF2.png",
+    "subwayBack": "backgrounds/subway_back.png",
+    "subwayFront": "backgrounds/subway_front.png",
+    "titleBackground": "backgrounds/title_background.png",
+    "train": "backgrounds/train.png",
+    "trainOpen": "backgrounds/train_open.png",
+    "yeoksam": "backgrounds/yeoksam.png",
+    "yeoksam2": "backgrounds/yeoksam2.png",
+    "yeoksam3": "backgrounds/yeoksam3.png"
+  },
+  "ui": {
+    "badge206": "ui/206.png",
+    "buttons": "ui/buttons.png",
+    "logo": "ui/logo.png",
+    "newGame": "ui/new_game.png",
+    "oldGame": "ui/old_game.png"
+  },
+  "npcs": {
+    "chamdom": "npc/chamdom.gif",
+    "jin": "npc/jin.gif",
+    "jyu": "npc/jyu.gif",
+    "woong": "npc/woong.gif"
+  },
+  "fonts": {
+    "pfStardustBold": "fonts/PFStardustBold.ttf"
+  },
+  "data": {
+    "balanceStatsSample": "data/balance/stats.sample.json",
+    "localizationKoSample": "data/localization/ko.sample.json",
+    "minigame001Sample": "data/minigames/minigame-001.sample.json",
+    "storySample": "data/story/story.sample.json"
+  },
+  "audio": {
+    "bgm": {
+      "busStop": "audio/BGM/BusStop.mp3",
+      "bye": "audio/BGM/bye.mp3",
+      "cafe": "audio/BGM/cafe.mp3",
+      "city": "audio/BGM/city.mp3",
+      "convenienceStore": "audio/BGM/convenience store.mp3",
+      "evening": "audio/BGM/evening.mp3",
+      "event1": "audio/BGM/Event1.mp3",
+      "event2": "audio/BGM/Event2.mp3",
+      "helloSsafy": "audio/BGM/HelloSSAFY.mp3",
+      "inSsafy": "audio/BGM/InSSAFY.mp3",
+      "letsGo": "audio/BGM/let's go.mp3",
+      "lullaby": "audio/BGM/Lullaby.mp3",
+      "mainTheme": "audio/BGM/MainTheme.mp3",
+      "morning": "audio/BGM/morning.mp3",
+      "myRoom": "audio/BGM/myRoom.mp3",
+      "parkDaytime": "audio/BGM/park_daytime.mp3",
+      "parkEvening": "audio/BGM/park_evening.mp3",
+      "roomtone": "audio/BGM/roomtone.mp3",
+      "survive": "audio/BGM/survive.mp3",
+      "ssibal": "audio/BGM/ssibal....mp3",
+      "yourFriends": "audio/BGM/yourFriends.mp3"
+    },
+    "soundEffects": {
+      "click": "audio/SoundEffect/click.wav",
+      "click2": "audio/SoundEffect/click2.mp3",
+      "correct": "audio/SoundEffect/correct.wav",
+      "crowded": "audio/SoundEffect/crowded.mp3",
+      "digitalAlarm": "audio/SoundEffect/Digital_Alarm.wav",
+      "doorOpen": "audio/SoundEffect/door_open.mp3",
+      "fail": "audio/SoundEffect/fail.wav",
+      "getItem": "audio/SoundEffect/get_item.wav",
+      "laugh": "audio/SoundEffect/Laugh.wav",
+      "levelUp": "audio/SoundEffect/LevelUp.wav",
+      "no": "audio/SoundEffect/no.mp3",
+      "pass": "audio/SoundEffect/pass.wav",
+      "subwayCome": "audio/SoundEffect/subway_come.mp3",
+      "train": "audio/SoundEffect/train.mp3",
+      "type": "audio/SoundEffect/type.mp3",
+      "useItem": "audio/SoundEffect/use_item.wav",
+      "voiceFemale": "audio/SoundEffect/voice_female.wav",
+      "voiceMale": "audio/SoundEffect/voice_male.wav",
+      "wrong": "audio/SoundEffect/wrong.wav"
+    }
+  }
+}

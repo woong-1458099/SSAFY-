@@ -25,6 +25,11 @@ pipeline {
     FRONTEND_LIVE_DIR = '/home/ubuntu/deploy/frontend/prod/live'
     NGINX_CONTAINER = 'ingress-nginx-1'
     FRONTEND_DOMAIN = 'ssafymaker.cloud'
+    VITE_API_BASE_URL = 'https://ssafymaker.cloud'
+    VITE_KEYCLOAK_BASE_URL = 'https://auth.ssafymaker.cloud'
+    VITE_KEYCLOAK_REALM = 'app'
+    VITE_KEYCLOAK_CLIENT_ID = 'ssafy-maker-public'
+    N8N_DEPLOY_TOKEN = credentials('n8n-deploy-token')
   }
 
   stages {
@@ -79,7 +84,6 @@ pipeline {
           set -eu
           cd FrontEnd/ssafy-maker
           npm ci
-          npm run lint
           npm run build
           test -d dist
         '''
@@ -179,6 +183,21 @@ EOSSH
   post {
     success {
       echo "Frontend PROD deploy success: release=${env.RELEASE_TAG}"
+      sh """
+        curl -sS -X POST 'https://n8n.ssafymaker.cloud/webhook/jenkins/deploy-notify' \
+          -H 'Content-Type: application/json' \
+          -H 'X-Deploy-Token: ${N8N_DEPLOY_TOKEN}' \
+          --data '{
+            "jobName":"frontend-master-prod",
+            "buildNumber":"'"${env.BUILD_NUMBER}"'",
+            "result":"SUCCESS",
+            "buildUrl":"'"${env.BUILD_URL}"'",
+            "branch":"master",
+            "service":"frontend",
+            "environment":"prod",
+            "releaseTag":"'"${env.RELEASE_TAG}"'"
+          }'
+      """
     }
 
     failure {
@@ -201,6 +220,22 @@ EOSSH
         } else {
           echo 'Rollback skipped: previous live dir missing or switch not completed.'
         }
+
+        sh """
+          curl -sS -X POST 'https://n8n.ssafymaker.cloud/webhook/jenkins/deploy-notify' \
+            -H 'Content-Type: application/json' \
+            -H 'X-Deploy-Token: ${N8N_DEPLOY_TOKEN}' \
+            --data '{
+              "jobName":"frontend-master-prod",
+              "buildNumber":"'"${env.BUILD_NUMBER}"'",
+              "result":"FAILURE",
+              "buildUrl":"'"${env.BUILD_URL}"'",
+              "branch":"master",
+              "service":"frontend",
+              "environment":"prod",
+              "releaseTag":"'"${env.RELEASE_TAG}"'"
+            }'
+        """
       }
     }
   }

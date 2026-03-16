@@ -6,6 +6,9 @@ import { TitleScene } from "@scenes/TitleScene";
 import { IntroScene } from "@scenes/IntroScene";
 import { NewCharacterScene } from "@scenes/NewCharacterScene";
 import { MainScene } from "@scenes/MainScene";
+import { FinalSummaryScene } from "@scenes/FinalSummaryScene";
+import { EndingIntroScene } from "@scenes/EndingIntroScene";
+import { EndingComicScene } from "@scenes/EndingComicScene";
 import LegacyAimScene from "@scenes/legacyMinigames/AimScene";
 import LegacyBugScene from "@scenes/legacyMinigames/BugScene";
 import LegacyBusinessSmileScene from "@scenes/legacyMinigames/BusinessSmileScene";
@@ -28,6 +31,9 @@ export const SCENE_REGISTRY = [
   IntroScene,
   NewCharacterScene,
   MainScene,
+  FinalSummaryScene,
+  EndingIntroScene,
+  EndingComicScene,
   LegacyMenuScene,
   LegacyMinigamePauseScene,
   LegacyQuizScene,

@@ -15,6 +15,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8081/realms/app}
   docker:
     compose:
       enabled: false
@@ -23,4 +28,6 @@ app:
   color: ${APP_COLOR:LOCAL}
   security:
     jwt:
-      enabled: ${JWT_ENABLED:false}
+      enabled: ${JWT_ENABLED:true}
+  keycloak:
+    enabled: ${KEYCLOAK_ENABLED:true}

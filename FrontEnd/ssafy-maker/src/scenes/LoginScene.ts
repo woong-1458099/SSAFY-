@@ -1,15 +1,17 @@
 import Phaser from "phaser";
-import { SceneKey } from "@shared/enums/sceneKey";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
+import { beginBackendAuth, clearStoredSession, completeAuthIfPresent, readStoredSession } from "@features/auth/authSession";
+import { fetchCurrentUser } from "@features/auth/api";
+import { SceneKey } from "@shared/enums/sceneKey";
 
 type AuthView = "login" | "signup" | "findId" | "findPw";
+type MessageTone = "info" | "success" | "error";
 
 export class LoginScene extends Phaser.Scene {
   private enterKey?: Phaser.Input.Keyboard.Key;
   private root?: Phaser.GameObjects.DOMElement;
   private submitHandler?: () => void;
   private currentView: AuthView = "login";
-  private suggestedLoginId = "";
 
   constructor() {
     super(SceneKey.Login);
@@ -19,7 +21,6 @@ export class LoginScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#070f1a");
     this.drawBackground();
     this.buildAuthLayout();
-
     this.enterKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
   }
 
@@ -30,9 +31,23 @@ export class LoginScene extends Phaser.Scene {
   }
 
   private drawBackground(): void {
-    this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT, 0x081525, 1);
+    this.add.rectangle(
+      this.px(GAME_CONSTANTS.WIDTH / 2),
+      this.px(GAME_CONSTANTS.HEIGHT / 2),
+      GAME_CONSTANTS.WIDTH,
+      GAME_CONSTANTS.HEIGHT,
+      0x081525,
+      1
+    );
+
     for (let i = 0; i < 16; i += 1) {
-      this.add.circle(Phaser.Math.Between(0, GAME_CONSTANTS.WIDTH), Phaser.Math.Between(0, GAME_CONSTANTS.HEIGHT), Phaser.Math.Between(60, 140), 0x0f2b43, 0.22);
+      this.add.circle(
+        Phaser.Math.Between(0, GAME_CONSTANTS.WIDTH),
+        Phaser.Math.Between(0, GAME_CONSTANTS.HEIGHT),
+        Phaser.Math.Between(60, 140),
+        0x0f2b43,
+        0.22
+      );
     }
   }
 
@@ -42,28 +57,28 @@ export class LoginScene extends Phaser.Scene {
         <section style="position:relative;overflow:hidden;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:34px 36px;">
           <p style="margin:0 0 10px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;">SSAFY Maker</p>
           <h1 style="margin:0;color:#f4fbff;font-size:62px;line-height:0.94;">로그인하고<br/>싸피생 키우기</h1>
-          <p style="margin:18px 0 0;color:#b6c5d3;font-size:16px;line-height:1.5;">기존 로그인 UI 흐름 그대로 계정 확인 후 게임에 입장합니다. 미니게임은 게임 내 NPC와 대화하여 시작합니다.</p>
+          <p style="margin:18px 0 0;color:#b6c5d3;font-size:16px;line-height:1.5;">기존 로그인 화면 감성을 유지하면서, 실제 인증은 백엔드가 관리하는 페이지에서 안전하게 처리합니다. 로그인 또는 회원가입을 완료하면 게임으로 바로 돌아옵니다.</p>
           <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:28px;">
             <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
               <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">01</span>
               <strong style="display:block;margin-bottom:8px;color:#f4fbff;">로그인</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">아이디/비밀번호 인증</p>
+              <p style="margin:0;color:#9baebe;font-size:13px;">백엔드 인증 페이지로 이동</p>
             </article>
             <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
               <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">02</span>
-              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">육성 플레이</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">싸피생 키우기 진입</p>
+              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">인증 완료</strong>
+              <p style="margin:0;color:#9baebe;font-size:13px;">백엔드에서 세션 확인 및 사용자 정보 동기화</p>
             </article>
             <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
               <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">03</span>
-              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">NPC 미니게임</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">대화로 센터 입장</p>
+              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">게임 입장</strong>
+              <p style="margin:0;color:#9baebe;font-size:13px;">인증 후 바로 싸피생 키우기 진입</p>
             </article>
           </div>
         </section>
         <section style="position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:24px;">
           <div style="margin-bottom:10px;">
-            <p style="margin:0 0 6px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;">Player Access</p>
+            <p style="margin:0 0 6px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;">게임 입장</p>
             <h2 style="margin:0;color:#f4fbff;font-size:34px;" id="auth-title">로그인</h2>
           </div>
           <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;" id="auth-tabs">
@@ -75,6 +90,9 @@ export class LoginScene extends Phaser.Scene {
           <div id="auth-msg" style="margin-top:12px;padding:12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;">로그인 후 게임에 입장할 수 있습니다.</div>
           <div id="auth-form" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:6px;scrollbar-width:thin;"></div>
           <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">로그인</button>
+          
+          <!-- 로컬 우회 테스트용 버튼 -->
+          <button id="auth-bypass" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[ 개발용 ] 백엔드 없이 바로 접속하기</button>
         </section>
       </div>
     `;
@@ -87,8 +105,11 @@ export class LoginScene extends Phaser.Scene {
     const message = node.querySelector<HTMLElement>("#auth-msg");
     const form = node.querySelector<HTMLElement>("#auth-form");
     const submit = node.querySelector<HTMLButtonElement>("#auth-submit");
+    const bypassBtn = node.querySelector<HTMLButtonElement>("#auth-bypass"); // 우회 버튼
 
-    if (!title || !message || !form || !submit) return;
+    if (!title || !message || !form || !submit || !bypassBtn) {
+      return;
+    }
 
     const viewTitle: Record<AuthView, string> = {
       login: "로그인",
@@ -97,18 +118,26 @@ export class LoginScene extends Phaser.Scene {
       findPw: "비밀번호 찾기"
     };
 
-    const setMessage = (text: string, tone: "info" | "success" | "error" = "info"): void => {
+    const setMessage = (text: string, tone: MessageTone = "info"): void => {
       message.textContent = text;
       if (tone === "success") {
         message.style.background = "rgba(24,105,78,0.36)";
         message.style.color = "#97f5d3";
-      } else if (tone === "error") {
+        return;
+      }
+      if (tone === "error") {
         message.style.background = "rgba(126,44,63,0.34)";
         message.style.color = "#ffb4c2";
-      } else {
-        message.style.background = "rgba(40,66,92,0.48)";
-        message.style.color = "#c4dae9";
+        return;
       }
+      message.style.background = "rgba(40,66,92,0.48)";
+      message.style.color = "#c4dae9";
+    };
+
+    const setSubmitting = (isSubmitting: boolean): void => {
+      submit.disabled = isSubmitting;
+      submit.style.opacity = isSubmitting ? "0.72" : "1";
+      submit.style.cursor = isSubmitting ? "progress" : "pointer";
     };
 
     const renderView = (view: AuthView): void => {
@@ -122,133 +151,181 @@ export class LoginScene extends Phaser.Scene {
 
       if (view === "login") {
         form.innerHTML = `
-          ${this.renderInput("login-id", "아이디", "아이디 입력", this.suggestedLoginId)}
-          ${this.renderInput("login-pw", "비밀번호", "비밀번호 입력", "", "password")}
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;">
+              로그인은 백엔드가 관리하는 인증 페이지에서 진행됩니다. 아이디와 비밀번호 입력, 검증, 세션 발급은 게임 클라이언트가 아닌 인증 서버에서 처리합니다.
+            </div>
+            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(8,18,29,0.92);color:#cfe0eb;line-height:1.6;">
+              아래 <strong style="color:#f4fbff;">로그인</strong> 버튼을 누르면 인증 페이지로 이동한 뒤, 인증이 완료되면 다시 게임으로 돌아옵니다.
+            </div>
+          </div>
         `;
         submit.textContent = "로그인";
+        submit.disabled = false;
+        submit.style.opacity = "1";
+        submit.style.cursor = "pointer";
         setMessage("로그인 후 게임에 입장할 수 있습니다.", "info");
-        node.querySelector<HTMLInputElement>("#login-id")?.focus();
-      } else if (view === "signup") {
+        return;
+      }
+
+      if (view === "signup") {
         form.innerHTML = `
-          ${this.renderInput("signup-id", "아이디", "아이디")}
-          ${this.renderInput("signup-nick", "닉네임", "닉네임")}
-          ${this.renderInput("signup-email", "이메일", "email@example.com")}
-          ${this.renderInput("signup-pw", "비밀번호", "8자 이상", "", "password")}
-          ${this.renderInput("signup-pw2", "비밀번호 확인", "비밀번호 재입력", "", "password")}
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;">
+              회원가입은 백엔드가 연결한 등록 페이지에서 진행됩니다. 계정 생성과 인증 절차는 외부 인증 페이지에서 처리됩니다.
+            </div>
+            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(8,18,29,0.92);color:#cfe0eb;line-height:1.6;">
+              아래 <strong style="color:#f4fbff;">회원가입</strong> 버튼을 누르면 가입 페이지로 이동합니다. 가입을 마치면 로그인 후 게임에 들어올 수 있습니다.
+            </div>
+          </div>
         `;
         submit.textContent = "회원가입";
-        setMessage("정보를 입력하면 가입 후 로그인 탭으로 이동합니다.", "info");
-      } else if (view === "findId") {
-        form.innerHTML = `
-          ${this.renderInput("findid-nick", "닉네임", "닉네임")}
-          ${this.renderInput("findid-email", "이메일", "email@example.com")}
-        `;
-        submit.textContent = "아이디 찾기";
-        setMessage("가입한 닉네임/이메일로 아이디를 확인합니다.", "info");
-      } else {
-        form.innerHTML = `
-          ${this.renderInput("findpw-id", "아이디", "아이디")}
-          ${this.renderInput("findpw-email", "이메일", "email@example.com")}
-        `;
-        submit.textContent = "비밀번호 찾기";
-        setMessage("아이디/이메일 확인 후 재설정 안내를 제공합니다.", "info");
+        submit.disabled = false;
+        submit.style.opacity = "1";
+        submit.style.cursor = "pointer";
+        setMessage("회원가입 후 로그인하여 게임에 입장할 수 있습니다.", "info");
+        return;
+      }
+
+      form.innerHTML = `
+        <div style="padding:18px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#d2deea;line-height:1.6;">
+          ${view === "findId"
+            ? "현재 인증 구조에서는 별도의 아이디 찾기 기능 대신, 가입한 계정 정보나 인증 서비스 정책에 따라 아이디를 확인해야 합니다."
+            : "비밀번호 재설정은 게임 내부 입력창이 아니라 인증 서비스의 재설정 페이지에서 제공하는 방식으로 연결되어야 합니다."}
+        </div>
+      `;
+      submit.textContent = "준비 중";
+      setMessage("현재 클라이언트에서는 로그인과 회원가입만 연결되어 있습니다.", "info");
+      submit.disabled = false;
+      submit.style.opacity = "1";
+      submit.style.cursor = "pointer";
+    };
+
+    const applySession = (
+      accessToken: string,
+      refreshToken: string,
+      idToken: string | null,
+      user: { id: string; email: string }
+    ): void => {
+      const nickname = user.email.split("@")[0]?.slice(0, 8) ?? "player";
+
+      this.registry.set("authToken", accessToken);
+      this.registry.set("authRefreshToken", refreshToken);
+      this.registry.set("authIdToken", idToken);
+      this.registry.set("authUser", {
+        id: user.id,
+        email: user.email,
+        nickname
+      });
+    };
+
+    const initializeSession = async (): Promise<void> => {
+      setSubmitting(true);
+      try {
+        const callbackSession = await completeAuthIfPresent();
+        if (callbackSession) {
+          applySession(
+            callbackSession.accessToken,
+            callbackSession.refreshToken,
+            callbackSession.idToken,
+            callbackSession.user
+          );
+          setMessage("인증이 완료되었습니다. 게임으로 이동합니다.", "success");
+          this.time.delayedCall(250, () => this.scene.start(SceneKey.Start));
+          return;
+        }
+
+        const storedSession = readStoredSession();
+        if (storedSession) {
+          const currentUser = await fetchCurrentUser(storedSession.accessToken);
+          applySession(
+            storedSession.accessToken,
+            storedSession.refreshToken,
+            storedSession.idToken,
+            currentUser
+          );
+          setMessage("기존 세션을 확인했습니다. 게임으로 이동합니다.", "success");
+          this.time.delayedCall(150, () => this.scene.start(SceneKey.Start));
+          return;
+        }
+
+        setMessage("로그인 후 게임에 입장할 수 있습니다.", "info");
+      } catch (error) {
+        clearStoredSession();
+        setMessage(error instanceof Error ? error.message : "인증에 실패했습니다.", "error");
+      } finally {
+        setSubmitting(false);
       }
     };
 
-    const onSubmit = (): void => {
-      if (this.currentView === "login") {
-        const id = node.querySelector<HTMLInputElement>("#login-id")?.value.trim() ?? "";
-        const pw = node.querySelector<HTMLInputElement>("#login-pw")?.value.trim() ?? "";
-        if (!id || !pw) {
-          setMessage("아이디와 비밀번호를 모두 입력해 주세요.", "error");
-          return;
-        }
-        this.registry.set("authUser", { loginId: id, nickname: id });
-        this.time.delayedCall(0, () => {
-          this.scene.start(SceneKey.Start);
-        });
+    const startAuth = async (action: "login" | "signup"): Promise<void> => {
+      setSubmitting(true);
+      try {
+        setMessage(
+          action === "signup"
+            ? "회원가입 페이지로 이동합니다."
+            : "로그인 페이지로 이동합니다.",
+          "info"
+        );
+        await beginBackendAuth(action);
+      } catch (error) {
+        setSubmitting(false);
+        setMessage(error instanceof Error ? error.message : "인증 시작에 실패했습니다.", "error");
+      }
+    };
+
+    const handleSubmit = async (): Promise<void> => {
+      if (this.currentView === "findId" || this.currentView === "findPw") {
+        setMessage("현재 클라이언트에서는 로그인과 회원가입만 연결되어 있습니다.", "info");
         return;
       }
 
-      if (this.currentView === "signup") {
-        const id = node.querySelector<HTMLInputElement>("#signup-id")?.value.trim() ?? "";
-        const nick = node.querySelector<HTMLInputElement>("#signup-nick")?.value.trim() ?? "";
-        const email = node.querySelector<HTMLInputElement>("#signup-email")?.value.trim() ?? "";
-        const pw = node.querySelector<HTMLInputElement>("#signup-pw")?.value ?? "";
-        const pw2 = node.querySelector<HTMLInputElement>("#signup-pw2")?.value ?? "";
+      await startAuth(this.currentView === "signup" ? "signup" : "login");
+    };
 
-        if (!id || !nick || !email || !pw || !pw2) {
-          setMessage("회원가입 항목을 모두 입력해 주세요.", "error");
-          return;
-        }
-        if (pw.length < 8) {
-          setMessage("비밀번호는 8자 이상이어야 합니다.", "error");
-          return;
-        }
-        if (pw !== pw2) {
-          setMessage("비밀번호 확인이 일치하지 않습니다.", "error");
-          return;
-        }
-
-        this.suggestedLoginId = id;
-        renderView("login");
-        setMessage(`${id} 계정이 생성되었습니다. 로그인해 주세요.`, "success");
-        return;
-      }
-
-      if (this.currentView === "findId") {
-        const nick = node.querySelector<HTMLInputElement>("#findid-nick")?.value.trim() ?? "";
-        const email = node.querySelector<HTMLInputElement>("#findid-email")?.value.trim() ?? "";
-        if (!nick || !email) {
-          setMessage("닉네임과 이메일을 입력해 주세요.", "error");
-          return;
-        }
-        setMessage("일치하는 정보가 있으면 아이디 안내를 발송했습니다.", "success");
-        return;
-      }
-
-      const id = node.querySelector<HTMLInputElement>("#findpw-id")?.value.trim() ?? "";
-      const email = node.querySelector<HTMLInputElement>("#findpw-email")?.value.trim() ?? "";
-      if (!id || !email) {
-        setMessage("아이디와 이메일을 입력해 주세요.", "error");
-        return;
-      }
-      setMessage("비밀번호 재설정 링크를 발송했습니다.", "success");
+    const onSubmitClick = (): void => {
+      void handleSubmit();
     };
 
     tabs.forEach((tab) => {
       const view = tab.dataset.view as AuthView;
-      tab.addEventListener("click", () => renderView(view));
+      tab.addEventListener("click", () => {
+        renderView(view);
+      });
     });
-    submit.addEventListener("click", onSubmit);
+    submit.addEventListener("click", onSubmitClick);
 
-    this.submitHandler = onSubmit;
+    // 로컬 접속 기능 바인딩
+    const onBypassClick = () => {
+      setMessage("백엔드 인증 없이 더미 계정으로 게임에 진입합니다.", "success");
+      
+      this.registry.set("authToken", "dummy-bypass-token");
+      this.registry.set("authRefreshToken", "dummy-refresh-token");
+      this.registry.set("authIdToken", "dummy-id-token");
+      this.registry.set("authUser", {
+        id: "local_test_user_001",
+        email: "tester@ssafy.com",
+        nickname: "테스터"
+      });
+
+      this.time.delayedCall(250, () => this.scene.start(SceneKey.Start));
+    };
+    bypassBtn.addEventListener("click", onBypassClick);
+
+    this.submitHandler = onSubmitClick;
     renderView("login");
+    void initializeSession();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      submit.removeEventListener("click", onSubmit);
+      submit.removeEventListener("click", onSubmitClick);
+      bypassBtn.removeEventListener("click", onBypassClick);
       this.root?.destroy();
       this.root = undefined;
       this.submitHandler = undefined;
     });
   }
 
-  private renderInput(id: string, label: string, placeholder: string, value = "", type = "text"): string {
-    return `
-      <label style="display:flex;flex-direction:column;gap:6px;color:#d2deea;font-size:14px;">
-        ${label}
-        <input id="${id}" type="${type}" value="${this.escapeHtml(value)}" placeholder="${this.escapeHtml(placeholder)}"
-          style="width:100%;padding:12px 14px;border:1px solid rgba(134,185,219,0.16);border-radius:14px;background:rgba(12,23,35,0.90);color:#f4fbff;outline:none;box-sizing:border-box;" />
-      </label>
-    `;
-  }
-
-  private escapeHtml(value: string): string {
-    return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;").replaceAll("'", "&#39;");
-  }
-
   private px(value: number): number {
     return Math.round(value);
   }
 }
-

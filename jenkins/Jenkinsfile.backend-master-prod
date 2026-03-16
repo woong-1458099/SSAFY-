@@ -25,6 +25,7 @@ pipeline {
     COMPOSE_ARGS = '-p prod-app --env-file docker/.env.prod -f docker/compose.app.yml'
     JAVA_HOME = '/opt/java/openjdk'
     PATH = "/opt/java/openjdk/bin:${env.PATH}"
+    N8N_DEPLOY_TOKEN = credentials('n8n-deploy-token')
   }
 
   stages {
@@ -272,11 +273,47 @@ EOSSH
   post {
     success {
       echo "PROD deploy success: ${env.TARGET_COLOR}, image=${env.BACKEND_IMAGE}"
+      sh """
+        curl -sS -X POST 'https://n8n.ssafymaker.cloud/webhook/jenkins/deploy-notify' \
+          -H 'Content-Type: application/json' \
+          -H 'X-Deploy-Token: ${N8N_DEPLOY_TOKEN}' \
+          --data '{
+            "jobName":"backend-master-prod",
+            "buildNumber":"'"${env.BUILD_NUMBER}"'",
+            "result":"SUCCESS",
+            "buildUrl":"'"${env.BUILD_URL}"'",
+            "branch":"master",
+            "service":"backend",
+            "environment":"prod",
+            "image":"'"${env.BACKEND_IMAGE}"'",
+            "targetColor":"'"${env.TARGET_COLOR}"'",
+            "activeColor":"'"${env.ACTIVE_COLOR}"'"
+          }'
+      """
     }
+
     failure {
       script {
         def rollbackColor = env.ACTIVE_COLOR ?: 'unknown'
         echo "PROD deploy failed. Rollback target(keep current active): ${rollbackColor}"
+
+        sh """
+          curl -sS -X POST 'https://n8n.ssafymaker.cloud/webhook/jenkins/deploy-notify' \
+            -H 'Content-Type: application/json' \
+            -H 'X-Deploy-Token: ${N8N_DEPLOY_TOKEN}' \
+            --data '{
+              "jobName":"backend-master-prod",
+              "buildNumber":"'"${env.BUILD_NUMBER}"'",
+              "result":"FAILURE",
+              "buildUrl":"'"${env.BUILD_URL}"'",
+              "branch":"master",
+              "service":"backend",
+              "environment":"prod",
+              "image":"'"${env.BACKEND_IMAGE}"'",
+              "targetColor":"'"${env.TARGET_COLOR}"'",
+              "activeColor":"'"${rollbackColor}"'"
+            }'
+        """
       }
     }
   }

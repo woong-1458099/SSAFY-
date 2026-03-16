@@ -4,7 +4,7 @@ Unity에서 전환한 팀 프로젝트용 웹 게임 클라이언트입니다.
 
 ## 실행 방법
 
-1. Node.js 20.x 설치
+1. Node.js 25.x 설치
 2. 의존성 설치
 ```bash
 npm install
@@ -24,9 +24,9 @@ npm run preview
 
 ## 권장 버전
 
-- Node.js: `>=20 <21`
-- npm: `>=10 <11`
-- packageManager: `npm@10`
+- Node.js: `>=25 <26`
+- npm: `>=11 <12`
+- packageManager: `npm@11.11.0`
 
 ## 핵심 구조
 
@@ -45,6 +45,7 @@ npm run preview
 
 ## 문서
 
+- 프론트 구현 맵: `docs/FRONTEND_IMPLEMENTATION_MAP.md`
 - 규칙: `docs/conventions/RULES.md`
 - 브랜치 전략: `docs/conventions/BRANCH_STRATEGY.md`
 - 폴더 소유권: `docs/conventions/FOLDER_OWNERSHIP.md`

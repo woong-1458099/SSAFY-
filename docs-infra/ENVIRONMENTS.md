@@ -20,6 +20,10 @@
 - `docker/.env.ops`
   - Jenkins / n8n / 모니터링용
 
+- `docker/.env.auth`
+  - Keycloak 배포용
+  - PostgreSQL 내 Keycloak 전용 DB 접속 정보 포함
+
 ## 2. 환경 분리 원칙
 1. local / stg / prod / ops env를 섞지 않는다.
 2. 비밀값은 저장소에 커밋하지 않는다.
@@ -89,6 +93,7 @@ ssh -L 15432:127.0.0.1:5432 -L 16379:127.0.0.1:6379 -L 15673:127.0.0.1:5672 <use
 - STG / PROD backend는 같은 postgres / redis / rabbitmq를 사용할 수 있음
 - 단기 프로젝트 기준으로 auth는 단일 인스턴스 유지
 - 외부 인증 도메인은 `auth.ssafymaker.cloud` 기준으로 사용
+- Keycloak 데이터는 앱 `users` 테이블과 분리된 별도 DB 또는 schema 로 유지
 
 ## 9. 비밀값 관리 기준
 - STG / PROD 실제 값은 Git에 커밋하지 않는다.
