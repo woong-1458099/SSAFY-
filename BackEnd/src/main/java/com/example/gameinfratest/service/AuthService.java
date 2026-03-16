@@ -5,6 +5,7 @@ import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.auth.KeycloakTokenResponse;
+import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,16 +44,19 @@ public class AuthService {
     private static final String SESSION_VERIFIER_KEY = "auth.bff.verifier";
     private static final String SESSION_ACTION_KEY = "auth.bff.action";
 
+    private final AppUrlProperties appUrlProperties;
     private final KeycloakAuthProperties keycloakAuthProperties;
     private final UserService userService;
     private final JwtDecoder jwtDecoder;
     private final RestClient restClient;
 
     public AuthService(
+            AppUrlProperties appUrlProperties,
             KeycloakAuthProperties keycloakAuthProperties,
             UserService userService,
             JwtDecoder jwtDecoder
     ) {
+        this.appUrlProperties = appUrlProperties;
         this.keycloakAuthProperties = keycloakAuthProperties;
         this.userService = userService;
         this.jwtDecoder = jwtDecoder;
@@ -166,6 +170,19 @@ public class AuthService {
         return new LogoutResponse(logoutUrl);
     }
 
+    public String frontendRootUri(HttpServletRequest request) {
+        String configuredFrontendBaseUrl = appUrlProperties.normalizedFrontendBaseUrl();
+        if (!configuredFrontendBaseUrl.isBlank()) {
+            return configuredFrontendBaseUrl + "/";
+        }
+
+        return UriComponentsBuilder.fromUriString(request.getRequestURL().toString())
+                .replacePath("/")
+                .replaceQuery(null)
+                .build()
+                .toUriString();
+    }
+
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
@@ -199,16 +216,13 @@ public class AuthService {
     }
 
     private String callbackUri(HttpServletRequest request) {
+        String configuredPublicBaseUrl = appUrlProperties.normalizedPublicBaseUrl();
+        if (!configuredPublicBaseUrl.isBlank()) {
+            return configuredPublicBaseUrl + "/api/auth/callback";
+        }
+
         return UriComponentsBuilder.fromUriString(request.getRequestURL().toString())
                 .replacePath("/api/auth/callback")
-                .replaceQuery(null)
-                .build()
-                .toUriString();
-    }
-
-    private String frontendRootUri(HttpServletRequest request) {
-        return UriComponentsBuilder.fromUriString(request.getRequestURL().toString())
-                .replacePath("/")
                 .replaceQuery(null)
                 .build()
                 .toUriString();
