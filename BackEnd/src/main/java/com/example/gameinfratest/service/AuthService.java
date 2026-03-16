@@ -5,10 +5,12 @@ import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.auth.KeycloakTokenResponse;
+import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -35,7 +37,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
 public class AuthService {
@@ -44,20 +45,32 @@ public class AuthService {
     private static final String SESSION_VERIFIER_KEY = "auth.bff.verifier";
     private static final String SESSION_ACTION_KEY = "auth.bff.action";
 
+    private final AppUrlProperties appUrlProperties;
     private final KeycloakAuthProperties keycloakAuthProperties;
     private final UserService userService;
     private final JwtDecoder jwtDecoder;
     private final RestClient restClient;
 
     public AuthService(
+            AppUrlProperties appUrlProperties,
             KeycloakAuthProperties keycloakAuthProperties,
             UserService userService,
             JwtDecoder jwtDecoder
     ) {
+        this.appUrlProperties = appUrlProperties;
         this.keycloakAuthProperties = keycloakAuthProperties;
         this.userService = userService;
         this.jwtDecoder = jwtDecoder;
         this.restClient = RestClient.builder().build();
+    }
+
+    @PostConstruct
+    void validateRequiredUrls() {
+        if (!keycloakAuthProperties.enabled()) {
+            return;
+        }
+        appUrlProperties.validatedPublicBaseUri();
+        appUrlProperties.validatedFrontendBaseUri();
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -66,7 +79,7 @@ public class AuthService {
         String state = UUID.randomUUID().toString().replace("-", "");
         String verifier = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
         String challenge = createCodeChallenge(verifier);
-        String callbackUri = callbackUri(request);
+        String callbackUri = callbackUri();
 
         session.setAttribute(SESSION_STATE_KEY, state);
         session.setAttribute(SESSION_VERIFIER_KEY, verifier);
@@ -106,8 +119,8 @@ public class AuthService {
         }
 
         log.info("auth callback received sessionId={} codePresent={} callbackUri={} keycloakServer={}",
-                session.getId(), true, callbackUri(request), keycloakAuthProperties.serverRealmUrl());
-        KeycloakTokenResponse tokenResponse = exchangeCode(code, verifier, callbackUri(request));
+                session.getId(), true, callbackUri(), keycloakAuthProperties.serverRealmUrl());
+        KeycloakTokenResponse tokenResponse = exchangeCode(code, verifier, callbackUri());
         Jwt jwt = jwtDecoder.decode(tokenResponse.accessToken());
         UserResponse user = userService.upsertFromJwt(jwt);
 
@@ -155,7 +168,7 @@ public class AuthService {
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
-                .queryParam("post_logout_redirect_uri", frontendRootUri(request))
+                .queryParam("post_logout_redirect_uri", frontendRootUri())
                 .queryParam("client_id", keycloakAuthProperties.clientId());
 
         if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
@@ -163,8 +176,12 @@ public class AuthService {
         }
 
         String logoutUrl = builder.build(true).toUriString();
-        log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(request), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
+        log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);
+    }
+
+    public String frontendRootUri() {
+        return appUrlProperties.normalizedFrontendBaseUrl() + "/";
     }
 
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
@@ -199,20 +216,8 @@ public class AuthService {
         }
     }
 
-    private String callbackUri(HttpServletRequest request) {
-        return ServletUriComponentsBuilder.fromRequestUri(request)
-                .replacePath("/api/auth/callback")
-                .replaceQuery(null)
-                .build()
-                .toUriString();
-    }
-
-    private String frontendRootUri(HttpServletRequest request) {
-        return ServletUriComponentsBuilder.fromRequestUri(request)
-                .replacePath("/")
-                .replaceQuery(null)
-                .build()
-                .toUriString();
+    private String callbackUri() {
+        return appUrlProperties.normalizedPublicBaseUrl() + "/api/auth/callback";
     }
 
     private void clearPendingAuth(HttpSession session) {
