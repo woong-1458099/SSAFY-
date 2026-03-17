@@ -6,6 +6,7 @@ import { TitleScene } from "@scenes/TitleScene";
 import { IntroScene } from "@scenes/IntroScene";
 import { NewCharacterScene } from "@scenes/NewCharacterScene";
 import { MainScene } from "@scenes/MainScene";
+import { CompletionScene } from "@scenes/CompletionScene";
 import { FinalSummaryScene } from "@scenes/FinalSummaryScene";
 import { EndingIntroScene } from "@scenes/EndingIntroScene";
 import { EndingComicScene } from "@scenes/EndingComicScene";
@@ -33,6 +34,7 @@ export const SCENE_REGISTRY = [
   IntroScene,
   NewCharacterScene,
   MainScene,
+  CompletionScene,
   FinalSummaryScene,
   EndingIntroScene,
   EndingComicScene,

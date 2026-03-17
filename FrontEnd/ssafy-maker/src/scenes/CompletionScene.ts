@@ -1,8 +1,9 @@
 import Phaser from "phaser";
+import type { EndingFlowPayload } from "@features/progression/types/ending";
 import { SceneKey } from "@shared/enums/sceneKey";
 
 export class CompletionScene extends Phaser.Scene {
-  private resultData: any;
+  private resultData: Partial<EndingFlowPayload> = {};
   private FONT_FAMILY = 'PFStardustBold';
   
   private readonly narrationTexts = [
@@ -26,6 +27,10 @@ export class CompletionScene extends Phaser.Scene {
 
   constructor() {
     super(SceneKey.Completion);
+  }
+
+  init(data: Partial<EndingFlowPayload>): void {
+    this.resultData = data;
   }
 
   preload(): void {
@@ -197,7 +202,7 @@ export class CompletionScene extends Phaser.Scene {
 
     trueEndingBtn.on("pointerdown", () => {
       this.sound.stopAll();
-      this.scene.start((SceneKey as any).TrueEnding || 'TrueEndingScene');
+      this.scene.start(SceneKey.FinalSummary, this.resultData);
     });
 
     uiContainer.add([completeTitle, trueEndingBtn]);
@@ -213,7 +218,7 @@ export class CompletionScene extends Phaser.Scene {
     skipBtn.on('pointerdown', () => {
       this.sound.stopAll();
       if (this.typewriterEvent) this.typewriterEvent.destroy();
-      this.scene.start((SceneKey as any).NewCharacter || 'NewCharacterScene');
+      this.scene.start(SceneKey.FinalSummary, this.resultData);
     });
   }
 }
