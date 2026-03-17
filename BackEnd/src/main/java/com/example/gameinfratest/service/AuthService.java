@@ -11,6 +11,8 @@ import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.annotation.PostConstruct;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -19,11 +21,13 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.GrantedAuthority;
@@ -46,19 +50,22 @@ public class AuthService {
     private static final String SESSION_ACTION_KEY = "auth.bff.action";
     private static final String OIDC_SCOPE = "openid profile email";
 
-    private final AppUrlProperties appUrlProperties;
+    private final String publicBaseUrl;
+    private final String frontendBaseUrl;
     private final KeycloakAuthProperties keycloakAuthProperties;
     private final UserService userService;
     private final JwtDecoder jwtDecoder;
     private final RestClient restClient;
 
     public AuthService(
-            AppUrlProperties appUrlProperties,
+            @Value("${app.urls.public-base-url:}") String publicBaseUrl,
+            @Value("${app.urls.frontend-base-url:}") String frontendBaseUrl,
             KeycloakAuthProperties keycloakAuthProperties,
             UserService userService,
             JwtDecoder jwtDecoder
     ) {
-        this.appUrlProperties = appUrlProperties;
+        this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
+        this.frontendBaseUrl = trimTrailingSlash(frontendBaseUrl);
         this.keycloakAuthProperties = keycloakAuthProperties;
         this.userService = userService;
         this.jwtDecoder = jwtDecoder;
@@ -70,12 +77,8 @@ public class AuthService {
         if (!keycloakAuthProperties.enabled()) {
             return;
         }
-        if (keycloakAuthProperties.requireClientSecret()
-                && (keycloakAuthProperties.clientSecret() == null || keycloakAuthProperties.clientSecret().isBlank())) {
-            throw new IllegalStateException("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
-        }
-        appUrlProperties.validatedPublicBaseUri();
-        appUrlProperties.validatedFrontendBaseUri();
+        requireConfiguredBaseUrl(publicBaseUrl, "app.urls.public-base-url");
+        requireConfiguredBaseUrl(frontendBaseUrl, "app.urls.frontend-base-url");
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -92,16 +95,26 @@ public class AuthService {
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
-                .queryParam("client_id", keycloakAuthProperties.clientId())
-                .queryParam("redirect_uri", callbackUri)
-                .queryParam("response_type", "code")
-                .queryParam("scope", OIDC_SCOPE)
-                .queryParam("state", state)
-                .queryParam("code_challenge", challenge)
-                .queryParam("code_challenge_method", "S256");
+                .queryParam("client_id", "{clientId}")
+                .queryParam("redirect_uri", "{redirectUri}")
+                .queryParam("response_type", "{responseType}")
+                .queryParam("scope", "{scope}")
+                .queryParam("state", "{state}")
+                .queryParam("code_challenge", "{codeChallenge}")
+                .queryParam("code_challenge_method", "{codeChallengeMethod}");
 
-        // Query param values must be raw values here; UriComponentsBuilder performs the percent-encoding.
-        String authorizationUrl = builder.build().encode().toUriString();
+        String authorizationUrl = builder
+                .encode()
+                .buildAndExpand(Map.of(
+                        "clientId", keycloakAuthProperties.clientId(),
+                        "redirectUri", callbackUri,
+                        "responseType", "code",
+                        "scope", "openid profile email",
+                        "state", state,
+                        "codeChallenge", challenge,
+                        "codeChallengeMethod", "S256"
+                ))
+                .toUriString();
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
         return authorizationUrl;
@@ -174,21 +187,27 @@ public class AuthService {
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
-                .queryParam("post_logout_redirect_uri", frontendRootUri())
-                .queryParam("client_id", keycloakAuthProperties.clientId());
+                .queryParam("post_logout_redirect_uri", "{postLogoutRedirectUri}")
+                .queryParam("client_id", "{clientId}");
 
         if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
-            builder.queryParam("id_token_hint", resolvedIdTokenHint);
+            builder.queryParam("id_token_hint", "{idTokenHint}");
         }
 
-        // Query param values must be raw values here; UriComponentsBuilder performs the percent-encoding.
-        String logoutUrl = builder.build().encode().toUriString();
+        Map<String, Object> uriVariables = new java.util.LinkedHashMap<>();
+        uriVariables.put("postLogoutRedirectUri", frontendRootUri());
+        uriVariables.put("clientId", keycloakAuthProperties.clientId());
+        if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
+            uriVariables.put("idTokenHint", resolvedIdTokenHint);
+        }
+
+        String logoutUrl = builder.encode().buildAndExpand(uriVariables).toUriString();
         log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);
     }
 
     public String frontendRootUri() {
-        return appUrlProperties.normalizedFrontendBaseUrl() + "/";
+        return requireConfiguredBaseUrl(frontendBaseUrl, "app.urls.frontend-base-url") + "/";
     }
 
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
@@ -224,7 +243,44 @@ public class AuthService {
     }
 
     private String callbackUri() {
-        return appUrlProperties.normalizedPublicBaseUrl() + "/api/auth/callback";
+        return requireConfiguredBaseUrl(publicBaseUrl, "app.urls.public-base-url") + "/api/auth/callback";
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String normalized = value;
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    private String requireConfiguredBaseUrl(String value, String propertyName) {
+        if (value.isBlank()) {
+            throw new IllegalStateException(propertyName + " must not be blank");
+        }
+        try {
+            String normalized = trimTrailingSlash(value);
+            URI uri = new URI(normalized);
+            if (uri.getScheme() == null || uri.getHost() == null) {
+                throw new IllegalStateException(propertyName + " must be an absolute URL");
+            }
+            String scheme = uri.getScheme().toLowerCase(Locale.ROOT);
+            if (!scheme.equals("http") && !scheme.equals("https")) {
+                throw new IllegalStateException(propertyName + " must use http or https");
+            }
+            if (uri.getUserInfo() != null) {
+                throw new IllegalStateException(propertyName + " must not include user info");
+            }
+            if (uri.getFragment() != null) {
+                throw new IllegalStateException(propertyName + " must not include a fragment");
+            }
+            return normalized;
+        } catch (URISyntaxException exception) {
+            throw new IllegalStateException(propertyName + " must be a valid URL", exception);
+        }
     }
 
     private void clearPendingAuth(HttpSession session) {
