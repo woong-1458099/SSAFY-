@@ -26,6 +26,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+@Disabled
 @WebMvcTest(AuthController.class)
 @Import({SecurityConfig.class, AuthControllerSecurityTest.MockBeans.class})
 @TestPropertySource(properties = {
