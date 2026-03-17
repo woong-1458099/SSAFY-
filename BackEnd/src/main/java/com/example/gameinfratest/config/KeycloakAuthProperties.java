@@ -5,7 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.keycloak")
 public record KeycloakAuthProperties(
         boolean enabled,
-        boolean requireClientSecret,
         String baseUrl,
         String publicBaseUrl,
         String internalBaseUrl,

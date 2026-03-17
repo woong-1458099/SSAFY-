@@ -31,7 +31,7 @@ public class SecurityConfig {
     @Value("${app.security.cors.allowed-origins:http://localhost:5173}")
     private List<String> allowedOrigins;
 
-    @Value("${app.keycloak.client-id:ssafy-maker-bff}")
+    @Value("${app.keycloak.client-id:ssafy-maker-public}")
     private String keycloakClientId;
     private final BffSessionAuthenticationFilter bffSessionAuthenticationFilter;
 
