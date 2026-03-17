@@ -38,20 +38,20 @@ export function getAvatarDataFromRegistry(registry: Phaser.Data.DataManager): Pl
 }
 
 export function preloadPlayerAvatarAssets(scene: Phaser.Scene): void {
-  scene.load.spritesheet("base_male", "../../assets/game/character/base_male.png", PLAYER_SPRITE_CONFIG);
-  scene.load.spritesheet("base_female", "../../assets/game/character/base_female.png", PLAYER_SPRITE_CONFIG);
-  scene.load.spritesheet("base_male_walk", "../../assets/game/character/base_male_walk.png", PLAYER_SPRITE_CONFIG);
-  scene.load.spritesheet("base_female_walk", "../../assets/game/character/base_female_walk.png", PLAYER_SPRITE_CONFIG);
+  scene.load.spritesheet("base_male", "assets/game/character/base_male.png", PLAYER_SPRITE_CONFIG);
+  scene.load.spritesheet("base_female", "assets/game/character/base_female.png", PLAYER_SPRITE_CONFIG);
+  scene.load.spritesheet("base_male_walk", "assets/game/character/base_male_walk.png", PLAYER_SPRITE_CONFIG);
+  scene.load.spritesheet("base_female_walk", "assets/game/character/base_female_walk.png", PLAYER_SPRITE_CONFIG);
 
   for (let i = 1; i <= 3; i += 1) {
-    scene.load.spritesheet(`male_hair_${i}`, `../../assets/game/character/male_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
-    scene.load.spritesheet(`female_hair_${i}`, `../../assets/game/character/female_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
-    scene.load.spritesheet(`male_clothes_${i}`, `../../assets/game/character/male_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
-    scene.load.spritesheet(`female_clothes_${i}`, `../../assets/game/character/female_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
-    scene.load.spritesheet(`male_hair_${i}_walk`, `../../assets/game/character/male_hair_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
-    scene.load.spritesheet(`female_hair_${i}_walk`, `../../assets/game/character/female_hair_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
-    scene.load.spritesheet(`male_clothes_${i}_walk`, `../../assets/game/character/male_clothes_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
-    scene.load.spritesheet(`female_clothes_${i}_walk`, `../../assets/game/character/female_clothes_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
+    scene.load.spritesheet(`male_hair_${i}`, `assets/game/character/male_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
+    scene.load.spritesheet(`female_hair_${i}`, `assets/game/character/female_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
+    scene.load.spritesheet(`male_clothes_${i}`, `assets/game/character/male_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
+    scene.load.spritesheet(`female_clothes_${i}`, `assets/game/character/female_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
+    scene.load.spritesheet(`male_hair_${i}_walk`, `assets/game/character/male_hair_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
+    scene.load.spritesheet(`female_hair_${i}_walk`, `assets/game/character/female_hair_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
+    scene.load.spritesheet(`male_clothes_${i}_walk`, `assets/game/character/male_clothes_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
+    scene.load.spritesheet(`female_clothes_${i}_walk`, `assets/game/character/female_clothes_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
   }
 }
 

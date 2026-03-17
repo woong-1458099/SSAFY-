@@ -1,6 +1,6 @@
 // @ts-nocheck
 import Phaser from 'phaser';
-import { applyLegacyViewport } from './legacyMinigames/viewport';
+import { applyLegacyViewport } from './viewport';
 
 const PF = '"Press Start 2P"';
 
