@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -74,8 +75,8 @@ public class AuthService {
         if (!keycloakAuthProperties.enabled()) {
             return;
         }
-        validateAbsoluteUri(publicBaseUrl, "app.urls.public-base-url");
-        validateAbsoluteUri(frontendBaseUrl, "app.urls.frontend-base-url");
+        requireConfiguredBaseUrl(publicBaseUrl, "app.urls.public-base-url");
+        requireConfiguredBaseUrl(frontendBaseUrl, "app.urls.frontend-base-url");
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -186,7 +187,7 @@ public class AuthService {
     }
 
     public String frontendRootUri() {
-        return frontendBaseUrl + "/";
+        return requireConfiguredBaseUrl(frontendBaseUrl, "app.urls.frontend-base-url") + "/";
     }
 
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
@@ -222,7 +223,7 @@ public class AuthService {
     }
 
     private String callbackUri() {
-        return publicBaseUrl + "/api/auth/callback";
+        return requireConfiguredBaseUrl(publicBaseUrl, "app.urls.public-base-url") + "/api/auth/callback";
     }
 
     private String trimTrailingSlash(String value) {
@@ -236,15 +237,27 @@ public class AuthService {
         return normalized;
     }
 
-    private void validateAbsoluteUri(String value, String propertyName) {
+    private String requireConfiguredBaseUrl(String value, String propertyName) {
         if (value.isBlank()) {
             throw new IllegalStateException(propertyName + " must not be blank");
         }
         try {
-            URI uri = new URI(value);
+            String normalized = trimTrailingSlash(value);
+            URI uri = new URI(normalized);
             if (uri.getScheme() == null || uri.getHost() == null) {
                 throw new IllegalStateException(propertyName + " must be an absolute URL");
             }
+            String scheme = uri.getScheme().toLowerCase(Locale.ROOT);
+            if (!scheme.equals("http") && !scheme.equals("https")) {
+                throw new IllegalStateException(propertyName + " must use http or https");
+            }
+            if (uri.getUserInfo() != null) {
+                throw new IllegalStateException(propertyName + " must not include user info");
+            }
+            if (uri.getFragment() != null) {
+                throw new IllegalStateException(propertyName + " must not include a fragment");
+            }
+            return normalized;
         } catch (URISyntaxException exception) {
             throw new IllegalStateException(propertyName + " must be a valid URL", exception);
         }
