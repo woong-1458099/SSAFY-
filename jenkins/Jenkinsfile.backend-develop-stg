@@ -297,6 +297,19 @@ EOSSH
         def rollbackColor = env.ACTIVE_COLOR ?: 'unknown'
         echo "Deploy failed. Rollback target(keep current active): ${rollbackColor}"
 
+        if (env.TARGET_COLOR?.trim()) {
+          sshagent(credentials: ['ec2-deploy-ssh-v2']) {
+            sh """
+              set -eu
+              ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+                cd ${REMOTE_PROJECT_DIR} &&
+                docker compose ${COMPOSE_ARGS} stop api-${env.TARGET_COLOR} || true &&
+                docker compose ${COMPOSE_ARGS} rm -f -s api-${env.TARGET_COLOR} || true
+              "
+            """
+          }
+        }
+
         sh """
           curl -sS -X POST 'https://n8n.ssafymaker.cloud/webhook/jenkins/deploy-notify' \
             -H 'Content-Type: application/json' \
