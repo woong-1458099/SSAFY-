@@ -42,16 +42,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     borderColor: 0xcc55ff,
     glowColor: 0x6600aa
   },
-  {
-    key: "BugScene",
-    title: "버그 찾기",
-    sub: "버그를 빠르게 클릭",
-    desc: "30초 / 콤보",
-    reward: "집중 +7, 골드 +20",
-    bgColor: 0x881100,
-    borderColor: 0xff4466,
-    glowColor: 0xaa1133
-  },
+
   {
     key: "RunnerScene",
     title: "러너",
@@ -62,16 +53,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     borderColor: 0x33ffcc,
     glowColor: 0x006644
   },
-  {
-    key: "AimScene",
-    title: "에임",
-    sub: "표적 정확도",
-    desc: "30초 / 정확도",
-    reward: "민첩 +7, 골드 +20",
-    bgColor: 0x220011,
-    borderColor: 0xff4466,
-    glowColor: 0x550022
-  },
+
   {
     key: "TypingScene",
     title: "타이핑",

@@ -5,9 +5,9 @@ export const LEGACY_MINIGAME_SCENE_KEYS = [
   "QuizScene",
   "RhythmScene",
   "DragScene",
-  "BugScene",
+
   "RunnerScene",
-  "AimScene",
+
   "TypingScene",
   "BusinessSmileScene",
   "DontSmileScene",
