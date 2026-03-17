@@ -19,13 +19,15 @@ export interface UserProfile {
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
-async function request<T>(path: string, init: RequestInit): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   console.log("[auth-api] request", {
     url: `${API_BASE_URL}${path}`,
-    method: init.method ?? "GET",
-    hasAuthorization: Boolean(init.headers && "Authorization" in (init.headers as Record<string, string>))
+    method: init.method ?? "GET"
   });
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    ...init
+  });
   const raw = await response.text();
   console.log("[auth-api] response", {
     url: `${API_BASE_URL}${path}`,
@@ -48,22 +50,29 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   return payload.data;
 }
 
-export function bootstrapCurrentUser(accessToken: string): Promise<UserProfile> {
+export interface BackendAuthSession {
+  authenticated: boolean;
+  expiresAt: number;
+  user: UserProfile | null;
+}
+
+export function bootstrapCurrentUser(): Promise<UserProfile> {
   console.log("[auth-api] bootstrapCurrentUser");
   return request<UserProfile>("/api/users/me/bootstrap", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
+    method: "POST"
   });
 }
 
-export function fetchCurrentUser(accessToken: string): Promise<UserProfile> {
+export function fetchCurrentUser(): Promise<UserProfile> {
   console.log("[auth-api] fetchCurrentUser");
   return request<UserProfile>("/api/users/me", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
+    method: "GET"
+  });
+}
+
+export function fetchBackendSession(): Promise<BackendAuthSession> {
+  console.log("[auth-api] fetchBackendSession");
+  return request<BackendAuthSession>("/api/auth/session", {
+    method: "GET"
   });
 }

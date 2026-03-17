@@ -1,7 +1,11 @@
 import Phaser from "phaser";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
-import { beginBackendAuth, clearStoredSession, completeAuthIfPresent, readStoredSession } from "@features/auth/authSession";
-import { fetchCurrentUser } from "@features/auth/api";
+import {
+  beginBackendAuth,
+  clearStoredSession,
+  completeAuthIfPresent,
+  fetchExistingSession
+} from "@features/auth/authSession";
 import { SceneKey } from "@shared/enums/sceneKey";
 
 type AuthView = "login" | "signup" | "findId" | "findPw";
@@ -56,23 +60,23 @@ export class LoginScene extends Phaser.Scene {
       <div style="width:1120px;height:640px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:24px;align-items:stretch;font-family:'PFStardustBold','Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
         <section style="position:relative;overflow:hidden;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:34px 36px;">
           <p style="margin:0 0 10px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;">SSAFY Maker</p>
-          <h1 style="margin:0;color:#f4fbff;font-size:62px;line-height:0.94;">로그인하고<br/>싸피생 키우기</h1>
-          <p style="margin:18px 0 0;color:#b6c5d3;font-size:16px;line-height:1.5;">기존 로그인 화면 감성을 유지하면서, 실제 인증은 백엔드가 관리하는 페이지에서 안전하게 처리합니다. 로그인 또는 회원가입을 완료하면 게임으로 바로 돌아옵니다.</p>
+          <h1 style="margin:0;color:#f4fbff;font-size:62px;line-height:0.94;">로그인하고<br/>현실 생존 시작</h1>
+          <p style="margin:18px 0 0;color:#b6c5d3;font-size:16px;line-height:1.5;">인증은 Keycloak과 백엔드가 처리하고, 브라우저에는 세션 쿠키만 남습니다. 로그인이나 회원가입을 마치면 게임으로 바로 돌아옵니다.</p>
           <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:28px;">
             <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
               <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">01</span>
-              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">로그인</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">백엔드 인증 페이지로 이동</p>
+              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">로그인 시작</strong>
+              <p style="margin:0;color:#9baebe;font-size:13px;">백엔드가 Keycloak 인증 페이지로 이동시킵니다.</p>
             </article>
             <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
               <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">02</span>
-              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">인증 완료</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">백엔드에서 세션 확인 및 사용자 정보 동기화</p>
+              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">세션 생성</strong>
+              <p style="margin:0;color:#9baebe;font-size:13px;">토큰은 서버에만 저장되고 브라우저는 세션만 유지합니다.</p>
             </article>
             <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
               <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">03</span>
               <strong style="display:block;margin-bottom:8px;color:#f4fbff;">게임 입장</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">인증 후 바로 싸피생 키우기 진입</p>
+              <p style="margin:0;color:#9baebe;font-size:13px;">세션을 확인한 뒤 게임 시작 화면으로 넘어갑니다.</p>
             </article>
           </div>
         </section>
@@ -87,12 +91,10 @@ export class LoginScene extends Phaser.Scene {
             <button data-view="findId" style="padding:12px;border-radius:14px;border:0;cursor:pointer;background:rgba(21,33,48,0.86);color:#c0cfdb;">아이디 찾기</button>
             <button data-view="findPw" style="padding:12px;border-radius:14px;border:0;cursor:pointer;background:rgba(21,33,48,0.86);color:#c0cfdb;">비밀번호 찾기</button>
           </div>
-          <div id="auth-msg" style="margin-top:12px;padding:12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;">로그인 후 게임에 입장할 수 있습니다.</div>
+          <div id="auth-msg" style="margin-top:12px;padding:12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;">로그인 후 게임을 계속할 수 있습니다.</div>
           <div id="auth-form" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:6px;scrollbar-width:thin;"></div>
           <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">로그인</button>
-          
-          <!-- 로컬 우회 테스트용 버튼 -->
-          <button id="auth-bypass" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[ 개발용 ] 백엔드 없이 바로 접속하기</button>
+          <button id="auth-bypass" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[개발용] 인증 없이 입장</button>
         </section>
       </div>
     `;
@@ -105,7 +107,7 @@ export class LoginScene extends Phaser.Scene {
     const message = node.querySelector<HTMLElement>("#auth-msg");
     const form = node.querySelector<HTMLElement>("#auth-form");
     const submit = node.querySelector<HTMLButtonElement>("#auth-submit");
-    const bypassBtn = node.querySelector<HTMLButtonElement>("#auth-bypass"); // 우회 버튼
+    const bypassBtn = node.querySelector<HTMLButtonElement>("#auth-bypass");
 
     if (!title || !message || !form || !submit || !bypassBtn) {
       return;
@@ -153,18 +155,12 @@ export class LoginScene extends Phaser.Scene {
         form.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;">
-              로그인은 백엔드가 관리하는 인증 페이지에서 진행됩니다. 아이디와 비밀번호 입력, 검증, 세션 발급은 게임 클라이언트가 아닌 인증 서버에서 처리합니다.
-            </div>
-            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(8,18,29,0.92);color:#cfe0eb;line-height:1.6;">
-              아래 <strong style="color:#f4fbff;">로그인</strong> 버튼을 누르면 인증 페이지로 이동한 뒤, 인증이 완료되면 다시 게임으로 돌아옵니다.
+              로그인은 Keycloak 인증 화면에서 진행됩니다. 인증이 끝나면 백엔드가 세션을 만들고 게임으로 돌아옵니다.
             </div>
           </div>
         `;
         submit.textContent = "로그인";
-        submit.disabled = false;
-        submit.style.opacity = "1";
-        submit.style.cursor = "pointer";
-        setMessage("로그인 후 게임에 입장할 수 있습니다.", "info");
+        setMessage("로그인 후 게임을 계속할 수 있습니다.", "info");
         return;
       }
 
@@ -172,46 +168,27 @@ export class LoginScene extends Phaser.Scene {
         form.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;">
-              회원가입은 백엔드가 연결한 등록 페이지에서 진행됩니다. 계정 생성과 인증 절차는 외부 인증 페이지에서 처리됩니다.
-            </div>
-            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(8,18,29,0.92);color:#cfe0eb;line-height:1.6;">
-              아래 <strong style="color:#f4fbff;">회원가입</strong> 버튼을 누르면 가입 페이지로 이동합니다. 가입을 마치면 로그인 후 게임에 들어올 수 있습니다.
+              회원가입은 Keycloak 등록 화면에서 진행됩니다. 가입이 끝나면 백엔드 세션을 확인하고 게임으로 돌아옵니다.
             </div>
           </div>
         `;
         submit.textContent = "회원가입";
-        submit.disabled = false;
-        submit.style.opacity = "1";
-        submit.style.cursor = "pointer";
-        setMessage("회원가입 후 로그인하여 게임에 입장할 수 있습니다.", "info");
+        setMessage("회원가입 후 바로 게임으로 이동할 수 있습니다.", "info");
         return;
       }
 
       form.innerHTML = `
         <div style="padding:18px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#d2deea;line-height:1.6;">
-          ${view === "findId"
-            ? "현재 인증 구조에서는 별도의 아이디 찾기 기능 대신, 가입한 계정 정보나 인증 서비스 정책에 따라 아이디를 확인해야 합니다."
-            : "비밀번호 재설정은 게임 내부 입력창이 아니라 인증 서비스의 재설정 페이지에서 제공하는 방식으로 연결되어야 합니다."}
+          현재 클라이언트에는 로그인과 회원가입만 연결되어 있습니다.
         </div>
       `;
       submit.textContent = "준비 중";
-      setMessage("현재 클라이언트에서는 로그인과 회원가입만 연결되어 있습니다.", "info");
-      submit.disabled = false;
-      submit.style.opacity = "1";
-      submit.style.cursor = "pointer";
+      setMessage("아직 연결되지 않은 화면입니다.", "info");
     };
 
-    const applySession = (
-      accessToken: string,
-      refreshToken: string,
-      idToken: string | null,
-      user: { id: string; email: string }
-    ): void => {
+    const applySession = (user: { id: string; email: string }): void => {
       const nickname = user.email.split("@")[0]?.slice(0, 8) ?? "player";
-
-      this.registry.set("authToken", accessToken);
-      this.registry.set("authRefreshToken", refreshToken);
-      this.registry.set("authIdToken", idToken);
+      this.registry.set("authToken", "bff-session");
       this.registry.set("authUser", {
         id: user.id,
         email: user.email,
@@ -224,35 +201,24 @@ export class LoginScene extends Phaser.Scene {
       try {
         const callbackSession = await completeAuthIfPresent();
         if (callbackSession) {
-          applySession(
-            callbackSession.accessToken,
-            callbackSession.refreshToken,
-            callbackSession.idToken,
-            callbackSession.user
-          );
+          applySession(callbackSession.user);
           setMessage("인증이 완료되었습니다. 게임으로 이동합니다.", "success");
           this.time.delayedCall(250, () => this.scene.start(SceneKey.Start));
           return;
         }
 
-        const storedSession = readStoredSession();
-        if (storedSession) {
-          const currentUser = await fetchCurrentUser(storedSession.accessToken);
-          applySession(
-            storedSession.accessToken,
-            storedSession.refreshToken,
-            storedSession.idToken,
-            currentUser
-          );
+        const existingSession = await fetchExistingSession();
+        if (existingSession) {
+          applySession(existingSession.user);
           setMessage("기존 세션을 확인했습니다. 게임으로 이동합니다.", "success");
           this.time.delayedCall(150, () => this.scene.start(SceneKey.Start));
           return;
         }
 
-        setMessage("로그인 후 게임에 입장할 수 있습니다.", "info");
+        setMessage("로그인 후 게임을 계속할 수 있습니다.", "info");
       } catch (error) {
         clearStoredSession();
-        setMessage(error instanceof Error ? error.message : "인증에 실패했습니다.", "error");
+        setMessage(error instanceof Error ? error.message : "인증 처리에 실패했습니다.", "error");
       } finally {
         setSubmitting(false);
       }
@@ -261,12 +227,7 @@ export class LoginScene extends Phaser.Scene {
     const startAuth = async (action: "login" | "signup"): Promise<void> => {
       setSubmitting(true);
       try {
-        setMessage(
-          action === "signup"
-            ? "회원가입 페이지로 이동합니다."
-            : "로그인 페이지로 이동합니다.",
-          "info"
-        );
+        setMessage(action === "signup" ? "회원가입 화면으로 이동합니다." : "로그인 화면으로 이동합니다.", "info");
         await beginBackendAuth(action);
       } catch (error) {
         setSubmitting(false);
@@ -276,7 +237,7 @@ export class LoginScene extends Phaser.Scene {
 
     const handleSubmit = async (): Promise<void> => {
       if (this.currentView === "findId" || this.currentView === "findPw") {
-        setMessage("현재 클라이언트에서는 로그인과 회원가입만 연결되어 있습니다.", "info");
+        setMessage("아직 연결되지 않은 화면입니다.", "info");
         return;
       }
 
@@ -295,13 +256,9 @@ export class LoginScene extends Phaser.Scene {
     });
     submit.addEventListener("click", onSubmitClick);
 
-    // 로컬 접속 기능 바인딩
     const onBypassClick = () => {
-      setMessage("백엔드 인증 없이 더미 계정으로 게임에 진입합니다.", "success");
-      
+      setMessage("개발용 로컬 계정으로 입장합니다.", "success");
       this.registry.set("authToken", "dummy-bypass-token");
-      this.registry.set("authRefreshToken", "dummy-refresh-token");
-      this.registry.set("authIdToken", "dummy-id-token");
       this.registry.set("authUser", {
         id: "local_test_user_001",
         email: "tester@ssafy.com",

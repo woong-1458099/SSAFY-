@@ -15,8 +15,6 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,95 +36,76 @@ public class SaveFileController {
     }
 
     @GetMapping("/users/{userId}/save-files")
-    public ApiResponse<List<SaveFileResponse>> userSaveFiles(
-            @PathVariable("userId") UUID userId,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
-        authorizationService.requireUserAccess(userId, jwt);
+    public ApiResponse<List<SaveFileResponse>> userSaveFiles(@PathVariable("userId") UUID userId) {
+        authorizationService.requireUserAccess(userId);
         return ApiResponse.ok("save file list success", saveFileService.getUserSaveFiles(userId));
     }
 
     @GetMapping("/save-files/{saveFileId}")
-    public ApiResponse<SaveFileResponse> saveFile(
-            @PathVariable("saveFileId") UUID saveFileId,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
+    public ApiResponse<SaveFileResponse> saveFile(@PathVariable("saveFileId") UUID saveFileId) {
         SaveFile saveFile = saveFileService.getSaveFileEntity(saveFileId);
-        authorizationService.requireUserAccess(saveFile.getUser().getId(), jwt);
+        authorizationService.requireUserAccess(saveFile.getUser().getId());
         return ApiResponse.ok("save file fetch success", SaveFileResponse.from(saveFile));
     }
 
     @PostMapping("/users/{userId}/save-files")
     public ApiResponse<SaveFileResponse> createSaveFile(
             @PathVariable("userId") UUID userId,
-            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateSaveFileRequest request
     ) {
-        authorizationService.requireUserAccess(userId, jwt);
+        authorizationService.requireUserAccess(userId);
         return ApiResponse.ok("save file create success", saveFileService.createSaveFile(userId, request));
     }
 
     @PutMapping("/save-files/{saveFileId}")
     public ApiResponse<SaveFileResponse> updateSaveFile(
             @PathVariable("saveFileId") UUID saveFileId,
-            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody UpdateSaveFileRequest request
     ) {
         SaveFile saveFile = saveFileService.getSaveFileEntity(saveFileId);
-        authorizationService.requireUserAccess(saveFile.getUser().getId(), jwt);
+        authorizationService.requireUserAccess(saveFile.getUser().getId());
         return ApiResponse.ok("save file update success", saveFileService.updateSaveFile(saveFileId, request));
     }
 
     @DeleteMapping("/save-files/{saveFileId}")
-    public ResponseEntity<ApiResponse<Void>> deleteSaveFile(
-            @PathVariable("saveFileId") UUID saveFileId,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
+    public ResponseEntity<ApiResponse<Void>> deleteSaveFile(@PathVariable("saveFileId") UUID saveFileId) {
         SaveFile saveFile = saveFileService.getSaveFileEntity(saveFileId);
-        authorizationService.requireUserAccess(saveFile.getUser().getId(), jwt);
+        authorizationService.requireUserAccess(saveFile.getUser().getId());
         saveFileService.deleteSaveFile(saveFileId);
         return ResponseEntity.ok(ApiResponse.ok("save file delete success", null));
     }
 
     @GetMapping("/save-files/{saveFileId}/inventory")
-    public ApiResponse<List<InventoryItemResponse>> inventory(
-            @PathVariable("saveFileId") UUID saveFileId,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
+    public ApiResponse<List<InventoryItemResponse>> inventory(@PathVariable("saveFileId") UUID saveFileId) {
         SaveFile saveFile = saveFileService.getSaveFileEntity(saveFileId);
-        authorizationService.requireUserAccess(saveFile.getUser().getId(), jwt);
+        authorizationService.requireUserAccess(saveFile.getUser().getId());
         return ApiResponse.ok("inventory fetch success", saveFileService.getInventoryItems(saveFileId));
     }
 
     @PostMapping("/save-files/{saveFileId}/inventory")
     public ApiResponse<InventoryItemResponse> createInventoryItem(
             @PathVariable("saveFileId") UUID saveFileId,
-            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateInventoryItemRequest request
     ) {
         SaveFile saveFile = saveFileService.getSaveFileEntity(saveFileId);
-        authorizationService.requireUserAccess(saveFile.getUser().getId(), jwt);
+        authorizationService.requireUserAccess(saveFile.getUser().getId());
         return ApiResponse.ok("inventory item create success", saveFileService.createInventoryItem(saveFileId, request));
     }
 
     @PutMapping("/inventory-items/{inventoryItemId}")
     public ApiResponse<InventoryItemResponse> updateInventoryItem(
             @PathVariable("inventoryItemId") UUID inventoryItemId,
-            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody UpdateInventoryItemRequest request
     ) {
         InventoryItem inventoryItem = saveFileService.getInventoryItemEntity(inventoryItemId);
-        authorizationService.requireUserAccess(inventoryItem.getSaveFile().getUser().getId(), jwt);
+        authorizationService.requireUserAccess(inventoryItem.getSaveFile().getUser().getId());
         return ApiResponse.ok("inventory item update success", saveFileService.updateInventoryItem(inventoryItemId, request));
     }
 
     @DeleteMapping("/inventory-items/{inventoryItemId}")
-    public ResponseEntity<ApiResponse<Void>> deleteInventoryItem(
-            @PathVariable("inventoryItemId") UUID inventoryItemId,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
+    public ResponseEntity<ApiResponse<Void>> deleteInventoryItem(@PathVariable("inventoryItemId") UUID inventoryItemId) {
         InventoryItem inventoryItem = saveFileService.getInventoryItemEntity(inventoryItemId);
-        authorizationService.requireUserAccess(inventoryItem.getSaveFile().getUser().getId(), jwt);
+        authorizationService.requireUserAccess(inventoryItem.getSaveFile().getUser().getId());
         saveFileService.deleteInventoryItem(inventoryItemId);
         return ResponseEntity.ok(ApiResponse.ok("inventory item delete success", null));
     }
