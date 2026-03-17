@@ -93,7 +93,7 @@ public class AuthService {
         session.setAttribute(SESSION_ACTION_KEY, action.name());
 
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromUriString(authenticationEntryPoint(action))
+                .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
                 .queryParam("client_id", "{clientId}")
                 .queryParam("redirect_uri", "{redirectUri}")
                 .queryParam("response_type", "{responseType}")
@@ -111,6 +111,11 @@ public class AuthService {
         uriVariables.put("codeChallenge", challenge);
         uriVariables.put("codeChallengeMethod", "S256");
 
+        if (action == AuthAction.SIGNUP) {
+            builder.queryParam("prompt", "{prompt}");
+            uriVariables.put("prompt", "create");
+        }
+
         String authorizationUrl = builder
                 .encode()
                 .buildAndExpand(uriVariables)
@@ -118,14 +123,6 @@ public class AuthService {
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
         return authorizationUrl;
-    }
-
-    private String authenticationEntryPoint(AuthAction action) {
-        String realmUrl = keycloakAuthProperties.browserRealmUrl();
-        if (action == AuthAction.SIGNUP) {
-            return realmUrl + "/protocol/openid-connect/registrations";
-        }
-        return realmUrl + "/protocol/openid-connect/auth";
     }
 
     public void handleCallback(HttpSession session, HttpServletRequest request, String code, String state) {
