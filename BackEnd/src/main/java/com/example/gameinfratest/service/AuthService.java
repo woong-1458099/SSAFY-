@@ -93,7 +93,7 @@ public class AuthService {
         session.setAttribute(SESSION_ACTION_KEY, action.name());
 
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
+                .fromUriString(authenticationEntryPoint(action))
                 .queryParam("client_id", "{clientId}")
                 .queryParam("redirect_uri", "{redirectUri}")
                 .queryParam("response_type", "{responseType}")
@@ -102,21 +102,30 @@ public class AuthService {
                 .queryParam("code_challenge", "{codeChallenge}")
                 .queryParam("code_challenge_method", "{codeChallengeMethod}");
 
+        Map<String, Object> uriVariables = new java.util.LinkedHashMap<>();
+        uriVariables.put("clientId", keycloakAuthProperties.clientId());
+        uriVariables.put("redirectUri", callbackUri);
+        uriVariables.put("responseType", "code");
+        uriVariables.put("scope", OIDC_SCOPE);
+        uriVariables.put("state", state);
+        uriVariables.put("codeChallenge", challenge);
+        uriVariables.put("codeChallengeMethod", "S256");
+
         String authorizationUrl = builder
                 .encode()
-                .buildAndExpand(Map.of(
-                        "clientId", keycloakAuthProperties.clientId(),
-                        "redirectUri", callbackUri,
-                        "responseType", "code",
-                        "scope", "openid profile email",
-                        "state", state,
-                        "codeChallenge", challenge,
-                        "codeChallengeMethod", "S256"
-                ))
+                .buildAndExpand(uriVariables)
                 .toUriString();
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
         return authorizationUrl;
+    }
+
+    private String authenticationEntryPoint(AuthAction action) {
+        String realmUrl = keycloakAuthProperties.browserRealmUrl();
+        if (action == AuthAction.SIGNUP) {
+            return realmUrl + "/protocol/openid-connect/registrations";
+        }
+        return realmUrl + "/protocol/openid-connect/auth";
     }
 
     public void handleCallback(HttpSession session, HttpServletRequest request, String code, String state) {
