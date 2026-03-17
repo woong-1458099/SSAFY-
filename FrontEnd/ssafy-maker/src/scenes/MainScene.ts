@@ -392,6 +392,12 @@ const AREA_INTERACTION_LAYER_NAMES: Record<AreaId, string[]> = {
   campus: ["tile layer 2", "tile layer 4(2)"]
 };
 
+const AREA_FOREGROUND_LAYER_NAMES: Partial<Record<AreaId, string[]>> = {
+  world: ["tree"]
+};
+
+const FOREGROUND_TILE_LAYER_DEPTH = 31;
+
 const EVENING_TIME_INDEX = 2;
 const NIGHT_TIME_INDEX = 3;
 
@@ -408,8 +414,11 @@ export class MainScene extends Phaser.Scene {
   private interactionTarget!: Phaser.GameObjects.Rectangle;
   private interactionLabel!: Phaser.GameObjects.Text;
   private worldMapRoot?: Phaser.GameObjects.Container;
+  private worldForegroundRoot?: Phaser.GameObjects.Container;
   private downtownMapRoot?: Phaser.GameObjects.Container;
+  private downtownForegroundRoot?: Phaser.GameObjects.Container;
   private campusMapRoot?: Phaser.GameObjects.Container;
+  private campusForegroundRoot?: Phaser.GameObjects.Container;
   private worldPlaceInteractionZones: Partial<Record<WorldPlaceId, Phaser.Geom.Rectangle>> = {};
   private areaCollisionConfigs: Partial<Record<AreaId, AreaCollisionConfig>> = {};
   private lastSafePlayerPosition: { x: number; y: number } | null = null;
@@ -750,10 +759,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buildAreaMaps(): void {
-    const worldObjects: Phaser.GameObjects.GameObject[] = [];
     const worldRoot = this.add.container(0, 0);
     worldRoot.setDepth(0);
-    const worldTmxBounds = this.buildAreaTmxBackground(worldRoot, AREA_TMX_TEXT_KEYS.world);
+    const worldForegroundRoot = this.add.container(0, 0);
+    worldForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
+    const worldObjects: Phaser.GameObjects.GameObject[] = [];
+    const worldTmxBounds = this.buildAreaTmxBackground(worldRoot, worldForegroundRoot, "world", AREA_TMX_TEXT_KEYS.world);
     const worldUsesTmx = Boolean(worldTmxBounds);
     const worldTmxText = worldTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.world) : "";
     this.areaCollisionConfigs.world = worldTmxBounds
@@ -840,10 +851,13 @@ export class MainScene extends Phaser.Scene {
 
     worldRoot.add(worldObjects);
     this.worldMapRoot = worldRoot;
+    this.worldForegroundRoot = worldForegroundRoot;
 
     const downtownRoot = this.add.container(0, 0);
     downtownRoot.setDepth(0);
-    const downtownTmxBounds = this.buildAreaTmxBackground(downtownRoot, AREA_TMX_TEXT_KEYS.downtown);
+    const downtownForegroundRoot = this.add.container(0, 0);
+    downtownForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
+    const downtownTmxBounds = this.buildAreaTmxBackground(downtownRoot, downtownForegroundRoot, "downtown", AREA_TMX_TEXT_KEYS.downtown);
     const downtownUsesTmx = Boolean(downtownTmxBounds);
     const downtownTmxText = downtownTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.downtown) : "";
     this.areaCollisionConfigs.downtown = downtownTmxBounds
@@ -930,10 +944,13 @@ export class MainScene extends Phaser.Scene {
     downtownRoot.add([...downtownDecorObjects, ...buildingObjects, areaTitle]);
     downtownRoot.setVisible(false);
     this.downtownMapRoot = downtownRoot;
+    this.downtownForegroundRoot = downtownForegroundRoot;
 
     const campusRoot = this.add.container(0, 0);
     campusRoot.setDepth(0);
-    const campusTmxBounds = this.buildAreaTmxBackground(campusRoot, AREA_TMX_TEXT_KEYS.campus);
+    const campusForegroundRoot = this.add.container(0, 0);
+    campusForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
+    const campusTmxBounds = this.buildAreaTmxBackground(campusRoot, campusForegroundRoot, "campus", AREA_TMX_TEXT_KEYS.campus);
     const campusUsesTmx = Boolean(campusTmxBounds);
     const campusTmxText = campusTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.campus) : "";
     this.areaCollisionConfigs.campus = campusTmxBounds
@@ -969,6 +986,7 @@ export class MainScene extends Phaser.Scene {
     campusRoot.add(campusObjects);
     campusRoot.setVisible(false);
     this.campusMapRoot = campusRoot;
+    this.campusForegroundRoot = campusForegroundRoot;
   }
 
 
@@ -1015,7 +1033,12 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private buildAreaTmxBackground(root: Phaser.GameObjects.Container, textKey: string): AreaRenderBounds {
+  private buildAreaTmxBackground(
+    root: Phaser.GameObjects.Container,
+    foregroundRoot: Phaser.GameObjects.Container,
+    areaId: AreaId,
+    textKey: string
+  ): AreaRenderBounds {
     const tmxText = this.cache.text.get(textKey);
     if (typeof tmxText !== "string" || tmxText.length === 0) {
       return null;
@@ -1044,6 +1067,9 @@ export class MainScene extends Phaser.Scene {
     const offsetX = this.px((GAME_CONSTANTS.WIDTH - renderWidth) / 2);
     const offsetY = this.px((GAME_CONSTANTS.HEIGHT - renderHeight) / 2);
     const renderedBounds = new Phaser.Geom.Rectangle(offsetX, offsetY, renderWidth, renderHeight);
+    const foregroundLayerNames = new Set(
+      (AREA_FOREGROUND_LAYER_NAMES[areaId] ?? []).map((name) => name.toLowerCase())
+    );
 
     layersToRender.forEach((layer, layerIndex) => {
       const map = this.make.tilemap({
@@ -1077,10 +1103,11 @@ export class MainScene extends Phaser.Scene {
       if (!tileLayer) {
         return;
       }
+      const isForegroundLayer = foregroundLayerNames.has(layer.name.toLowerCase());
       tileLayer.setPosition(offsetX, offsetY);
       tileLayer.setScale(scale);
       tileLayer.setDepth(layerIndex);
-      root.add(tileLayer);
+      (isForegroundLayer ? foregroundRoot : root).add(tileLayer);
     });
 
     return renderedBounds;
@@ -1109,8 +1136,11 @@ export class MainScene extends Phaser.Scene {
     this.player.setVelocity(0, 0);
 
     this.worldMapRoot?.setVisible(area === "world");
+    this.worldForegroundRoot?.setVisible(area === "world");
     this.downtownMapRoot?.setVisible(area === "downtown");
+    this.downtownForegroundRoot?.setVisible(area === "downtown");
     this.campusMapRoot?.setVisible(area === "campus");
+    this.campusForegroundRoot?.setVisible(area === "campus");
 
     if (area === "world") {
       const spawnFrom = WORLD_PLACE_NODES.find((node) => node.id === worldPlace) ?? WORLD_PLACE_NODES[1];

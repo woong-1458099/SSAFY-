@@ -22,6 +22,7 @@ export const PLAYER_SPRITE_CONFIG = {
 
 export const PLAYER_DISPLAY_SCALE = 2.4;
 export const PLAYER_WALK_FRAME_DURATION = 120;
+export const PLAYER_VISUAL_DEPTH = 30;
 const PLAYER_DIRECTION_FRAMES = {
   right: { idle: 0, walk: [1, 2] },
   up: { idle: 3, walk: [4, 5, 6, 5] },
@@ -67,7 +68,7 @@ export function buildPlayerVisual(
   hair.name = "hair";
 
   const root = scene.add.container(x, y + 10, [base, clothes, hair]);
-  root.setDepth(32);
+  root.setDepth(PLAYER_VISUAL_DEPTH);
   root.setScale(PLAYER_DISPLAY_SCALE);
 
   return { root, base, clothes, hair };
