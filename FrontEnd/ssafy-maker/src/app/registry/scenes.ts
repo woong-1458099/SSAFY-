@@ -14,7 +14,7 @@ import { EndingComicScene } from "@scenes/EndingComicScene";
 import LegacyBusinessSmileScene from "@scenes/legacyMinigames/BusinessSmileScene";
 import LegacyCookingScene from "@scenes/legacyMinigames/CookingScene";
 import LegacyDontSmileScene from "@scenes/legacyMinigames/DontSmileScene";
-import LegacyDragScene from "@scenes/legacyMinigames/DragScene";
+import LegacyConflictResolveScene from "@scenes/legacyMinigames/ConflictResolveScene";
 import LegacyGymScene from "@scenes/legacyMinigames/GymScene";
 import LegacyLottoScene from "@scenes/legacyMinigames/LottoScene";
 import LegacyMenuScene from "@scenes/legacyMinigames/MenuScene";
@@ -23,6 +23,8 @@ import LegacyQuizScene from "@scenes/legacyMinigames/QuizScene";
 import LegacyRhythmScene from "@scenes/legacyMinigames/RhythmScene";
 import LegacyRunnerScene from "@scenes/legacyMinigames/RunnerScene";
 import LegacyTypingScene from "@scenes/legacyMinigames/TypingScene";
+import LegacyInterviewScene from "@scenes/legacyMinigames/InterviewScene";
+import LegacyDrinkingScene from "@scenes/legacyMinigames/DrinkingScene";
 
 // Scene registration must be managed only in this file.
 export const SCENE_REGISTRY = [
@@ -42,7 +44,7 @@ export const SCENE_REGISTRY = [
   LegacyMinigamePauseScene,
   LegacyQuizScene,
   LegacyRhythmScene,
-  LegacyDragScene,
+  LegacyConflictResolveScene,
 
   LegacyRunnerScene,
 
@@ -51,5 +53,7 @@ export const SCENE_REGISTRY = [
   LegacyDontSmileScene,
   LegacyGymScene,
   LegacyCookingScene,
-  LegacyLottoScene
+  LegacyLottoScene,
+  LegacyInterviewScene,
+  LegacyDrinkingScene
 ];

@@ -1,205 +1,166 @@
 // @ts-nocheck
 import Phaser from 'phaser';
+import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 
 const PF = '"Press Start 2P"';
 
 const EXERCISES = [
-  { name: 'BENCH PRESS', keyA: 'LEFT', keyB: 'RIGHT', top: '←→', desc: '← → 교대로 눌러라!' },
-  { name: 'SQUAT',       keyA: 'LEFT', keyB: 'RIGHT', top: '←→', desc: '← → 교대로 눌러라!' },
-  { name: 'BICEP CURL',  keyA: 'Z',    keyB: 'X',    top: 'Z X',  desc: 'Z X 교대로 눌러라!' },
-  { name: 'PUSH-UP',     keyA: 'Z',    keyB: 'X',    top: 'Z X',  desc: 'Z X 교대로 눌러라!' },
+  { name: 'BENCH PRESS', desc: 'SPACE를 연타해서 들어올려라!' },
+  { name: 'SQUAT',       desc: 'SPACE를 연타해서 들어올려라!' },
+  { name: 'BICEP CURL',  desc: 'SPACE를 연타해서 들어올려라!' },
+  { name: 'PUSH-UP',     desc: 'SPACE를 연타해서 들어올려라!' },
 ];
 
 const TOTAL_TIME = 30;
-const MAX_REPS = 15;
+const MAX_REPS = 10;
+const POWER_DECAY = 0.015; // 초마다 감소하는 기본 양 (실제론 프레임당 계산)
+const POWER_GAIN = 0.12;  // 한 번 누를 때 상승폭
 
 export default class GymScene extends Phaser.Scene {
   constructor() { super({ key: 'GymScene' }); }
 
   create() {
     applyLegacyViewport(this);
+    installMinigamePause(this);
     const W = 800, H = 600;
 
-    // 운동 랜덤 선택
     this.exercise = Phaser.Math.RND.pick(EXERCISES);
     this.reps = 0;
-    this.repProgress = 0; // 0 ~ 1 (한 rep 내 진행도, A누름=0.5, B누름=1.0)
-    this.lastPressed = null; // 마지막으로 누른 키
+    this.power = 0; // 0 ~ 1.0 (연타로 채우는 게이지)
     this.timeLeft = TOTAL_TIME;
     this.gameOver = false;
-    this.halfDone = false; // A 눌린 상태
 
     // ── 배경 ──
     this.add.rectangle(W / 2, H / 2, W, H, 0x111111);
     for (let x = 0; x < W; x += 40) this.add.rectangle(x, H / 2, 1, H, 0x222222, 0.6);
     for (let y = 0; y < H; y += 40) this.add.rectangle(W / 2, y, W, 1, 0x222222, 0.6);
 
-    // 상단 바
+    // 상단 UI
     this.add.rectangle(W / 2, 30, W, 60, 0x1a0a00, 0.97);
     this.add.rectangle(W / 2, 4, W, 6, 0xff8800);
     this.add.rectangle(W / 2, 60, W, 3, 0xff4400);
-    this.add.text(W / 2, 16, 'GYM TRAINING', { fontSize: '14px', color: '#ff8800', fontFamily: PF }).setOrigin(0.5, 0);
-
-    // 운동 이름
-    this.add.text(W / 2, 100, this.exercise.name, { fontSize: '22px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 136, this.exercise.desc, { fontSize: '9px', color: '#ffcc88', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, 16, 'SSAFY GYM: SA STYLE', { fontSize: '14px', color: '#ff8800', fontFamily: PF }).setOrigin(0.5, 0);
 
     // 타이머
     this.timerTxt = this.add.text(W - 20, 12, `TIME: ${TOTAL_TIME}`, { fontSize: '9px', color: '#ff4400', fontFamily: PF }).setOrigin(1, 0);
-    this.add.rectangle(W / 2, 57, W - 40, 6, 0x332211);
+    this.timerBarBase = this.add.rectangle(W / 2, 57, W - 40, 6, 0x332211);
     this.timerBar = this.add.rectangle(20, 57, W - 40, 6, 0xff6600).setOrigin(0, 0.5);
 
-    // ── 바벨 / 운동 시각화 ──
+    // 제목/설명
+    this.add.text(W / 2, 100, this.exercise.name, { fontSize: '22px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, 136, this.exercise.desc, { fontSize: '9px', color: '#ffcc88', fontFamily: PF }).setOrigin(0.5);
+
+    // 기구 시각화
     this.buildGymVisual(W, H);
 
-    // REP 진행 바 (한 rep 내)
-    this.add.text(W / 2, 340, 'REP POWER', { fontSize: '8px', color: '#888888', fontFamily: PF }).setOrigin(0.5);
-    this.add.rectangle(W / 2, 364, 500, 28, 0x221100);
-    this.add.rectangle(W / 2, 364, 500, 28, 0x000000, 0).setStrokeStyle(2, 0xff6600);
-    this.repBar = this.add.rectangle(W / 2 - 250, 364, 0, 24, 0xff6600).setOrigin(0, 0.5);
+    // ── POWER GAUGE (GTA 스타일) ──
+    const GX = 650, GY = 300, GW = 40, GH = 250;
+    this.add.text(GX, GY - 145, 'POWER', { fontSize: '10px', color: '#ffcc44', fontFamily: PF }).setOrigin(0.5);
+    this.add.rectangle(GX, GY, GW, GH, 0x000000).setStrokeStyle(4, 0x444444);
+    this.powerBar = this.add.rectangle(GX, GY + GH/2, GW - 8, 0, 0xffcc44).setOrigin(0.5, 1);
+    
+    // 연타 버튼 힌트
+    this.spaceBtn = this.add.container(W / 2, 460);
+    this.spaceBg = this.add.rectangle(0, 0, 240, 50, 0x331100).setStrokeStyle(3, 0xff8800);
+    this.spaceTxt = this.add.text(0, 0, 'PRESS SPACE', { fontSize: '16px', color: '#ff8800', fontFamily: PF }).setOrigin(0.5);
+    this.spaceBtn.add([this.spaceBg, this.spaceTxt]);
 
-    // A/B 키 표시
-    this.keyABox = this.add.rectangle(W / 2 - 80, 420, 100, 60, 0x330000).setStrokeStyle(3, 0xff6600);
-    this.keyATxt = this.add.text(W / 2 - 80, 420, this.exercise.top.split(' ')[0] || '←', { fontSize: '18px', color: '#ff8800', fontFamily: PF }).setOrigin(0.5);
-    this.keyBBox = this.add.rectangle(W / 2 + 80, 420, 100, 60, 0x330000).setStrokeStyle(3, 0x444444);
-    this.keyBTxt = this.add.text(W / 2 + 80, 420, this.exercise.top.split(' ')[1] || '→', { fontSize: '18px', color: '#888888', fontFamily: PF }).setOrigin(0.5);
+    // Rep 카운트
+    this.add.text(W / 2, 530, 'REPS', { fontSize: '10px', color: '#888888', fontFamily: PF }).setOrigin(0.5);
+    this.repTxt = this.add.text(W / 2, 560, `0 / ${MAX_REPS}`, { fontSize: '26px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
 
-    // NEXT 화살표 표시
-    this.nextTxt = this.add.text(W / 2, 458, '▼ 먼저 ← 를 눌러라!', { fontSize: '8px', color: '#ffcc44', fontFamily: PF }).setOrigin(0.5);
+    // 판정
+    this.judgeTxt = this.add.text(W / 2, 290, '', { fontSize: '18px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5).setAlpha(0).setDepth(20);
 
-    // REP 카운터
-    this.add.text(W / 2, 490, 'REPS', { fontSize: '8px', color: '#888888', fontFamily: PF }).setOrigin(0.5);
-    this.repTxt = this.add.text(W / 2, 516, `0 / ${MAX_REPS}`, { fontSize: '22px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    // 입력
+    this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.input.keyboard.on('keydown-SPACE', this.handleMash, this);
 
-    // 판정 텍스트
-    this.judgeTxt = this.add.text(W / 2, 295, '', { fontSize: '16px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5).setAlpha(0).setDepth(10);
-
-    // 키 입력
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.zKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-    this.xKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-
-    this.input.keyboard.on('keydown', this.handleKey, this);
-
-    // 타이머
+    // 타이머/업데이트 루프
     this.timerEvent = this.time.addEvent({ delay: 1000, loop: true, callback: this.tick, callbackScope: this });
   }
 
   buildGymVisual(W, H) {
-    // 바벨 (운동 기구 시각화)
-    const cx = W / 2, cy = 230;
-
+    const cx = W / 2, cy = 250;
     // 받침대
     this.add.rectangle(cx - 160, cy + 40, 20, 100, 0x555555);
     this.add.rectangle(cx + 160, cy + 40, 20, 100, 0x555555);
-    // 바
-    this.barbellBar = this.add.rectangle(cx, cy, 320, 16, 0x999999);
-    // 왼쪽 원판
-    this.weightL = this.add.rectangle(cx - 140, cy, 28, 60, 0xcc4400);
-    this.weightL2 = this.add.rectangle(cx - 160, cy, 20, 70, 0x884400);
-    // 오른쪽 원판
-    this.weightR = this.add.rectangle(cx + 140, cy, 28, 60, 0xcc4400);
-    this.weightR2 = this.add.rectangle(cx + 160, cy, 20, 70, 0x884400);
-
-    // 바 y 위치 (운동 진행에 따라 상하 이동)
+    // 바벨
+    this.barbell = this.add.container(cx, cy);
+    const bar = this.add.rectangle(0, 0, 320, 16, 0x999999);
+    const wL = this.add.rectangle(-140, 0, 28, 70, 0xcc4400);
+    const wL2 = this.add.rectangle(-165, 0, 20, 85, 0x884400);
+    const wR = this.add.rectangle(140, 0, 28, 70, 0xcc4400);
+    const wR2 = this.add.rectangle(165, 0, 20, 85, 0x884400);
+    this.barbell.add([bar, wL, wL2, wR, wR2]);
     this.barbellBaseY = cy;
   }
 
-  handleKey(event) {
+  handleMash() {
+    if (this.gameOver) return;
+    
+    // 파워 상승
+    this.power = Math.min(1.0, this.power + POWER_GAIN);
+    
+    // 시각적 피드백
+    this.spaceBg.setFillStyle(0xff8800);
+    this.spaceTxt.setColor('#ffffff');
+    this.time.delayedCall(80, () => {
+      this.spaceBg.setFillStyle(0x331100);
+      this.spaceTxt.setColor('#ff8800');
+    });
+
+    // 100% 도달 시 Rep 성공
+    if (this.power >= 1.0) {
+      this.completeRep();
+    }
+  }
+
+  completeRep() {
+    this.reps += 1;
+    this.power = 0; // 게이지 초기화
+    this.repTxt.setText(`${this.reps} / ${MAX_REPS}`);
+    
+    // 성공 연타 효과
+    this.showJudge('REP!', '#44ff88');
+    this.sound.play('click'); // 사운드 있으면 재생
+
+    // 바벨 애니메이션
+    this.tweens.add({
+        targets: this.barbell,
+        y: this.barbellBaseY - 60,
+        duration: 200,
+        yoyo: true,
+        ease: 'Cubic.out'
+    });
+
+    if (this.reps >= MAX_REPS) {
+      this.gameOver = true;
+      this.timerEvent.remove();
+      this.showJudge('MAXIMUM GAIN!!', '#FFD700');
+      this.time.delayedCall(1000, () => this.endGame());
+    }
+  }
+
+  update(time, delta) {
     if (this.gameOver) return;
 
-    const key = event.key;
-    const isA =
-      (this.exercise.keyA === 'LEFT' && (key === 'ArrowLeft')) ||
-      (this.exercise.keyA === 'Z' && key.toLowerCase() === 'z');
-    const isB =
-      (this.exercise.keyB === 'RIGHT' && (key === 'ArrowRight')) ||
-      (this.exercise.keyB === 'X' && key.toLowerCase() === 'x');
+    // 파워 감쇠 (초당 횟수가 많아질수록 더 빨리 감소)
+    const decayFactor = 0.3 + (this.reps * 0.08); // Reps가 늘수록 더 빨리 빠짐
+    this.power = Math.max(0, this.power - (decayFactor * (delta / 1000)));
 
-    if (!isA && !isB) return;
+    // 파워 바 업데이트
+    this.powerBar.height = 242 * this.power;
+    
+    // 게이지 색상 변경 (뜨거워지는 연출)
+    if (this.power > 0.8) this.powerBar.setFillStyle(0xff4422);
+    else if (this.power > 0.5) this.powerBar.setFillStyle(0xffaa00);
+    else this.powerBar.setFillStyle(0xffcc44);
 
-    // A → B 순서로만 받기
-    if (isA && !this.halfDone) {
-      // 첫 입력 A
-      this.halfDone = true;
-      this.repProgress = 0.5;
-      this.flashKey('A');
-      this.updateNextHint();
-      this.updateRepBar();
-      this.animateBarbell(true);
-    } else if (isB && this.halfDone) {
-      // 두 번째 입력 B → rep 완료
-      this.halfDone = false;
-      this.repProgress = 0;
-      this.reps += 1;
-      this.flashKey('B');
-      this.animateBarbell(false);
-      this.showJudge(this.reps >= MAX_REPS ? 'MAX REP!!' : 'REP!', this.reps >= MAX_REPS ? '#FFD700' : '#44ff88');
-      this.updateRepBar();
-      this.updateNextHint();
-      this.repTxt.setText(`${this.reps} / ${MAX_REPS}`);
-      if (this.reps >= MAX_REPS) {
-        this.gameOver = true;
-        this.timerEvent.remove();
-        this.time.delayedCall(600, () => this.endGame());
-      }
-    } else if (isA && this.halfDone) {
-      // 잘못된 순서 (A 연속)
-      this.halfDone = false;
-      this.repProgress = 0;
-      this.updateRepBar();
-      this.showJudge('순서 틀림!', '#ff4444');
-    }
-  }
-
-  flashKey(which) {
-    const box = which === 'A' ? this.keyABox : this.keyBBox;
-    const txt = which === 'A' ? this.keyATxt : this.keyBTxt;
-    const origColor = 0xff6600;
-    box.setFillStyle(origColor);
-    txt.setColor('#ffffff');
-    this.time.delayedCall(120, () => {
-      box.setFillStyle(0x330000);
-      txt.setColor(which === 'A' ? '#ff8800' : '#888888');
-    });
-  }
-
-  updateNextHint() {
-    if (this.halfDone) {
-      const btnB = this.exercise.top.split(' ')[1] || '→';
-      this.nextTxt.setText(`▼ 이제 ${btnB} 를 눌러라!`);
-      this.keyABox.setStrokeStyle(3, 0x444444);
-      this.keyBBox.setStrokeStyle(3, 0xff6600);
-      this.keyATxt.setColor('#888888');
-      this.keyBTxt.setColor('#ff8800');
-    } else {
-      const btnA = this.exercise.top.split(' ')[0] || '←';
-      this.nextTxt.setText(`▼ 먼저 ${btnA} 를 눌러라!`);
-      this.keyABox.setStrokeStyle(3, 0xff6600);
-      this.keyBBox.setStrokeStyle(3, 0x444444);
-      this.keyATxt.setColor('#ff8800');
-      this.keyBTxt.setColor('#888888');
-    }
-  }
-
-  updateRepBar() {
-    this.repBar.width = 500 * this.repProgress;
-  }
-
-  animateBarbell(goUp) {
-    const targetY = goUp ? this.barbellBaseY - 30 : this.barbellBaseY;
-    this.tweens.add({
-      targets: [this.barbellBar, this.weightL, this.weightL2, this.weightR, this.weightR2],
-      y: (obj) => obj === this.barbellBar ? targetY : (goUp ? obj.y - 30 : obj.y + 30),
-      duration: 120,
-      ease: 'Power2',
-    });
-  }
-
-  showJudge(text, color) {
-    this.judgeTxt.setText(text).setColor(color).setAlpha(1).setScale(1);
-    this.tweens.add({ targets: this.judgeTxt, alpha: 0, y: this.judgeTxt.y - 30, duration: 500, ease: 'Power2', onComplete: () => this.judgeTxt.setY(295).setScale(1) });
+    // 바벨 위치를 파워에 살짝 연동 (실시간 리프팅 느낌)
+    const liftY = this.barbellBaseY - (this.power * 40);
+    this.barbell.y = liftY;
   }
 
   tick() {
@@ -209,16 +170,21 @@ export default class GymScene extends Phaser.Scene {
     const ratio = this.timeLeft / TOTAL_TIME;
     this.timerBar.scaleX = ratio;
     if (ratio < 0.3) this.timerBar.setFillStyle(0xff2200);
-    else if (ratio < 0.6) this.timerBar.setFillStyle(0xffaa00);
+    
     if (this.timeLeft <= 0) {
       this.gameOver = true;
       this.timerEvent.remove();
-      this.time.delayedCall(500, () => this.endGame());
+      this.endGame();
     }
   }
 
+  showJudge(text, color) {
+    this.judgeTxt.setText(text).setColor(color).setAlpha(1).setScale(1.5).setY(290);
+    this.tweens.add({ targets: this.judgeTxt, alpha: 0, y: 240, duration: 600, ease: 'Power2' });
+  }
+
   endGame() {
-    this.input.keyboard.off('keydown', this.handleKey, this);
+    this.input.keyboard.off('keydown-SPACE', this.handleMash, this);
     this.children.removeAll();
     const W = 800, H = 600;
     this.add.rectangle(W / 2, H / 2, W, H, 0x111111);
@@ -229,29 +195,17 @@ export default class GymScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2 + 208, 620, 4, 0xff8800);
     this.add.rectangle(W / 2 - 308, H / 2, 4, 420, 0xff8800);
     this.add.rectangle(W / 2 + 308, H / 2, 4, 420, 0xff8800);
-    this.add.text(W / 2, 115, 'GYM RESULT', { fontSize: '18px', color: '#ff8800', fontFamily: PF }).setOrigin(0.5);
-
-    const repsDone = this.reps;
-    this.add.text(W / 2, 175, `${repsDone} REPS`, { fontSize: '32px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 225, this.exercise.name, { fontSize: '9px', color: '#888888', fontFamily: PF }).setOrigin(0.5);
-
+    
+    this.add.text(W / 2, 115, 'TRAINING RESULT', { fontSize: '18px', color: '#ff8800', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, 175, `${this.reps} REPS`, { fontSize: '36px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    
     let grade = 'C', gradeColor = '#ff4466', reward = 'STR +2  HP +5';
-    if (repsDone >= MAX_REPS)    { grade = 'S'; gradeColor = '#FFD700'; reward = 'STR +10  HP +30  GP +20'; }
-    else if (repsDone >= 10) { grade = 'A'; gradeColor = '#00ff88'; reward = 'STR +7   HP +20  GP +10'; }
-    else if (repsDone >= 6)  { grade = 'B'; gradeColor = '#4499ff'; reward = 'STR +5   HP +12  GP +5'; }
+    if (this.reps >= MAX_REPS) { grade = 'S'; gradeColor = '#FFD700'; reward = 'STR +10  HP +30  GP +20'; }
+    else if (this.reps >= 7) { grade = 'A'; gradeColor = '#00ff88'; reward = 'STR +7   HP +20  GP +10'; }
+    else if (this.reps >= 4) { grade = 'B'; gradeColor = '#4499ff'; reward = 'STR +5   HP +12  GP +5'; }
 
-    this.add.text(W / 2 + 200, 260, grade, { fontSize: '70px', color: gradeColor, fontFamily: PF }).setOrigin(0.5);
-
-    [
-      { label: 'REPS DONE',   value: `${repsDone}`, color: '#ffffff' },
-      { label: 'TARGET',      value: `${MAX_REPS}`, color: '#aaaaaa' },
-      { label: 'COMPLETION',  value: `${Math.floor((repsDone / MAX_REPS) * 100)}%`, color: '#ffcc44' },
-    ].forEach((s, i) => {
-      this.add.text(W / 2 - 150, 285 + i * 42, s.label, { fontSize: '8px', color: '#888888', fontFamily: PF }).setOrigin(0, 0.5);
-      this.add.text(W / 2 + 100, 285 + i * 42, s.value, { fontSize: '10px', color: s.color, fontFamily: PF }).setOrigin(1, 0.5);
-    });
-
-    this.add.text(W / 2, 415, reward, { fontSize: '9px', color: '#aaddff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2 + 200, 270, grade, { fontSize: '80px', color: gradeColor, fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, 415, reward, { fontSize: '10px', color: '#aaddff', fontFamily: PF }).setOrigin(0.5);
 
     this.createBtn(270, 490, 'RETRY', 0x440000, 0xff6600, () => this.scene.restart());
     this.createBtn(530, 490, 'MENU',  0x001888, 0x4499ff, () => this.scene.start('MenuScene'));
