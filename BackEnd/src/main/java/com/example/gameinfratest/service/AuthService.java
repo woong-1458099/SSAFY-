@@ -5,12 +5,13 @@ import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.auth.KeycloakTokenResponse;
-import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.annotation.PostConstruct;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -26,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -46,19 +48,22 @@ public class AuthService {
     private static final String SESSION_ACTION_KEY = "auth.bff.action";
     private static final String OIDC_SCOPE = "openid profile email";
 
-    private final AppUrlProperties appUrlProperties;
+    private final String publicBaseUrl;
+    private final String frontendBaseUrl;
     private final KeycloakAuthProperties keycloakAuthProperties;
     private final UserService userService;
     private final JwtDecoder jwtDecoder;
     private final RestClient restClient;
 
     public AuthService(
-            AppUrlProperties appUrlProperties,
+            @Value("${app.urls.public-base-url:}") String publicBaseUrl,
+            @Value("${app.urls.frontend-base-url:}") String frontendBaseUrl,
             KeycloakAuthProperties keycloakAuthProperties,
             UserService userService,
             JwtDecoder jwtDecoder
     ) {
-        this.appUrlProperties = appUrlProperties;
+        this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
+        this.frontendBaseUrl = trimTrailingSlash(frontendBaseUrl);
         this.keycloakAuthProperties = keycloakAuthProperties;
         this.userService = userService;
         this.jwtDecoder = jwtDecoder;
@@ -74,8 +79,8 @@ public class AuthService {
                 && (keycloakAuthProperties.clientSecret() == null || keycloakAuthProperties.clientSecret().isBlank())) {
             throw new IllegalStateException("app.keycloak.client-secret must not be blank when app.keycloak.require-client-secret is enabled");
         }
-        appUrlProperties.validatedPublicBaseUri();
-        appUrlProperties.validatedFrontendBaseUri();
+        validatedBaseUri(publicBaseUrl, "app.urls.public-base-url");
+        validatedBaseUri(frontendBaseUrl, "app.urls.frontend-base-url");
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -188,7 +193,7 @@ public class AuthService {
     }
 
     public String frontendRootUri() {
-        return appUrlProperties.normalizedFrontendBaseUrl() + "/";
+        return frontendBaseUrl + "/";
     }
 
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
@@ -224,7 +229,7 @@ public class AuthService {
     }
 
     private String callbackUri() {
-        return appUrlProperties.normalizedPublicBaseUrl() + "/api/auth/callback";
+        return publicBaseUrl + "/api/auth/callback";
     }
 
     private void clearPendingAuth(HttpSession session) {
@@ -257,6 +262,32 @@ public class AuthService {
             return null;
         }
         return sessionState.idToken();
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String normalized = value;
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    private URI validatedBaseUri(String value, String propertyName) {
+        if (value.isBlank()) {
+            throw new IllegalStateException(propertyName + " must not be blank");
+        }
+        try {
+            URI uri = new URI(value);
+            if (uri.getScheme() == null || uri.getHost() == null) {
+                throw new IllegalStateException(propertyName + " must be an absolute URL");
+            }
+            return uri;
+        } catch (URISyntaxException exception) {
+            throw new IllegalStateException(propertyName + " must be a valid URL", exception);
+        }
     }
 
     @SuppressWarnings("unchecked")

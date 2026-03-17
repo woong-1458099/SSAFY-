@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import com.example.gameinfratest.auth.AuthAction;
-import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -19,7 +18,8 @@ class AuthServiceTest {
     @Test
     void validateRequiredUrlsFailsWhenClientSecretMissing() {
         AuthService authService = new AuthService(
-                new AppUrlProperties("https://api.example.com", "https://app.example.com"),
+                "https://api.example.com",
+                "https://app.example.com",
                 new KeycloakAuthProperties(
                         true,
                         true,
@@ -44,7 +44,8 @@ class AuthServiceTest {
     @Test
     void validateRequiredUrlsAllowsMissingClientSecretWhenDisabledByConfig() {
         AuthService authService = new AuthService(
-                new AppUrlProperties("https://api.example.com", "https://app.example.com"),
+                "https://api.example.com",
+                "https://app.example.com",
                 new KeycloakAuthProperties(
                         true,
                         false,
@@ -67,7 +68,8 @@ class AuthServiceTest {
     @Test
     void buildAuthorizationUrlEncodesScopeAndRedirectUri() {
         AuthService authService = new AuthService(
-                new AppUrlProperties("https://api.example.com", "https://app.example.com"),
+                "https://api.example.com",
+                "https://app.example.com",
                 new KeycloakAuthProperties(
                         true,
                         true,
@@ -97,7 +99,8 @@ class AuthServiceTest {
     @Test
     void logoutUrlEncodesPostLogoutRedirectUri() {
         AuthService authService = new AuthService(
-                new AppUrlProperties("https://api.example.com", "https://app.example.com/app"),
+                "https://api.example.com",
+                "https://app.example.com/app",
                 new KeycloakAuthProperties(
                         true,
                         true,
