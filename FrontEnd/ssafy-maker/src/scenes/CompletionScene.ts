@@ -3,7 +3,16 @@ import type { EndingFlowPayload } from "@features/progression/types/ending";
 import { SceneKey } from "@shared/enums/sceneKey";
 
 export class CompletionScene extends Phaser.Scene {
-  private resultData: Partial<EndingFlowPayload> = {};
+  private resultData: EndingFlowPayload = {
+    fe: 0,
+    be: 0,
+    teamwork: 0,
+    luck: 0,
+    hp: 0,
+    week: 6,
+    dayLabel: "금요일",
+    timeLabel: "밤"
+  };
   private FONT_FAMILY = 'PFStardustBold';
   
   private readonly narrationTexts = [
@@ -29,8 +38,17 @@ export class CompletionScene extends Phaser.Scene {
     super(SceneKey.Completion);
   }
 
-  init(data: Partial<EndingFlowPayload>): void {
-    this.resultData = data;
+  init(data?: Partial<EndingFlowPayload>): void {
+    this.resultData = {
+      fe: data?.fe ?? 0,
+      be: data?.be ?? 0,
+      teamwork: data?.teamwork ?? 0,
+      luck: data?.luck ?? 0,
+      hp: data?.hp ?? 0,
+      week: data?.week ?? 6,
+      dayLabel: data?.dayLabel ?? "금요일",
+      timeLabel: data?.timeLabel ?? "밤"
+    };
   }
 
   preload(): void {
