@@ -3215,6 +3215,6 @@ export class MainScene extends Phaser.Scene {
     this.endingFlowStarted = true;
     this.player.setVelocity(0, 0);
     this.saveGameToSlot("auto", true);
-    this.scene.start(SceneKey.FinalSummary, this.buildEndingPayload());
+    this.scene.start(SceneKey.Completion, this.buildEndingPayload());
   }
 }
