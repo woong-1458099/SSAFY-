@@ -28,7 +28,7 @@ export type DialogueNode = {
   action?: DialogueAction;
 };
 
-export type NpcDialogueId = "downtown_shopkeeper" | "campus_senior";
+export type NpcDialogueId = "downtown_shopkeeper" | "campus_senior" | "campus_script_npc";
 
 export type NpcDialogueScript = {
   npcId: NpcDialogueId;
@@ -166,6 +166,40 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         id: "rest_result",
         speaker: "캠퍼스 선배",
         text: "휴식도 전략이야. 다음엔 실전으로 가보자."
+      }
+    }
+  },
+  campus_script_npc: {
+    npcId: "campus_script_npc",
+    npcLabel: "스크립트 NPC",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "스크립트 NPC",
+        text: "나중에 JSON 스크립트를 연결할 테스트용 NPC야. 지금은 임시 대사만 보여주고 있어.",
+        choices: [
+          {
+            id: "placeholder_info",
+            text: "지금은 어떤 역할이야?",
+            nextNodeId: "placeholder_info_result"
+          },
+          {
+            id: "bye",
+            text: "나중에 다시 올게.",
+            nextNodeId: "bye_result"
+          }
+        ]
+      },
+      placeholder_info_result: {
+        id: "placeholder_info_result",
+        speaker: "스크립트 NPC",
+        text: "새 JSON 대사 파일을 붙이기 전까지 이 자리를 맡고 있을게."
+      },
+      bye_result: {
+        id: "bye_result",
+        speaker: "스크립트 NPC",
+        text: "준비되면 새 대사로 바꿔줘."
       }
     }
   }

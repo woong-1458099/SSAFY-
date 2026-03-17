@@ -14,7 +14,7 @@
       "@scenes/*": ["src/scenes/*"],
       "@infra/*": ["src/infra/*"]
     },
-    "lib": ["ES2020", "DOM"],
+    "lib": ["ES2020", "DOM", "ScriptHost"],
     "types": ["vite/client"]
   },
   "include": ["src"]
