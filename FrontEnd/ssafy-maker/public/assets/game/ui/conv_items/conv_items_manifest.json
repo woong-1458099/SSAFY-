@@ -1,0 +1,178 @@
+{
+  "source": "public/assets/game/ui/conv_items.png",
+  "source_size": {
+    "width": 448,
+    "height": 32
+  },
+  "item_count": 14,
+  "items": [
+    {
+      "index": 1,
+      "file_name": "conv_item_01.png",
+      "source_bounds": {
+        "left": 1,
+        "right": 30
+      },
+      "size": {
+        "width": 30,
+        "height": 22
+      }
+    },
+    {
+      "index": 2,
+      "file_name": "conv_item_02.png",
+      "source_bounds": {
+        "left": 32,
+        "right": 63
+      },
+      "size": {
+        "width": 32,
+        "height": 23
+      }
+    },
+    {
+      "index": 3,
+      "file_name": "conv_item_03.png",
+      "source_bounds": {
+        "left": 65,
+        "right": 94
+      },
+      "size": {
+        "width": 30,
+        "height": 25
+      }
+    },
+    {
+      "index": 4,
+      "file_name": "conv_item_04.png",
+      "source_bounds": {
+        "left": 96,
+        "right": 127
+      },
+      "size": {
+        "width": 32,
+        "height": 27
+      }
+    },
+    {
+      "index": 5,
+      "file_name": "conv_item_05.png",
+      "source_bounds": {
+        "left": 129,
+        "right": 158
+      },
+      "size": {
+        "width": 30,
+        "height": 24
+      }
+    },
+    {
+      "index": 6,
+      "file_name": "conv_item_06.png",
+      "source_bounds": {
+        "left": 166,
+        "right": 184
+      },
+      "size": {
+        "width": 19,
+        "height": 29
+      }
+    },
+    {
+      "index": 7,
+      "file_name": "conv_item_07.png",
+      "source_bounds": {
+        "left": 197,
+        "right": 218
+      },
+      "size": {
+        "width": 22,
+        "height": 30
+      }
+    },
+    {
+      "index": 8,
+      "file_name": "conv_item_08.png",
+      "source_bounds": {
+        "left": 227,
+        "right": 253
+      },
+      "size": {
+        "width": 27,
+        "height": 28
+      }
+    },
+    {
+      "index": 9,
+      "file_name": "conv_item_09.png",
+      "source_bounds": {
+        "left": 258,
+        "right": 286
+      },
+      "size": {
+        "width": 29,
+        "height": 30
+      }
+    },
+    {
+      "index": 10,
+      "file_name": "conv_item_10.png",
+      "source_bounds": {
+        "left": 292,
+        "right": 316
+      },
+      "size": {
+        "width": 25,
+        "height": 32
+      }
+    },
+    {
+      "index": 11,
+      "file_name": "conv_item_11.png",
+      "source_bounds": {
+        "left": 322,
+        "right": 350
+      },
+      "size": {
+        "width": 29,
+        "height": 28
+      }
+    },
+    {
+      "index": 12,
+      "file_name": "conv_item_12.png",
+      "source_bounds": {
+        "left": 357,
+        "right": 379
+      },
+      "size": {
+        "width": 23,
+        "height": 31
+      }
+    },
+    {
+      "index": 13,
+      "file_name": "conv_item_13.png",
+      "source_bounds": {
+        "left": 384,
+        "right": 415
+      },
+      "size": {
+        "width": 32,
+        "height": 17
+      }
+    },
+    {
+      "index": 14,
+      "file_name": "conv_item_14.png",
+      "source_bounds": {
+        "left": 421,
+        "right": 440
+      },
+      "size": {
+        "width": 20,
+        "height": 32
+      }
+    }
+  ]
+}

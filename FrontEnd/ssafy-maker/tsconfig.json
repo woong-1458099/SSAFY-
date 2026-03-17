@@ -5,7 +5,6 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": true,
-    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "@app/*": ["src/app/*"],
@@ -15,7 +14,7 @@
       "@scenes/*": ["src/scenes/*"],
       "@infra/*": ["src/infra/*"]
     },
-    "lib": ["ES2020", "DOM"],
+    "lib": ["ES2020", "DOM", "ScriptHost"],
     "types": ["vite/client"]
   },
   "include": ["src"]

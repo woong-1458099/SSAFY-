@@ -1,25 +1,16 @@
 // @ts-nocheck
 import Phaser from "phaser";
+
+import { LEGACY_MINIGAME_CARDS } from "@features/minigame/minigameCatalog";
+import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
+
 import { applyLegacyViewport } from "./viewport";
 
-const PF = '"Press Start 2P"';
-
-const GAME_CARDS = [
-  { key: "QuizScene", title: "퀴즈", sub: "알고리즘/CS 문제", desc: "15초 / 5문제", reward: "지능 +10, 골드 +30", bgColor: 0x001888, borderColor: 0x4499ff, glowColor: 0x0033cc },
-  { key: "RhythmScene", title: "리듬", sub: "키보드 리듬 입력", desc: "A S D F", reward: "집중 +7, 골드 +20", bgColor: 0x005518, borderColor: 0x33ff88, glowColor: 0x007722 },
-  { key: "DragScene", title: "정렬", sub: "코드 순서 맞추기", desc: "60초 / 드래그", reward: "지능 +10, 골드 +30", bgColor: 0x440088, borderColor: 0xcc55ff, glowColor: 0x6600aa },
-  { key: "RunnerScene", title: "러너", sub: "장애물 점프", desc: "생존형", reward: "민첩 +7, 골드 +20", bgColor: 0x003322, borderColor: 0x33ffcc, glowColor: 0x006644 },
-  { key: "TypingScene", title: "타이핑", sub: "코드 타이핑", desc: "20초 / 입력", reward: "지능 +5, 골드 +10", bgColor: 0x0d2a1a, borderColor: 0x44ff88, glowColor: 0x116633 },
-  { key: "BusinessSmileScene", title: "비즈니스 미소", sub: "미소 게이지 채우기", desc: "표정 인식", reward: "매력 +8, 골드 +20", bgColor: 0x003455, borderColor: 0x48d4ff, glowColor: 0x0d5c84 },
-  { key: "DontSmileScene", title: "웃음 참기", sub: "표정 제어 챌린지", desc: "끝까지 버티기", reward: "멘탈 +8, 골드 +20", bgColor: 0x4d1020, borderColor: 0xff6a88, glowColor: 0x6d1830 },
-  { key: "GymScene", title: "헬스장", sub: "← → 교대 입력", desc: "15렙 / 30초", reward: "체력 +10, 골드 +20", bgColor: 0x1a0800, borderColor: 0xff8800, glowColor: 0x332200 },
-  { key: "CookingScene", title: "라면 장인", sub: "재료 받기", desc: "30초 / 캐치", reward: "체력 +15, 골드 +20", bgColor: 0x442211, borderColor: 0xff8822, glowColor: 0x663311 },
-  { key: "LottoScene", title: "SSAFY 로또", sub: "일확천금 가챠", desc: "운빨 테스트", reward: "1등: 10,000 GP", bgColor: 0x001133, borderColor: 0xffff00, glowColor: 0x002244 },
-];
+const PIXEL_FONT = '"Press Start 2P"';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
-    super({ key: "MenuScene" });
+    super({ key: LEGACY_MINIGAME_MENU_SCENE_KEY });
   }
 
   init(data) {
@@ -81,38 +72,44 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   drawCampus() {
-    const W = 800;
-    const H = 600;
+    const width = 800;
+    const height = 600;
 
-    this.add.rectangle(W / 2, H / 2, W, H, 0x316f42);
-    for (let i = 0; i < 32; i += 1) {
-      this.add.circle(Phaser.Math.Between(0, W), Phaser.Math.Between(120, H), Phaser.Math.Between(18, 42), 0x3b824a, 0.18);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x316f42);
+    for (let index = 0; index < 32; index += 1) {
+      this.add.circle(
+        Phaser.Math.Between(0, width),
+        Phaser.Math.Between(120, height),
+        Phaser.Math.Between(18, 42),
+        0x3b824a,
+        0.18
+      );
     }
 
-    this.add.rectangle(W / 2, 6, W, 6, 0xffd700);
-    this.add.rectangle(W / 2, 48, W, 84, 0x10243d, 0.96);
+    this.add.rectangle(width / 2, 6, width, 6, 0xffd700);
+    this.add.rectangle(width / 2, 48, width, 84, 0x10243d, 0.96);
     this.add.text(28, 52, "SSAFY 미니게임 필드", {
       fontSize: "18px",
       color: "#FFD700",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     });
     this.add.text(772, 24, "NPC 게임 마스터", {
       fontSize: "9px",
       color: "#9fd8ff",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(1, 0);
-    this.add.text(772, 52, "미니게임 10종 준비 완료", {
+    this.add.text(772, 52, `미니게임 ${LEGACY_MINIGAME_CARDS.length}종 준비 완료`, {
       fontSize: "9px",
       color: "#ffffff",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(1, 0);
 
     this.add.rectangle(400, 378, 520, 136, 0xc7b98f).setStrokeStyle(4, 0x8f7a4d);
     this.add.rectangle(400, 378, 454, 74, 0xb8d4ea, 1).setStrokeStyle(3, 0x7aa2bf);
-    this.add.text(400, 382, "SSAFY 미니게임 연구동", {
+    this.add.text(400, 382, "SSAFY 미니게임 연구소", {
       fontSize: "18px",
       color: "#22384d",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.rectangle(128, 482, 180, 92, 0x4f3e2d).setStrokeStyle(4, 0x2e241a);
@@ -125,7 +122,7 @@ export default class MenuScene extends Phaser.Scene {
     this.add.text(690, 206, "게임\n구역", {
       fontSize: "11px",
       color: "#ffffff",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
       align: "center"
     }).setOrigin(0.5);
 
@@ -134,7 +131,7 @@ export default class MenuScene extends Phaser.Scene {
     this.add.text(595, 301, "NPC 부스", {
       fontSize: "8px",
       color: "#4a361d",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
   }
 
@@ -143,11 +140,11 @@ export default class MenuScene extends Phaser.Scene {
     const body = this.add.rectangle(0, 0, 22, 26, 0x4da3ff).setStrokeStyle(3, 0xd7f0ff);
     const head = this.add.rectangle(0, -22, 18, 18, 0xffd39f).setStrokeStyle(2, 0xbe864f);
     const hair = this.add.rectangle(0, -28, 20, 8, 0x1b2330);
-    const eyeL = this.add.rectangle(-4, -22, 2, 2, 0x000000);
-    const eyeR = this.add.rectangle(4, -22, 2, 2, 0x000000);
-    this.legL = this.add.rectangle(-5, 20, 6, 18, 0x233a68);
-    this.legR = this.add.rectangle(5, 20, 6, 18, 0x233a68);
-    this.player.add([this.legL, this.legR, body, head, hair, eyeL, eyeR]);
+    const eyeLeft = this.add.rectangle(-4, -22, 2, 2, 0x000000);
+    const eyeRight = this.add.rectangle(4, -22, 2, 2, 0x000000);
+    this.legLeft = this.add.rectangle(-5, 20, 6, 18, 0x233a68);
+    this.legRight = this.add.rectangle(5, 20, 6, 18, 0x233a68);
+    this.player.add([this.legLeft, this.legRight, body, head, hair, eyeLeft, eyeRight]);
     this.playerShadow = this.add.ellipse(170, 444, 30, 10, 0x000000, 0.25);
   }
 
@@ -162,13 +159,13 @@ export default class MenuScene extends Phaser.Scene {
     this.add.text(595, 368, "게임 마스터", {
       fontSize: "7px",
       color: "#fff2cf",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.playerPrompt = this.add.text(595, 402, "E를 눌러 대화하기", {
       fontSize: "8px",
       color: "#ffffff",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
       backgroundColor: "#10243d",
       padding: { left: 8, right: 8, top: 6, bottom: 6 }
     }).setOrigin(0.5).setVisible(false);
@@ -179,17 +176,17 @@ export default class MenuScene extends Phaser.Scene {
     this.add.text(24, 560, "NPC에게 가까이 가서 E를 누르면 미니게임 목록이 열립니다.", {
       fontSize: "9px",
       color: "#d9f2ff",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     });
     this.add.text(24, 578, "미니게임 중 ESC는 일시정지, Pause에서 E는 재개, ESC는 종료입니다.", {
       fontSize: "8px",
       color: "#88c7e9",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     });
     this.add.text(772, 578, "ESC: Back To Main", {
       fontSize: "8px",
       color: "#c8e8ff",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(1, 0);
   }
 
@@ -200,17 +197,17 @@ export default class MenuScene extends Phaser.Scene {
     const title = this.add.text(400, 108, "NPC 미니게임 선택", {
       fontSize: "18px",
       color: "#FFD700",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
     const guide = this.add.text(400, 142, "카드를 클릭하면 시작합니다. ESC를 누르면 창이 닫힙니다.", {
       fontSize: "8px",
       color: "#dff8ff",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.selectorRoot.add([overlay, panel, title, guide]);
 
-    GAME_CARDS.forEach((game, index) => {
+    LEGACY_MINIGAME_CARDS.forEach((game, index) => {
       const col = index % 4;
       const row = Math.floor(index / 4);
       const x = 125 + col * 184;
@@ -223,25 +220,29 @@ export default class MenuScene extends Phaser.Scene {
     const container = this.add.container(0, 0);
     const shadow = this.add.rectangle(x + 4, y + 4, 172, 84, 0x000000, 0.66);
     const card = this.add.rectangle(x, y, 172, 84, game.bgColor).setInteractive().setStrokeStyle(3, game.borderColor);
-    const title = this.add.text(x, y - 18, game.title, { fontSize: "10px", color: "#ffffff", fontFamily: PF }).setOrigin(0.5);
+    const title = this.add.text(x, y - 18, game.title, {
+      fontSize: "10px",
+      color: "#ffffff",
+      fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
     const sub = this.add.text(x, y + 1, game.sub, {
       fontSize: "5px",
       color: "#bfe4ff",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
       align: "center",
       wordWrap: { width: 164 }
     }).setOrigin(0.5);
     const desc = this.add.text(x, y + 22, game.desc, {
       fontSize: "4px",
       color: "#d8e7f8",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
       align: "center",
       wordWrap: { width: 166 }
     }).setOrigin(0.5);
     const reward = this.add.text(x, y + 34, game.reward, {
       fontSize: "4px",
       color: "#FFD700",
-      fontFamily: PF
+      fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     card.on("pointerover", () => {
@@ -258,33 +259,34 @@ export default class MenuScene extends Phaser.Scene {
     return container;
   }
 
-  animatePlayerWalk() {
-    if (this.walkTween) return;
-    this.walkTween = this.tweens.add({
-      targets: [this.legL, this.legR],
-      angle: { from: -12, to: 12 },
-      duration: 160,
-      yoyo: true,
-      repeat: -1
-    });
-  }
-
-  stopPlayerWalk() {
-    if (!this.walkTween) return;
-    this.walkTween.stop();
-    this.walkTween = null;
-    this.legL.setAngle(0);
-    this.legR.setAngle(0);
-  }
-
   openSelector() {
     this.selectorOpen = true;
     this.selectorRoot.setVisible(true);
+    this.cameras.main.flash(100, 255, 255, 255, false);
   }
 
   closeSelector() {
     this.selectorOpen = false;
     this.selectorRoot.setVisible(false);
+  }
+
+  animatePlayerWalk() {
+    if (this.walkTween) return;
+    this.walkTween = this.tweens.add({
+      targets: [this.legLeft, this.legRight],
+      angle: { from: -12, to: 12 },
+      yoyo: true,
+      repeat: -1,
+      duration: 120,
+      ease: "Sine.easeInOut"
+    });
+  }
+
+  stopPlayerWalk() {
+    this.walkTween?.stop();
+    this.walkTween = null;
+    this.legLeft.setAngle(0);
+    this.legRight.setAngle(0);
   }
 
   startSelectedGame(sceneKey) {
@@ -293,7 +295,7 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   returnToMainWorld() {
-    this.scene.stop("MenuScene");
+    this.scene.stop(LEGACY_MINIGAME_MENU_SCENE_KEY);
     if (this.scene.isPaused(this.returnSceneKey)) {
       this.scene.resume(this.returnSceneKey);
       return;

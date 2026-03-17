@@ -1,11 +1,6 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
-import {
-  buildPlayerVisual,
-  getAvatarDataFromRegistry,
-  type PlayerVisualParts,
-} from "@features/avatar/playerAvatar";
 
 type MiniGameData = {
   returnSceneKey?: SceneKey;
@@ -19,7 +14,6 @@ export class MiniGameReflexScene extends Phaser.Scene {
   private timerText?: Phaser.GameObjects.Text;
   private infoText?: Phaser.GameObjects.Text;
   private timerEvent?: Phaser.Time.TimerEvent;
-  private playerVisual?: PlayerVisualParts;
   private score = 0;
   private remainSec = 25;
   private finished = false;
@@ -80,17 +74,9 @@ export class MiniGameReflexScene extends Phaser.Scene {
       if (this.finished) this.returnToMain();
     });
 
-    // 플레이어 캐릭터 표시
-    const avatarData = getAvatarDataFromRegistry(this.registry);
-    const charX = GAME_CONSTANTS.WIDTH - 68;
-    const charY = GAME_CONSTANTS.HEIGHT - 32;
-    this.playerVisual = buildPlayerVisual(this, charX, charY, avatarData);
-    this.playerVisual.root.setDepth(100);
-
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.timerEvent?.destroy();
       this.target?.removeAllListeners();
-      this.playerVisual?.root.destroy(true);
     });
   }
 
