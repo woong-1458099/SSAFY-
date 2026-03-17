@@ -93,15 +93,26 @@ public class AuthService {
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/auth")
-                .queryParam("client_id", keycloakAuthProperties.clientId())
-                .queryParam("redirect_uri", callbackUri)
-                .queryParam("response_type", "code")
-                .queryParam("scope", "openid profile email")
-                .queryParam("state", state)
-                .queryParam("code_challenge", challenge)
-                .queryParam("code_challenge_method", "S256");
+                .queryParam("client_id", "{clientId}")
+                .queryParam("redirect_uri", "{redirectUri}")
+                .queryParam("response_type", "{responseType}")
+                .queryParam("scope", "{scope}")
+                .queryParam("state", "{state}")
+                .queryParam("code_challenge", "{codeChallenge}")
+                .queryParam("code_challenge_method", "{codeChallengeMethod}");
 
-        String authorizationUrl = builder.build().encode().toUriString();
+        String authorizationUrl = builder
+                .encode()
+                .buildAndExpand(Map.of(
+                        "clientId", keycloakAuthProperties.clientId(),
+                        "redirectUri", callbackUri,
+                        "responseType", "code",
+                        "scope", "openid profile email",
+                        "state", state,
+                        "codeChallenge", challenge,
+                        "codeChallengeMethod", "S256"
+                ))
+                .toUriString();
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
         return authorizationUrl;
@@ -174,14 +185,21 @@ public class AuthService {
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromUriString(keycloakAuthProperties.browserRealmUrl() + "/protocol/openid-connect/logout")
-                .queryParam("post_logout_redirect_uri", frontendRootUri())
-                .queryParam("client_id", keycloakAuthProperties.clientId());
+                .queryParam("post_logout_redirect_uri", "{postLogoutRedirectUri}")
+                .queryParam("client_id", "{clientId}");
 
         if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
-            builder.queryParam("id_token_hint", resolvedIdTokenHint);
+            builder.queryParam("id_token_hint", "{idTokenHint}");
         }
 
-        String logoutUrl = builder.build().encode().toUriString();
+        Map<String, Object> uriVariables = new java.util.LinkedHashMap<>();
+        uriVariables.put("postLogoutRedirectUri", frontendRootUri());
+        uriVariables.put("clientId", keycloakAuthProperties.clientId());
+        if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
+            uriVariables.put("idTokenHint", resolvedIdTokenHint);
+        }
+
+        String logoutUrl = builder.encode().buildAndExpand(uriVariables).toUriString();
         log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);
     }
