@@ -21,8 +21,10 @@ import {
   type DialogueChoice,
   type DialogueNode,
   type NpcDialogueId,
+  type NpcDialogueScript,
   type StoryStatKey
 } from "@features/story/npcDialogueScripts";
+import { buildDialogueScriptFromFixedEventJson } from "@features/story/jsonDialogueAdapter";
 import {
   clearDialogueChoices,
   createDialogueUi,
@@ -109,6 +111,22 @@ type WorldPlaceNode = {
   zoneWidth: number;
   zoneHeight: number;
   movable: boolean;
+};
+
+type AreaNpcConfig = {
+  dialogueId: NpcDialogueId;
+  x: number;
+  y: number;
+  labelOffsetX: number;
+  labelOffsetY: number;
+  flashColor: number;
+};
+
+type AreaNpcView = {
+  area: Exclude<AreaId, "world">;
+  config: AreaNpcConfig;
+  marker: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
 };
 
 type InventoryItemTemplate = {
@@ -347,30 +365,35 @@ const STAT_LABEL: Record<StatKey, string> = {
   stress: "\uC2A4\uD2B8\uB808\uC2A4"
 };
 
-const AREA_NPC_CONFIG: Record<Exclude<AreaId, "world">, {
-  dialogueId: NpcDialogueId;
-  x: number;
-  y: number;
-  labelOffsetX: number;
-  labelOffsetY: number;
-  flashColor: number;
-}> = {
-  downtown: {
-    dialogueId: "downtown_shopkeeper",
-    x: 930,
-    y: 404,
-    labelOffsetX: -24,
-    labelOffsetY: 24,
-    flashColor: 0xb07a3c
-  },
-  campus: {
-    dialogueId: "campus_senior",
-    x: 924,
-    y: 390,
-    labelOffsetX: -36,
-    labelOffsetY: 24,
-    flashColor: 0x3f6e90
-  }
+const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
+  downtown: [
+    {
+      dialogueId: "downtown_shopkeeper",
+      x: 930,
+      y: 404,
+      labelOffsetX: -24,
+      labelOffsetY: 24,
+      flashColor: 0xb07a3c
+    }
+  ],
+  campus: [
+    {
+      dialogueId: "campus_senior",
+      x: 924,
+      y: 390,
+      labelOffsetX: -36,
+      labelOffsetY: 24,
+      flashColor: 0x3f6e90
+    },
+    {
+      dialogueId: "campus_script_npc",
+      x: 760,
+      y: 442,
+      labelOffsetX: -42,
+      labelOffsetY: 24,
+      flashColor: 0x7a56b8
+    }
+  ]
 };
 
 const AREA_TILESET_IMAGE_KEY = "map_tiles_full_asset";
@@ -411,8 +434,8 @@ export class MainScene extends Phaser.Scene {
   };
   private playerVisual?: PlayerVisualParts;
   private playerFacing: "left" | "right" | "up" | "down" = "down";
-  private interactionTarget!: Phaser.GameObjects.Rectangle;
-  private interactionLabel!: Phaser.GameObjects.Text;
+  private areaNpcViews: AreaNpcView[] = [];
+  private activeAreaNpcView: AreaNpcView | null = null;
   private worldMapRoot?: Phaser.GameObjects.Container;
   private worldForegroundRoot?: Phaser.GameObjects.Container;
   private downtownMapRoot?: Phaser.GameObjects.Container;
@@ -490,6 +513,7 @@ export class MainScene extends Phaser.Scene {
   private activeDialogueId: NpcDialogueId | null = null;
   private activeDialogueNodeId: string | null = null;
   private dialogueChoiceIndex = 0;
+  private runtimeDialogueScripts: Partial<Record<NpcDialogueId, NpcDialogueScript>> = {};
 
   private hud!: GameHud;
   private hudState: HudState = {
@@ -551,22 +575,10 @@ export class MainScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT);
 
     this.buildAreaMaps();
+    this.createAreaNpcViews();
 
     this.playerAvatar = this.getSelectedPlayerAvatar();
     this.createPlayerAvatar();
-
-    this.interactionTarget = this.add.rectangle(0, 0, 28, 34, 0x6e4f2b, 1);
-    this.interactionTarget.setStrokeStyle(2, 0x4b351b, 1);
-    this.interactionTarget.setDepth(32);
-    this.interactionTarget.setVisible(false);
-    this.interactionLabel = this.add.text(0, 0, "", {
-      fontFamily: this.uiFontFamily,
-      color: "#f6e6c8",
-      fontSize: "14px",
-      resolution: 2
-    });
-    this.interactionLabel.setDepth(33);
-    this.interactionLabel.setVisible(false);
 
     this.inputManager = new InputManager(this);
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
@@ -745,14 +757,13 @@ export class MainScene extends Phaser.Scene {
     this.player.setVelocity(move.x * GAME_CONSTANTS.PLAYER_SPEED, move.y * GAME_CONSTANTS.PLAYER_SPEED);
     this.updatePlayerAvatarAnimation(move);
 
-    const areaNpcConfig = this.getAreaNpcConfig(this.currentArea);
-    const nearNpc = this.isNearPoint(this.interactionTarget.x, this.interactionTarget.y, 74);
-    const prompt = nearNpc && areaNpcConfig ? "E \uB300\uD654\uD558\uAE30  |  Q \uC804\uCCB4 \uC9C0\uB3C4" : "Q \uC804\uCCB4 \uC9C0\uB3C4";
+    const nearbyNpcView = this.getNearestAreaNpcView(this.currentArea, 74);
+    this.refreshAreaNpcHighlight(nearbyNpcView);
+    const prompt = nearbyNpcView ? "E \uB300\uD654\uD558\uAE30  |  Q \uC804\uCCB4 \uC9C0\uB3C4" : "Q \uC804\uCCB4 \uC9C0\uB3C4";
     this.hud.setInteractionPrompt(this.withPlannerPrompt(prompt));
 
-    if (nearNpc && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
-      if (!areaNpcConfig) return;
-      this.handleNpcInteraction(areaNpcConfig.dialogueId);
+    if (nearbyNpcView && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      this.handleNpcInteraction(nearbyNpcView);
     }
 
     this.enforceAreaCollision();
@@ -1151,8 +1162,8 @@ export class MainScene extends Phaser.Scene {
       const worldSpawn = this.buildWorldSpawnPoint(spawnFrom.id, spawnFrom.x, spawnFrom.y + 52);
       this.player.setPosition(worldSpawn.x, worldSpawn.y);
       this.highlightWorldPlace(spawnFrom.id);
-      this.interactionTarget.setVisible(false);
-      this.interactionLabel.setVisible(false);
+      this.refreshAreaNpcVisibility(area);
+      this.refreshAreaNpcHighlight(null);
       this.controlHintText?.setText("WASD / Arrow: \uC774\uB3D9  |  E: \uC7A5\uC18C \uC0C1\uD638\uC791\uC6A9  |  ESC: \uBA54\uB274");
       this.updateHudState({ locationLabel: AREA_LABEL.world });
       this.lastSafePlayerPosition = { x: this.player.x, y: this.player.y };
@@ -1170,22 +1181,8 @@ export class MainScene extends Phaser.Scene {
     this.controlHintText?.setText("WASD / Arrow: \uC774\uB3D9  |  E: \uC0C1\uD638\uC791\uC6A9  |  Q: \uC804\uCCB4 \uC9C0\uB3C4  |  ESC: \uBA54\uB274");
     this.updateHudState({ locationLabel: AREA_LABEL[area] });
     this.lastSafePlayerPosition = { x: this.player.x, y: this.player.y };
-    const npcConfig = this.getAreaNpcConfig(area);
-    if (!npcConfig) {
-      this.interactionTarget.setVisible(false);
-      this.interactionLabel.setVisible(false);
-      return;
-    }
-
-    this.interactionTarget.setPosition(npcConfig.x, npcConfig.y);
-    this.interactionTarget.setFillStyle(0x6e4f2b, 1);
-    this.interactionTarget.setVisible(true);
-    this.interactionLabel.setText(NPC_DIALOGUE_SCRIPTS[npcConfig.dialogueId]?.npcLabel ?? "NPC");
-    this.interactionLabel.setPosition(
-      this.px(this.interactionTarget.x + npcConfig.labelOffsetX),
-      this.px(this.interactionTarget.y + npcConfig.labelOffsetY)
-    );
-    this.interactionLabel.setVisible(true);
+    this.refreshAreaNpcVisibility(area);
+    this.refreshAreaNpcHighlight(null);
   }
 
   private buildWorldSpawnPoint(placeId: WorldPlaceId, fallbackX: number, fallbackY: number): { x: number; y: number } {
@@ -1248,13 +1245,93 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private isNearPoint(targetX: number, targetY: number, distance: number): boolean {
-    return Phaser.Math.Distance.Between(this.player.x, this.player.y, targetX, targetY) <= distance;
+  private getAreaRoot(area: Exclude<AreaId, "world">): Phaser.GameObjects.Container | undefined {
+    if (area === "downtown") return this.downtownMapRoot;
+    return this.campusMapRoot;
   }
 
-  private getAreaNpcConfig(area: AreaId): (typeof AREA_NPC_CONFIG)["downtown"] | null {
+  private createAreaNpcViews(): void {
+    (Object.entries(AREA_NPC_CONFIGS) as Array<[Exclude<AreaId, "world">, AreaNpcConfig[]]>).forEach(([area, configs]) => {
+      const root = this.getAreaRoot(area);
+      if (!root) return;
+
+      configs.forEach((config) => {
+        const script = this.getDialogueScript(config.dialogueId);
+        const marker = this.add.rectangle(config.x, config.y, 28, 34, 0x6e4f2b, 1);
+        marker.setStrokeStyle(2, 0x4b351b, 1);
+        const label = this.add.text(
+          this.px(config.x + config.labelOffsetX),
+          this.px(config.y + config.labelOffsetY),
+          script?.npcLabel ?? "NPC",
+          {
+            fontFamily: this.uiFontFamily,
+            color: "#f6e6c8",
+            fontSize: "14px",
+            resolution: 2
+          }
+        );
+        label.setVisible(true);
+        root.add([marker, label]);
+        this.areaNpcViews.push({ area, config, marker, label });
+      });
+    });
+  }
+
+  private getDialogueScript(dialogueId: NpcDialogueId): NpcDialogueScript | null {
+    if (this.runtimeDialogueScripts[dialogueId]) {
+      return this.runtimeDialogueScripts[dialogueId] ?? null;
+    }
+
+    if (dialogueId === "campus_script_npc") {
+      const rawJson = this.cache.json.get("story_fixed_week1");
+      const jsonScript = buildDialogueScriptFromFixedEventJson(dialogueId, rawJson, "스크립트 NPC");
+      if (jsonScript) {
+        this.runtimeDialogueScripts[dialogueId] = jsonScript;
+        return jsonScript;
+      }
+    }
+
+    return NPC_DIALOGUE_SCRIPTS[dialogueId] ?? null;
+  }
+
+  private refreshAreaNpcVisibility(area: AreaId): void {
+    this.areaNpcViews.forEach((view) => {
+      const visible = area !== "world" && view.area === area;
+      view.marker.setVisible(visible);
+      view.label.setVisible(visible);
+      if (visible) {
+        view.marker.setFillStyle(0x6e4f2b, 1);
+        view.marker.setStrokeStyle(2, 0x4b351b, 1);
+      }
+    });
+  }
+
+  private getNearestAreaNpcView(area: AreaId, maxDistance: number): AreaNpcView | null {
     if (area === "world") return null;
-    return AREA_NPC_CONFIG[area];
+
+    let nearestView: AreaNpcView | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    this.areaNpcViews.forEach((view) => {
+      if (view.area !== area || !view.marker.visible) return;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, view.config.x, view.config.y);
+      if (distance <= maxDistance && distance < nearestDistance) {
+        nearestView = view;
+        nearestDistance = distance;
+      }
+    });
+
+    return nearestView;
+  }
+
+  private refreshAreaNpcHighlight(activeView: AreaNpcView | null): void {
+    this.activeAreaNpcView = activeView;
+    this.areaNpcViews.forEach((view) => {
+      const isActive = activeView?.config.dialogueId === view.config.dialogueId && activeView.area === view.area;
+      view.marker.setFillStyle(isActive ? view.config.flashColor : 0x6e4f2b, 1);
+      view.marker.setStrokeStyle(2, isActive ? 0xf2e8b6 : 0x4b351b, 1);
+      view.label.setColor(isActive ? "#fff6d0" : "#f6e6c8");
+    });
   }
 
   private isNightTime(): boolean {
@@ -2294,20 +2371,17 @@ export class MainScene extends Phaser.Scene {
     this.dialogueActionButtonText = ui.actionButtonText;
   }
 
-  private handleNpcInteraction(dialogueId: NpcDialogueId): void {
-    const npcConfig = this.getAreaNpcConfig(this.currentArea);
-    const flashColor = npcConfig?.flashColor ?? 0xb07a3c;
-
-    this.interactionTarget.setFillStyle(flashColor, 1);
+  private handleNpcInteraction(npcView: AreaNpcView): void {
+    npcView.marker.setFillStyle(npcView.config.flashColor, 1);
     this.time.delayedCall(160, () => {
-      this.interactionTarget.setFillStyle(0x6e4f2b, 1);
+      this.refreshAreaNpcHighlight(this.activeAreaNpcView);
     });
 
-    this.startNpcDialogue(dialogueId);
+    this.startNpcDialogue(npcView.config.dialogueId);
   }
 
   private startNpcDialogue(dialogueId: NpcDialogueId): void {
-    const script = NPC_DIALOGUE_SCRIPTS[dialogueId];
+    const script = this.getDialogueScript(dialogueId);
     if (!script) {
       this.showSystemToast("\uB300\uD654 \uC2A4\uD06C\uB9BD\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
       return;
@@ -2443,7 +2517,7 @@ export class MainScene extends Phaser.Scene {
 
   private getCurrentDialogueNode(): DialogueNode | null {
     if (!this.activeDialogueId || !this.activeDialogueNodeId) return null;
-    const script = NPC_DIALOGUE_SCRIPTS[this.activeDialogueId];
+    const script = this.getDialogueScript(this.activeDialogueId);
     if (!script) return null;
     return script.nodes[this.activeDialogueNodeId] ?? null;
   }
