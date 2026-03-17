@@ -30,6 +30,7 @@ export function createWeeklyPlannerModal(params: {
   week: number;
   dayLabels: readonly string[];
   initialPlan: WeeklyPlanOptionId[];
+  completedSlotIndices?: ReadonlySet<number>;
   getBodyStyle: BodyStyleFn;
   createActionButton: ActionButtonFn;
   uiPanelInnerBorderColor: number;
@@ -41,6 +42,7 @@ export function createWeeklyPlannerModal(params: {
     week,
     dayLabels,
     initialPlan,
+    completedSlotIndices,
     getBodyStyle,
     createActionButton,
     uiPanelInnerBorderColor,
@@ -50,18 +52,20 @@ export function createWeeklyPlannerModal(params: {
 
   const centerX = Math.round(GAME_CONSTANTS.WIDTH / 2);
   const centerY = Math.round(GAME_CONSTANTS.HEIGHT / 2);
+  const panelWidth = 940;
+  const panelHeight = 600;
   const overlay = scene.add.rectangle(centerX, centerY, GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT, 0x000000, 0.42);
-  const panelOuter = createPanelOuterBorder(scene, centerX, centerY, 940, 600);
+  const panelOuter = createPanelOuterBorder(scene, centerX, centerY, panelWidth, panelHeight);
   panelOuter.setStrokeStyle(3, uiPanelOuterBorderColor, 1);
-  const panel = scene.add.rectangle(centerX, centerY, 940, 600, 0x183657, 0.96);
+  const panel = scene.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x183657, 0.96);
   panel.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
 
   const title = scene.add.text(centerX, centerY - 258, "주간 계획표", getBodyStyle(34, "#e6f3ff", "bold"));
   title.setOrigin(0.5);
   const subtitle = scene.add.text(
-    centerX,
+    centerX - 54,
     centerY - 220,
-    `${week}주차 월~금 오전/오후 일정을 선택하세요`,
+    `${week}주차 평일 오전/오후 일정을 선택하세요`,
     getBodyStyle(19, "#b6d6fb", "bold")
   );
   subtitle.setOrigin(0.5);
@@ -84,12 +88,13 @@ export function createWeeklyPlannerModal(params: {
   slotObjects.push(amHeader, pmHeader);
 
   WEEKLY_PLAN_OPTIONS.forEach((option, index) => {
-    const legend = scene.add.rectangle(centerX - 300 + index * 300, centerY + 188, 18, 18, option.color, 1);
+    const legendY = centerY - 252 + index * 28;
+    const legend = scene.add.rectangle(centerX + 205, legendY, 18, 18, option.color, 1);
     legend.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
     const legendText = scene.add.text(
-      centerX - 268 + index * 300,
-      centerY + 188,
-      `${option.label} · ${option.description}`,
+      centerX + 225,
+      legendY,
+      `${option.label} | ${option.description}`,
       getBodyStyle(15, "#d7e9ff", "bold")
     );
     legendText.setOrigin(0, 0.5);
@@ -98,14 +103,21 @@ export function createWeeklyPlannerModal(params: {
 
   const refreshSlot = (
     bg: Phaser.GameObjects.Rectangle,
+    badgeBg: Phaser.GameObjects.Rectangle,
     badgeText: Phaser.GameObjects.Text,
     infoText: Phaser.GameObjects.Text,
-    optionId: WeeklyPlanOptionId
+    optionId: WeeklyPlanOptionId,
+    completed: boolean
   ) => {
     const option = getWeeklyPlanOption(optionId);
-    bg.setFillStyle(option.color, 0.95);
-    badgeText.setText(badgeText.text);
-    infoText.setText(`${option.label}  |  ${option.description}`);
+    bg.setFillStyle(completed ? 0x4c5f76 : option.color, completed ? 0.82 : 0.95);
+    badgeBg.setFillStyle(completed ? 0x22384f : 0x133150, 0.96);
+    badgeText.setText(completed ? `${badgeText.text.replace(" 완료", "")} 완료` : badgeText.text.replace(" 완료", ""));
+    infoText.setText(completed ? `${option.label}  |  완료` : `${option.label}  |  ${option.description}`);
+    bg.disableInteractive();
+    if (!completed) {
+      bg.setInteractive({ useHandCursor: true });
+    }
   };
 
   WEEKLY_PLAN_DAY_INDICES.forEach((dayIndex) => {
@@ -119,7 +131,6 @@ export function createWeeklyPlannerModal(params: {
       const slotIndex = getWeeklyPlanSlotIndex(dayIndex, timeIndex);
       const bg = scene.add.rectangle(x, rowY, slotWidth, slotHeight, 0x2d5c8e, 0.95);
       bg.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
-      bg.setInteractive({ useHandCursor: true });
       const badgeBg = scene.add.rectangle(x - slotWidth / 2 + 42, rowY, 58, 28, 0x133150, 0.96);
       badgeBg.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
       const badgeText = scene.add.text(x - slotWidth / 2 + 42, rowY, timeLabel, getBodyStyle(13, "#f4fbff", "bold"));
@@ -127,12 +138,16 @@ export function createWeeklyPlannerModal(params: {
       const infoText = scene.add.text(x - slotWidth / 2 + 82, rowY, "", getBodyStyle(15, "#f7fbff", "bold"));
       infoText.setOrigin(0, 0.5);
 
-      refreshSlot(bg, badgeText, infoText, draftPlan[slotIndex]);
+      const completed = completedSlotIndices?.has(slotIndex) ?? false;
+      refreshSlot(bg, badgeBg, badgeText, infoText, draftPlan[slotIndex], completed);
       bg.on("pointerdown", () => {
+        if (completedSlotIndices?.has(slotIndex)) {
+          return;
+        }
         const currentIndex = WEEKLY_PLAN_OPTIONS.findIndex((option) => option.id === draftPlan[slotIndex]);
         const nextIndex = (currentIndex + 1) % WEEKLY_PLAN_OPTIONS.length;
         draftPlan[slotIndex] = WEEKLY_PLAN_OPTIONS[nextIndex].id;
-        refreshSlot(bg, badgeText, infoText, draftPlan[slotIndex]);
+        refreshSlot(bg, badgeBg, badgeText, infoText, draftPlan[slotIndex], false);
       });
 
       slotObjects.push(bg, badgeBg, badgeText, infoText);

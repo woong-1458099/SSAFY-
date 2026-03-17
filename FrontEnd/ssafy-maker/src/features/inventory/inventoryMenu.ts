@@ -3,6 +3,7 @@ import Phaser from "phaser";
 export type SlotView = {
   bg: Phaser.GameObjects.Rectangle;
   icon: Phaser.GameObjects.Rectangle;
+  iconImage: Phaser.GameObjects.Image;
   iconText: Phaser.GameObjects.Text;
   stackText: Phaser.GameObjects.Text;
 };
@@ -85,6 +86,9 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
     icon.setStrokeStyle(1, 0x4f98df, 1);
     icon.setVisible(false);
 
+    const iconImage = scene.add.image(x, y, "__WHITE");
+    iconImage.setVisible(false);
+
     const iconText = scene.add.text(x, y + 1, "", getBodyStyle(Math.max(12, Math.floor(size * 0.28)), "#e8f4ff", "bold"));
     iconText.setOrigin(0.5);
     iconText.setVisible(false);
@@ -93,7 +97,7 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
     stackText.setOrigin(1, 1);
     stackText.setVisible(false);
 
-    return { bg, icon, iconText, stackText };
+    return { bg, icon, iconImage, iconText, stackText };
   };
 
   const equipSlotSize = 102;
@@ -119,7 +123,7 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
     view.bg.on("pointerdown", () => onEquipDown(def.key, view));
 
     equipmentSlotViews[def.key] = view;
-    equipmentObjects.push(view.bg, view.icon, view.iconText, view.stackText, label);
+    equipmentObjects.push(view.bg, view.icon, view.iconImage, view.iconText, view.stackText, label);
   });
 
   const inventorySlotSize = 54;
@@ -144,7 +148,7 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
       view.bg.on("pointerout", () => onInventoryOut(slotIndex, view));
       view.bg.on("pointerdown", () => onInventoryDown(slotIndex, view));
 
-      inventoryObjects.push(scene.add.container(0, 0, [view.bg, view.icon, view.iconText, view.stackText]));
+      inventoryObjects.push(scene.add.container(0, 0, [view.bg, view.icon, view.iconImage, view.iconText, view.stackText]));
     }
   }
 

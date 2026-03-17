@@ -1,0 +1,40 @@
+{
+  "source": "public/assets/raw/tilesets/cafe_items.aseprite",
+  "size": {
+    "width": 32,
+    "height": 32
+  },
+  "composite_file": "cafe_items_full.png",
+  "layers": [
+    {
+      "layer_index": 0,
+      "layer_name": "레이어 3",
+      "file_name": "cafe_items_layer_01.png"
+    },
+    {
+      "layer_index": 2,
+      "layer_name": "레이어 9",
+      "file_name": "cafe_items_layer_03.png"
+    },
+    {
+      "layer_index": 3,
+      "layer_name": "레이어 4",
+      "file_name": "cafe_items_layer_04.png"
+    },
+    {
+      "layer_index": 4,
+      "layer_name": "레이어 5",
+      "file_name": "cafe_items_layer_05.png"
+    },
+    {
+      "layer_index": 5,
+      "layer_name": "레이어 7",
+      "file_name": "cafe_items_layer_06.png"
+    },
+    {
+      "layer_index": 6,
+      "layer_name": "레이어 8",
+      "file_name": "cafe_items_layer_07.png"
+    }
+  ]
+}

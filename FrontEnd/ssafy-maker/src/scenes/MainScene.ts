@@ -51,6 +51,7 @@ import {
   type PlayerAvatarData,
   type PlayerVisualParts,
 } from "@features/avatar/playerAvatar";
+import { openLegacyMinigameMenu } from "@features/minigame/minigameLauncher";
 import { createHomeActionModal } from "@features/home/homeActionModal";
 import { resolveHomeAction, type HomeActionId } from "@features/home/homeActions";
 import {
@@ -61,9 +62,11 @@ import {
 } from "@features/progression/services/timeProgression";
 import {
   createDefaultWeeklyPlan,
+  WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS,
   getCurrentWeeklyPlanSlotKey,
   getWeeklyPlanOption,
   getWeeklyPlanSlotIndex,
+  parseWeeklyPlanSlotKey,
   parseWeeklyPlanOptionId,
   WEEKLY_PLAN_OPTIONS,
   type WeeklyPlanOption,
@@ -119,6 +122,10 @@ type InventoryItemTemplate = {
   effect: string;
   stackable: boolean;
   color: number;
+  iconKey: string;
+  hpDelta?: number;
+  stressDelta?: number;
+  statDelta?: Partial<Record<StatKey, number>>;
 };
 
 type InventoryItemStack = {
@@ -128,56 +135,137 @@ type InventoryItemStack = {
 
 const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
   {
-    templateId: "kbd-basic",
-    name: "\uAE30\uACC4\uC2DD \uD0A4\uBCF4\uB4DC",
+    templateId: "kbd-gaming",
+    name: "\uAC8C\uC774\uBC0D \uD0A4\uBCF4\uB4DC",
     shortLabel: "KB",
     kind: "equipment",
     equipSlot: "keyboard",
-    price: 3500,
-    sellPrice: 1800,
-    effect: "\uD0C0\uC774\uD551 \uC131\uB2A5 +5",
+    price: 4200,
+    sellPrice: 2100,
+    effect: "FE \uB2A5\uB825\uCE58 +5",
     stackable: false,
-    color: 0x78a6d1
+    color: 0x78a6d1,
+    iconKey: "shop-item-keyboard",
+    statDelta: { fe: 5 }
   },
   {
-    templateId: "mouse-basic",
+    templateId: "mouse-gaming",
     name: "\uAC8C\uC774\uBC0D \uB9C8\uC6B0\uC2A4",
     shortLabel: "MS",
     kind: "equipment",
     equipSlot: "mouse",
-    price: 2800,
-    sellPrice: 1400,
-    effect: "\uC791\uC5C5 \uC18D\uB3C4 +5%",
+    price: 3200,
+    sellPrice: 1600,
+    effect: "BE \uB2A5\uB825\uCE58 +5",
     stackable: false,
-    color: 0x9a86d4
+    color: 0x9a86d4,
+    iconKey: "shop-item-mouse",
+    statDelta: { be: 5 }
   },
   {
-    templateId: "snack-energybar",
-    name: "\uC5D0\uB108\uC9C0\uBC14",
+    templateId: "item-chocolate",
+    name: "\uCD08\uCF54\uB9BF",
+    shortLabel: "CH",
+    kind: "consumable",
+    price: 500,
+    sellPrice: 250,
+    effect: "HP +5, \uC2A4\uD2B8\uB808\uC2A4 -3",
+    stackable: true,
+    color: 0xd89a66,
+    iconKey: "shop-item-chocolate",
+    hpDelta: 5,
+    stressDelta: -3
+  },
+  {
+    templateId: "item-ramen",
+    name: "\uB77C\uBA74",
+    shortLabel: "RA",
+    kind: "consumable",
+    price: 1200,
+    sellPrice: 600,
+    effect: "HP +12, \uC2A4\uD2B8\uB808\uC2A4 -2",
+    stackable: true,
+    color: 0xb17b4d,
+    iconKey: "shop-item-ramen",
+    hpDelta: 12,
+    stressDelta: -2
+  },
+  {
+    templateId: "item-dosirak",
+    name: "\uB3C4\uC2DC\uB77D",
+    shortLabel: "DO",
+    kind: "consumable",
+    price: 1800,
+    sellPrice: 900,
+    effect: "HP +18, \uC2A4\uD2B8\uB808\uC2A4 -5",
+    stackable: true,
+    color: 0xc9936a,
+    iconKey: "shop-item-dosirak",
+    hpDelta: 18,
+    stressDelta: -5
+  },
+  {
+    templateId: "item-energy-drink",
+    name: "\uC5D0\uB108\uC9C0 \uB4DC\uB9C1\uD06C",
+    shortLabel: "ED",
+    kind: "consumable",
+    price: 1300,
+    sellPrice: 650,
+    effect: "HP +9, \uC2A4\uD2B8\uB808\uC2A4 +6",
+    stackable: true,
+    color: 0x7dd2d4,
+    iconKey: "shop-item-energy-drink",
+    hpDelta: 9,
+    stressDelta: 6
+  },
+  {
+    templateId: "item-snack",
+    name: "\uACFC\uC790",
     shortLabel: "SN",
+    kind: "consumable",
+    price: 800,
+    sellPrice: 400,
+    effect: "HP +6, \uC2A4\uD2B8\uB808\uC2A4 -1",
+    stackable: true,
+    color: 0xf0b75d,
+    iconKey: "shop-item-snack",
+    hpDelta: 6,
+    stressDelta: -1
+  },
+  {
+    templateId: "item-cigarette",
+    name: "\uB2F4\uBC30",
+    shortLabel: "CG",
     kind: "consumable",
     price: 900,
     sellPrice: 450,
-    effect: "\uCCB4\uB825 +12, \uC2A4\uD2B8\uB808\uC2A4 -4",
+    effect: "HP -7, \uC2A4\uD2B8\uB808\uC2A4 -10",
     stackable: true,
-    color: 0xd89a66
+    color: 0xb7bcc9,
+    iconKey: "shop-item-cigarette",
+    hpDelta: -7,
+    stressDelta: -10
   },
   {
-    templateId: "item-coffee",
-    name: "\uCEE4\uD53C",
-    shortLabel: "CF",
+    templateId: "item-soju",
+    name: "\uC18C\uC8FC",
+    shortLabel: "SJ",
     kind: "consumable",
-    price: 700,
-    sellPrice: 350,
-    effect: "\uCCB4\uB825 +7, \uC2A4\uD2B8\uB808\uC2A4 -2",
+    price: 1100,
+    sellPrice: 550,
+    effect: "HP -4, \uC2A4\uD2B8\uB808\uC2A4 -12, \uD611\uC5C5 +2",
     stackable: true,
-    color: 0xb17b4d
+    color: 0x85d5b8,
+    iconKey: "shop-item-soju",
+    hpDelta: -4,
+    stressDelta: -12,
+    statDelta: { teamwork: 2 }
   }
 ];
 
 const STARTER_ITEM_TEMPLATES: InventoryItemTemplate[] = [
   SHOP_ITEM_TEMPLATES[2],
-  SHOP_ITEM_TEMPLATES[3]
+  SHOP_ITEM_TEMPLATES[5]
 ];
 
 const WORLD_PLACE_NODES: WorldPlaceNode[] = [
@@ -304,6 +392,9 @@ const AREA_INTERACTION_LAYER_NAMES: Record<AreaId, string[]> = {
   campus: ["tile layer 2", "tile layer 4(2)"]
 };
 
+const EVENING_TIME_INDEX = 2;
+const NIGHT_TIME_INDEX = 3;
+
 export class MainScene extends Phaser.Scene {
   private initialSaveSlotId: string | null = null;
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -333,6 +424,7 @@ export class MainScene extends Phaser.Scene {
   private escapeKey?: Phaser.Input.Keyboard.Key;
   private interactKey?: Phaser.Input.Keyboard.Key;
   private mapKey?: Phaser.Input.Keyboard.Key;
+  private plannerKey?: Phaser.Input.Keyboard.Key;
   private upKey?: Phaser.Input.Keyboard.Key;
   private downKey?: Phaser.Input.Keyboard.Key;
   private endingDebugKey?: Phaser.Input.Keyboard.Key;
@@ -351,6 +443,7 @@ export class MainScene extends Phaser.Scene {
   private weeklyPlanActivityRoot?: Phaser.GameObjects.Container;
   private weeklyPlanActivityTimer?: Phaser.Time.TimerEvent;
   private weeklyPlanActivityOpen = false;
+  private weeklyPlannerPopupOpen = false;
   private tooltipRoot?: Phaser.GameObjects.Container;
   private carriedItemRoot?: Phaser.GameObjects.Container;
   private carriedItem: InventoryItemStack | null = null;
@@ -429,6 +522,18 @@ export class MainScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayerAvatarAssets(this);
+    this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.ui_practice, "assets/game/ui/UIpractice.png");
+    this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.rest_api_db, "assets/game/ui/DBconsult.png");
+    this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.team_project, "assets/game/ui/TeamPJT.png");
+    this.load.image("shop-item-chocolate", "assets/game/ui/conv_items/chocolate.png");
+    this.load.image("shop-item-ramen", "assets/game/ui/conv_items/ramen.png");
+    this.load.image("shop-item-dosirak", "assets/game/ui/conv_items/dosirak.png");
+    this.load.image("shop-item-energy-drink", "assets/game/ui/conv_items/energy_drink.png");
+    this.load.image("shop-item-snack", "assets/game/ui/conv_items/snack.png");
+    this.load.image("shop-item-cigarette", "assets/game/ui/conv_items/cigarette.png");
+    this.load.image("shop-item-soju", "assets/game/ui/conv_items/soju.png");
+    this.load.image("shop-item-keyboard", "assets/game/ui/conv_items/keyboard.png");
+    this.load.image("shop-item-mouse", "assets/game/ui/conv_items/mouse.png");
   }
 
   create(): void {
@@ -458,6 +563,7 @@ export class MainScene extends Phaser.Scene {
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.interactKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.mapKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+    this.plannerKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.upKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
     this.downKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
     // Development shortcut for verifying the ending flow without waiting for week 6.
@@ -595,6 +701,11 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    if (!this.endingFlowStarted && this.plannerKey && Phaser.Input.Keyboard.JustDown(this.plannerKey)) {
+      this.openWeeklyPlannerPopup();
+      return;
+    }
+
     if (this.currentArea !== "world" && this.mapKey && Phaser.Input.Keyboard.JustDown(this.mapKey)) {
       const returnPlace: WorldPlaceId = this.currentArea === "downtown" ? "downtown" : "campus";
       this.enterArea("world", returnPlace);
@@ -611,8 +722,8 @@ export class MainScene extends Phaser.Scene {
       this.highlightWorldPlace(nearbyPlace?.id ?? null);
       this.hud.setInteractionPrompt(
         nearbyPlace
-          ? "E \uC7A5\uC18C \uC774\uB3D9/\uAE30\uB2A5 \uC0AC\uC6A9  |  WASD / Arrow \uC774\uB3D9  |  ESC \uBA54\uB274"
-          : "WASD / Arrow \uC774\uB3D9  |  ESC \uBA54\uB274"
+          ? this.withPlannerPrompt("E \uC7A5\uC18C \uC774\uB3D9/\uAE30\uB2A5 \uC0AC\uC6A9  |  WASD / Arrow \uC774\uB3D9  |  ESC \uBA54\uB274")
+          : this.withPlannerPrompt("WASD / Arrow \uC774\uB3D9  |  ESC \uBA54\uB274")
       );
       if (nearbyPlace && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
         this.handleWorldPlaceInteraction(nearbyPlace);
@@ -628,7 +739,7 @@ export class MainScene extends Phaser.Scene {
     const areaNpcConfig = this.getAreaNpcConfig(this.currentArea);
     const nearNpc = this.isNearPoint(this.interactionTarget.x, this.interactionTarget.y, 74);
     const prompt = nearNpc && areaNpcConfig ? "E \uB300\uD654\uD558\uAE30  |  Q \uC804\uCCB4 \uC9C0\uB3C4" : "Q \uC804\uCCB4 \uC9C0\uB3C4";
-    this.hud.setInteractionPrompt(prompt);
+    this.hud.setInteractionPrompt(this.withPlannerPrompt(prompt));
 
     if (nearNpc && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       if (!areaNpcConfig) return;
@@ -1115,12 +1226,82 @@ export class MainScene extends Phaser.Scene {
     return AREA_NPC_CONFIG[area];
   }
 
+  private isNightTime(): boolean {
+    return this.timeCycleIndex === NIGHT_TIME_INDEX;
+  }
+
+  private isEveningOrNight(): boolean {
+    return this.timeCycleIndex === EVENING_TIME_INDEX || this.timeCycleIndex === NIGHT_TIME_INDEX;
+  }
+
+  private getPlaceUnavailableMessage(placeId: WorldPlaceId): { title: string; description: string } | null {
+    if (placeId === "cafe" && this.isNightTime()) {
+      return {
+        title: "카페",
+        description: "지금은 열지 않습니다.\n밤에는 이용할 수 없습니다."
+      };
+    }
+
+    return null;
+  }
+
+  private getDowntownBuildingUnavailableMessage(
+    buildingId: DowntownBuildingId
+  ): { title: string; description: string } | null {
+    const config = getDowntownBuildingConfig(buildingId);
+
+    if (buildingId === "hof" && !this.isEveningOrNight()) {
+      return {
+        title: config.title,
+        description: "지금은 열지 않습니다.\n호프 알바는 저녁과 밤에만 가능합니다."
+      };
+    }
+
+    if (this.isNightTime() && (buildingId === "gym" || buildingId === "ramenthings" || buildingId === "lottery")) {
+      return {
+        title: config.title,
+        description: "지금은 열지 않습니다.\n밤에는 이용할 수 없습니다."
+      };
+    }
+
+    return null;
+  }
+
+  private openUnavailablePlacePopup(title: string, description: string, backgroundKey: string | null): void {
+    this.closePlacePopup();
+    const backgroundImage = this.createPlaceBackgroundImage(backgroundKey);
+    this.placePopupRoot = createPlaceActionModal({
+      scene: this,
+      width: 500,
+      height: 270,
+      title,
+      description,
+      actionText: "확인",
+      showCloseButton: false,
+      backgroundImage,
+      getBodyStyle: this.getBodyStyle.bind(this),
+      createActionButton: this.createActionButton.bind(this),
+      uiPanelInnerBorderColor: this.uiPanelInnerBorderColor,
+      uiPanelOuterBorderColor: this.uiPanelOuterBorderColor,
+      onAction: () => this.closePlacePopup(),
+      onClose: () => this.closePlacePopup()
+    });
+    this.placePopupRoot.setDepth(920);
+    this.placePopupOpen = true;
+  }
+
   private openPlacePopup(placeId: WorldPlaceId): void {
     if (placeId === "home") {
       this.openHomeActionPopup();
       return;
     }
     if (placeId !== "cafe" && placeId !== "store") {
+      return;
+    }
+
+    const unavailable = this.getPlaceUnavailableMessage(placeId);
+    if (unavailable) {
+      this.openUnavailablePlacePopup(unavailable.title, unavailable.description, getPlaceBackgroundTextureKey(placeId));
       return;
     }
 
@@ -1160,7 +1341,37 @@ export class MainScene extends Phaser.Scene {
       .setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT);
   }
 
+  private createTextureImage(textureKey: string | null): Phaser.GameObjects.Image | null {
+    if (!textureKey || !this.textures.exists(textureKey)) return null;
+    return this.add.image(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), textureKey);
+  }
+
+  private applyItemIconImage(
+    image: Phaser.GameObjects.Image,
+    template: InventoryItemTemplate,
+    maxWidth: number,
+    maxHeight: number
+  ): boolean {
+    if (!template.iconKey || !this.textures.exists(template.iconKey)) {
+      image.setVisible(false);
+      return false;
+    }
+
+    image.setTexture(template.iconKey);
+    const frameWidth = Math.max(1, image.width);
+    const frameHeight = Math.max(1, image.height);
+    const scale = Math.min(maxWidth / frameWidth, maxHeight / frameHeight);
+    image.setScale(scale);
+    image.setTint(0xffffff);
+    image.setVisible(true);
+    return true;
+  }
+
   private closePlacePopup(): void {
+    if (this.weeklyPlannerPopupOpen) {
+      this.weeklyPlannerPopupOpen = false;
+      this.hud.setStatusPanelsVisible(true);
+    }
     this.placePopupOpen = false;
     this.placePopupRoot?.destroy(true);
     this.placePopupRoot = undefined;
@@ -1168,6 +1379,11 @@ export class MainScene extends Phaser.Scene {
 
   private usePlaceFeature(placeId: WorldPlaceId): void {
     if (placeId !== "cafe" && placeId !== "store") {
+      return;
+    }
+    const unavailable = this.getPlaceUnavailableMessage(placeId);
+    if (unavailable) {
+      this.openUnavailablePlacePopup(unavailable.title, unavailable.description, getPlaceBackgroundTextureKey(placeId));
       return;
     }
     const result = resolvePlaceAction(placeId);
@@ -1267,7 +1483,7 @@ export class MainScene extends Phaser.Scene {
 
     const slotIndex = getWeeklyPlanSlotIndex(this.dayCycleIndex, this.timeCycleIndex);
     const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex] ?? WEEKLY_PLAN_OPTIONS[0].id);
-    const backgroundImage = this.createPlaceBackgroundImage(PLACE_BACKGROUND_KEYS.home);
+    const backgroundImage = this.createTextureImage(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS[option.id]);
     const title = `${DAY_CYCLE[this.dayCycleIndex]} ${TIME_CYCLE[this.timeCycleIndex]}`;
     this.closeWeeklyPlanActivity();
     this.weeklyPlanActivityRoot = createWeeklyPlanActivityModal(this, {
@@ -1309,24 +1525,58 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  private withPlannerPrompt(message: string): string {
+    return `${message}  |  P 계획표`;
+  }
+
+  private getCompletedWeeklyPlanSlotIndices(): Set<number> {
+    const completed = new Set<number>();
+    if (this.weeklyPlanWeek !== this.hudState.week || !this.lastAppliedWeeklyPlanSlotKey) {
+      return completed;
+    }
+
+    const parsedSlot = parseWeeklyPlanSlotKey(this.lastAppliedWeeklyPlanSlotKey);
+    if (!parsedSlot || parsedSlot.week !== this.hudState.week) {
+      return completed;
+    }
+
+    const lastCompletedIndex = getWeeklyPlanSlotIndex(parsedSlot.dayIndex, parsedSlot.timeIndex);
+    for (let slotIndex = 0; slotIndex <= lastCompletedIndex; slotIndex += 1) {
+      completed.add(slotIndex);
+    }
+    return completed;
+  }
+
   private openWeeklyPlannerPopup(): void {
     this.closePlacePopup();
+    this.weeklyPlannerPopupOpen = true;
+    this.hud.setStatusPanelsVisible(false);
     this.placePopupRoot = createWeeklyPlannerModal({
       scene: this,
       week: this.hudState.week,
       dayLabels: DAY_CYCLE,
       initialPlan: this.weeklyPlan,
+      completedSlotIndices: this.getCompletedWeeklyPlanSlotIndices(),
       getBodyStyle: this.getBodyStyle.bind(this),
       createActionButton: this.createActionButton.bind(this),
       uiPanelInnerBorderColor: this.uiPanelInnerBorderColor,
       uiPanelOuterBorderColor: this.uiPanelOuterBorderColor,
       onConfirm: (draftPlan) => {
+        const isPlanningNewWeek = this.weeklyPlanWeek < this.hudState.week;
         this.weeklyPlan = [...draftPlan];
         this.weeklyPlanWeek = this.hudState.week;
-        this.lastAppliedWeeklyPlanSlotKey = null;
+        if (isPlanningNewWeek) {
+          this.lastAppliedWeeklyPlanSlotKey = null;
+        }
         this.closePlacePopup();
-        this.showSystemToast(`${this.hudState.week}주차 계획을 확정했습니다`);
-        this.maybeStartWeeklyPlanActivity();
+        this.showSystemToast(
+          isPlanningNewWeek
+            ? `${this.hudState.week}주차 계획을 확정했습니다`
+            : `${this.hudState.week}주차 계획을 수정했습니다`
+        );
+        if (isPlanningNewWeek) {
+          this.maybeStartWeeklyPlanActivity();
+        }
       },
     });
     this.placePopupRoot.setDepth(920);
@@ -1334,6 +1584,16 @@ export class MainScene extends Phaser.Scene {
   }
 
   private openDowntownBuildingPopup(buildingId: DowntownBuildingId): void {
+    const unavailable = this.getDowntownBuildingUnavailableMessage(buildingId);
+    if (unavailable) {
+      this.openUnavailablePlacePopup(
+        unavailable.title,
+        unavailable.description,
+        getDowntownBuildingBackgroundTextureKey(buildingId)
+      );
+      return;
+    }
+
     this.closePlacePopup();
     const buildingBackgroundImage = this.createPlaceBackgroundImage(getDowntownBuildingBackgroundTextureKey(buildingId));
     const config = getDowntownBuildingConfig(buildingId);
@@ -1343,7 +1603,7 @@ export class MainScene extends Phaser.Scene {
       height: 296,
       title: config.title,
       description: config.description,
-      actionText: "\uC774\uC6A9\uD558\uAE30",
+      actionText: config.actionText ?? "\uC774\uC6A9\uD558\uAE30",
       backgroundImage: buildingBackgroundImage,
       getBodyStyle: this.getBodyStyle.bind(this),
       createActionButton: this.createActionButton.bind(this),
@@ -1357,6 +1617,16 @@ export class MainScene extends Phaser.Scene {
   }
 
   private useDowntownBuilding(buildingId: DowntownBuildingId): void {
+    const unavailable = this.getDowntownBuildingUnavailableMessage(buildingId);
+    if (unavailable) {
+      this.openUnavailablePlacePopup(
+        unavailable.title,
+        unavailable.description,
+        getDowntownBuildingBackgroundTextureKey(buildingId)
+      );
+      return;
+    }
+
     const spend = (cost: number): boolean => {
       if (this.hudState.money < cost) {
         this.showSystemToast("\uB3C8\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4");
@@ -2198,30 +2468,10 @@ export class MainScene extends Phaser.Scene {
       return;
     }
     if (action === "openMiniGame") {
-      this.launchMiniGameCenter();
+      openLegacyMinigameMenu(this, SceneKey.Main, () => {
+        this.showSystemToast("\uBBF8\uB2C8\uAC8C\uC784 \uC13C\uD130 \uC785\uC7A5");
+      });
     }
-  }
-
-  private launchMiniGameCenter(): void {
-    if (
-      this.scene.isActive("MenuScene") ||
-      this.scene.isActive("MinigamePauseScene") ||
-      this.scene.isActive("QuizScene") ||
-      this.scene.isActive("RhythmScene") ||
-      this.scene.isActive("DragScene") ||
-      this.scene.isActive("BugScene") ||
-      this.scene.isActive("RunnerScene") ||
-      this.scene.isActive("AimScene") ||
-      this.scene.isActive("TypingScene") ||
-      this.scene.isActive("BusinessSmileScene") ||
-      this.scene.isActive("DontSmileScene")
-    ) {
-      return;
-    }
-
-    this.showSystemToast("\uBBF8\uB2C8\uAC8C\uC784 \uC13C\uD130 \uC785\uC7A5");
-    this.scene.launch("MenuScene", { returnSceneKey: SceneKey.Main });
-    this.scene.pause(SceneKey.Main);
   }
 
   private buildShop(): void {
@@ -2235,36 +2485,40 @@ export class MainScene extends Phaser.Scene {
 
     const overlay = this.add.rectangle(centerX, centerY, GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT, 0x000000, 0.35);
 
-    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 760, 430);
-    const panel = this.add.rectangle(centerX, centerY, 760, 430, 0x163357, 0.96);
+    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 820, 620);
+    const panel = this.add.rectangle(centerX, centerY, 820, 620, 0x163357, 0.96);
     panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
 
-    const title = this.add.text(centerX, centerY - 190, "NPC \uC0C1\uC810", this.getBodyStyle(30, "#e6f3ff", "bold"));
+    const title = this.add.text(centerX, centerY - 282, "\uD3B8\uC758\uC810", this.getBodyStyle(30, "#e6f3ff", "bold"));
     title.setOrigin(0.5);
-    const hint = this.add.text(centerX, centerY + 176, "E / ESC\uB85C \uB2EB\uAE30", this.getBodyStyle(16, "#a8c9ef"));
+    const hint = this.add.text(centerX, centerY + 274, "E / ESC\uB85C \uB2EB\uAE30", this.getBodyStyle(16, "#a8c9ef"));
     hint.setOrigin(0.5);
 
     const cards: Phaser.GameObjects.GameObject[] = [];
 
     SHOP_ITEM_TEMPLATES.forEach((item, idx) => {
-      const col = idx % 2;
-      const row = Math.floor(idx / 2);
-      const x = this.px(centerX - 170 + col * 340);
-      const y = this.px(centerY - 62 + row * 165);
-      const card = this.add.rectangle(x, y, 300, 140, 0x234873, 1);
+      const col = idx % 3;
+      const row = Math.floor(idx / 3);
+      const x = this.px(centerX - 248 + col * 248);
+      const y = this.px(centerY - 148 + row * 178);
+      const card = this.add.rectangle(x, y, 220, 152, 0x234873, 1);
       card.setStrokeStyle(2, 0x5cb0ff, 1);
 
-      const icon = this.add.rectangle(x - 100, y, 66, 66, item.color, 1);
+      const icon = this.add.rectangle(x, y - 30, 74, 74, 0xf5fbff, 1);
       icon.setStrokeStyle(2, 0x5cb0ff, 1);
-      const iconLabel = this.add.text(x - 100, y + 1, item.shortLabel, this.getBodyStyle(22, "#f0f8ff", "bold"));
+      const iconImage = this.add.image(x, y - 30, "__WHITE");
+      const hasIconImage = this.applyItemIconImage(iconImage, item, 62, 62);
+      icon.setFillStyle(0xf5fbff, hasIconImage ? 0 : 1);
+      const iconLabel = this.add.text(x, y - 29, item.shortLabel, this.getBodyStyle(22, "#234873", "bold"));
       iconLabel.setOrigin(0.5);
+      iconLabel.setVisible(!hasIconImage);
 
-      const name = this.add.text(x - 22, y - 28, item.name, this.getBodyStyle(19, "#e6f3ff", "bold"));
-      name.setOrigin(0, 0.5);
-      const price = this.add.text(x - 22, y + 2, `${item.price.toLocaleString("ko-KR")} G`, this.getBodyStyle(18, "#b6d6fb", "bold"));
-      price.setOrigin(0, 0.5);
-      const buyHint = this.add.text(x - 22, y + 30, "\uD074\uB9AD \uAD6C\uB9E4", this.getBodyStyle(15, "#a1c5ef"));
-      buyHint.setOrigin(0, 0.5);
+      const name = this.add.text(x, y + 20, item.name, this.getBodyStyle(16, "#e6f3ff", "bold"));
+      name.setOrigin(0.5);
+      const price = this.add.text(x, y + 50, `${item.price.toLocaleString("ko-KR")} G`, this.getBodyStyle(17, "#b6d6fb", "bold"));
+      price.setOrigin(0.5);
+      const buyHint = this.add.text(x, y + 75, "\uD074\uB9AD \uAD6C\uB9E4", this.getBodyStyle(14, "#a1c5ef"));
+      buyHint.setOrigin(0.5);
 
       card.setInteractive({ useHandCursor: true });
       card.on("pointerover", (pointer: Phaser.Input.Pointer) => {
@@ -2280,7 +2534,7 @@ export class MainScene extends Phaser.Scene {
       });
       card.on("pointerdown", () => this.purchaseFromShop(item));
 
-      cards.push(card, icon, iconLabel, name, price, buyHint);
+      cards.push(card, icon, iconImage, iconLabel, name, price, buyHint);
     });
 
     const objects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, hint, ...cards];
@@ -2359,15 +2613,18 @@ export class MainScene extends Phaser.Scene {
 
       if (!template) {
         view.icon.setVisible(false);
+        view.iconImage.setVisible(false);
         view.iconText.setVisible(false);
         view.stackText.setVisible(false);
         return;
       }
 
-      view.icon.setFillStyle(template.color, 1);
+      const hasIconImage = this.applyItemIconImage(view.iconImage, template, view.icon.width - 10, view.icon.height - 10);
+      view.icon.setFillStyle(0xf5fbff, hasIconImage ? 0 : 1);
       view.icon.setVisible(true);
       view.iconText.setText(template.shortLabel);
-      view.iconText.setVisible(true);
+      view.iconText.setColor(hasIconImage ? "#e8f4ff" : "#234873");
+      view.iconText.setVisible(!hasIconImage);
       view.stackText.setText(quantity > 1 ? `${quantity}` : "");
       view.stackText.setVisible(quantity > 1);
     };
@@ -2445,8 +2702,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private seedDemoItems(): void {
-    this.addItemToInventory(STARTER_ITEM_TEMPLATES[0], 3, false);
-    this.addItemToInventory(STARTER_ITEM_TEMPLATES[1], 2, false);
+    STARTER_ITEM_TEMPLATES.forEach((template, index) => {
+      this.addItemToInventory(template, index === 0 ? 2 : 1, false);
+    });
   }
 
   private refreshStatsUi(): void {
@@ -2462,23 +2720,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private getEquipmentStatDelta(item: InventoryItemTemplate): Partial<Record<StatKey, number>> {
-    if (item.templateId === "kbd-basic") {
-      return { fe: 5 };
-    }
-    if (item.templateId === "mouse-basic") {
-      return { be: 5 };
-    }
-    return {};
+    return item.statDelta ?? {};
   }
 
   private getConsumableStatDelta(item: InventoryItemTemplate): Partial<Record<StatKey, number>> {
-    if (item.templateId === "snack-energybar") {
-      return { stress: -4 };
-    }
-    if (item.templateId === "item-coffee") {
-      return { fe: 1, be: 1, stress: -2 };
-    }
-    return {};
+    return item.statDelta ?? {};
   }
 
   private applyStatDelta(delta: Partial<Record<StatKey, number>>, multiplier: 1 | -1 = 1): void {
@@ -2506,8 +2752,8 @@ export class MainScene extends Phaser.Scene {
       this.inventorySlots[index] = null;
     }
 
-    const nextHp = Phaser.Math.Clamp(this.hudState.hp + (stack.template.templateId === "snack-energybar" ? 12 : 7), 0, this.hudState.hpMax);
-    const nextStress = Phaser.Math.Clamp(this.hudState.stress - (stack.template.templateId === "snack-energybar" ? 4 : 2), 0, 100);
+    const nextHp = Phaser.Math.Clamp(this.hudState.hp + (stack.template.hpDelta ?? 0), 0, this.hudState.hpMax);
+    const nextStress = Phaser.Math.Clamp(this.hudState.stress + (stack.template.stressDelta ?? 0), 0, 100);
     this.applyStatDelta(this.getConsumableStatDelta(stack.template), 1);
     this.updateHudState({ hp: nextHp, stress: nextStress });
     this.refreshInventoryUi();
@@ -2639,12 +2885,14 @@ export class MainScene extends Phaser.Scene {
   private createCarriedItemPreview(): void {
     const icon = this.add.rectangle(0, 0, 38, 38, 0xffffff, 1);
     icon.setStrokeStyle(2, 0x5aa8ee, 1);
+    const iconImage = this.add.image(0, 0, "__WHITE");
+    iconImage.setVisible(false);
     const label = this.add.text(0, 0, "", this.getBodyStyle(16, "#e6f3ff", "bold"));
     label.setOrigin(0.5);
     const stackText = this.add.text(16, 14, "", this.getBodyStyle(13, "#e6f3ff", "bold"));
     stackText.setOrigin(1, 1);
 
-    this.carriedItemRoot = this.add.container(0, 0, [icon, label, stackText]);
+    this.carriedItemRoot = this.add.container(0, 0, [icon, iconImage, label, stackText]);
     this.carriedItemRoot.setAlpha(0.55);
     this.carriedItemRoot.setDepth(1400);
     this.carriedItemRoot.setVisible(false);
@@ -2653,11 +2901,15 @@ export class MainScene extends Phaser.Scene {
   private showCarriedItem(stack: InventoryItemStack): void {
     if (!this.carriedItemRoot) return;
     const icon = this.carriedItemRoot.list[0] as Phaser.GameObjects.Rectangle;
-    const label = this.carriedItemRoot.list[1] as Phaser.GameObjects.Text;
-    const stackText = this.carriedItemRoot.list[2] as Phaser.GameObjects.Text;
+    const iconImage = this.carriedItemRoot.list[1] as Phaser.GameObjects.Image;
+    const label = this.carriedItemRoot.list[2] as Phaser.GameObjects.Text;
+    const stackText = this.carriedItemRoot.list[3] as Phaser.GameObjects.Text;
 
-    icon.setFillStyle(stack.template.color, 1);
+    const hasIconImage = this.applyItemIconImage(iconImage, stack.template, 30, 30);
+    icon.setFillStyle(0xf5fbff, hasIconImage ? 0 : 1);
     label.setText(stack.template.shortLabel);
+    label.setColor(hasIconImage ? "#e6f3ff" : "#234873");
+    label.setVisible(!hasIconImage);
     stackText.setText(stack.quantity > 1 ? `${stack.quantity}` : "");
     this.carriedItemRoot.setVisible(true);
     this.updateCarriedItemPosition(this.input.activePointer.worldX, this.input.activePointer.worldY);
@@ -2817,6 +3069,7 @@ export class MainScene extends Phaser.Scene {
     this.updateHudState(result.patch);
 
     if (result.dayPassed) {
+      this.enterArea("world", "home");
       this.time.delayedCall(180, () => {
         this.showSystemToast("\uD558\uB8E8\uAC00 \uC9C0\uB0AC\uC2B5\uB2C8\uB2E4");
       });

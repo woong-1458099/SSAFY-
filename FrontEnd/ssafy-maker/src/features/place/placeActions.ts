@@ -84,7 +84,9 @@ export function resolvePlaceAction(placeId: Extract<PlaceId, "cafe" | "store">):
   };
 }
 
-export function getDowntownBuildingConfig(buildingId: DowntownBuildingId): { title: string; description: string } {
+export function getDowntownBuildingConfig(
+  buildingId: DowntownBuildingId
+): { title: string; description: string; actionText?: string } {
   if (buildingId === "ramenthings") {
     return {
       title: "라멘띵스",
@@ -105,13 +107,14 @@ export function getDowntownBuildingConfig(buildingId: DowntownBuildingId): { tit
   }
   if (buildingId === "hof") {
     return {
-      title: "호프",
-      description: "친구들과 한 잔 1,600G\n스트레스 감소 / 체력 감소",
+      title: "호프 알바",
+      description: "저녁 알바로 1,800G 획득\n재화 획득 / 체력 감소 / 스트레스 증가",
+      actionText: "일하기",
     };
   }
   return {
     title: "복권판매점",
-    description: "복권 1장 800G\n행운에 따라 돈을 잃거나 벌 수 있습니다.",
+    description: "복권 1장 800G\n행운에 따라 잃을 수도 벌 수도 있습니다.",
   };
 }
 
@@ -147,11 +150,12 @@ export function resolveDowntownBuildingAction(
   }
   if (buildingId === "hof") {
     return {
-      cost: 1600,
+      cost: 0,
       hpDelta: -10,
-      stressDelta: -12,
-      statDelta: { luck: 2 },
-      toastMessage: "호프 이용 완료",
+      stressDelta: 8,
+      moneyDelta: 1800,
+      statDelta: { teamwork: 2 },
+      toastMessage: "호프 알바 완료 +1800G",
     };
   }
   return {
