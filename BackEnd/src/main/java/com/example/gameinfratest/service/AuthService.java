@@ -102,17 +102,23 @@ public class AuthService {
                 .queryParam("code_challenge", "{codeChallenge}")
                 .queryParam("code_challenge_method", "{codeChallengeMethod}");
 
+        Map<String, Object> uriVariables = new java.util.LinkedHashMap<>();
+        uriVariables.put("clientId", keycloakAuthProperties.clientId());
+        uriVariables.put("redirectUri", callbackUri);
+        uriVariables.put("responseType", "code");
+        uriVariables.put("scope", OIDC_SCOPE);
+        uriVariables.put("state", state);
+        uriVariables.put("codeChallenge", challenge);
+        uriVariables.put("codeChallengeMethod", "S256");
+
+        if (action == AuthAction.SIGNUP) {
+            builder.queryParam("prompt", "{prompt}");
+            uriVariables.put("prompt", "create");
+        }
+
         String authorizationUrl = builder
                 .encode()
-                .buildAndExpand(Map.of(
-                        "clientId", keycloakAuthProperties.clientId(),
-                        "redirectUri", callbackUri,
-                        "responseType", "code",
-                        "scope", "openid profile email",
-                        "state", state,
-                        "codeChallenge", challenge,
-                        "codeChallengeMethod", "S256"
-                ))
+                .buildAndExpand(uriVariables)
                 .toUriString();
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
