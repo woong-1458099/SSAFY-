@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.gameinfratest.auth.BffSessionAuthenticationFilter;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.config.SecurityConfig;
 import com.example.gameinfratest.service.AuthService;
@@ -62,6 +63,12 @@ class AuthControllerSecurityTest {
         @Primary
         JwtDecoder jwtDecoder() {
             return Mockito.mock(JwtDecoder.class);
+        }
+
+        @Bean
+        @Primary
+        BffSessionAuthenticationFilter bffSessionAuthenticationFilter() {
+            return new BffSessionAuthenticationFilter();
         }
     }
 }

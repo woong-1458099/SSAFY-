@@ -55,11 +55,30 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    @Transactional(readOnly = true)
+    public UserResponse getCurrentUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .filter(current -> current.getDeletedAt() == null)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "user profile not found"));
+
+        return UserResponse.from(user);
+    }
+
     @Transactional
     public void softDeleteCurrentUser(Jwt jwt) {
         JwtIdentity identity = extractIdentity(jwt);
         User user = userRepository.findByProviderAndProviderIdAndDeletedAtIsNull(PROVIDER, identity.subject())
                 .or(() -> userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(identity.email()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "user profile not found"));
+
+        user.setDeletedAt(Instant.now());
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void softDeleteCurrentUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .filter(current -> current.getDeletedAt() == null)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "user profile not found"));
 
         user.setDeletedAt(Instant.now());

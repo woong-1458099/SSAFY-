@@ -1,9 +1,7 @@
 package com.example.gameinfratest.api.dto.auth;
 
 public record AuthSessionResponse(
-        String accessToken,
-        String refreshToken,
-        String idToken,
+        boolean authenticated,
         long expiresAt,
         UserResponse user
 ) {

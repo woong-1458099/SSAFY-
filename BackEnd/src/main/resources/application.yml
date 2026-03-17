@@ -5,6 +5,20 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local}
   jpa:
     open-in-view: false
+  web:
+    resources:
+      add-mappings: true
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: ${SERVER_SESSION_TIMEOUT:30m}
+      cookie:
+        name: ${SESSION_COOKIE_NAME:SSAFY_MAKER_SESSION}
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: ${SESSION_COOKIE_SAME_SITE:Lax}
 
 management:
   endpoints:
@@ -29,6 +43,9 @@ app:
   assets:
     base-url: ${ASSET_BASE_URL:https://assets.ssafymaker.cloud/game/v1}
     manifest-version: ${ASSET_MANIFEST_VERSION:2026-03-12.1}
+  urls:
+    public-base-url: ${APP_PUBLIC_BASE_URL:}
+    frontend-base-url: ${APP_FRONTEND_BASE_URL:}
   security:
     jwt:
       enabled: ${JWT_ENABLED:true}
