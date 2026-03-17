@@ -5,6 +5,7 @@ import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.auth.KeycloakTokenResponse;
+import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,6 +48,7 @@ public class AuthService {
     private static final String SESSION_STATE_KEY = "auth.bff.state";
     private static final String SESSION_VERIFIER_KEY = "auth.bff.verifier";
     private static final String SESSION_ACTION_KEY = "auth.bff.action";
+    private static final String OIDC_SCOPE = "openid profile email";
 
     private final String publicBaseUrl;
     private final String frontendBaseUrl;

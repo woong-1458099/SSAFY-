@@ -200,6 +200,11 @@ export class GameHud {
     });
   }
 
+  setStatusPanelsVisible(visible: boolean): void {
+    this.leftGroup.setVisible(visible);
+    this.rightGroup.setVisible(visible);
+  }
+
   updateLayout(): void {
     const w = this.scene.scale.width;
     const h = this.scene.scale.height;

@@ -39,8 +39,8 @@ export class MiniGameCenterScene extends Phaser.Scene {
       fontSize: "22px"
     }).setOrigin(0.5);
 
-    this.createActionButton(430, 302, "타이핑 훈련", () => this.openMiniGame(SceneKey.MiniGameTyping));
-    this.createActionButton(730, 302, "순발력 훈련", () => this.openMiniGame(SceneKey.MiniGameReflex));
+    this.createActionButton(430, 302, "??댄븨 ?덈젴", () => this.openMiniGame(SceneKey.MiniGameTyping));
+    this.createActionButton(730, 302, "?쒕컻???덈젴", () => this.openMiniGame(SceneKey.MiniGameReflex));
     this.createActionButton(580, 380, "돌아가기", () => this.closeCenter());
 
     this.escKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);

@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "source_index": 1,
+      "label": "초코릿",
+      "file_name": "chocolate.png"
+    },
+    {
+      "source_index": 4,
+      "label": "라면",
+      "file_name": "ramen.png"
+    },
+    {
+      "source_index": 5,
+      "label": "도시락",
+      "file_name": "dosirak.png"
+    },
+    {
+      "source_index": 7,
+      "label": "에너지 드링크",
+      "file_name": "energy_drink.png"
+    },
+    {
+      "source_index": 8,
+      "label": "과자",
+      "file_name": "snack.png"
+    },
+    {
+      "source_index": 12,
+      "label": "담배",
+      "file_name": "cigarette.png"
+    },
+    {
+      "source_index": 13,
+      "label": "키보드",
+      "file_name": "keyboard.png"
+    },
+    {
+      "source_index": 14,
+      "label": "마우스",
+      "file_name": "mouse.png"
+    },
+    {
+      "source_index": 15,
+      "label": "소주",
+      "file_name": "soju.png"
+    }
+  ]
+}
