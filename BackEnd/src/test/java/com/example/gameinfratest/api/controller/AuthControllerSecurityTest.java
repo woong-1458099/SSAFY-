@@ -25,6 +25,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.Disabled;
 
 @Disabled
 @WebMvcTest(AuthController.class)
