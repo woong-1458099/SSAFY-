@@ -404,8 +404,8 @@ const AREA_TMX_TEXT_KEYS: Record<AreaId, string> = {
 };
 
 const AREA_COLLISION_LAYER_NAMES: Record<AreaId, string[]> = {
-  world: ["tree", "build"],
-  downtown: ["tile layer 5(4)", "tile layer 3"],
+  world: ["root", "build"],
+  downtown: ["tile layer 5(4)", "tile layer 3", "build(foul)"],
   campus: ["tile layer 4(2)", "tile layer 3"]
 };
 
@@ -416,7 +416,8 @@ const AREA_INTERACTION_LAYER_NAMES: Record<AreaId, string[]> = {
 };
 
 const AREA_FOREGROUND_LAYER_NAMES: Partial<Record<AreaId, string[]>> = {
-  world: ["tree"]
+  world: ["tree"],
+  downtown: ["build(hide)"]
 };
 
 const FOREGROUND_TILE_LAYER_DEPTH = 31;
