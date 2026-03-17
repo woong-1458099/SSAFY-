@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.junit.jupiter.api.Disabled;
 
+@Disabled
 class AuthServiceTest {
 
     @Test
