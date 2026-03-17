@@ -51,3 +51,12 @@ npm run preview
 - 폴더 소유권: `docs/conventions/FOLDER_OWNERSHIP.md`
 - 에셋 파이프라인: `docs/conventions/ASSET_PIPELINE.md`
 - 환경 설정: `docs/conventions/ENVIRONMENT_SETUP.md`
+- MR 리뷰 규칙: `docs/infra/REVIEW_RULES.md`
+- MR 리뷰 구조 맵: `docs/infra/STRUCTURE_MAP.md`
+
+## MR 리뷰 문서 동기화 규칙
+
+- `src/app`, `src/scenes`, `src/features`, `src/core`, `src/infra`의 책임이나 연결 방식이 바뀌면 `docs/infra/STRUCTURE_MAP.md`도 같이 갱신합니다.
+- MR 리뷰 AI가 참고하는 규칙, 금지 패턴, 체크리스트가 바뀌면 `docs/infra/REVIEW_RULES.md`도 같이 갱신합니다.
+- 씬 등록 방식, 전역 이벤트 흐름, 외부 API 연동 경계가 바뀌면 코드 변경만 올리지 말고 문서 변경도 같은 MR에 포함합니다.
+- PR/MR 작성 전에 현재 변경이 `docs/infra/REVIEW_RULES.md`, `docs/infra/STRUCTURE_MAP.md`와 어긋나는지 먼저 확인합니다.
