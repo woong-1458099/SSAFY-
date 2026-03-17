@@ -233,3 +233,19 @@ GTA 산안드레아스 스타일의 헬스장 미니게임(GymScene)을 Phaser.j
 Phaser.js Container를 활용해 픽셀 캐릭터를 부위별로 조합하고 운동 동작을 표현하는 방법
 키 연타 속도를 측정해 Date.now() 인터벌로 RPM을 계산하는 방식
 운동 종목별로 다른 자세의 픽셀 캐릭터를 동적으로 렌더링하는 방법
+
+📅 2026-03-17 (월)
+Today I Learned
+오늘은 미니게임 대규모 추가 및 개편 작업을 진행했다. 기존 7종에서 5종을 새로 추가하여 총 12종의 미니게임 라인업을 완성했다.
+새로 추가/개편한 게임
+첫 번째로 할맥 부어라 마시기(DrinkingScene) 를 구현했다. 스페이스바 조작으로 거품이 BEST ZONE에 올 때 타이밍을 맞추는 게임이다. 5라운드 진행 방식이며 팀원 NPC 6명이 라운드마다 순서대로 등장한다.
+두 번째로 TECH INTERVIEW(InterviewScene) 를 구현했다. REST API, HTTP, React, SQL, Git, OOP, Spring Boot 등 실제 기술 면접에서 자주 나오는 문제 10개 중 5개를 랜덤으로 출제한다. 문제당 15초 제한이 있으며 카테고리별로 색상이 다르게 표시된다.
+세 번째로 충돌 해결(ConflictResolveScene) 을 구현했다. Git Conflict 상황을 게임으로 만든 퍼즐 게임으로 기존 DragScene을 대체한다.
+네 번째로 헬스장(GymScene) 을 구현했다. GTA 산안드레아스 스타일의 스페이스바 연타 운동 게임으로 벤치프레스, 스쿼트, 데드리프트 3종 운동을 선택할 수 있다. 30초 안에 최대한 많은 횟수를 달성하면 체력 최대치가 상승한다.
+다섯 번째로 리듬(RhythmScene) 을 AWJI 키 조작 방식으로 개편하고 난이도 선택 기능을 추가했다.
+새로 배운 것
+
+Phaser.js에서 update() 루프로 게이지 바를 위아래로 왕복시키는 타이밍 게임 구현 방법
+TypeScript에서 LegacyMinigameCard 타입에 없는 프로퍼티를 추가할 때 타입 정의 파일을 수정하거나 해당 프로퍼티를 제거해야 한다는 점
+미니게임 씬 등록 시 minigameSceneKeys.ts, minigameCatalog.ts, scenes.ts 세 파일을 모두 수정해야 한다는 것
+applyLegacyViewport 와 installMinigamePause 를 모든 미니게임 씬 create() 첫 줄에 호출해야 공용 pause 기능이 정상 작동한다는 점
