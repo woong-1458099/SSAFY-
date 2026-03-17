@@ -242,7 +242,8 @@ public class AuthService {
             throw new IllegalStateException(propertyName + " must not be blank");
         }
         try {
-            URI uri = new URI(value);
+            String normalized = trimTrailingSlash(value);
+            URI uri = new URI(normalized);
             if (uri.getScheme() == null || uri.getHost() == null) {
                 throw new IllegalStateException(propertyName + " must be an absolute URL");
             }
@@ -256,7 +257,7 @@ public class AuthService {
             if (uri.getFragment() != null) {
                 throw new IllegalStateException(propertyName + " must not include a fragment");
             }
-            return value;
+            return normalized;
         } catch (URISyntaxException exception) {
             throw new IllegalStateException(propertyName + " must be a valid URL", exception);
         }
