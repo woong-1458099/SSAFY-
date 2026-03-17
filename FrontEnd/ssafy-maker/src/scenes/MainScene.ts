@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import { InputManager } from "@core/managers/InputManager";
@@ -23,14 +23,80 @@ import {
   type NpcDialogueId,
   type StoryStatKey
 } from "@features/story/npcDialogueScripts";
+import {
+  clearDialogueChoices,
+  createDialogueUi,
+  refreshDialogueChoiceStyles,
+  renderDialogueNode,
+  type DialogueChoiceView
+} from "@features/story/dialogueUi";
+import {
+  buildAreaCollisionConfigFromTmxText,
+  buildInteractionZonesFromTmxText,
+  findNearestWalkablePoint,
+  isBlockedByAreaCollision,
+  mapPointToAreaBounds,
+  mapSizeToAreaBounds,
+  parseTmxMap,
+  type AreaCollisionConfig,
+  type AreaRenderBounds
+} from "@features/world/tmxNavigation";
 import type { EndingFlowPayload } from "@features/progression/types/ending";
+import {
+  buildPlayerVisual,
+  PLAYER_DISPLAY_SCALE,
+  preloadPlayerAvatarAssets,
+  syncPlayerAvatarVisuals,
+  updatePlayerAvatarAnimation,
+  type PlayerAvatarData,
+  type PlayerVisualParts,
+} from "@features/avatar/playerAvatar";
+import { createHomeActionModal } from "@features/home/homeActionModal";
+import { resolveHomeAction, type HomeActionId } from "@features/home/homeActions";
+import {
+  advanceTimeProgress,
+  DAY_CYCLE,
+  shouldTriggerEndingFlow,
+  TIME_CYCLE
+} from "@features/progression/services/timeProgression";
+import {
+  createDefaultWeeklyPlan,
+  getCurrentWeeklyPlanSlotKey,
+  getWeeklyPlanOption,
+  getWeeklyPlanSlotIndex,
+  parseWeeklyPlanOptionId,
+  WEEKLY_PLAN_OPTIONS,
+  type WeeklyPlanOption,
+  type WeeklyPlanOptionId,
+} from "@features/planning/weeklyPlan";
+import { createWeeklyPlannerModal } from "@features/planning/weeklyPlannerModal";
+import { createWeeklyPlanActivityModal } from "@features/planning/weeklyPlanActivityModal";
+import {
+  getDowntownBuildingBackgroundTextureKey,
+  getDowntownBuildingConfig,
+  getPlaceBackgroundTextureKey,
+  getPlacePopupContent,
+  resolveDowntownBuildingAction,
+  resolvePlaceAction,
+  type DowntownBuildingId
+} from "@features/place/placeActions";
+import { createPlaceActionModal } from "@features/place/placeModal";
+import {
+  captureGameSavePayload,
+  getSaveSlotMetaText,
+  restoreInventoryFromSave,
+  restoreStatsFromSave,
+  type SaveGamePayload
+} from "@features/save/saveGameState";
+import { createSavePage as createSavePageContent, type SaveSlotView } from "@features/save/saveMenu";
+import { createInventoryPage as createInventoryPageContent, type SlotView } from "@features/inventory/inventoryMenu";
+import { createSettingsPage as createSettingsPageContent, createStatsPage as createStatsPageContent, type StatView } from "@features/menu/tabPages";
 
 type TabKey = "inventory" | "stats" | "settings" | "save";
 type EquipmentSlotKey = "keyboard" | "mouse";
 type AreaId = "world" | "downtown" | "campus";
 type WorldPlaceId = "home" | "downtown" | "campus" | "cafe" | "store";
 type StatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
-type DowntownBuildingId = "ramenthings" | "gym" | "karaoke" | "hof" | "lottery";
 
 type WorldPlaceNode = {
   id: WorldPlaceId;
@@ -58,13 +124,6 @@ type InventoryItemTemplate = {
 type InventoryItemStack = {
   template: InventoryItemTemplate;
   quantity: number;
-};
-
-type SlotView = {
-  bg: Phaser.GameObjects.Rectangle;
-  icon: Phaser.GameObjects.Rectangle;
-  iconText: Phaser.GameObjects.Text;
-  stackText: Phaser.GameObjects.Text;
 };
 
 const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
@@ -162,12 +221,6 @@ type TabVisual = {
   lip: Phaser.GameObjects.Rectangle;
 };
 
-type StatView = {
-  valueText: Phaser.GameObjects.Text;
-  barFill: Phaser.GameObjects.Rectangle;
-  maxFillWidth: number;
-};
-
 type ScrollableTabPage = {
   root: Phaser.GameObjects.Container;
   content: Phaser.GameObjects.Container;
@@ -184,100 +237,7 @@ type ScrollableTabPage = {
   offset: number;
 };
 
-type DialogueChoiceView = {
-  text: Phaser.GameObjects.Text;
-  choice: DialogueChoice;
-  requirementText: string;
-};
-
-type SaveSlotView = {
-  slotId: string;
-  bg: Phaser.GameObjects.Rectangle;
-  title: Phaser.GameObjects.Text;
-  meta: Phaser.GameObjects.Text;
-};
-
-type ParsedTmxLayer = {
-  name: string;
-  visible: boolean;
-  data: number[][];
-};
-
-type TmxSemanticCode = 0 | 1 | 2;
-
-type TmxSemanticRule = {
-  layerNames: string[];
-  code: TmxSemanticCode;
-};
-
-type TmxRegion = {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-  area: number;
-  centerX: number;
-  centerY: number;
-};
-
-type InteractionZone = {
-  centerX: number;
-  centerY: number;
-  width: number;
-  height: number;
-};
-
-type ParsedTmxMap = {
-  width: number;
-  height: number;
-  tileWidth: number;
-  tileHeight: number;
-  tilesets: Array<{ firstgid: number; name: string }>;
-  layers: ParsedTmxLayer[];
-};
-
-type AreaRenderBounds = Phaser.Geom.Rectangle | null;
-
-type AreaCollisionConfig = {
-  bounds: Phaser.Geom.Rectangle;
-  mapWidth: number;
-  mapHeight: number;
-  tileWidth: number;
-  tileHeight: number;
-  tileCodes: TmxSemanticCode[][];
-  blocked: boolean[][];
-};
-
-type SerializedInventoryStack = {
-  templateId: string;
-  quantity: number;
-};
-
-type PlayerAvatarData = {
-  gender: "male" | "female";
-  hair: number;
-  cloth: number;
-};
-
-type PlayerVisualParts = {
-  root: Phaser.GameObjects.Container;
-  base: Phaser.GameObjects.Sprite;
-  clothes: Phaser.GameObjects.Sprite;
-  hair: Phaser.GameObjects.Sprite;
-};
-
-type MainSavePayload = {
-  currentArea: AreaId;
-  lastSelectedWorldPlace: WorldPlaceId;
-  playerPosition: { x: number; y: number };
-  hudState: HudState;
-  statsState: Record<StatKey, number>;
-  actionPoint: number;
-  timeCycleIndex: number;
-  dayCycleIndex: number;
-  inventorySlots: Array<SerializedInventoryStack | null>;
-  equippedSlots: Record<EquipmentSlotKey, string | null>;
-};
+type MainSavePayload = SaveGamePayload<AreaId, WorldPlaceId, StatKey, EquipmentSlotKey, WeeklyPlanOptionId>;
 
 type MainSceneInitData = {
   saveSlotId?: string;
@@ -325,17 +285,6 @@ const AREA_NPC_CONFIG: Record<Exclude<AreaId, "world">, {
   }
 };
 
-const TIME_CYCLE = ["\uC624\uC804", "\uC624\uD6C4", "\uC800\uB141", "\uBC24"] as const;
-const DAY_CYCLE = [
-  "\uC6D4\uC694\uC77C",
-  "\uD654\uC694\uC77C",
-  "\uC218\uC694\uC77C",
-  "\uBAA9\uC694\uC77C",
-  "\uAE08\uC694\uC77C",
-  "\uD1A0\uC694\uC77C",
-  "\uC77C\uC694\uC77C"
-] as const;
-
 const AREA_TILESET_IMAGE_KEY = "map_tiles_full_asset";
 const AREA_TMX_TEXT_KEYS: Record<AreaId, string> = {
   world: "map_tmx_world",
@@ -354,27 +303,6 @@ const AREA_INTERACTION_LAYER_NAMES: Record<AreaId, string[]> = {
   downtown: ["tile layer 4", "tile layer 5(4)"],
   campus: ["tile layer 2", "tile layer 4(2)"]
 };
-
-const PLAYER_SPRITE_CONFIG = {
-  frameWidth: 16,
-  frameHeight: 32
-} as const;
-const PLAYER_DISPLAY_SCALE = 2.4;
-const PLAYER_WALK_FRAME_DURATION = 120;
-const PLAYER_DIRECTION_FRAMES = {
-  right: { idle: 0, walk: [1, 2] },
-  up: { idle: 3, walk: [4, 5, 6, 5] },
-  left: { idle: 7, walk: [7, 8] },
-  down: { idle: 9, walk: [10, 11, 12, 11] }
-} as const;
-
-const DOWNTOWN_TMX_SEMANTIC_RULES: TmxSemanticRule[] = [
-  { layerNames: ["collision building"], code: 2 }
-];
-
-const CAMPUS_TMX_SEMANTIC_RULES: TmxSemanticRule[] = [
-  { layerNames: ["collision building"], code: 2 }
-];
 
 export class MainScene extends Phaser.Scene {
   private initialSaveSlotId: string | null = null;
@@ -420,6 +348,9 @@ export class MainScene extends Phaser.Scene {
   private readonly uiPanelOuterBorderColor = UI_PANEL_OUTER_BORDER_COLOR;
   private systemToastRoot?: Phaser.GameObjects.Container;
   private systemToastTimer?: Phaser.Time.TimerEvent;
+  private weeklyPlanActivityRoot?: Phaser.GameObjects.Container;
+  private weeklyPlanActivityTimer?: Phaser.Time.TimerEvent;
+  private weeklyPlanActivityOpen = false;
   private tooltipRoot?: Phaser.GameObjects.Container;
   private carriedItemRoot?: Phaser.GameObjects.Container;
   private carriedItem: InventoryItemStack | null = null;
@@ -429,6 +360,9 @@ export class MainScene extends Phaser.Scene {
   private readonly maxActionPoint = 4;
   private timeCycleIndex = 0;
   private dayCycleIndex = 0;
+  private weeklyPlan: WeeklyPlanOptionId[] = createDefaultWeeklyPlan();
+  private weeklyPlanWeek = 0;
+  private lastAppliedWeeklyPlanSlotKey: string | null = null;
 
   private readonly inventorySlots: Array<InventoryItemStack | null> = Array.from({ length: 16 }, () => null);
   private readonly equippedSlots: Record<EquipmentSlotKey, InventoryItemTemplate | null> = {
@@ -494,7 +428,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.preloadPlayerAvatarAssets();
+    preloadPlayerAvatarAssets(this);
   }
 
   create(): void {
@@ -542,6 +476,11 @@ export class MainScene extends Phaser.Scene {
       this.enterArea("world", "downtown");
     }
 
+    this.time.delayedCall(120, () => {
+      this.maybeOpenWeeklyPlanner();
+      this.maybeStartWeeklyPlanActivity();
+    });
+
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       this.updateCarriedItemPosition(pointer.worldX, pointer.worldY);
     });
@@ -556,6 +495,8 @@ export class MainScene extends Phaser.Scene {
       this.pendingInventoryPickup = undefined;
       this.systemToastTimer?.destroy();
       this.systemToastRoot?.destroy();
+      this.weeklyPlanActivityTimer?.destroy();
+      this.weeklyPlanActivityRoot?.destroy();
       this.tooltipRoot?.destroy();
       this.carriedItemRoot?.destroy();
       this.shopRoot?.destroy();
@@ -591,6 +532,13 @@ export class MainScene extends Phaser.Scene {
   update(): void {
     if (this.endingDebugKey && Phaser.Input.Keyboard.JustDown(this.endingDebugKey)) {
       this.startEndingFlow();
+      return;
+    }
+
+    if (this.weeklyPlanActivityOpen) {
+      this.player.setVelocity(0, 0);
+      this.updatePlayerAvatarAnimation({ x: 0, y: 0 });
+      this.hud.setInteractionPrompt(null);
       return;
     }
 
@@ -696,8 +644,13 @@ export class MainScene extends Phaser.Scene {
     worldRoot.setDepth(0);
     const worldTmxBounds = this.buildAreaTmxBackground(worldRoot, AREA_TMX_TEXT_KEYS.world);
     const worldUsesTmx = Boolean(worldTmxBounds);
+    const worldTmxText = worldTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.world) : "";
     this.areaCollisionConfigs.world = worldTmxBounds
-      ? this.buildAreaCollisionConfigFromTmx(AREA_TMX_TEXT_KEYS.world, worldTmxBounds, AREA_COLLISION_LAYER_NAMES.world) ?? undefined
+      ? buildAreaCollisionConfigFromTmxText(
+          typeof worldTmxText === "string" ? worldTmxText : "",
+          worldTmxBounds,
+          AREA_COLLISION_LAYER_NAMES.world
+        ) ?? undefined
       : undefined;
 
     if (!worldUsesTmx) {
@@ -726,8 +679,8 @@ export class MainScene extends Phaser.Scene {
     }
 
     const tmxWorldZones = worldTmxBounds
-      ? this.buildInteractionZonesFromTmx(
-          AREA_TMX_TEXT_KEYS.world,
+      ? buildInteractionZonesFromTmxText(
+          typeof worldTmxText === "string" ? worldTmxText : "",
           worldTmxBounds,
           AREA_INTERACTION_LAYER_NAMES.world,
           WORLD_PLACE_NODES.map((node) => ({ id: node.id, x: node.x, y: node.y })),
@@ -746,20 +699,20 @@ export class MainScene extends Phaser.Scene {
     worldObjects.push(title);
 
     WORLD_PLACE_NODES.forEach((place) => {
-      const mapped = this.mapPointToAreaBounds(place.x, place.y, worldTmxBounds);
+      const mapped = mapPointToAreaBounds(place.x, place.y, worldTmxBounds, (value) => this.px(value));
       const zone = tmxWorldZones?.[place.id];
       const mappedZoneSize = zone
         ? { width: zone.width, height: zone.height }
-        : this.mapSizeToAreaBounds(place.zoneWidth, place.zoneHeight, worldTmxBounds);
+        : mapSizeToAreaBounds(place.zoneWidth, place.zoneHeight, worldTmxBounds, (value) => this.px(value));
       const zoneCenter = zone ? { x: zone.centerX, y: zone.centerY } : mapped;
-      const markerSize = this.mapSizeToAreaBounds(40, 28, worldTmxBounds);
+      const markerSize = mapSizeToAreaBounds(40, 28, worldTmxBounds, (value) => this.px(value));
       const marker = this.add.rectangle(zoneCenter.x, zoneCenter.y, markerSize.width, markerSize.height, place.movable ? 0xe7d593 : 0xc9a67f, 1);
       marker.setStrokeStyle(2, 0x5d4426, 1);
       marker.setVisible(false);
 
       const mappedLabel = zone
         ? { x: zone.centerX, y: zone.centerY + mappedZoneSize.height / 2 + 8 }
-        : this.mapPointToAreaBounds(place.x, place.y + 28, worldTmxBounds);
+        : mapPointToAreaBounds(place.x, place.y + 28, worldTmxBounds, (value) => this.px(value));
       const label = this.add.text(mappedLabel.x, mappedLabel.y, place.label, this.getBodyStyle(18, "#3d2d1d", "bold"));
       label.setOrigin(0.5, 0);
       label.setVisible(false);
@@ -781,12 +734,17 @@ export class MainScene extends Phaser.Scene {
     downtownRoot.setDepth(0);
     const downtownTmxBounds = this.buildAreaTmxBackground(downtownRoot, AREA_TMX_TEXT_KEYS.downtown);
     const downtownUsesTmx = Boolean(downtownTmxBounds);
+    const downtownTmxText = downtownTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.downtown) : "";
     this.areaCollisionConfigs.downtown = downtownTmxBounds
-      ? this.buildAreaCollisionConfigFromTmx(AREA_TMX_TEXT_KEYS.downtown, downtownTmxBounds, AREA_COLLISION_LAYER_NAMES.downtown) ?? undefined
+      ? buildAreaCollisionConfigFromTmxText(
+          typeof downtownTmxText === "string" ? downtownTmxText : "",
+          downtownTmxBounds,
+          AREA_COLLISION_LAYER_NAMES.downtown
+        ) ?? undefined
       : undefined;
     const downtownZones = downtownTmxBounds
-      ? this.buildInteractionZonesFromTmx(
-          AREA_TMX_TEXT_KEYS.downtown,
+      ? buildInteractionZonesFromTmxText(
+          typeof downtownTmxText === "string" ? downtownTmxText : "",
           downtownTmxBounds,
           AREA_INTERACTION_LAYER_NAMES.downtown,
           DOWNTOWN_BUILDINGS.map((building) => ({ id: building.id, x: building.x, y: building.y })),
@@ -826,10 +784,10 @@ export class MainScene extends Phaser.Scene {
       const zone = downtownZones?.[building.id];
       const mappedCenter = zone
         ? { x: zone.centerX, y: zone.centerY }
-        : this.mapPointToAreaBounds(building.x, building.y, downtownTmxBounds);
+        : mapPointToAreaBounds(building.x, building.y, downtownTmxBounds, (value) => this.px(value));
       const mappedSize = zone
         ? { width: zone.width, height: zone.height }
-        : this.mapSizeToAreaBounds(building.w, building.h, downtownTmxBounds);
+        : mapSizeToAreaBounds(building.w, building.h, downtownTmxBounds, (value) => this.px(value));
 
       const hitBox = this.add.rectangle(
         mappedCenter.x,
@@ -866,8 +824,13 @@ export class MainScene extends Phaser.Scene {
     campusRoot.setDepth(0);
     const campusTmxBounds = this.buildAreaTmxBackground(campusRoot, AREA_TMX_TEXT_KEYS.campus);
     const campusUsesTmx = Boolean(campusTmxBounds);
+    const campusTmxText = campusTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.campus) : "";
     this.areaCollisionConfigs.campus = campusTmxBounds
-      ? this.buildAreaCollisionConfigFromTmx(AREA_TMX_TEXT_KEYS.campus, campusTmxBounds, AREA_COLLISION_LAYER_NAMES.campus) ?? undefined
+      ? buildAreaCollisionConfigFromTmxText(
+          typeof campusTmxText === "string" ? campusTmxText : "",
+          campusTmxBounds,
+          AREA_COLLISION_LAYER_NAMES.campus
+        ) ?? undefined
       : undefined;
     const campusObjects: Phaser.GameObjects.GameObject[] = [];
     if (!campusUsesTmx) {
@@ -897,24 +860,6 @@ export class MainScene extends Phaser.Scene {
     this.campusMapRoot = campusRoot;
   }
 
-  private preloadPlayerAvatarAssets(): void {
-    this.load.spritesheet("base_male", "../../assets/game/character/base_male.png", PLAYER_SPRITE_CONFIG);
-    this.load.spritesheet("base_female", "../../assets/game/character/base_female.png", PLAYER_SPRITE_CONFIG);
-    this.load.spritesheet("base_male_walk", "../../assets/game/character/base_male_walk.png", PLAYER_SPRITE_CONFIG);
-    this.load.spritesheet("base_female_walk", "../../assets/game/character/base_female_walk.png", PLAYER_SPRITE_CONFIG);
-
-    for (let i = 1; i <= 3; i += 1) {
-      this.load.spritesheet(`male_hair_${i}`, `../../assets/game/character/male_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
-      this.load.spritesheet(`female_hair_${i}`, `../../assets/game/character/female_hair_${i}.png`, PLAYER_SPRITE_CONFIG);
-      this.load.spritesheet(`male_clothes_${i}`, `../../assets/game/character/male_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
-      this.load.spritesheet(`female_clothes_${i}`, `../../assets/game/character/female_clothes_${i}.png`, PLAYER_SPRITE_CONFIG);
-      this.load.spritesheet(`male_hair_${i}_walk`, `../../assets/game/character/male_hair_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
-      this.load.spritesheet(`female_hair_${i}_walk`, `../../assets/game/character/female_hair_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
-      this.load.spritesheet(`male_clothes_${i}_walk`, `../../assets/game/character/male_clothes_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
-      this.load.spritesheet(`female_clothes_${i}_walk`, `../../assets/game/character/female_clothes_${i}_walk.png`, PLAYER_SPRITE_CONFIG);
-    }
-  }
-
   private getSelectedPlayerAvatar(): PlayerAvatarData {
     const raw = this.registry.get("playerData");
     const playerData = raw as Partial<PlayerAvatarData> | undefined;
@@ -939,85 +884,23 @@ export class MainScene extends Phaser.Scene {
     this.player.setOffset(7, 20);
     this.player.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 
-    this.playerVisual = this.buildPlayerVisual(x, y);
+    this.playerVisual = buildPlayerVisual(this, x, y, this.playerAvatar);
     this.syncPlayerAvatarVisuals();
     this.updatePlayerAvatarAnimation({ x: 0, y: 0 });
   }
 
   private syncPlayerAvatarVisuals(): void {
-    if (!this.player || !this.playerVisual) return;
-
-    this.playerVisual.root.setPosition(this.player.x, this.player.y + 10);
-    this.playerVisual.root.setVisible(this.player.visible);
+    syncPlayerAvatarVisuals(this.player, this.playerVisual);
   }
 
   private updatePlayerAvatarAnimation(move: { x: number; y: number }): void {
-    if (!this.playerVisual) return;
-
-    const isMoving = Math.abs(move.x) > 0.01 || Math.abs(move.y) > 0.01;
-    const gender = this.playerAvatar.gender;
-    if (Math.abs(move.x) > Math.abs(move.y) && Math.abs(move.x) > 0.01) {
-      this.playerFacing = move.x < 0 ? "left" : "right";
-    } else if (Math.abs(move.y) > 0.01) {
-      this.playerFacing = move.y < 0 ? "up" : "down";
-    }
-
-    const visual = this.playerVisual;
-    const walkBaseKey = `base_${gender}_walk`;
-    const walkClothesKey = `${gender}_clothes_${this.playerAvatar.cloth}_walk`;
-    const walkHairKey = `${gender}_hair_${this.playerAvatar.hair}_walk`;
-    const facingFrames = PLAYER_DIRECTION_FRAMES[this.playerFacing];
-    const walkFrame =
-      facingFrames.walk[Math.floor(this.time.now / PLAYER_WALK_FRAME_DURATION) % facingFrames.walk.length];
-    const targetFrame = isMoving ? walkFrame : facingFrames.idle;
-
-    visual.root.setScale(PLAYER_DISPLAY_SCALE);
-
-    if (visual.base.texture.key !== walkBaseKey) {
-      visual.base.setTexture(walkBaseKey, targetFrame);
-    } else {
-      visual.base.setFrame(targetFrame);
-    }
-    if (visual.clothes.texture.key !== walkClothesKey) {
-      visual.clothes.setTexture(walkClothesKey, targetFrame);
-    } else {
-      visual.clothes.setFrame(targetFrame);
-    }
-    if (visual.hair.texture.key !== walkHairKey) {
-      visual.hair.setTexture(walkHairKey, targetFrame);
-    } else {
-      visual.hair.setFrame(targetFrame);
-    }
-  }
-
-  private buildPlayerVisual(x: number, y: number): PlayerVisualParts {
-    const gender = this.playerAvatar.gender;
-    const base = this.add.sprite(0, 0, `base_${gender}`, 0).setOrigin(0.5, 1);
-    const clothes = this.add
-      .sprite(0, 0, `${gender}_clothes_${this.playerAvatar.cloth}`, 0)
-      .setOrigin(0.5, 1);
-    const hair = this.add
-      .sprite(0, 0, `${gender}_hair_${this.playerAvatar.hair}`, 0)
-      .setOrigin(0.5, 1);
-
-    base.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    clothes.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    hair.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-
-    base.name = "base";
-    clothes.name = "clothes";
-    hair.name = "hair";
-
-    const root = this.add.container(x, y + 10, [base, clothes, hair]);
-    root.setDepth(32);
-    root.setScale(PLAYER_DISPLAY_SCALE);
-
-    return {
-      root,
-      base,
-      clothes,
-      hair,
-    };
+    this.playerFacing = updatePlayerAvatarAnimation({
+      visual: this.playerVisual,
+      avatar: this.playerAvatar,
+      currentFacing: this.playerFacing,
+      move,
+      timeNow: this.time.now
+    });
   }
 
   private buildAreaTmxBackground(root: Phaser.GameObjects.Container, textKey: string): AreaRenderBounds {
@@ -1029,7 +912,7 @@ export class MainScene extends Phaser.Scene {
       return null;
     }
 
-    const parsed = this.parseTmxMap(tmxText);
+    const parsed = parseTmxMap(tmxText);
     if (!parsed) {
       return null;
     }
@@ -1091,454 +974,19 @@ export class MainScene extends Phaser.Scene {
     return renderedBounds;
   }
 
-  private parseTmxMap(rawTmx: string): ParsedTmxMap | null {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(rawTmx, "application/xml");
-    if (doc.getElementsByTagName("parsererror").length > 0) {
-      return null;
-    }
-
-    const mapNode = doc.getElementsByTagName("map")[0];
-    if (!mapNode) return null;
-
-    const width = Number.parseInt(mapNode.getAttribute("width") ?? "0", 10);
-    const height = Number.parseInt(mapNode.getAttribute("height") ?? "0", 10);
-    const tileWidth = Number.parseInt(mapNode.getAttribute("tilewidth") ?? "32", 10);
-    const tileHeight = Number.parseInt(mapNode.getAttribute("tileheight") ?? "32", 10);
-    if (width <= 0 || height <= 0 || tileWidth <= 0 || tileHeight <= 0) return null;
-
-    const tilesets = Array.from(mapNode.getElementsByTagName("tileset"))
-      .map((tilesetNode, idx) => {
-        const firstgid = Number.parseInt(tilesetNode.getAttribute("firstgid") ?? `${idx + 1}`, 10);
-        const name = tilesetNode.getAttribute("name") ?? tilesetNode.getAttribute("source") ?? `tileset_${idx + 1}`;
-        if (!Number.isFinite(firstgid)) return null;
-        return { firstgid, name };
-      })
-      .filter((tileset): tileset is { firstgid: number; name: string } => Boolean(tileset))
-      .sort((a, b) => a.firstgid - b.firstgid);
-
-    const layers: ParsedTmxLayer[] = [];
-    Array.from(mapNode.getElementsByTagName("layer")).forEach((layerNode, idx) => {
-      const dataNode = layerNode.getElementsByTagName("data")[0];
-      if (!dataNode) return;
-      const encoding = dataNode.getAttribute("encoding");
-      if (encoding !== "csv") return;
-
-      const values = (dataNode.textContent ?? "")
-        .split(",")
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0)
-        .map((value) => {
-          const parsedValue = Number.parseInt(value, 10);
-          if (!Number.isFinite(parsedValue)) return 0;
-          const gid = (parsedValue >>> 0) & 0x1fffffff;
-          return gid;
-        });
-
-      const required = width * height;
-      if (values.length < required) {
-        values.push(...Array.from({ length: required - values.length }, () => 0));
-      }
-
-      const rowData: number[][] = [];
-      for (let y = 0; y < height; y += 1) {
-        const start = y * width;
-        rowData.push(values.slice(start, start + width));
-      }
-
-      layers.push({
-        name: layerNode.getAttribute("name") ?? `layer_${idx + 1}`,
-        visible: layerNode.getAttribute("visible") !== "0",
-        data: rowData
-      });
-    });
-
-    if (layers.length === 0) return null;
-    return { width, height, tileWidth, tileHeight, tilesets, layers };
-  }
-
-  private buildInteractionZonesFromTmx<T extends string>(
-    textKey: string,
-    bounds: AreaRenderBounds,
-    layerNames: string[],
-    targets: Array<{ id: T; x: number; y: number }>,
-    minAreaTiles: number,
-    maxAreaTiles: number
-  ): Partial<Record<T, InteractionZone>> | null {
-    if (!bounds) return null;
-    const tmxText = this.cache.text.get(textKey);
-    if (typeof tmxText !== "string" || tmxText.length === 0) return null;
-
-    const parsed = this.parseTmxMap(tmxText);
-    if (!parsed) return null;
-
-    const combined = this.combineLayersByNames(parsed, layerNames);
-    if (!combined) return null;
-    const targetIds = targets.map((target) => target.id);
-    const baseTargets = targets.reduce(
-      (acc, target) => {
-        acc[target.id] = this.screenPointToMapTile(target.x, target.y, bounds, parsed);
-        return acc;
-      },
-      {} as Record<T, { tileX: number; tileY: number }>
-    );
-
-    const regions = this.expandInteractionRegions(
-      this.extractTmxConnectedRegions(combined, minAreaTiles).filter((region) => region.area >= minAreaTiles && region.area <= maxAreaTiles),
-      baseTargets
-    );
-    if (regions.length === 0) return null;
-
-    const mapPixelWidth = parsed.width * parsed.tileWidth;
-    const mapPixelHeight = parsed.height * parsed.tileHeight;
-    const scaleX = bounds.width / mapPixelWidth;
-    const scaleY = bounds.height / mapPixelHeight;
-
-    const remaining = [...regions];
-    const zones: Partial<Record<T, InteractionZone>> = {};
-
-    targetIds.forEach((id) => {
-      const target = baseTargets[id];
-      if (!target || remaining.length === 0) return;
-      let bestIdx = 0;
-      let bestDist = Number.POSITIVE_INFINITY;
-      remaining.forEach((region, idx) => {
-        const dx = region.centerX - target.tileX;
-        const dy = region.centerY - target.tileY;
-        const dist = dx * dx + dy * dy;
-        if (dist < bestDist) {
-          bestDist = dist;
-          bestIdx = idx;
-        }
-      });
-      const [region] = remaining.splice(bestIdx, 1);
-      if (!region) return;
-
-      const paddingTiles = 0.35;
-      const minTileX = Math.max(0, region.minX - paddingTiles);
-      const maxTileX = Math.min(parsed.width, region.maxX + 1 + paddingTiles);
-      const minTileY = Math.max(0, region.minY - paddingTiles);
-      const maxTileY = Math.min(parsed.height, region.maxY + 1 + paddingTiles);
-      const x = bounds.x + minTileX * parsed.tileWidth * scaleX;
-      const y = bounds.y + minTileY * parsed.tileHeight * scaleY;
-      const width = (maxTileX - minTileX) * parsed.tileWidth * scaleX;
-      const height = (maxTileY - minTileY) * parsed.tileHeight * scaleY;
-      zones[id] = {
-        centerX: x + width / 2,
-        centerY: y + height / 2,
-        width,
-        height
-      };
-    });
-
-    return zones;
-  }
-
-  private expandInteractionRegions<T extends string>(
-    regions: TmxRegion[],
-    targets: Record<T, { tileX: number; tileY: number }>
-  ): TmxRegion[] {
-    const expanded: TmxRegion[] = [];
-
-    regions.forEach((region) => {
-      const targetValues = Object.values(targets) as Array<{ tileX: number; tileY: number }>;
-      const containedTargets = targetValues
-        .filter(
-          (target) =>
-            target.tileX >= region.minX &&
-            target.tileX <= region.maxX &&
-            target.tileY >= region.minY &&
-            target.tileY <= region.maxY
-        )
-        .sort((a, b) => a.tileX - b.tileX);
-
-      if (containedTargets.length <= 1 || region.maxX <= region.minX) {
-        expanded.push(region);
-        return;
-      }
-
-      const splitEdges = [region.minX];
-      for (let i = 0; i < containedTargets.length - 1; i += 1) {
-        splitEdges.push(Math.floor((containedTargets[i].tileX + containedTargets[i + 1].tileX) / 2));
-      }
-      splitEdges.push(region.maxX + 1);
-
-      for (let i = 0; i < containedTargets.length; i += 1) {
-        const minX = splitEdges[i];
-        const maxX = splitEdges[i + 1] - 1;
-        const centerX = (minX + maxX) / 2;
-        expanded.push({
-          minX,
-          maxX,
-          minY: region.minY,
-          maxY: region.maxY,
-          area: Math.max(1, (maxX - minX + 1) * (region.maxY - region.minY + 1)),
-          centerX,
-          centerY: region.centerY
-        });
-      }
-    });
-
-    return expanded;
-  }
-
-  private combineLayersByNames(parsed: ParsedTmxMap, layerNames: string[]): number[][] | null {
-    const names = new Set(layerNames.map((name) => name.trim().toLowerCase()));
-    const layers = parsed.layers.filter((layer) => names.has(layer.name.trim().toLowerCase()));
-    if (layers.length === 0) return null;
-    const combined = Array.from({ length: parsed.height }, () => Array.from({ length: parsed.width }, () => 0));
-    layers.forEach((layer) => {
-      for (let y = 0; y < parsed.height; y += 1) {
-        for (let x = 0; x < parsed.width; x += 1) {
-          if ((layer.data[y]?.[x] ?? 0) !== 0) combined[y][x] = 1;
-        }
-      }
-    });
-    return combined;
-  }
-
-  private buildTmxSemanticGrid(parsed: ParsedTmxMap, rules: TmxSemanticRule[]): TmxSemanticCode[][] | null {
-    const grid = Array.from({ length: parsed.height }, () =>
-      Array.from({ length: parsed.width }, () => 0 as TmxSemanticCode)
-    );
-    let matchedLayer = false;
-
-    rules.forEach((rule) => {
-      const combined = this.combineLayersByNames(parsed, rule.layerNames);
-      if (!combined) return;
-      matchedLayer = true;
-
-      for (let y = 0; y < parsed.height; y += 1) {
-        for (let x = 0; x < parsed.width; x += 1) {
-          if (combined[y]?.[x]) {
-            grid[y][x] = rule.code;
-          }
-        }
-      }
-    });
-
-    return matchedLayer ? grid : null;
-  }
-
-  private createAreaCollisionConfigFromSemanticGrid(
-    bounds: Phaser.Geom.Rectangle,
-    parsed: ParsedTmxMap,
-    tileCodes: TmxSemanticCode[][],
-    blockedCodes: TmxSemanticCode[]
-  ): AreaCollisionConfig {
-    const blockedCodeSet = new Set<TmxSemanticCode>(blockedCodes);
-
-    return {
-      bounds,
-      mapWidth: parsed.width,
-      mapHeight: parsed.height,
-      tileWidth: parsed.tileWidth,
-      tileHeight: parsed.tileHeight,
-      tileCodes,
-      blocked: tileCodes.map((row) => row.map((cell) => blockedCodeSet.has(cell)))
-    };
-  }
-
-  private buildAreaCollisionConfigFromTmxSemanticRules(
-    textKey: string,
-    bounds: Phaser.Geom.Rectangle,
-    rules: TmxSemanticRule[],
-    blockedCodes: TmxSemanticCode[]
-  ): AreaCollisionConfig | null {
-    const tmxText = this.cache.text.get(textKey);
-    if (typeof tmxText !== "string" || tmxText.length === 0) return null;
-    const parsed = this.parseTmxMap(tmxText);
-    if (!parsed) return null;
-    const tileCodes = this.buildTmxSemanticGrid(parsed, rules);
-    if (!tileCodes) return null;
-    return this.createAreaCollisionConfigFromSemanticGrid(bounds, parsed, tileCodes, blockedCodes);
-  }
-
-  private buildAreaCollisionConfigFromTmx(textKey: string, bounds: Phaser.Geom.Rectangle, layerNames: string[]): AreaCollisionConfig | null {
-    const tmxText = this.cache.text.get(textKey);
-    if (typeof tmxText !== "string" || tmxText.length === 0) return null;
-    const parsed = this.parseTmxMap(tmxText);
-    if (!parsed) return null;
-    const combined = this.combineLayersByNames(parsed, layerNames);
-    if (!combined) return null;
-
-    return {
-      bounds,
-      mapWidth: parsed.width,
-      mapHeight: parsed.height,
-      tileWidth: parsed.tileWidth,
-      tileHeight: parsed.tileHeight,
-      tileCodes: combined.map((row) => row.map((cell) => (cell !== 0 ? 1 : 0 as TmxSemanticCode))),
-      blocked: combined.map((row) => row.map((cell) => cell !== 0))
-    };
-  }
-
-  private screenPointToMapTile(
-    screenX: number,
-    screenY: number,
-    bounds: Phaser.Geom.Rectangle,
-    parsed: Pick<ParsedTmxMap, "width" | "height" | "tileWidth" | "tileHeight">
-  ): { tileX: number; tileY: number } {
-    const mapPixelWidth = parsed.width * parsed.tileWidth;
-    const mapPixelHeight = parsed.height * parsed.tileHeight;
-    const localX = Phaser.Math.Clamp((screenX - bounds.x) / bounds.width, 0, 0.9999) * mapPixelWidth;
-    const localY = Phaser.Math.Clamp((screenY - bounds.y) / bounds.height, 0, 0.9999) * mapPixelHeight;
-    return {
-      tileX: Math.floor(localX / parsed.tileWidth),
-      tileY: Math.floor(localY / parsed.tileHeight)
-    };
-  }
-
-  private findNearestWalkablePoint(area: AreaId, desiredX: number, desiredY: number): { x: number; y: number } {
-    const config = this.areaCollisionConfigs[area];
-    if (!config) {
-      return { x: this.px(desiredX), y: this.px(desiredY) };
-    }
-
-    const desiredTile = this.screenPointToMapTile(desiredX, desiredY, config.bounds, {
-      width: config.mapWidth,
-      height: config.mapHeight,
-      tileWidth: config.tileWidth,
-      tileHeight: config.tileHeight
-    });
-
-    const clampTileX = Phaser.Math.Clamp(desiredTile.tileX, 0, config.mapWidth - 1);
-    const clampTileY = Phaser.Math.Clamp(desiredTile.tileY, 0, config.mapHeight - 1);
-    if (!config.blocked[clampTileY]?.[clampTileX]) {
-      return { x: this.px(desiredX), y: this.px(desiredY) };
-    }
-
-    const maxRadius = Math.max(config.mapWidth, config.mapHeight);
-    for (let radius = 1; radius <= maxRadius; radius += 1) {
-      for (let tileY = Math.max(0, clampTileY - radius); tileY <= Math.min(config.mapHeight - 1, clampTileY + radius); tileY += 1) {
-        for (let tileX = Math.max(0, clampTileX - radius); tileX <= Math.min(config.mapWidth - 1, clampTileX + radius); tileX += 1) {
-          if (config.blocked[tileY]?.[tileX]) continue;
-
-          const screenX = config.bounds.x + ((tileX + 0.5) * config.tileWidth * config.bounds.width) / (config.mapWidth * config.tileWidth);
-          const screenY = config.bounds.y + ((tileY + 0.5) * config.tileHeight * config.bounds.height) / (config.mapHeight * config.tileHeight);
-          return { x: this.px(screenX), y: this.px(screenY) };
-        }
-      }
-    }
-
-    return { x: this.px(desiredX), y: this.px(desiredY) };
-  }
-
-  private isBlockedByAreaCollision(area: AreaId, x: number, y: number): boolean {
-    const config = this.areaCollisionConfigs[area];
-    if (!config) return false;
-    const { bounds, mapWidth, mapHeight, tileWidth, tileHeight, blocked } = config;
-    const mapPixelWidth = mapWidth * tileWidth;
-    const mapPixelHeight = mapHeight * tileHeight;
-    const localX = ((x - bounds.x) / bounds.width) * mapPixelWidth;
-    const localY = ((y - bounds.y) / bounds.height) * mapPixelHeight;
-    const tileX = Math.floor(localX / tileWidth);
-    const tileY = Math.floor(localY / tileHeight);
-    if (tileX < 0 || tileY < 0 || tileX >= mapWidth || tileY >= mapHeight) return false;
-    return Boolean(blocked[tileY]?.[tileX]);
-  }
-
   private enforceAreaCollision(): void {
     const playerBody = this.player.body;
     if (!playerBody?.enable || this.currentArea === "world" && !this.worldMapRoot?.visible) return;
     if (this.menuOpen || this.dialogueOpen || this.placePopupOpen || this.shopOpen) return;
     const x = this.player.x;
     const y = this.player.y;
-    if (!this.isBlockedByAreaCollision(this.currentArea, x, y)) {
+    if (!isBlockedByAreaCollision(this.areaCollisionConfigs[this.currentArea], x, y)) {
       this.lastSafePlayerPosition = { x, y };
       return;
     }
     if (!this.lastSafePlayerPosition) return;
     this.player.setPosition(this.lastSafePlayerPosition.x, this.lastSafePlayerPosition.y);
     this.player.setVelocity(0, 0);
-  }
-
-  private extractTmxConnectedRegions(data: number[][], minAreaTiles: number): TmxRegion[] {
-    const height = data.length;
-    if (height === 0) return [];
-    const width = data[0]?.length ?? 0;
-    if (width === 0) return [];
-
-    const visited = Array.from({ length: height }, () => Array.from({ length: width }, () => false));
-    const dirs: Array<[number, number]> = [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1]
-    ];
-    const regions: TmxRegion[] = [];
-
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        if (visited[y][x] || data[y][x] === 0) continue;
-
-        const queue: Array<[number, number]> = [[x, y]];
-        visited[y][x] = true;
-        let qi = 0;
-        let minX = x;
-        let maxX = x;
-        let minY = y;
-        let maxY = y;
-        let area = 0;
-        let sumX = 0;
-        let sumY = 0;
-
-        while (qi < queue.length) {
-          const [cx, cy] = queue[qi];
-          qi += 1;
-          area += 1;
-          sumX += cx;
-          sumY += cy;
-          minX = Math.min(minX, cx);
-          maxX = Math.max(maxX, cx);
-          minY = Math.min(minY, cy);
-          maxY = Math.max(maxY, cy);
-
-          dirs.forEach(([dx, dy]) => {
-            const nx = cx + dx;
-            const ny = cy + dy;
-            if (nx < 0 || ny < 0 || nx >= width || ny >= height) return;
-            if (visited[ny][nx] || data[ny][nx] === 0) return;
-            visited[ny][nx] = true;
-            queue.push([nx, ny]);
-          });
-        }
-
-        if (area >= minAreaTiles) {
-          regions.push({
-            minX,
-            maxX,
-            minY,
-            maxY,
-            area,
-            centerX: sumX / area,
-            centerY: sumY / area
-          });
-        }
-      }
-    }
-
-    return regions;
-  }
-
-  private mapPointToAreaBounds(x: number, y: number, bounds: AreaRenderBounds): { x: number; y: number } {
-    if (!bounds) {
-      return { x: this.px(x), y: this.px(y) };
-    }
-    return {
-      x: this.px(bounds.x + (x / GAME_CONSTANTS.WIDTH) * bounds.width),
-      y: this.px(bounds.y + (y / GAME_CONSTANTS.HEIGHT) * bounds.height)
-    };
-  }
-
-  private mapSizeToAreaBounds(width: number, height: number, bounds: AreaRenderBounds): { width: number; height: number } {
-    if (!bounds) {
-      return { width: this.px(width), height: this.px(height) };
-    }
-    return {
-      width: this.px((width / GAME_CONSTANTS.WIDTH) * bounds.width),
-      height: this.px((height / GAME_CONSTANTS.HEIGHT) * bounds.height)
-    };
   }
 
   private enterArea(area: AreaId, worldPlace: WorldPlaceId = this.lastSelectedWorldPlace): void {
@@ -1574,7 +1022,7 @@ export class MainScene extends Phaser.Scene {
     this.player.setVisible(true);
     const areaBody = this.player.body;
     if (areaBody) areaBody.enable = true;
-    const resolvedSpawn = this.findNearestWalkablePoint(area, spawn.x, spawn.y);
+    const resolvedSpawn = findNearestWalkablePoint(this.areaCollisionConfigs[area], spawn.x, spawn.y, (value) => this.px(value));
     this.player.setPosition(resolvedSpawn.x, resolvedSpawn.y);
     this.highlightWorldPlace(null);
     this.controlHintText?.setText("WASD / Arrow: \uC774\uB3D9  |  E: \uC0C1\uD638\uC791\uC6A9  |  Q: \uC804\uCCB4 \uC9C0\uB3C4  |  ESC: \uBA54\uB274");
@@ -1603,10 +1051,10 @@ export class MainScene extends Phaser.Scene {
     if (zone) {
       const centerX = zone.centerX;
       const belowZoneY = zone.bottom + this.px(28);
-      return this.findNearestWalkablePoint("world", centerX, belowZoneY);
+      return findNearestWalkablePoint(this.areaCollisionConfigs.world, centerX, belowZoneY, (value) => this.px(value));
     }
 
-    return this.findNearestWalkablePoint("world", this.px(fallbackX), this.px(fallbackY));
+    return findNearestWalkablePoint(this.areaCollisionConfigs.world, this.px(fallbackX), this.px(fallbackY), (value) => this.px(value));
   }
 
   private getNearestWorldPlace(maxDistance: number): WorldPlaceNode | null {
@@ -1672,89 +1120,37 @@ export class MainScene extends Phaser.Scene {
       this.openHomeActionPopup();
       return;
     }
+    if (placeId !== "cafe" && placeId !== "store") {
+      return;
+    }
 
     this.closePlacePopup();
 
     const centerX = this.px(GAME_CONSTANTS.WIDTH / 2);
     const centerY = this.px(GAME_CONSTANTS.HEIGHT / 2);
-    const placeBackgroundKey = this.getPlaceBackgroundTextureKey(placeId);
+    const placeBackgroundKey = getPlaceBackgroundTextureKey(placeId);
     const placeBackgroundImage =
       placeBackgroundKey && this.textures.exists(placeBackgroundKey)
         ? this.add.image(centerX, centerY, placeBackgroundKey).setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT)
         : null;
-    const overlay = this.add.rectangle(
-      centerX,
-      centerY,
-      GAME_CONSTANTS.WIDTH,
-      GAME_CONSTANTS.HEIGHT,
-      0x000000,
-      placeBackgroundImage ? 0.42 : 0.36
-    );
-    let title = "";
-    let description = "";
-    let actionText = "";
-
-    if (placeId === "cafe") {
-      title = "\uCE74\uD398";
-      description = "\uCEE4\uD53C \uD55C \uC794 1,200G\n\uC2A4\uD2B8\uB808\uC2A4 \uAC10\uC18C / \uCCB4\uB825 \uC18C\uD3ED \uD68C\uBCF5";
-      actionText = "\uCEE4\uD53C \uB9C8\uC2DC\uAE30";
-    } else {
-      title = "\uD3B8\uC758\uC810";
-      description = "\uD544\uC694\uD55C \uBB3C\uD488\uC744 \uAD6C\uB9E4\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.";
-      actionText = "\uC0C1\uC810 \uC5F4\uAE30";
-    }
-
-    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 530, 290);
-    const panel = this.add.rectangle(centerX, centerY, 530, 290, 0x1a375c, 0.95);
-    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
-    const titleText = this.add.text(centerX, centerY - 92, title, this.getBodyStyle(34, "#e6f3ff", "bold"));
-    titleText.setOrigin(0.5);
-    const descText = this.add.text(centerX, centerY - 16, description, this.getBodyStyle(21, "#b6d6fb"));
-    descText.setOrigin(0.5);
-    descText.setAlign("center");
-    descText.setLineSpacing(8);
-
-    const actionBtn = this.createActionButton({
-      x: centerX - 96,
-      y: centerY + 86,
-      width: 170,
-      height: 52,
-      text: actionText,
-      onClick: () => this.usePlaceFeature(placeId)
+    const content = getPlacePopupContent(placeId);
+    this.placePopupRoot = createPlaceActionModal({
+      scene: this,
+      width: 530,
+      height: 290,
+      title: content.title,
+      description: content.description,
+      actionText: content.actionText,
+      backgroundImage: placeBackgroundImage,
+      getBodyStyle: this.getBodyStyle.bind(this),
+      createActionButton: this.createActionButton.bind(this),
+      uiPanelInnerBorderColor: this.uiPanelInnerBorderColor,
+      uiPanelOuterBorderColor: this.uiPanelOuterBorderColor,
+      onAction: () => this.usePlaceFeature(placeId),
+      onClose: () => this.closePlacePopup()
     });
-    const closeBtn = this.createActionButton({
-      x: centerX + 96,
-      y: centerY + 86,
-      width: 170,
-      height: 52,
-      text: "\uB2EB\uAE30",
-      onClick: () => this.closePlacePopup()
-    });
-
-    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, titleText, descText, actionBtn, closeBtn];
-    if (placeBackgroundImage) {
-      popupObjects.unshift(placeBackgroundImage);
-    }
-
-    this.placePopupRoot = this.add.container(0, 0, popupObjects);
     this.placePopupRoot.setDepth(920);
     this.placePopupOpen = true;
-  }
-
-  private getPlaceBackgroundTextureKey(placeId: WorldPlaceId): string | null {
-    if (placeId === "home") return PLACE_BACKGROUND_KEYS.home;
-    if (placeId === "cafe") return PLACE_BACKGROUND_KEYS.cafe;
-    if (placeId === "store") return PLACE_BACKGROUND_KEYS.store;
-    return null;
-  }
-
-  private getDowntownBuildingBackgroundTextureKey(buildingId: DowntownBuildingId): string | null {
-    if (buildingId === "gym") return PLACE_BACKGROUND_KEYS.gym;
-    if (buildingId === "ramenthings") return PLACE_BACKGROUND_KEYS.ramenthings;
-    if (buildingId === "karaoke") return PLACE_BACKGROUND_KEYS.karaoke;
-    if (buildingId === "hof") return PLACE_BACKGROUND_KEYS.hof;
-    if (buildingId === "lottery") return PLACE_BACKGROUND_KEYS.lottery;
-    return null;
   }
 
   private createPlaceBackgroundImage(textureKey: string | null): Phaser.GameObjects.Image | null {
@@ -1771,8 +1167,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   private usePlaceFeature(placeId: WorldPlaceId): void {
-    if (placeId === "cafe") {
-      const cost = 1200;
+    if (placeId !== "cafe" && placeId !== "store") {
+      return;
+    }
+    const result = resolvePlaceAction(placeId);
+    if (result.kind === "cafe") {
+      const cost = result.cost;
       if (this.hudState.money < cost) {
         this.showSystemToast("\uB3C8\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4");
         return;
@@ -1781,201 +1181,179 @@ export class MainScene extends Phaser.Scene {
         return;
       }
 
-      const nextHp = Phaser.Math.Clamp(this.hudState.hp + 8, 0, this.hudState.hpMax);
-      const nextStress = Phaser.Math.Clamp(this.hudState.stress - 12, 0, 100);
+      const nextHp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, this.hudState.hpMax);
+      const nextStress = Phaser.Math.Clamp(this.hudState.stress + result.stressDelta, 0, 100);
       this.updateHudState({
         hp: nextHp,
         stress: nextStress,
-        money: this.hudState.money - cost
+        money: this.hudState.money + result.moneyDelta
       });
       this.closePlacePopup();
-      this.showSystemToast("\uCE74\uD398\uC5D0\uC11C \uD734\uC2DD\uD588\uC2B5\uB2C8\uB2E4");
+      this.showSystemToast(result.toastMessage);
       return;
     }
 
     this.closePlacePopup();
-    this.openShop(this.getPlaceBackgroundTextureKey("store"));
-    this.showSystemToast("\uD3B8\uC758\uC810 \uC0C1\uC810 \uC5F4\uAE30");
+    this.openShop(getPlaceBackgroundTextureKey("store"));
+    this.showSystemToast(result.toastMessage);
   }
 
   private openHomeActionPopup(): void {
     this.closePlacePopup();
-
-    const centerX = this.px(GAME_CONSTANTS.WIDTH / 2);
-    const centerY = this.px(GAME_CONSTANTS.HEIGHT / 2);
-    const homeBackgroundImage = this.createPlaceBackgroundImage(this.getPlaceBackgroundTextureKey("home"));
-    const overlay = this.add.rectangle(
-      centerX,
-      centerY,
-      GAME_CONSTANTS.WIDTH,
-      GAME_CONSTANTS.HEIGHT,
-      0x000000,
-      homeBackgroundImage ? 0.42 : 0.36
-    );
-    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 560, 460);
-    const panel = this.add.rectangle(centerX, centerY, 560, 460, 0x1a375c, 0.95);
-    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
-    const title = this.add.text(centerX, centerY - 190, "\uC9D1 \uD589\uB3D9", this.getBodyStyle(34, "#e6f3ff", "bold"));
-    title.setOrigin(0.5);
-    const apText = this.add.text(
-      centerX,
-      centerY - 146,
-      `\uB0A8\uC740 \uD589\uB3D9\uB825: ${this.actionPoint}/${this.maxActionPoint}`,
-      this.getBodyStyle(21, "#b6d6fb", "bold")
-    );
-    apText.setOrigin(0.5);
-
-    const sleepBtn = this.createActionButton({
-      x: centerX,
-      y: centerY - 54,
-      width: 390,
-      height: 66,
-      text: "\uC7A0\uC790\uAE30 (행동력 1)  -  \uC2A4\uD2B8\uB808\uC2A4 \uAC10\uC18C, \uCCB4\uB825 \uD68C\uBCF5",
-      onClick: () => this.useHomeAction("sleep")
+    const homeBackgroundImage = this.createPlaceBackgroundImage(getPlaceBackgroundTextureKey("home"));
+    this.placePopupRoot = createHomeActionModal({
+      scene: this,
+      actionPoint: this.actionPoint,
+      maxActionPoint: this.maxActionPoint,
+      backgroundImage: homeBackgroundImage,
+      getBodyStyle: this.getBodyStyle.bind(this),
+      createActionButton: this.createActionButton.bind(this),
+      uiPanelInnerBorderColor: this.uiPanelInnerBorderColor,
+      uiPanelOuterBorderColor: this.uiPanelOuterBorderColor,
+      onAction: (action) => this.useHomeAction(action),
+      onClose: () => this.closePlacePopup(),
     });
-    const studyBtn = this.createActionButton({
-      x: centerX,
-      y: centerY + 32,
-      width: 390,
-      height: 66,
-      text: "\uACF5\uBD80\uD558\uAE30 (행동력 1)  -  FE/BE \uC99D\uAC00, \uC2A4\uD2B8\uB808\uC2A4/\uCCB4\uB825 \uBCC0\uD654",
-      onClick: () => this.useHomeAction("study")
-    });
-    const gameBtn = this.createActionButton({
-      x: centerX,
-      y: centerY + 118,
-      width: 390,
-      height: 66,
-      text: "\uAC8C\uC784\uD558\uAE30 (행동력 1)  -  FE/BE \uC18C\uD3ED \uAC10\uC18C, \uC2A4\uD2B8\uB808\uC2A4 \uAC10\uC18C",
-      onClick: () => this.useHomeAction("game")
-    });
-    const closeBtn = this.createActionButton({
-      x: centerX,
-      y: centerY + 196,
-      width: 210,
-      height: 52,
-      text: "\uB2EB\uAE30",
-      onClick: () => this.closePlacePopup()
-    });
-
-    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, apText, sleepBtn, studyBtn, gameBtn, closeBtn];
-    if (homeBackgroundImage) {
-      popupObjects.unshift(homeBackgroundImage);
-    }
-
-    this.placePopupRoot = this.add.container(0, 0, popupObjects);
     this.placePopupRoot.setDepth(920);
     this.placePopupOpen = true;
   }
 
-  private useHomeAction(action: "sleep" | "study" | "game"): void {
-    if (!this.spendActionPoint()) {
+  private useHomeAction(action: HomeActionId): void {
+    if (!this.spendActionPointAfter(() => this.openHomeActionPopup())) {
       return;
     }
 
-    if (action === "sleep") {
-      const nextHp = Phaser.Math.Clamp(this.hudState.hp + 22, 0, this.hudState.hpMax);
-      const nextStress = Phaser.Math.Clamp(this.hudState.stress - 20, 0, 100);
-      this.updateHudState({ hp: nextHp, stress: nextStress });
-      this.showSystemToast("\uC7A0\uC790\uAE30 \uC644\uB8CC");
-    } else if (action === "study") {
-      const nextHp = Phaser.Math.Clamp(this.hudState.hp - 12, 0, this.hudState.hpMax);
-      const nextStress = Phaser.Math.Clamp(this.hudState.stress + 10, 0, 100);
-      this.applyStatDelta({ fe: 4, be: 4 });
-      this.updateHudState({ hp: nextHp, stress: nextStress });
-      this.showSystemToast("\uACF5\uBD80\uD558\uAE30 \uC644\uB8CC");
-    } else {
-      const nextHp = Phaser.Math.Clamp(this.hudState.hp - 6, 0, this.hudState.hpMax);
-      const nextStress = Phaser.Math.Clamp(this.hudState.stress - 12, 0, 100);
-      this.applyStatDelta({ fe: -2, be: -2 });
-      this.updateHudState({ hp: nextHp, stress: nextStress });
-      this.showSystemToast("\uAC8C\uC784\uD558\uAE30 \uC644\uB8CC");
+    const result = resolveHomeAction(action);
+    const nextHp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, this.hudState.hpMax);
+    const nextStress = Phaser.Math.Clamp(this.hudState.stress + result.stressDelta, 0, 100);
+    this.applyStatDelta(result.statDelta);
+    this.updateHudState({ hp: nextHp, stress: nextStress });
+    this.showSystemToast(result.toastMessage);
+    this.closePlacePopup();
+  }
+
+  private getCurrentWeeklyPlanSlotKey(): string | null {
+    return getCurrentWeeklyPlanSlotKey(this.hudState.week, this.dayCycleIndex, this.timeCycleIndex);
+  }
+
+  private applyWeeklyPlanForCurrentSlot(): WeeklyPlanOption | null {
+    if (this.weeklyPlanWeek < this.hudState.week) return null;
+    const slotKey = this.getCurrentWeeklyPlanSlotKey();
+    if (!slotKey || this.lastAppliedWeeklyPlanSlotKey === slotKey) return null;
+
+    const slotIndex = getWeeklyPlanSlotIndex(this.dayCycleIndex, this.timeCycleIndex);
+    const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex] ?? WEEKLY_PLAN_OPTIONS[0].id);
+    this.applyStatDelta(option.statDelta);
+    this.lastAppliedWeeklyPlanSlotKey = slotKey;
+    return option;
+  }
+
+  private closeWeeklyPlanActivity(): void {
+    this.weeklyPlanActivityOpen = false;
+    this.weeklyPlanActivityTimer?.destroy();
+    this.weeklyPlanActivityTimer = undefined;
+    this.weeklyPlanActivityRoot?.destroy(true);
+    this.weeklyPlanActivityRoot = undefined;
+  }
+
+  private maybeStartWeeklyPlanActivity(onSettled?: () => void): boolean {
+    if (this.weeklyPlanActivityOpen || this.weeklyPlanWeek < this.hudState.week) {
+      return false;
     }
 
-    this.openHomeActionPopup();
+    const slotKey = this.getCurrentWeeklyPlanSlotKey();
+    if (!slotKey || this.lastAppliedWeeklyPlanSlotKey === slotKey) {
+      return false;
+    }
+
+    const slotIndex = getWeeklyPlanSlotIndex(this.dayCycleIndex, this.timeCycleIndex);
+    const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex] ?? WEEKLY_PLAN_OPTIONS[0].id);
+    const backgroundImage = this.createPlaceBackgroundImage(PLACE_BACKGROUND_KEYS.home);
+    const title = `${DAY_CYCLE[this.dayCycleIndex]} ${TIME_CYCLE[this.timeCycleIndex]}`;
+    this.closeWeeklyPlanActivity();
+    this.weeklyPlanActivityRoot = createWeeklyPlanActivityModal(this, {
+      title,
+      statusText: `${option.label} 하는 중...`,
+      description: option.description,
+      accentColor: option.color,
+      backgroundImage,
+      getBodyStyle: this.getBodyStyle.bind(this),
+      uiPanelInnerBorderColor: this.uiPanelInnerBorderColor,
+      uiPanelOuterBorderColor: this.uiPanelOuterBorderColor
+    });
+    this.weeklyPlanActivityOpen = true;
+    this.weeklyPlanActivityTimer = this.time.delayedCall(3000, () => {
+      this.closeWeeklyPlanActivity();
+      this.applyWeeklyPlanForCurrentSlot();
+
+      const result = advanceTimeProgress({
+        actionPoint: this.actionPoint,
+        maxActionPoint: this.maxActionPoint,
+        timeCycleIndex: this.timeCycleIndex,
+        dayCycleIndex: this.dayCycleIndex,
+        week: this.hudState.week,
+        endingWeek: 6
+      });
+      this.applyTimeProgressResult(result, onSettled);
+    });
+    return true;
+  }
+
+  private maybeOpenWeeklyPlanner(): void {
+    if (this.endingFlowStarted) return;
+    if (this.dayCycleIndex !== 0) return;
+    if (this.weeklyPlanWeek >= this.hudState.week) return;
+
+    this.time.delayedCall(120, () => {
+      if (this.dayCycleIndex !== 0 || this.weeklyPlanWeek >= this.hudState.week || this.endingFlowStarted) return;
+      this.openWeeklyPlannerPopup();
+    });
+  }
+
+  private openWeeklyPlannerPopup(): void {
+    this.closePlacePopup();
+    this.placePopupRoot = createWeeklyPlannerModal({
+      scene: this,
+      week: this.hudState.week,
+      dayLabels: DAY_CYCLE,
+      initialPlan: this.weeklyPlan,
+      getBodyStyle: this.getBodyStyle.bind(this),
+      createActionButton: this.createActionButton.bind(this),
+      uiPanelInnerBorderColor: this.uiPanelInnerBorderColor,
+      uiPanelOuterBorderColor: this.uiPanelOuterBorderColor,
+      onConfirm: (draftPlan) => {
+        this.weeklyPlan = [...draftPlan];
+        this.weeklyPlanWeek = this.hudState.week;
+        this.lastAppliedWeeklyPlanSlotKey = null;
+        this.closePlacePopup();
+        this.showSystemToast(`${this.hudState.week}주차 계획을 확정했습니다`);
+        this.maybeStartWeeklyPlanActivity();
+      },
+    });
+    this.placePopupRoot.setDepth(920);
+    this.placePopupOpen = true;
   }
 
   private openDowntownBuildingPopup(buildingId: DowntownBuildingId): void {
     this.closePlacePopup();
-
-    const centerX = this.px(GAME_CONSTANTS.WIDTH / 2);
-    const centerY = this.px(GAME_CONSTANTS.HEIGHT / 2);
-    const buildingBackgroundImage = this.createPlaceBackgroundImage(this.getDowntownBuildingBackgroundTextureKey(buildingId));
-    const overlay = this.add.rectangle(
-      centerX,
-      centerY,
-      GAME_CONSTANTS.WIDTH,
-      GAME_CONSTANTS.HEIGHT,
-      0x000000,
-      buildingBackgroundImage ? 0.42 : 0.36
-    );
-    const config = this.getDowntownBuildingConfig(buildingId);
-    const panelOuter = this.createPanelOuterBorder(centerX, centerY, 540, 296);
-    const panel = this.add.rectangle(centerX, centerY, 540, 296, 0x1a375c, 0.95);
-    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
-    const title = this.add.text(centerX, centerY - 90, config.title, this.getBodyStyle(34, "#e6f3ff", "bold"));
-    title.setOrigin(0.5);
-    const desc = this.add.text(centerX, centerY - 12, config.description, this.getBodyStyle(21, "#b6d6fb"));
-    desc.setOrigin(0.5);
-    desc.setAlign("center");
-    desc.setLineSpacing(8);
-
-    const actionBtn = this.createActionButton({
-      x: centerX - 96,
-      y: centerY + 92,
-      width: 170,
-      height: 52,
-      text: "\uC774\uC6A9\uD558\uAE30",
-      onClick: () => this.useDowntownBuilding(buildingId)
+    const buildingBackgroundImage = this.createPlaceBackgroundImage(getDowntownBuildingBackgroundTextureKey(buildingId));
+    const config = getDowntownBuildingConfig(buildingId);
+    this.placePopupRoot = createPlaceActionModal({
+      scene: this,
+      width: 540,
+      height: 296,
+      title: config.title,
+      description: config.description,
+      actionText: "\uC774\uC6A9\uD558\uAE30",
+      backgroundImage: buildingBackgroundImage,
+      getBodyStyle: this.getBodyStyle.bind(this),
+      createActionButton: this.createActionButton.bind(this),
+      uiPanelInnerBorderColor: this.uiPanelInnerBorderColor,
+      uiPanelOuterBorderColor: this.uiPanelOuterBorderColor,
+      onAction: () => this.useDowntownBuilding(buildingId),
+      onClose: () => this.closePlacePopup()
     });
-    const closeBtn = this.createActionButton({
-      x: centerX + 96,
-      y: centerY + 92,
-      width: 170,
-      height: 52,
-      text: "\uB2EB\uAE30",
-      onClick: () => this.closePlacePopup()
-    });
-
-    const popupObjects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, desc, actionBtn, closeBtn];
-    if (buildingBackgroundImage) {
-      popupObjects.unshift(buildingBackgroundImage);
-    }
-
-    this.placePopupRoot = this.add.container(0, 0, popupObjects);
     this.placePopupRoot.setDepth(920);
     this.placePopupOpen = true;
-  }
-
-  private getDowntownBuildingConfig(buildingId: DowntownBuildingId): { title: string; description: string } {
-    if (buildingId === "ramenthings") {
-      return {
-        title: "라멘띵스",
-        description: "\uB530\uB73B\uD55C \uB77C\uBA58 \uD55C \uADF8\uB987 1,400G\n\uCCB4\uB825 \uD68C\uBCF5 / \uC2A4\uD2B8\uB808\uC2A4 \uAC10\uC18C"
-      };
-    }
-    if (buildingId === "gym") {
-      return {
-        title: "\uD5EC\uC2A4\uC7A5",
-        description: "\uAC04\uB2E8 \uC6B4\uB3D9 \uD504\uB85C\uADF8\uB7A8 1,000G\n\uCD5C\uB300 \uCCB4\uB825 +10 / \uC2A4\uD2B8\uB808\uC2A4 \uAC10\uC18C"
-      };
-    }
-    if (buildingId === "karaoke") {
-      return {
-        title: "\uB178\uB798\uBC29",
-        description: "\uB9C8\uC74C\uAECF \uB178\uB798\uD558\uAE30 1,300G\n\uC2A4\uD2B8\uB808\uC2A4 \uAC10\uC18C / \uD611\uC5C5 \uC18C\uD3ED \uC99D\uAC00"
-      };
-    }
-    if (buildingId === "hof") {
-      return {
-        title: "\uD638\uD504",
-        description: "\uCE5C\uAD6C\uB4E4\uACFC \uD55C \uC794 1,600G\n\uC2A4\uD2B8\uB808\uC2A4 \uAC10\uC18C / \uCCB4\uB825 \uAC10\uC18C"
-      };
-    }
-    return {
-      title: "\uBCF5\uAD8C\uD310\uB9E4\uC810",
-      description: "\uBCF5\uAD8C 1\uC7A5 800G\n\uD589\uC6B4\uC5D0 \uB530\uB77C \uB3C8\uC744 \uC783\uAC70\uB098 \uBC8C \uC218 \uC788\uC2B5\uB2C8\uB2E4."
-    };
   }
 
   private useDowntownBuilding(buildingId: DowntownBuildingId): void {
@@ -1990,62 +1368,30 @@ export class MainScene extends Phaser.Scene {
       this.updateHudState({ money: this.hudState.money - cost });
       return true;
     };
+    const lotteryDelta = buildingId === "lottery" ? Phaser.Utils.Array.GetRandom([-1200, -500, 0, 700, 1800, 3200]) : 0;
+    const result = resolveDowntownBuildingAction(buildingId, lotteryDelta);
+    if (!spend(result.cost)) return;
 
-    if (buildingId === "ramenthings") {
-      if (!spend(1400)) return;
-      this.updateHudState({
-        hp: Phaser.Math.Clamp(this.hudState.hp + 12, 0, this.hudState.hpMax),
-        stress: Phaser.Math.Clamp(this.hudState.stress - 8, 0, 100)
-      });
-      this.closePlacePopup();
-      this.showSystemToast("\uB77C\uBA58\uC744 \uBA39\uACE0 \uD68C\uBCF5\uD588\uC2B5\uB2C8\uB2E4");
-      return;
+    const patch: Partial<HudState> = {};
+    if (typeof result.hpMaxDelta === "number") {
+      const nextHpMax = Math.max(1, Math.round(this.hudState.hpMax + result.hpMaxDelta));
+      patch.hpMax = nextHpMax;
+      patch.hp = Phaser.Math.Clamp(this.hudState.hp, 0, nextHpMax);
+    } else if (typeof result.hpDelta === "number") {
+      patch.hp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, this.hudState.hpMax);
     }
-
-    if (buildingId === "gym") {
-      if (!spend(1000)) return;
-      const nextHpMax = Math.max(1, Math.round(this.hudState.hpMax + 10));
-      this.updateHudState({
-        hpMax: nextHpMax,
-        hp: Phaser.Math.Clamp(this.hudState.hp, 0, nextHpMax),
-        stress: Phaser.Math.Clamp(this.hudState.stress - 7, 0, 100)
-      });
-      this.applyStatDelta({ teamwork: 2 });
-      this.closePlacePopup();
-      this.showSystemToast("\uC6B4\uB3D9 \uC644\uB8CC (\uCD5C\uB300 \uCCB4\uB825 +10)");
-      return;
+    if (typeof result.stressDelta === "number") {
+      patch.stress = Phaser.Math.Clamp(this.hudState.stress + result.stressDelta, 0, 100);
     }
-
-    if (buildingId === "karaoke") {
-      if (!spend(1300)) return;
-      this.updateHudState({
-        hp: Phaser.Math.Clamp(this.hudState.hp - 3, 0, this.hudState.hpMax),
-        stress: Phaser.Math.Clamp(this.hudState.stress - 14, 0, 100)
-      });
-      this.applyStatDelta({ teamwork: 4 });
-      this.closePlacePopup();
-      this.showSystemToast("\uB178\uB798\uBC29 \uC774\uC6A9 \uC644\uB8CC");
-      return;
+    if (typeof result.moneyDelta === "number") {
+      patch.money = Math.max(0, this.hudState.money + result.moneyDelta);
     }
-
-    if (buildingId === "hof") {
-      if (!spend(1600)) return;
-      this.updateHudState({
-        hp: Phaser.Math.Clamp(this.hudState.hp - 10, 0, this.hudState.hpMax),
-        stress: Phaser.Math.Clamp(this.hudState.stress - 12, 0, 100)
-      });
-      this.applyStatDelta({ luck: 2 });
-      this.closePlacePopup();
-      this.showSystemToast("\uD638\uD504 \uC774\uC6A9 \uC644\uB8CC");
-      return;
+    this.updateHudState(patch);
+    if (result.statDelta) {
+      this.applyStatDelta(result.statDelta);
     }
-
-    if (!spend(800)) return;
-    const delta = Phaser.Utils.Array.GetRandom([-1200, -500, 0, 700, 1800, 3200]);
-    this.updateHudState({ money: Math.max(0, this.hudState.money + delta) });
-    this.applyStatDelta({ luck: 1 });
     this.closePlacePopup();
-    this.showSystemToast(delta >= 0 ? `\uBCF5\uAD8C \uB2F9\uCCA8! +${delta}G` : `\uC544\uC26C\uC6CC\uC694 ${delta}G`);
+    this.showSystemToast(result.toastMessage);
   }
 
   private toggleMenu(): void {
@@ -2336,361 +1682,98 @@ export class MainScene extends Phaser.Scene {
   }
 
   private createSettingsPage(bounds: Phaser.Geom.Rectangle): Phaser.GameObjects.Container {
-    const container = this.add.container(0, 0);
-
-    const controlGuideTitle = this.add.text(
-      this.px(bounds.x + 24),
-      this.px(bounds.y + 18),
-      "\uC870\uC791 \uC548\uB0B4",
-      this.getBodyStyle(28, "#4b351f", "bold")
-    );
-
-    const body = this.add.text(
-      this.px(bounds.x + 24),
-      this.px(bounds.y + 58),
-      "ESC: \uBA54\uB274 \uC5F4\uAE30/\uB2EB\uAE30\nWASD/\uBC29\uD5A5\uD0A4: \uC774\uB3D9\nE: NPC \uB300\uD654\nQ: \uC804\uCCB4 \uC9C0\uB3C4",
-      this.getBodyStyle(23)
-    );
-    body.setLineSpacing(10);
-
-    const sectionTitle = this.add.text(
-      this.px(bounds.x + 24),
-      this.px(bounds.y + 206),
-      "\uC0AC\uC6B4\uB4DC \uBCFC\uB968",
-      this.getBodyStyle(28, "#4b351f", "bold")
-    );
-
-    const volume = this.audioManager.getVolumes();
-    const volumeState: Record<"bgm" | "sfx" | "ambience", number> = {
-      bgm: Math.round(volume.bgm * 100),
-      sfx: Math.round(volume.sfx * 100),
-      ambience: Math.round(volume.ambience * 100)
-    };
-
-    const setVolume = (key: "bgm" | "sfx" | "ambience", value: number): void => {
-      const next = Phaser.Math.Clamp(value, 0, 100);
-      volumeState[key] = next;
-      const normalized = next / 100;
-
-      if (key === "bgm") this.audioManager.setBgmVolume(normalized);
-      if (key === "sfx") this.audioManager.setSfxVolume(normalized);
-      if (key === "ambience") this.audioManager.setAmbienceVolume(normalized);
-    };
-
-    const rows: Phaser.GameObjects.GameObject[] = [];
-    const rowDefs: Array<{ key: "bgm" | "sfx" | "ambience"; label: string }> = [
-      { key: "bgm", label: "BGM" },
-      { key: "sfx", label: "SFX" },
-      { key: "ambience", label: "\uD658\uACBD\uC74C" }
-    ];
-
-    rowDefs.forEach((row, idx) => {
-      const y = this.px(bounds.y + 266 + idx * 62);
-      const rowLabel = this.add.text(this.px(bounds.x + 28), y - 12, row.label, this.getBodyStyle(21, "#4a371f", "bold"));
-      const valueText = this.add.text(this.px(bounds.x + 538), y - 12, `${volumeState[row.key]}%`, this.getBodyStyle(20, "#4a371f", "bold"));
-
-      const trackLeft = this.px(bounds.x + 142);
-      const trackWidth = 372;
-      const trackBg = this.add.rectangle(trackLeft, y + 1, trackWidth, 14, 0xd8c6a3, 1);
-      trackBg.setOrigin(0, 0.5);
-      trackBg.setStrokeStyle(1, 0x8f6c3c, 1);
-
-      const fill = this.add.rectangle(trackLeft + 2, y + 1, 0, 10, 0x9fbe7a, 1);
-      fill.setOrigin(0, 0.5);
-
-      const knob = this.add.rectangle(trackLeft, y + 1, 14, 20, 0xc8ae82, 1);
-      knob.setStrokeStyle(2, 0x725127, 1);
-      knob.setInteractive({ draggable: true, useHandCursor: true });
-      this.input.setDraggable(knob);
-
-      const applyFromValue = (next: number): void => {
-        setVolume(row.key, next);
-        const ratio = volumeState[row.key] / 100;
-        fill.width = this.px((trackWidth - 4) * ratio);
-        knob.x = this.px(trackLeft + ratio * trackWidth);
-        valueText.setText(`${volumeState[row.key]}%`);
-      };
-
-      const applyFromPointerX = (pointerX: number): void => {
-        const clampedX = Phaser.Math.Clamp(pointerX, trackLeft, trackLeft + trackWidth);
-        const ratio = (clampedX - trackLeft) / trackWidth;
-        applyFromValue(Math.round(ratio * 100));
-      };
-
-      trackBg.setInteractive({ useHandCursor: true }).on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-        applyFromPointerX(pointer.worldX);
-      });
-
-      knob.on("drag", (_pointer: Phaser.Input.Pointer, dragX: number) => {
-        applyFromPointerX(dragX);
-      });
-
-      applyFromValue(volumeState[row.key]);
-      rows.push(rowLabel, trackBg, fill, knob, valueText);
+    return createSettingsPageContent(this, {
+      bounds,
+      px: (value) => this.px(value),
+      getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
+      getVolumes: () => this.audioManager.getVolumes(),
+      setVolume: (key, value) => {
+        if (key === "bgm") this.audioManager.setBgmVolume(value);
+        if (key === "sfx") this.audioManager.setSfxVolume(value);
+        if (key === "ambience") this.audioManager.setAmbienceVolume(value);
+      }
     });
-
-    container.add([controlGuideTitle, body, sectionTitle, ...rows]);
-    return container;
   }
 
   private createInventoryPage(bounds: Phaser.Geom.Rectangle): Phaser.GameObjects.Container {
-    const container = this.add.container(0, 0);
-    const panelY = this.px(bounds.y + 28);
-    const panelH = 300;
-
-    const equipPanelX = this.px(bounds.x + 24);
-    const equipPanelW = 300;
-    const equipPanelCenterX = this.px(equipPanelX + equipPanelW / 2);
-
-    const inventoryPanelX = this.px(equipPanelX + equipPanelW + 16);
-    const inventoryPanelW = this.px(bounds.width - (inventoryPanelX - bounds.x) - 24);
-    const inventoryPanelCenterX = this.px(inventoryPanelX + inventoryPanelW / 2);
-
-    const equipPanelOuter = this.createPanelOuterBorder(equipPanelCenterX, panelY + panelH / 2, equipPanelW, panelH);
-    const equipPanel = this.add.rectangle(equipPanelCenterX, panelY + panelH / 2, equipPanelW, panelH, 0x17355a, 0.86);
-    equipPanel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
-    const inventoryPanelOuter = this.createPanelOuterBorder(inventoryPanelCenterX, panelY + panelH / 2, inventoryPanelW, panelH);
-    const inventoryPanel = this.add.rectangle(inventoryPanelCenterX, panelY + panelH / 2, inventoryPanelW, panelH, 0x17355a, 0.86);
-    inventoryPanel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
-
-    const equipLabel = this.add.text(
-      equipPanelCenterX,
-      this.px(panelY + 12),
-      "\uC7A5\uBE44 \uCE78",
-      this.getBodyStyle(20, "#b9d8fb")
-    );
-    equipLabel.setOrigin(0.5, 0);
-    const inventoryLabel = this.add.text(
-      inventoryPanelCenterX,
-      this.px(panelY + 12),
-      "\uC778\uBCA4\uD1A0\uB9AC",
-      this.getBodyStyle(20, "#b9d8fb")
-    );
-    inventoryLabel.setOrigin(0.5, 0);
-
-    const createSlotView = (x: number, y: number, size: number): SlotView => {
-      const bg = this.add.rectangle(x, y, size, size, 0x2e527d, 1);
-      bg.setStrokeStyle(2, 0x5aa8ee, 1);
-
-      const icon = this.add.rectangle(x, y, this.px(size - 14), this.px(size - 14), 0xffffff, 1);
-      icon.setStrokeStyle(1, 0x4f98df, 1);
-      icon.setVisible(false);
-
-      const iconText = this.add.text(x, y + 1, "", this.getBodyStyle(Math.max(12, Math.floor(size * 0.28)), "#e8f4ff", "bold"));
-      iconText.setOrigin(0.5);
-      iconText.setVisible(false);
-
-      const stackText = this.add.text(x + size / 2 - 4, y + size / 2 - 3, "", this.getBodyStyle(13, "#e8f4ff", "bold"));
-      stackText.setOrigin(1, 1);
-      stackText.setVisible(false);
-
-      return { bg, icon, iconText, stackText };
-    };
-
-    const equipSlotSize = 102;
-    const equipSlotY = this.px(panelY + 156);
-    const equipSlotGap = 156;
-    const keyboardSlotX = this.px(equipPanelCenterX - equipSlotGap / 2);
-    const mouseSlotX = this.px(equipPanelCenterX + equipSlotGap / 2);
-
-    const keyboardView = createSlotView(keyboardSlotX, equipSlotY, equipSlotSize);
-    const mouseView = createSlotView(mouseSlotX, equipSlotY, equipSlotSize);
-
-    const keyboardLabel = this.add.text(keyboardSlotX, this.px(equipSlotY + equipSlotSize / 2 + 16), "\uD0A4\uBCF4\uB4DC", this.getBodyStyle(19, "#b9d8fb"));
-    keyboardLabel.setOrigin(0.5, 0.5);
-    const mouseLabel = this.add.text(mouseSlotX, this.px(equipSlotY + equipSlotSize / 2 + 16), "\uB9C8\uC6B0\uC2A4", this.getBodyStyle(19, "#b9d8fb"));
-    mouseLabel.setOrigin(0.5, 0.5);
-
-    const bindEquipSlot = (slot: EquipmentSlotKey, view: SlotView): void => {
-      view.bg.setInteractive({ useHandCursor: true });
-      view.bg.on("pointerover", () => {
+    const inventoryPage = createInventoryPageContent(this, {
+      bounds,
+      px: (value) => this.px(value),
+      getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
+      createPanelOuterBorder: (centerX, centerY, width, height) =>
+        this.createPanelOuterBorder(centerX, centerY, width, height),
+      panelInnerBorderColor: this.uiPanelInnerBorderColor,
+      equipmentDefs: [
+        { key: "keyboard", label: "\uD0A4\uBCF4\uB4DC" },
+        { key: "mouse", label: "\uB9C8\uC6B0\uC2A4" }
+      ],
+      onEquipHover: (slot, view) => {
         this.applySlotHoverStyle(view);
         this.showItemTooltip(this.equippedSlots[slot], this.input.activePointer.worldX, this.input.activePointer.worldY);
-      });
-      view.bg.on("pointerout", () => {
+      },
+      onEquipOut: (_slot, view) => {
         this.applySlotIdleStyle(view);
         this.hideItemTooltip();
-      });
-      view.bg.on("pointerdown", () => {
+      },
+      onEquipDown: (slot, view) => {
         if (this.isDoubleClick(`equip-${slot}`)) {
           this.unequipItem(slot);
           return;
         }
         this.applySlotSelectedStyle(view);
-      });
-    };
-
-    bindEquipSlot("keyboard", keyboardView);
-    bindEquipSlot("mouse", mouseView);
-
-    const inventorySlotSize = 54;
-    const inventorySlotGap = 10;
-    const gridTotalW = inventorySlotSize * 4 + inventorySlotGap * 3;
-    const gridTotalH = inventorySlotSize * 4 + inventorySlotGap * 3;
-    const gridStartX = this.px(inventoryPanelCenterX - gridTotalW / 2 + inventorySlotSize / 2);
-    const gridStartY = this.px(panelY + 48 + (panelH - 72 - gridTotalH) / 2 + inventorySlotSize / 2);
-    const inventorySlots: Phaser.GameObjects.Container[] = [];
-    this.inventorySlotViews = [];
-
-    for (let row = 0; row < 4; row += 1) {
-      for (let col = 0; col < 4; col += 1) {
-        const x = this.px(gridStartX + col * (inventorySlotSize + inventorySlotGap));
-        const y = this.px(gridStartY + row * (inventorySlotSize + inventorySlotGap));
-        const slotIndex = row * 4 + col;
-        const view = createSlotView(x, y, inventorySlotSize);
-        this.inventorySlotViews.push(view);
-
-        view.bg.setInteractive({ useHandCursor: true });
-        view.bg.on("pointerover", () => {
-          this.applySlotHoverStyle(view);
-          this.showItemTooltip(this.inventorySlots[slotIndex], this.input.activePointer.worldX, this.input.activePointer.worldY);
-        });
-        view.bg.on("pointerout", () => {
-          this.applySlotIdleStyle(view);
-          this.hideItemTooltip();
-        });
-        view.bg.on("pointerdown", () => {
-          this.onInventorySlotClick(slotIndex, view);
-        });
-
-        inventorySlots.push(this.add.container(0, 0, [view.bg, view.icon, view.iconText, view.stackText]));
+      },
+      onInventoryHover: (slotIndex, view) => {
+        this.applySlotHoverStyle(view);
+        this.showItemTooltip(this.inventorySlots[slotIndex], this.input.activePointer.worldX, this.input.activePointer.worldY);
+      },
+      onInventoryOut: (_slotIndex, view) => {
+        this.applySlotIdleStyle(view);
+        this.hideItemTooltip();
+      },
+      onInventoryDown: (slotIndex, view) => {
+        this.onInventorySlotClick(slotIndex, view);
       }
-    }
-
-    this.equipmentSlotViews = {
-      keyboard: keyboardView,
-      mouse: mouseView
-    };
-
-    container.add([
-      equipPanelOuter,
-      equipPanel,
-      inventoryPanelOuter,
-      inventoryPanel,
-      equipLabel,
-      inventoryLabel,
-      keyboardView.bg,
-      keyboardView.icon,
-      keyboardView.iconText,
-      keyboardView.stackText,
-      mouseView.bg,
-      mouseView.icon,
-      mouseView.iconText,
-      mouseView.stackText,
-      keyboardLabel,
-      mouseLabel,
-      ...inventorySlots
-    ]);
+    });
+    this.inventorySlotViews = inventoryPage.inventorySlotViews;
+    this.equipmentSlotViews = inventoryPage.equipmentSlotViews;
     this.refreshInventoryUi();
-    return container;
+    return inventoryPage.container;
   }
 
   private createStatsPage(bounds: Phaser.Geom.Rectangle): Phaser.GameObjects.Container {
-    const container = this.add.container(0, 0);
-
-    const rowStartY = this.px(bounds.y + 38);
-    const rowGap = 52;
-    const barCenterX = this.px(bounds.x + 390);
-    const barW = 360;
-
-    STAT_ROW_DEFS.forEach((stat, i) => {
-      const y = this.px(rowStartY + i * rowGap);
-
-      const label = this.add.text(this.px(bounds.x + 24), y - 14, stat.label, this.getBodyStyle(22));
-      const value = this.add.text(this.px(bounds.x + 600), y - 14, `${this.statsState[stat.key]}`, this.getBodyStyle(22));
-
-      const barBg = this.add.rectangle(barCenterX, y + 2, barW, 16, 0x2c507a, 1);
-      barBg.setStrokeStyle(1, 0x4f98df, 1);
-
-      const barFillWidth = this.px((barW - 4) * Phaser.Math.Clamp(this.statsState[stat.key] / 100, 0, 1));
-      const barFill = this.add.rectangle(this.px(barCenterX - barW / 2 + 2), y + 2, barFillWidth, 12, 0x66d1c2, 1);
-      barFill.setOrigin(0, 0.5);
-
-      container.add([label, value, barBg, barFill]);
-      this.statViews[stat.key] = {
-        valueText: value,
-        barFill,
-        maxFillWidth: barW - 4
-      };
+    const statsPage = createStatsPageContent(this, {
+      bounds,
+      px: (value) => this.px(value),
+      getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
+      statRows: STAT_ROW_DEFS,
+      statsState: this.statsState
     });
-
+    this.statViews = statsPage.statViews;
     this.refreshStatsUi();
-    return container;
+    return statsPage.container;
   }
 
   private createSavePage(bounds: Phaser.Geom.Rectangle): Phaser.GameObjects.Container {
-    const container = this.add.container(0, 0);
-    const centerX = this.px(bounds.x + bounds.width / 2);
     this.savePinnedObjects = [];
-
-    const title = this.add.text(centerX, this.px(bounds.y + 34), "\uC138\uC774\uBE0C / \uBD88\uB7EC\uC624\uAE30", this.getBodyStyle(28, "#d7ecff", "bold"));
-    title.setOrigin(0.5, 0.5);
-    const subtitle = this.add.text(
-      centerX,
-      this.px(bounds.y + 64),
-      "\uB9E8 \uC704 auto\uB294 \uD558\uB8E8\uAC00 \uC9C0\uB098\uBA74 \uC790\uB3D9 \uC800\uC7A5 \uB429\uB2C8\uB2E4.",
-      this.getBodyStyle(16, "#95bde7")
-    );
-    subtitle.setOrigin(0.5, 0.5);
-
-    const actionY = this.px(bounds.y + 106);
-    const slotStartY = this.px(bounds.y + 172);
-    const slotGap = 58;
-    const slotWidth = this.px(bounds.width - 120);
-    const slotHeight = 48;
     const slotIds = this.saveManager.getSlotIds();
-
-    this.saveSlotViews = [];
     this.saveSlots = this.saveManager.loadSlots();
-
-    slotIds.forEach((slotId, index) => {
-      const y = this.px(slotStartY + index * slotGap);
-      const bg = this.add.rectangle(centerX, y, slotWidth, slotHeight, 0x1f3f64, 1);
-      bg.setStrokeStyle(2, 0x4f98df, 1);
-
-      const titleText = this.add.text(this.px(centerX - slotWidth / 2 + 18), this.px(y - 10), "", this.getBodyStyle(18, "#e8f4ff", "bold"));
-      titleText.setOrigin(0, 0);
-      const metaText = this.add.text(this.px(centerX - slotWidth / 2 + 18), this.px(y + 8), "", this.getBodyStyle(14, "#9ec7f1"));
-      metaText.setOrigin(0, 0);
-
-      bg.setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", () => {
+    const savePage = createSavePageContent(this, {
+      bounds,
+      slotIds,
+      px: (value) => this.px(value),
+      getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
+      createActionButton: (params) => this.createActionButton(params),
+      onSelectSlot: (slotId) => {
         this.selectedSaveSlotId = slotId;
         this.refreshSaveSlotUi();
-      });
-
-      this.saveSlotViews.push({
-        slotId,
-        bg,
-        title: titleText,
-        meta: metaText
-      });
-
-      container.add([bg, titleText, metaText]);
+      },
+      onSave: () => this.saveToSelectedSlot(),
+      onLoad: () => this.loadFromSelectedSlot()
     });
-
-    const saveBtn = this.createActionButton({
-      x: this.px(centerX - 130),
-      y: actionY,
-      width: 200,
-      height: 48,
-      text: "\uC800\uC7A5\uD558\uAE30",
-      onClick: () => this.saveToSelectedSlot()
-    });
-
-    const loadBtn = this.createActionButton({
-      x: this.px(centerX + 130),
-      y: actionY,
-      width: 200,
-      height: 48,
-      text: "\uBD88\uB7EC\uC624\uAE30",
-      onClick: () => this.loadFromSelectedSlot()
-    });
-
-    container.add([title, subtitle, saveBtn, loadBtn]);
-    this.savePinnedObjects = [title, subtitle, saveBtn, loadBtn];
+    this.saveSlotViews = savePage.saveSlotViews;
+    this.savePinnedObjects = savePage.pinnedObjects;
     this.refreshSaveSlotUi();
-    return container;
+    return savePage.container;
   }
 
   private saveToSelectedSlot(): void {
@@ -2756,60 +1839,25 @@ export class MainScene extends Phaser.Scene {
   }
 
   private getSaveSlotMetaText(slotData: SaveSlotData | null): string {
-    if (!slotData) return "\uBE48\uCE78";
-
-    const payload = slotData.payload as Partial<MainSavePayload>;
-    const hud = payload.hudState as Partial<HudState> | undefined;
-    const weekText = typeof hud?.week === "number" ? `${hud.week}\uC8FC\uCC28` : "";
-    const dayText = typeof hud?.dayLabel === "string" ? hud.dayLabel : "";
-    const timeText = typeof hud?.timeLabel === "string" ? hud.timeLabel : "";
-    const locationText = typeof hud?.locationLabel === "string" ? hud.locationLabel : "";
-    const summary = [weekText, dayText, timeText].filter((entry) => entry.length > 0).join(" ");
-    const savedAt = this.formatSaveTime(slotData.savedAt);
-
-    if (summary && locationText) {
-      return `${summary} | ${locationText} | ${savedAt}`;
-    }
-    if (summary) {
-      return `${summary} | ${savedAt}`;
-    }
-    return savedAt;
-  }
-
-  private formatSaveTime(iso: string): string {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return "\uC800\uC7A5 \uB370\uC774\uD130";
-    return date.toLocaleString("ko-KR", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    return getSaveSlotMetaText<AreaId, WorldPlaceId, StatKey, EquipmentSlotKey, WeeklyPlanOptionId>(slotData);
   }
 
   private captureGameSavePayload(): MainSavePayload {
-    return {
+    return captureGameSavePayload({
       currentArea: this.currentArea,
       lastSelectedWorldPlace: this.lastSelectedWorldPlace,
       playerPosition: { x: this.player.x, y: this.player.y },
-      hudState: { ...this.hudState },
-      statsState: { ...this.statsState },
+      hudState: this.hudState,
+      statsState: this.statsState,
       actionPoint: this.actionPoint,
       timeCycleIndex: this.timeCycleIndex,
       dayCycleIndex: this.dayCycleIndex,
-      inventorySlots: this.inventorySlots.map((slot) =>
-        slot
-          ? {
-              templateId: slot.template.templateId,
-              quantity: slot.quantity
-            }
-          : null
-      ),
-      equippedSlots: {
-        keyboard: this.equippedSlots.keyboard?.templateId ?? null,
-        mouse: this.equippedSlots.mouse?.templateId ?? null
-      }
-    };
+      weeklyPlan: this.weeklyPlan,
+      weeklyPlanWeek: this.weeklyPlanWeek,
+      lastAppliedWeeklyPlanSlotKey: this.lastAppliedWeeklyPlanSlotKey,
+      inventorySlots: this.inventorySlots,
+      equippedSlots: this.equippedSlots
+    });
   }
 
   private applyGameSavePayload(rawPayload: Record<string, unknown>): boolean {
@@ -2829,6 +1877,15 @@ export class MainScene extends Phaser.Scene {
     }
     if (typeof payload.dayCycleIndex === "number") {
       this.dayCycleIndex = Phaser.Math.Wrap(Math.round(payload.dayCycleIndex), 0, DAY_CYCLE.length);
+    }
+    if (Array.isArray(payload.weeklyPlan) && payload.weeklyPlan.length === this.weeklyPlan.length) {
+      this.weeklyPlan = payload.weeklyPlan.map((entry) => parseWeeklyPlanOptionId(entry) ?? WEEKLY_PLAN_OPTIONS[0].id);
+    }
+    if (typeof payload.weeklyPlanWeek === "number") {
+      this.weeklyPlanWeek = Math.max(0, Math.round(payload.weeklyPlanWeek));
+    }
+    if (typeof payload.lastAppliedWeeklyPlanSlotKey === "string" || payload.lastAppliedWeeklyPlanSlotKey === null) {
+      this.lastAppliedWeeklyPlanSlotKey = payload.lastAppliedWeeklyPlanSlotKey ?? null;
     }
 
     this.restoreStatsFromSave(payload.statsState);
@@ -2855,58 +1912,21 @@ export class MainScene extends Phaser.Scene {
   }
 
   private restoreStatsFromSave(stats: unknown): void {
-    if (!stats || typeof stats !== "object") return;
-    const saved = stats as Partial<Record<StatKey, number>>;
-
-    // Backward compatibility: old saves used "coding" instead of FE/BE.
-    const legacyCoding = (stats as Partial<Record<"coding", number>>).coding;
-    if (typeof legacyCoding === "number") {
-      const next = Phaser.Math.Clamp(Math.round(legacyCoding), 0, 100);
-      if (typeof saved.fe !== "number") this.statsState.fe = next;
-      if (typeof saved.be !== "number") this.statsState.be = next;
-    }
-
-    (Object.keys(this.statsState) as StatKey[]).forEach((key) => {
-      const next = saved[key];
-      if (typeof next !== "number") return;
-      this.statsState[key] = Phaser.Math.Clamp(Math.round(next), 0, 100);
+    restoreStatsFromSave({
+      stats,
+      statsState: this.statsState,
+      statKeys: Object.keys(this.statsState) as StatKey[],
+      legacyCodingTargets: ["fe", "be"]
     });
   }
 
   private restoreInventoryFromSave(payload: Partial<MainSavePayload>): void {
-    const templateMap = new Map<string, InventoryItemTemplate>();
-    SHOP_ITEM_TEMPLATES.forEach((template) => {
-      templateMap.set(template.templateId, template);
+    restoreInventoryFromSave({
+      payload,
+      inventorySlots: this.inventorySlots,
+      equippedSlots: this.equippedSlots,
+      templates: SHOP_ITEM_TEMPLATES
     });
-
-    for (let i = 0; i < this.inventorySlots.length; i += 1) {
-      this.inventorySlots[i] = null;
-    }
-
-    const savedInventory = Array.isArray(payload.inventorySlots) ? payload.inventorySlots : [];
-    for (let i = 0; i < this.inventorySlots.length; i += 1) {
-      const row = savedInventory[i];
-      if (!row || typeof row !== "object") continue;
-      const item = row as Partial<SerializedInventoryStack>;
-      if (typeof item.templateId !== "string") continue;
-      const template = templateMap.get(item.templateId);
-      if (!template) continue;
-      const quantity = Math.max(1, Math.round(item.quantity ?? 1));
-      this.inventorySlots[i] = { template, quantity };
-    }
-
-    this.equippedSlots.keyboard = null;
-    this.equippedSlots.mouse = null;
-
-    const savedEquipped = payload.equippedSlots;
-    if (!savedEquipped || typeof savedEquipped !== "object") return;
-
-    const keyboardId = (savedEquipped as Partial<Record<EquipmentSlotKey, string | null>>).keyboard;
-    const mouseId = (savedEquipped as Partial<Record<EquipmentSlotKey, string | null>>).mouse;
-    const keyboardTemplate = typeof keyboardId === "string" ? templateMap.get(keyboardId) ?? null : null;
-    const mouseTemplate = typeof mouseId === "string" ? templateMap.get(mouseId) ?? null : null;
-    this.equippedSlots.keyboard = keyboardTemplate;
-    this.equippedSlots.mouse = mouseTemplate;
   }
 
   private parseAreaId(value: unknown): AreaId | null {
@@ -2953,55 +1973,24 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buildDialogueUi(): void {
-    const panelWidth = this.px(GAME_CONSTANTS.WIDTH - 84);
-    const panelHeight = 220;
-    const centerX = this.px(GAME_CONSTANTS.WIDTH / 2);
-    const panelCenterY = this.px(GAME_CONSTANTS.HEIGHT - 132);
-    const panelLeft = this.px(centerX - panelWidth / 2);
-    const panelTop = this.px(panelCenterY - panelHeight / 2);
-
-    const panelOuter = this.createPanelOuterBorder(centerX, panelCenterY, panelWidth, panelHeight);
-    const panel = this.add.rectangle(centerX, panelCenterY, panelWidth, panelHeight, 0x132e4f, 0.94);
-    panel.setStrokeStyle(2, this.uiPanelInnerBorderColor, 1);
-
-    const speaker = this.add.text(panelLeft + 22, panelTop + 16, "", this.getBodyStyle(21, "#e8f4ff", "bold"));
-    speaker.setOrigin(0, 0);
-
-    const body = this.add.text(panelLeft + 22, panelTop + 52, "", this.getBodyStyle(19, "#cde3ff"));
-    body.setOrigin(0, 0);
-    body.setWordWrapWidth(this.px(panelWidth - 44), true);
-    body.setLineSpacing(8);
-
-    const actionButtonBg = this.add.rectangle(panelLeft + panelWidth - 90, panelTop + panelHeight - 38, 132, 34, 0x2c5888, 1);
-    actionButtonBg.setStrokeStyle(2, 0x78c3ff, 1);
-    actionButtonBg.setInteractive({ useHandCursor: true });
-    actionButtonBg.on("pointerover", () => actionButtonBg.setFillStyle(0x34669c, 1));
-    actionButtonBg.on("pointerout", () => actionButtonBg.setFillStyle(0x2c5888, 1));
-    actionButtonBg.on("pointerdown", () => {
-      const node = this.getCurrentDialogueNode();
-      if (!node) return;
-      this.resolveDialogueAdvance(node);
+    const ui = createDialogueUi(this, {
+      px: (value) => this.px(value),
+      getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
+      createPanelOuterBorder: (centerX, centerY, panelWidth, panelHeight) =>
+        this.createPanelOuterBorder(centerX, centerY, panelWidth, panelHeight),
+      panelInnerBorderColor: this.uiPanelInnerBorderColor,
+      onAction: () => {
+        const node = this.getCurrentDialogueNode();
+        if (!node) return;
+        this.resolveDialogueAdvance(node);
+      }
     });
-
-    const actionButtonText = this.add.text(
-      panelLeft + panelWidth - 90,
-      panelTop + panelHeight - 39,
-      "E \uB2E4\uC74C",
-      this.getBodyStyle(16, "#e6f3ff", "bold")
-    );
-    actionButtonText.setOrigin(0.5);
-
-    const hint = this.add.text(panelLeft + panelWidth - 20, panelTop + panelHeight - 68, "", this.getBodyStyle(14, "#99c4f3"));
-    hint.setOrigin(1, 1);
-
-    this.dialogueRoot = this.add.container(0, 0, [panelOuter, panel, speaker, body, actionButtonBg, actionButtonText, hint]);
-    this.dialogueRoot.setDepth(1150);
-    this.dialogueRoot.setVisible(false);
-    this.dialogueSpeakerText = speaker;
-    this.dialogueBodyText = body;
-    this.dialogueHintText = hint;
-    this.dialogueActionButtonBg = actionButtonBg;
-    this.dialogueActionButtonText = actionButtonText;
+    this.dialogueRoot = ui.root;
+    this.dialogueSpeakerText = ui.speakerText;
+    this.dialogueBodyText = ui.bodyText;
+    this.dialogueHintText = ui.hintText;
+    this.dialogueActionButtonBg = ui.actionButtonBg;
+    this.dialogueActionButtonText = ui.actionButtonText;
   }
 
   private handleNpcInteraction(dialogueId: NpcDialogueId): void {
@@ -3108,63 +2097,38 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    this.dialogueSpeakerText?.setText(node.speaker);
-    this.dialogueBodyText?.setText(node.text);
     this.clearDialogueChoices();
-
-    if (node.choices?.length) {
-      const choiceStartY = this.px(GAME_CONSTANTS.HEIGHT - 122);
-      const choiceSpacing = 26;
-      const choiceX = this.px(74);
-      const wrapWidth = this.px(GAME_CONSTANTS.WIDTH - 148);
-
-      node.choices.forEach((choice, index) => {
-        const line = this.add.text(choiceX, choiceStartY + index * choiceSpacing, "", this.getBodyStyle(17, "#d2e7ff"));
-        line.setOrigin(0, 0);
-        line.setWordWrapWidth(wrapWidth, true);
-        this.dialogueRoot?.add(line);
-        this.dialogueChoiceViews.push({
-          text: line,
-          choice,
-          requirementText: this.getDialogueRequirementText(choice)
-        });
-      });
-
-      if (this.dialogueChoiceIndex >= node.choices.length) {
-        this.dialogueChoiceIndex = 0;
-      }
-
-      this.dialogueHintText?.setText("\u2191/\u2193 \uC120\uD0DD  |  E \uB610\uB294 \uBC84\uD2BC \uACB0\uC815  |  ESC \uC885\uB8CC");
-      this.dialogueActionButtonText?.setText("E \uC120\uD0DD");
-      this.refreshDialogueChoiceStyles();
+    if (!this.dialogueSpeakerText || !this.dialogueBodyText || !this.dialogueHintText || !this.dialogueActionButtonText) {
       return;
     }
 
-    this.dialogueActionButtonText?.setText((node.nextNodeId || node.action ? "E \uB2E4\uC74C" : "E \uC885\uB8CC"));
-    this.dialogueHintText?.setText((node.nextNodeId || node.action ? "E \uB2E4\uC74C" : "E \uC885\uB8CC") + "  |  ESC \uC885\uB8CC");
+    const rendered = renderDialogueNode(this, {
+      node,
+      root: this.dialogueRoot,
+      px: (value) => this.px(value),
+      getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
+      ui: {
+        speakerText: this.dialogueSpeakerText,
+        bodyText: this.dialogueBodyText,
+        hintText: this.dialogueHintText,
+        actionButtonText: this.dialogueActionButtonText
+      },
+      dialogueChoiceIndex: this.dialogueChoiceIndex,
+      getRequirementText: (choice) => this.getDialogueRequirementText(choice),
+      isChoiceAvailable: (choice) => this.isDialogueChoiceAvailable(choice)
+    });
+    this.dialogueChoiceViews = rendered.choiceViews;
+    this.dialogueChoiceIndex = rendered.dialogueChoiceIndex;
   }
 
   private refreshDialogueChoiceStyles(): void {
-    this.dialogueChoiceViews.forEach((view, index) => {
-      const selected = index === this.dialogueChoiceIndex;
-      const available = this.isDialogueChoiceAvailable(view.choice);
-      const prefix = selected ? "\u25B6 " : "   ";
-      let text = `${prefix}${view.choice.text}`;
-      if (view.requirementText.length > 0) {
-        text += ` (${view.requirementText})`;
-      }
-      if (!available) {
-        text += " [\uC870\uAC74 \uBBF8\uCDA9\uC871]";
-      }
-      view.text.setText(text);
-      view.text.setColor(available ? (selected ? "#f0f8ff" : "#bfd9f8") : "#7f9cbc");
-      view.text.setAlpha(available ? 1 : 0.78);
-    });
+    refreshDialogueChoiceStyles(this.dialogueChoiceViews, this.dialogueChoiceIndex, (choice) =>
+      this.isDialogueChoiceAvailable(choice)
+    );
   }
 
   private clearDialogueChoices(): void {
-    this.dialogueChoiceViews.forEach((view) => view.text.destroy());
-    this.dialogueChoiceViews = [];
+    this.dialogueChoiceViews = clearDialogueChoices(this.dialogueChoiceViews);
   }
 
   private closeDialogue(): void {
@@ -3818,51 +2782,57 @@ export class MainScene extends Phaser.Scene {
   }
 
   private spendActionPoint(): boolean {
+    return this.spendActionPointAfter();
+  }
+
+  private spendActionPointAfter(onSettled?: () => void): boolean {
     if (this.actionPoint <= 0) {
       this.showSystemToast("\uD589\uB3D9\uB825\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4");
       return false;
     }
+    if (this.weeklyPlanActivityOpen) {
+      return false;
+    }
 
-    let dayPassed = false;
-    let shouldStartEndingAfterUpdate = false;
-    this.actionPoint = Phaser.Math.Clamp(this.actionPoint - 1, 0, this.maxActionPoint);
-    this.timeCycleIndex = (this.timeCycleIndex + 1) % TIME_CYCLE.length;
+    const result = advanceTimeProgress({
+      actionPoint: this.actionPoint,
+      maxActionPoint: this.maxActionPoint,
+      timeCycleIndex: this.timeCycleIndex,
+      dayCycleIndex: this.dayCycleIndex,
+      week: this.hudState.week,
+      endingWeek: 6
+    });
+    this.applyTimeProgressResult(result, onSettled);
+    return true;
+  }
 
-    const patch: Partial<HudState> = {
-      timeLabel: TIME_CYCLE[this.timeCycleIndex]
-    };
+  private applyTimeProgressResult(
+    result: ReturnType<typeof advanceTimeProgress>,
+    onSettled?: () => void
+  ): void {
+    this.actionPoint = result.actionPoint;
+    this.timeCycleIndex = result.timeCycleIndex;
+    this.dayCycleIndex = result.dayCycleIndex;
 
-    if (this.timeCycleIndex === 0) {
-      dayPassed = true;
-      this.actionPoint = this.maxActionPoint;
-      this.dayCycleIndex = (this.dayCycleIndex + 1) % DAY_CYCLE.length;
-      patch.dayLabel = DAY_CYCLE[this.dayCycleIndex];
-      if (this.dayCycleIndex === 0) {
-        if (this.hudState.week >= 6) {
-          shouldStartEndingAfterUpdate = true;
-        } else {
-          patch.week = this.hudState.week + 1;
-        }
-      }
+    this.updateHudState(result.patch);
+
+    if (result.dayPassed) {
       this.time.delayedCall(180, () => {
         this.showSystemToast("\uD558\uB8E8\uAC00 \uC9C0\uB0AC\uC2B5\uB2C8\uB2E4");
       });
-    }
-
-    this.updateHudState(patch);
-    if (dayPassed) {
       this.saveGameToSlot("auto", true);
-      if (shouldStartEndingAfterUpdate || this.shouldTriggerEndingFlow(patch.week)) {
+      this.maybeOpenWeeklyPlanner();
+      if (result.shouldStartEndingAfterUpdate || shouldTriggerEndingFlow(this.hudState.week, result.patch.week)) {
         this.time.delayedCall(240, () => {
           this.startEndingFlow();
         });
       }
     }
-    return true;
-  }
 
-  private shouldTriggerEndingFlow(nextWeek?: number): boolean {
-    return typeof nextWeek === "number" && this.hudState.week <= 6 && nextWeek > 6;
+    if (this.maybeStartWeeklyPlanActivity(onSettled)) {
+      return;
+    }
+    onSettled?.();
   }
 
   private buildEndingPayload(): EndingFlowPayload {

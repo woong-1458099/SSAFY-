@@ -82,9 +82,7 @@ export class AudioManager {
   }
 
   updateManagedSoundVolume(sound: Phaser.Sound.BaseSound, category: AudioCategory, baseVolume = 1): void {
-    (sound as Phaser.Sound.WebAudioSound | Phaser.Sound.HTML5AudioSound).setVolume(
-      AudioManager.getEffectiveVolumeFor(category, baseVolume)
-    );
+    sound.setVolume(AudioManager.getEffectiveVolumeFor(category, baseVolume));
   }
 
   private static setVolume(category: AudioCategory, value: number): void {
@@ -103,9 +101,7 @@ export class AudioManager {
         AudioManager.managedSounds.delete(entry);
         return;
       }
-      (entry.sound as Phaser.Sound.WebAudioSound | Phaser.Sound.HTML5AudioSound).setVolume(
-        AudioManager.getEffectiveVolumeFor(entry.category, entry.baseVolume)
-      );
+      entry.sound.setVolume(AudioManager.getEffectiveVolumeFor(entry.category, entry.baseVolume));
     });
   }
 

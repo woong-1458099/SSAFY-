@@ -8,13 +8,12 @@ const GAME_CARDS = [
   { key: "QuizScene", title: "퀴즈", sub: "알고리즘/CS 문제", desc: "15초 / 5문제", reward: "지능 +10, 골드 +30", bgColor: 0x001888, borderColor: 0x4499ff, glowColor: 0x0033cc },
   { key: "RhythmScene", title: "리듬", sub: "키보드 리듬 입력", desc: "A S D F", reward: "집중 +7, 골드 +20", bgColor: 0x005518, borderColor: 0x33ff88, glowColor: 0x007722 },
   { key: "DragScene", title: "정렬", sub: "코드 순서 맞추기", desc: "60초 / 드래그", reward: "지능 +10, 골드 +30", bgColor: 0x440088, borderColor: 0xcc55ff, glowColor: 0x6600aa },
+  { key: "BugScene", title: "버그 찾기", sub: "버그를 빠르게 클릭", desc: "30초 / 콤보", reward: "집중 +7, 골드 +20", bgColor: 0x881100, borderColor: 0xff4466, glowColor: 0xaa1133 },
   { key: "RunnerScene", title: "러너", sub: "장애물 점프", desc: "생존형", reward: "민첩 +7, 골드 +20", bgColor: 0x003322, borderColor: 0x33ffcc, glowColor: 0x006644 },
+  { key: "AimScene", title: "에임", sub: "표적 정확도", desc: "30초 / 정확도", reward: "민첩 +7, 골드 +20", bgColor: 0x220011, borderColor: 0xff4466, glowColor: 0x550022 },
   { key: "TypingScene", title: "타이핑", sub: "코드 타이핑", desc: "20초 / 입력", reward: "지능 +5, 골드 +10", bgColor: 0x0d2a1a, borderColor: 0x44ff88, glowColor: 0x116633 },
   { key: "BusinessSmileScene", title: "비즈니스 미소", sub: "미소 게이지 채우기", desc: "표정 인식", reward: "매력 +8, 골드 +20", bgColor: 0x003455, borderColor: 0x48d4ff, glowColor: 0x0d5c84 },
-  { key: "DontSmileScene", title: "웃음 참기", sub: "표정 제어 챌린지", desc: "끝까지 버티기", reward: "멘탈 +8, 골드 +20", bgColor: 0x4d1020, borderColor: 0xff6a88, glowColor: 0x6d1830 },
-  { key: "GymScene", title: "헬스장", sub: "← → 교대 입력", desc: "15렙 / 30초", reward: "체력 +10, 골드 +20", bgColor: 0x1a0800, borderColor: 0xff8800, glowColor: 0x332200 },
-  { key: "CookingScene", title: "라면 장인", sub: "재료 받기", desc: "30초 / 캐치", reward: "체력 +15, 골드 +20", bgColor: 0x442211, borderColor: 0xff8822, glowColor: 0x663311 },
-  { key: "LottoScene", title: "SSAFY 로또", sub: "일확천금 가챠", desc: "운빨 테스트", reward: "1등: 10,000 GP", bgColor: 0x001133, borderColor: 0xffff00, glowColor: 0x002244 },
+  { key: "DontSmileScene", title: "웃음 참기", sub: "표정 제어 챌린지", desc: "끝까지 버티기", reward: "멘탈 +8, 골드 +20", bgColor: 0x4d1020, borderColor: 0xff6a88, glowColor: 0x6d1830 }
 ];
 
 export default class MenuScene extends Phaser.Scene {
@@ -101,7 +100,7 @@ export default class MenuScene extends Phaser.Scene {
       color: "#9fd8ff",
       fontFamily: PF
     }).setOrigin(1, 0);
-    this.add.text(772, 52, "미니게임 10종 준비 완료", {
+    this.add.text(772, 52, "미니게임 9종 준비 완료", {
       fontSize: "9px",
       color: "#ffffff",
       fontFamily: PF
@@ -211,18 +210,18 @@ export default class MenuScene extends Phaser.Scene {
     this.selectorRoot.add([overlay, panel, title, guide]);
 
     GAME_CARDS.forEach((game, index) => {
-      const col = index % 4;
-      const row = Math.floor(index / 4);
-      const x = 125 + col * 184;
-      const y = 230 + row * 105;
+      const col = index % 3;
+      const row = Math.floor(index / 3);
+      const x = 182 + col * 218;
+      const y = 238 + row * 112;
       this.selectorRoot.add(this.createCard(game, x, y));
     });
   }
 
   createCard(game, x, y) {
     const container = this.add.container(0, 0);
-    const shadow = this.add.rectangle(x + 4, y + 4, 172, 84, 0x000000, 0.66);
-    const card = this.add.rectangle(x, y, 172, 84, game.bgColor).setInteractive().setStrokeStyle(3, game.borderColor);
+    const shadow = this.add.rectangle(x + 4, y + 4, 188, 88, 0x000000, 0.66);
+    const card = this.add.rectangle(x, y, 188, 88, game.bgColor).setInteractive().setStrokeStyle(3, game.borderColor);
     const title = this.add.text(x, y - 18, game.title, { fontSize: "10px", color: "#ffffff", fontFamily: PF }).setOrigin(0.5);
     const sub = this.add.text(x, y + 1, game.sub, {
       fontSize: "5px",
