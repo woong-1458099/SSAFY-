@@ -5,7 +5,6 @@ import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.auth.KeycloakTokenResponse;
-import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
