@@ -5,12 +5,13 @@ import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.auth.KeycloakTokenResponse;
-import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.annotation.PostConstruct;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.GrantedAuthority;
@@ -45,19 +47,22 @@ public class AuthService {
     private static final String SESSION_VERIFIER_KEY = "auth.bff.verifier";
     private static final String SESSION_ACTION_KEY = "auth.bff.action";
 
-    private final AppUrlProperties appUrlProperties;
+    private final String publicBaseUrl;
+    private final String frontendBaseUrl;
     private final KeycloakAuthProperties keycloakAuthProperties;
     private final UserService userService;
     private final JwtDecoder jwtDecoder;
     private final RestClient restClient;
 
     public AuthService(
-            AppUrlProperties appUrlProperties,
+            @Value("${app.urls.public-base-url:}") String publicBaseUrl,
+            @Value("${app.urls.frontend-base-url:}") String frontendBaseUrl,
             KeycloakAuthProperties keycloakAuthProperties,
             UserService userService,
             JwtDecoder jwtDecoder
     ) {
-        this.appUrlProperties = appUrlProperties;
+        this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
+        this.frontendBaseUrl = trimTrailingSlash(frontendBaseUrl);
         this.keycloakAuthProperties = keycloakAuthProperties;
         this.userService = userService;
         this.jwtDecoder = jwtDecoder;
@@ -69,8 +74,8 @@ public class AuthService {
         if (!keycloakAuthProperties.enabled()) {
             return;
         }
-        appUrlProperties.validatedPublicBaseUri();
-        appUrlProperties.validatedFrontendBaseUri();
+        validateAbsoluteUri(publicBaseUrl, "app.urls.public-base-url");
+        validateAbsoluteUri(frontendBaseUrl, "app.urls.frontend-base-url");
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -95,7 +100,7 @@ public class AuthService {
                 .queryParam("code_challenge", challenge)
                 .queryParam("code_challenge_method", "S256");
 
-        String authorizationUrl = builder.build(true).toUriString();
+        String authorizationUrl = builder.build().encode().toUriString();
         log.info("auth start action={} sessionId={} callbackUri={} authHost={}",
                 action, session.getId(), callbackUri, keycloakAuthProperties.browserRealmUrl());
         return authorizationUrl;
@@ -175,13 +180,13 @@ public class AuthService {
             builder.queryParam("id_token_hint", resolvedIdTokenHint);
         }
 
-        String logoutUrl = builder.build(true).toUriString();
+        String logoutUrl = builder.build().encode().toUriString();
         log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);
     }
 
     public String frontendRootUri() {
-        return appUrlProperties.normalizedFrontendBaseUrl() + "/";
+        return frontendBaseUrl + "/";
     }
 
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
@@ -217,7 +222,32 @@ public class AuthService {
     }
 
     private String callbackUri() {
-        return appUrlProperties.normalizedPublicBaseUrl() + "/api/auth/callback";
+        return publicBaseUrl + "/api/auth/callback";
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String normalized = value;
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    private void validateAbsoluteUri(String value, String propertyName) {
+        if (value.isBlank()) {
+            throw new IllegalStateException(propertyName + " must not be blank");
+        }
+        try {
+            URI uri = new URI(value);
+            if (uri.getScheme() == null || uri.getHost() == null) {
+                throw new IllegalStateException(propertyName + " must be an absolute URL");
+            }
+        } catch (URISyntaxException exception) {
+            throw new IllegalStateException(propertyName + " must be a valid URL", exception);
+        }
     }
 
     private void clearPendingAuth(HttpSession session) {
