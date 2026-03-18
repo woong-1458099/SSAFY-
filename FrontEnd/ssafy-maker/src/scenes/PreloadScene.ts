@@ -24,6 +24,9 @@ export class PreloadScene extends Phaser.Scene {
     this.load.text("map_tmx_downtown", "assets/game/map/city.tmx");
     this.load.text("map_tmx_campus", "assets/game/map/inSSAFY.tmx");
     this.load.json("story_fixed_week1", "assets/game/data/story/fixedevent/fixed_week1.json");
+    this.load.json("story_fixed_week2", "assets/game/data/story/fixedevent/fixed_week2.json");
+    this.load.json("story_fixed_week3", "assets/game/data/story/fixedevent/fixed_week3.json");
+    this.load.json("story_fixed_week4", "assets/game/data/story/fixedevent/fixed_week4.json");
   }
 
   create(): void {

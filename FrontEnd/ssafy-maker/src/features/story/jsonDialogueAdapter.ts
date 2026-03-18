@@ -22,6 +22,7 @@ export type FixedEventChoiceCondition = {
   luck?: number;
   hp?: number;
   stress?: number;
+  stress_max?: number;
   trait?: string;
 };
 
@@ -33,6 +34,8 @@ export type FixedEventStatChangeKey =
   | "hp"
   | "stress"
   | "luck"
+  | "favor_pro"
+  | "madness"
   | "fe"
   | "be"
   | "teamwork";
@@ -111,6 +114,36 @@ function normalizeActionType(value: unknown): DialogueChoiceActionType {
   return "NORMAL";
 }
 
+function normalizeChoiceText(value: unknown, fallback: string, playerName: string, actionType: DialogueChoiceActionType): string {
+  const text = normalizeTextWithPlayerName(value, fallback, playerName).trim();
+  let startIndex = 0;
+
+  while (startIndex < text.length) {
+    const char = text[startIndex];
+    const code = text.charCodeAt(startIndex);
+    const isAsciiLetter = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+    const isKorean = code >= 0xac00 && code <= 0xd7a3;
+    const isQuote = char === '"' || char === "'";
+    const isBracket = char === '[';
+    if (isAsciiLetter || isKorean || isQuote || isBracket) {
+      break;
+    }
+    startIndex += 1;
+  }
+
+  let normalized = text.slice(startIndex);
+  if (actionType !== "LOCKED") {
+    return normalized;
+  }
+
+  const closingBracketIndex = normalized.indexOf(']');
+  if (normalized.startsWith('[') && closingBracketIndex > -1) {
+    normalized = normalized.slice(closingBracketIndex + 1).trimStart();
+  }
+
+  return normalized.trim();
+}
+
 function resolveSpeakerLabel(entry: FixedEventDialogueEntry, fallbackNpcLabel: string): string {
   if (entry.speakerName && entry.speakerName.trim().length > 0) {
     return entry.speakerName;
@@ -135,6 +168,7 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
       key !== "luck" &&
       key !== "hp" &&
       key !== "stress" &&
+      key !== "stress_max" &&
       key !== "trait"
   );
 
@@ -162,6 +196,9 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
   if (typeof condition.stress === "number") {
     requirements.push({ stat: "stress", max: Math.round(condition.stress), label: `스트레스 ${Math.round(condition.stress)} 이하` });
   }
+  if (typeof condition.stress_max === "number") {
+    requirements.push({ stat: "stress", max: Math.round(condition.stress_max), label: `스트레스 ${Math.round(condition.stress_max)} 이하` });
+  }
 
   return requirements;
 }
@@ -180,6 +217,9 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
       case "social":
         mapped.teamwork = (mapped.teamwork ?? 0) + value;
         break;
+      case "favor_pro":
+        mapped.teamwork = (mapped.teamwork ?? 0) + value;
+        break;
       case "code": {
         const feDelta = value >= 0 ? Math.ceil(value / 2) : Math.floor(value / 2);
         const beDelta = value - feDelta;
@@ -187,6 +227,9 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
         mapped.be = (mapped.be ?? 0) + beDelta;
         break;
       }
+      case "madness":
+        mapped.stress = (mapped.stress ?? 0) + value;
+        break;
       case "gold":
         mapped.gold = (mapped.gold ?? 0) + value;
         break;
@@ -291,6 +334,7 @@ export function buildDialogueScriptFromFixedEventEntry(
     finalDialogueNode.nextNodeId = undefined;
     finalDialogueNode.choices = choices.map((choice, index): DialogueChoice => {
       const choiceId = choice.choiceId ?? index + 1;
+      const actionType = normalizeActionType(choice.actionType);
       const requirements = mapConditionToRequirements(choice.condition);
       const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : [];
       const feedbackStartNodeId = feedbackDialogues.length > 0 ? `json_choice_feedback_${choiceId}_1` : undefined;
@@ -301,9 +345,10 @@ export function buildDialogueScriptFromFixedEventEntry(
 
       return {
         id: `json_choice_${choiceId}`,
-        text: normalizeTextWithPlayerName(choice.text, `선택지 ${index + 1}`, playerName),
+        text: normalizeChoiceText(choice.text, `??? ${index + 1}`, playerName, actionType),
         nextNodeId: feedbackStartNodeId,
-        actionType: normalizeActionType(choice.actionType),
+        actionType,
+
         requirements,
         lockedReason,
         statChanges: mapStatChanges(choice.result?.statChanges),
