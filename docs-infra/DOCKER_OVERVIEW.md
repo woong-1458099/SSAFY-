@@ -189,8 +189,24 @@ server prod-api-blue:8080;
     - 로그 저장 / 검색
 - `promtail`
     - Docker 컨테이너 로그를 Loki로 전달
+### 11. nginx whitelist mount
+- 호스트 경로: `/home/ubuntu/deploy/nginx/whitelist`
+- 컨테이너 경로: `/etc/nginx/whitelist`
+- 용도: 운영 도구 공통 IP 화이트리스트 런타임 파일 관리
+- 주요 파일:
+  - `active-whitelist.conf`
+  - `backup-whitelist.conf`
+  - `candidate-whitelist.conf`
+### nginx whitelist include
+- `jenkins.ssafymaker.cloud`
+- `n8n.ssafymaker.cloud`
+- `grafana.ssafymaker.cloud`
+- `rabbitmq.ssafymaker.cloud`
+- `auth.ssafymaker.cloud` 의 `/admin` 계열 경로
+- 공통 whitelist 파일:
+  - `/etc/nginx/whitelist/active-whitelist.conf`
 
-## 11. 주의사항
+## 12. 주의사항
 - `compose.app.yml`에 nginx를 다시 넣지 않는다.
 - 공용 nginx는 `docker/compose.nginx.yml` 기준으로만 운영한다.
 - backend app container는 외부 포트를 직접 publish하지 않는다.

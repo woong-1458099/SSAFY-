@@ -95,6 +95,15 @@ ssh -L 15432:127.0.0.1:5432 -L 16379:127.0.0.1:6379 -L 15673:127.0.0.1:5672 <use
 - 외부 인증 도메인은 `auth.ssafymaker.cloud` 기준으로 사용
 - Keycloak 데이터는 앱 `users` 테이블과 분리된 별도 DB 또는 schema 로 유지
 
+### 운영 도구 외부 공개 원칙
+- 운영 도구는 HTTPS + 서비스 자체 로그인 + 공통 IP 화이트리스트 기준으로 공개
+- 공통 IP 화이트리스트 대상:
+  - `jenkins.ssafymaker.cloud`
+  - `n8n.ssafymaker.cloud`
+  - `grafana.ssafymaker.cloud`
+  - `rabbitmq.ssafymaker.cloud`
+- `auth.ssafymaker.cloud` 는 전체 공개 유지, admin 관련 경로만 별도 제한
+
 ## 9. 비밀값 관리 기준
 - STG / PROD 실제 값은 Git에 커밋하지 않는다.
 - Jenkins Credentials 또는 별도 비밀 저장소로 관리한다.

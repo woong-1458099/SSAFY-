@@ -157,6 +157,13 @@
 2. 모니터링 대시보드 정리
 3. nginx / backend 로그 운영 기준 문서화
 4. 필요 시 exporter / alerting 2차 확장 검토
+5. 운영 도구 공통 IP 화이트리스트 자동화
+  - 대상: `jenkins.ssafymaker.cloud`, `n8n.ssafymaker.cloud`, `grafana.ssafymaker.cloud`, `rabbitmq.ssafymaker.cloud`
+  - Keycloak 은 `auth.ssafymaker.cloud` 전체가 아니라 admin 관련 경로만 제한
+  - Google Form + Google Sheet + n8n 으로 자동 반영
+  - Mattermost 전용 채널로 실패/거절/반영 오류 알림
+  - Nginx 런타임 경로: `/home/ubuntu/deploy/nginx/whitelist`
+  - 상세 계획: `docs-infra/IP_WHITELIST_PLAN.md`
 
 ## 다음에 작업할 때 먼저 볼 것
 1. `WORK_GUIDE.md`
