@@ -7,6 +7,8 @@ export const LEGACY_MINIGAME_SCENE_KEYS = [
   "ConflictResolveScene",
   "InterviewScene",
   "RunnerScene",
+  "BilliardsScene",
+  "TankScene",
 
   "TypingScene",
   "BusinessSmileScene",
