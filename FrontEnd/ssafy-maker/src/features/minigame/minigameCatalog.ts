@@ -42,6 +42,26 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     borderColor: 0xcc55ff,
     glowColor: 0x6600aa
   },
+  {
+    key: "BilliardsScene",
+    title: "당구 챌린지",
+    sub: "각도와 힘 조절",
+    desc: "모든 공을 포켓에 넣기",
+    reward: "민첩 +10, 골드 +30",
+    bgColor: 0x004411,
+    borderColor: 0x00ff44,
+    glowColor: 0x006622
+  },
+  {
+    key: "TankScene",
+    title: "탱크 워",
+    sub: "적 탱크 파괴",
+    desc: "생존 및 섬멸",
+    reward: "집중 +10, 골드 +40",
+    bgColor: 0x332200,
+    borderColor: 0x88ff00,
+    glowColor: 0x443300
+  },
 
   {
     key: "RunnerScene",

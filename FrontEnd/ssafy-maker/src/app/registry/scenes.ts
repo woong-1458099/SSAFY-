@@ -25,6 +25,8 @@ import LegacyRunnerScene from "@scenes/legacyMinigames/RunnerScene";
 import LegacyTypingScene from "@scenes/legacyMinigames/TypingScene";
 import LegacyInterviewScene from "@scenes/legacyMinigames/InterviewScene";
 import LegacyDrinkingScene from "@scenes/legacyMinigames/DrinkingScene";
+import LegacyBilliardsScene from "@scenes/legacyMinigames/BilliardsScene";
+import LegacyTankScene from "@scenes/legacyMinigames/TankScene";
 
 // Scene registration must be managed only in this file.
 export const SCENE_REGISTRY = [
@@ -55,5 +57,7 @@ export const SCENE_REGISTRY = [
   LegacyCookingScene,
   LegacyLottoScene,
   LegacyInterviewScene,
-  LegacyDrinkingScene
+  LegacyDrinkingScene,
+  LegacyBilliardsScene,
+  LegacyTankScene
 ];
