@@ -5,7 +5,8 @@
 ## 먼저 읽을 문서
 1. `docs-infra/00_CURRENT_STATE.md`
 2. `docs-infra/01_OPERATIONS.md`
-3. 작업 주제에 맞는 세부 문서
+3. `docs-infra/07_RUNBOOK.md`
+4. 작업 주제에 맞는 세부 문서
 
 ## 문서 구조
 - `docs-infra/00_CURRENT_STATE.md`
@@ -30,6 +31,11 @@
 - `docs-infra/06_ROADMAP.md`
   - 다음 작업
   - 공개 예정 도메인/페이지 계획
+- `docs-infra/07_RUNBOOK.md`
+  - 배포 절차
+  - smoke check 기준
+  - Cloudflare purge 기준
+  - verify / rollback 기준
 
 ## 유지 원칙
 - 현재 실제 운영값은 `docs-infra/00_CURRENT_STATE.md` 한 곳에만 적는다.
