@@ -2606,7 +2606,7 @@ export class MainScene extends Phaser.Scene {
     if (stat === "hp") {
       return this.hudState.hp;
     }
-    if (stat === "money") {
+    if (stat === "gold") {
       return this.hudState.money;
     }
     return this.statsState[stat as StatKey];
@@ -2632,7 +2632,7 @@ export class MainScene extends Phaser.Scene {
         const label =
           req.stat === "hp"
             ? "HP"
-            : req.stat === "money"
+            : req.stat === "gold"
               ? "재화"
               : STAT_LABEL[req.stat as StatKey];
         if (typeof req.min === "number" && typeof req.max === "number") {
@@ -2662,7 +2662,7 @@ export class MainScene extends Phaser.Scene {
         hudPatch.hp = Phaser.Math.Clamp(this.hudState.hp + value, 0, this.hudState.hpMax);
         return;
       }
-      if (key === "money") {
+      if (key === "gold") {
         hudPatch.money = Math.max(0, this.hudState.money + value);
         return;
       }
@@ -2681,7 +2681,7 @@ export class MainScene extends Phaser.Scene {
         const label =
           key === "hp"
             ? "HP"
-            : key === "money"
+            : key === "gold"
               ? "재화"
               : STAT_LABEL[key as StatKey];
         return `${label} ${value > 0 ? "+" : ""}${value}`;

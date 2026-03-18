@@ -1,5 +1,5 @@
 export type StoryStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
-export type DialogueStatKey = StoryStatKey | "hp" | "money";
+export type DialogueStatKey = StoryStatKey | "hp" | "gold";
 export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
 
 export type DialogueAction = "openShop" | "openMiniGame";
