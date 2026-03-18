@@ -42,6 +42,10 @@
 - 설정 파일 위치
 - 메트릭 / 로그 구성
 - 기본 확인 포인트
+### 6. IP 화이트 리스트 설정 문서
+- `docs-infra/IP_WHITELIST_PLAN.md`
+    - 운영 도구 외부 공개용 공통 IP 화이트리스트 정책
+    - Google Form / Google Sheet / n8n / Mattermost / Nginx 반영 구조
 
 ### 6. 진행 계획 문서
 - `PROGRESS_PLAN.md`
