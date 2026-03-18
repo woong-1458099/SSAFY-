@@ -201,6 +201,12 @@ export default class BilliardsScene extends Phaser.Scene {
     btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => cb());
   }
+
+  shutdown() {
+    this.input.off('pointerdown');
+    this.input.off('pointermove');
+    this.input.off('pointerup');
+  }
 }
 
 // Helper for pockets (not using physics group perfectly here, just raw dist check in update)
