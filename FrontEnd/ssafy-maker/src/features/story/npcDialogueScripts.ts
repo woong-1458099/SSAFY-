@@ -1,9 +1,11 @@
 export type StoryStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
+export type DialogueStatKey = StoryStatKey | "hp" | "gold";
+export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
 
 export type DialogueAction = "openShop" | "openMiniGame";
 
 export type DialogueRequirement = {
-  stat: StoryStatKey;
+  stat: DialogueStatKey;
   min?: number;
   max?: number;
   label?: string;
@@ -13,22 +15,26 @@ export type DialogueChoice = {
   id: string;
   text: string;
   nextNodeId?: string;
-  statChanges?: Partial<Record<StoryStatKey, number>>;
+  actionType?: DialogueChoiceActionType;
+  statChanges?: Partial<Record<DialogueStatKey, number>>;
   requirements?: DialogueRequirement[];
   lockedReason?: string;
+  feedbackText?: string;
   action?: DialogueAction;
 };
 
 export type DialogueNode = {
   id: string;
   speaker: string;
+  speakerId?: string;
+  emotion?: string;
   text: string;
   nextNodeId?: string;
   choices?: DialogueChoice[];
   action?: DialogueAction;
 };
 
-export type NpcDialogueId = "downtown_shopkeeper" | "campus_senior" | "campus_script_npc";
+export type NpcDialogueId = "downtown_shopkeeper" | "campus_senior" | "campus_script_npc" | "fixed_event_runtime";
 
 export type NpcDialogueScript = {
   npcId: NpcDialogueId;
@@ -200,6 +206,18 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         id: "bye_result",
         speaker: "스크립트 NPC",
         text: "준비되면 새 대사로 바꿔줘."
+      }
+    }
+  },
+  fixed_event_runtime: {
+    npcId: "fixed_event_runtime",
+    npcLabel: "이벤트",
+    startNodeId: "placeholder",
+    nodes: {
+      placeholder: {
+        id: "placeholder",
+        speaker: "이벤트",
+        text: "이벤트 데이터를 불러오는 중입니다."
       }
     }
   }
