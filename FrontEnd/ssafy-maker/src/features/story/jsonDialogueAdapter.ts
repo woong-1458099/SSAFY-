@@ -6,6 +6,7 @@ import type {
   NpcDialogueId,
   NpcDialogueScript,
 } from "./npcDialogueScripts";
+import { matchesFixedEventLocation, normalizeFixedEventLocationToken } from "./fixedEventLocation";
 
 export type FixedEventDialogueEntry = {
   speakerId?: string;
@@ -85,15 +86,6 @@ const SPEAKER_LABEL_BY_ID: Record<string, string> = {
   NPC_UNKNOWN: "동기",
 };
 
-const LOCATION_ALIASES: Record<string, string[]> = {
-  campus: ["캠퍼스", "강의동", "inssafy", "캠퍼스내부"],
-  downtown: ["번화가", "시내", "city"],
-  world: ["전체지도", "월드", "맵"],
-  home: ["집", "home"],
-  cafe: ["카페", "cafe"],
-  store: ["편의점", "store"],
-};
-
 function normalizeText(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim().length > 0 ? value : fallback;
 }
@@ -117,18 +109,6 @@ function normalizeActionType(value: unknown): DialogueChoiceActionType {
     return token;
   }
   return "NORMAL";
-}
-
-function matchesEventLocation(rawLocation: unknown, currentLocation: string): boolean {
-  const location = normalizeToken(rawLocation);
-  const current = normalizeToken(currentLocation);
-  if (!location || !current) return true;
-  if (location === current) return true;
-
-  return Object.entries(LOCATION_ALIASES).some(([canonical, aliases]) => {
-    const normalizedValues = [canonical, ...aliases].map((value) => normalizeToken(value));
-    return normalizedValues.includes(location) && normalizedValues.includes(current);
-  });
 }
 
 function resolveSpeakerLabel(entry: FixedEventDialogueEntry, fallbackNpcLabel: string): string {
@@ -234,7 +214,17 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
 }
 
 export function getFixedEventEntries(rawData: unknown): FixedEventEntry[] {
-  return Array.isArray(rawData) ? rawData.filter((entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")) : [];
+  if (Array.isArray(rawData)) {
+    return rawData.filter((entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object"));
+  }
+
+  if (rawData && typeof rawData === "object" && Array.isArray((rawData as { events?: unknown[] }).events)) {
+    return (rawData as { events: unknown[] }).events.filter(
+      (entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")
+    );
+  }
+
+  return [];
 }
 
 export function findMatchingFixedEvent(
@@ -258,7 +248,7 @@ export function findMatchingFixedEvent(
       const sameWeek = Math.round(timing.week ?? -1) === context.week;
       const sameDay = Math.round(timing.day ?? -1) === context.day;
       const sameTime = normalizeToken(timing.timeOfDay) === targetTime;
-      const sameLocation = matchesEventLocation(event.location, context.location);
+      const sameLocation = matchesFixedEventLocation(event.location, context.location);
       return sameWeek && sameDay && sameTime && sameLocation;
     }) ?? null
   );
@@ -284,12 +274,7 @@ export function buildDialogueScriptFromFixedEventEntry(
 
   dialogues.forEach((entry, index) => {
     const id = `json_dialogue_${index + 1}`;
-    const nextNodeId =
-      index < dialogues.length - 1
-        ? `json_dialogue_${index + 2}`
-        : choices.length > 0
-          ? undefined
-          : undefined;
+    const nextNodeId = index < dialogues.length - 1 ? `json_dialogue_${index + 2}` : undefined;
 
     nodes[id] = {
       id,
@@ -303,10 +288,11 @@ export function buildDialogueScriptFromFixedEventEntry(
 
   if (choices.length > 0) {
     const finalDialogueNode = nodes[`json_dialogue_${dialogues.length}`];
+    finalDialogueNode.nextNodeId = undefined;
     finalDialogueNode.choices = choices.map((choice, index): DialogueChoice => {
       const choiceId = choice.choiceId ?? index + 1;
       const requirements = mapConditionToRequirements(choice.condition);
-      const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result?.feedbackDialogues : [];
+      const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : [];
       const feedbackStartNodeId = feedbackDialogues.length > 0 ? `json_choice_feedback_${choiceId}_1` : undefined;
       const lockedReason =
         typeof choice.condition?.trait === "string" && choice.condition.trait.trim().length > 0
@@ -321,23 +307,22 @@ export function buildDialogueScriptFromFixedEventEntry(
         requirements,
         lockedReason,
         statChanges: mapStatChanges(choice.result?.statChanges),
-        feedbackText: feedbackDialogues.length === 0 ? normalizeTextWithPlayerName(choice.result?.feedbackText, "", playerName) : undefined,
+        feedbackText:
+          feedbackDialogues.length === 0
+            ? normalizeTextWithPlayerName(choice.result?.feedbackText, "", playerName)
+            : undefined,
       };
     });
 
     choices.forEach((choice, index) => {
       const choiceId = choice.choiceId ?? index + 1;
       const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : [];
-      if (feedbackDialogues.length === 0) {
-        return;
-      }
+      if (feedbackDialogues.length === 0) return;
 
       feedbackDialogues.forEach((entry, feedbackIndex) => {
         const id = `json_choice_feedback_${choiceId}_${feedbackIndex + 1}`;
         const nextNodeId =
-          feedbackIndex < feedbackDialogues.length - 1
-            ? `json_choice_feedback_${choiceId}_${feedbackIndex + 2}`
-            : undefined;
+          feedbackIndex < feedbackDialogues.length - 1 ? `json_choice_feedback_${choiceId}_${feedbackIndex + 2}` : undefined;
         nodes[id] = {
           id,
           speaker: resolveSpeakerLabel(entry, npcLabel),
@@ -374,3 +359,5 @@ export function buildDialogueScriptFromFixedEventJson(
     playerName,
   });
 }
+
+export { normalizeFixedEventLocationToken };

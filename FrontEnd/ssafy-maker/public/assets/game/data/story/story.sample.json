@@ -1,81 +1,88 @@
-[
-  {
-    "eventId": "SAMPLE_FIXED_EVENT",
-    "eventName": "샘플 고정 이벤트",
-    "eventType": "FIXED",
-    "triggerTiming": {
-      "week": 1,
-      "day": 1,
-      "timeOfDay": "오전"
-    },
-    "location": "캠퍼스 내부",
-    "isRepeatable": false,
-    "dialogues": [
-      {
-        "speakerId": "SYSTEM",
-        "text": "샘플 고정 이벤트가 시작됩니다."
+{
+  "meta": {
+    "format": "fixed-event-sample",
+    "version": 1,
+    "description": "고정 이벤트 JSON 포맷 검증용 샘플"
+  },
+  "events": [
+    {
+      "eventId": "SAMPLE_FIXED_EVENT",
+      "eventName": "샘플 고정 이벤트",
+      "eventType": "FIXED",
+      "triggerTiming": {
+        "week": 1,
+        "day": 1,
+        "timeOfDay": "오전"
       },
-      {
-        "speakerId": "NPC_SAMPLE",
-        "speakerName": "샘플 NPC",
-        "emotion": "NORMAL",
-        "text": "{playerName}님, 이 파일은 JSON 포맷 검증용 샘플입니다."
-      }
-    ],
-    "choices": [
-      {
-        "choiceId": 1,
-        "actionType": "NORMAL",
-        "condition": null,
-        "text": "기본 선택지",
-        "result": {
-          "statChanges": {
-            "stress": -2,
-            "social": 1
-          },
-          "feedbackText": "기본 선택 결과가 적용되었습니다."
-        }
-      },
-      {
-        "choiceId": 2,
-        "actionType": "LOCKED",
-        "condition": {
-          "code": 10,
-          "gold": 500
+      "location": "캠퍼스 내부",
+      "isRepeatable": false,
+      "dialogues": [
+        {
+          "speakerId": "SYSTEM",
+          "text": "샘플 고정 이벤트가 시작됩니다."
         },
-        "text": "조건부 선택지",
-        "result": {
-          "statChanges": {
-            "code": 2,
-            "gold": -500
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_SAMPLE",
-              "speakerName": "샘플 NPC",
-              "emotion": "SMILE",
-              "text": "조건을 만족해서 특별한 결과 대사가 재생됩니다."
+        {
+          "speakerId": "NPC_SAMPLE",
+          "speakerName": "샘플 NPC",
+          "emotion": "NORMAL",
+          "text": "{playerName}님, 이 파일은 JSON 포맷 검증용 샘플입니다."
+        }
+      ],
+      "choices": [
+        {
+          "choiceId": 1,
+          "actionType": "NORMAL",
+          "condition": null,
+          "text": "기본 선택지",
+          "result": {
+            "statChanges": {
+              "stress": -2,
+              "social": 1
             },
-            {
-              "speakerId": "SYSTEM",
-              "text": "후속 연출이 끝났습니다."
-            }
-          ]
-        }
-      },
-      {
-        "choiceId": 3,
-        "actionType": "MADNESS",
-        "condition": null,
-        "text": "광기 선택지",
-        "result": {
-          "statChanges": {
-            "hp": -5,
-            "luck": -1
+            "feedbackText": "기본 선택 결과가 적용되었습니다."
+          }
+        },
+        {
+          "choiceId": 2,
+          "actionType": "LOCKED",
+          "condition": {
+            "code": 10,
+            "gold": 500
           },
-          "feedbackText": "광기 선택의 결과가 적용되었습니다."
+          "text": "조건부 선택지",
+          "result": {
+            "statChanges": {
+              "code": 2,
+              "gold": -500
+            },
+            "feedbackDialogues": [
+              {
+                "speakerId": "NPC_SAMPLE",
+                "speakerName": "샘플 NPC",
+                "emotion": "SMILE",
+                "text": "조건을 만족해서 특별한 결과 대사가 재생됩니다."
+              },
+              {
+                "speakerId": "SYSTEM",
+                "text": "후속 연출이 끝났습니다."
+              }
+            ]
+          }
+        },
+        {
+          "choiceId": 3,
+          "actionType": "MADNESS",
+          "condition": null,
+          "text": "광기 선택지",
+          "result": {
+            "statChanges": {
+              "hp": -5,
+              "luck": -1
+            },
+            "feedbackText": "광기 선택의 결과가 적용되었습니다."
+          }
         }
-      }
-    ]
-  }
-]
+      ]
+    }
+  ]
+}

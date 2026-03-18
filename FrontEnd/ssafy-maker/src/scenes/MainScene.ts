@@ -1,4 +1,4 @@
-﻿import Phaser from "phaser";
+import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import { InputManager } from "@core/managers/InputManager";
@@ -719,7 +719,7 @@ export class MainScene extends Phaser.Scene {
         this.closeShop();
         return;
       }
-      this.hud.setInteractionPrompt("E / ESC ?リ린");
+      this.hud.setInteractionPrompt("E / ESC로 닫기");
       return;
     }
 
@@ -730,7 +730,7 @@ export class MainScene extends Phaser.Scene {
         this.closePlacePopup();
         return;
       }
-      this.hud.setInteractionPrompt("E ?リ린");
+      this.hud.setInteractionPrompt("E로 닫기");
       return;
     }
 

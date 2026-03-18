@@ -23,22 +23,40 @@ type TextStyleFactory = (
   fontStyle?: "normal" | "bold"
 ) => Phaser.Types.GameObjects.Text.TextStyle;
 
-const EMOTION_LABELS: Record<string, string> = {
+const EMOTION_LABELS = {
   NORMAL: "평온",
   ANGRY: "분노",
   FLUSTERED: "당황",
   SHY: "수줍",
   HAPPY: "기쁨",
-  SAD: "침울",
+  SAD: "슬픔",
   SURPRISED: "놀람",
   SMILE: "미소",
-  SPEECHLESS: "말없음",
+  SPEECHLESS: "멍함",
   TIRED: "지침",
-};
+} as const;
+
+type DialogueEmotionToken = keyof typeof EMOTION_LABELS;
+
+const warnedEmotionTokens = new Set<string>();
+
+function getEmotionLabel(node: DialogueNode): string | null {
+  const emotionToken = typeof node.emotion === "string" ? node.emotion.trim().toUpperCase() : "";
+  if (!emotionToken) return null;
+
+  if (emotionToken in EMOTION_LABELS) {
+    return EMOTION_LABELS[emotionToken as DialogueEmotionToken];
+  }
+
+  if (!warnedEmotionTokens.has(emotionToken)) {
+    warnedEmotionTokens.add(emotionToken);
+    console.warn("[dialogue-ui] unsupported emotion token", emotionToken);
+  }
+  return null;
+}
 
 function formatSpeakerTitle(node: DialogueNode): string {
-  const emotionToken = typeof node.emotion === "string" ? node.emotion.trim().toUpperCase() : "";
-  const emotionLabel = EMOTION_LABELS[emotionToken];
+  const emotionLabel = getEmotionLabel(node);
   if (!emotionLabel) {
     return node.speaker;
   }
@@ -56,13 +74,21 @@ function getSpeakerColor(node: DialogueNode): string {
   return "#e8f4ff";
 }
 
-export function createDialogueUi(scene: Phaser.Scene, options: {
-  px: (value: number) => number;
-  getBodyStyle: TextStyleFactory;
-  createPanelOuterBorder: (centerX: number, centerY: number, panelWidth: number, panelHeight: number) => Phaser.GameObjects.Rectangle;
-  panelInnerBorderColor: number;
-  onAction: () => void;
-}): DialogueUiRefs {
+export function createDialogueUi(
+  scene: Phaser.Scene,
+  options: {
+    px: (value: number) => number;
+    getBodyStyle: TextStyleFactory;
+    createPanelOuterBorder: (
+      centerX: number,
+      centerY: number,
+      panelWidth: number,
+      panelHeight: number
+    ) => Phaser.GameObjects.Rectangle;
+    panelInnerBorderColor: number;
+    onAction: () => void;
+  }
+): DialogueUiRefs {
   const { px, getBodyStyle, createPanelOuterBorder, panelInnerBorderColor, onAction } = options;
   const panelWidth = px(GAME_CONSTANTS.WIDTH - 84);
   const panelHeight = 220;
@@ -120,16 +146,19 @@ export function clearDialogueChoices(choiceViews: DialogueChoiceView[]): Dialogu
   return [];
 }
 
-export function renderDialogueNode(scene: Phaser.Scene, options: {
-  node: DialogueNode;
-  root?: Phaser.GameObjects.Container;
-  px: (value: number) => number;
-  getBodyStyle: TextStyleFactory;
-  ui: Omit<DialogueUiRefs, "root" | "actionButtonBg">;
-  dialogueChoiceIndex: number;
-  getRequirementText: (choice: DialogueChoice) => string;
-  isChoiceAvailable: (choice: DialogueChoice) => boolean;
-}): {
+export function renderDialogueNode(
+  scene: Phaser.Scene,
+  options: {
+    node: DialogueNode;
+    root?: Phaser.GameObjects.Container;
+    px: (value: number) => number;
+    getBodyStyle: TextStyleFactory;
+    ui: Omit<DialogueUiRefs, "root" | "actionButtonBg">;
+    dialogueChoiceIndex: number;
+    getRequirementText: (choice: DialogueChoice) => string;
+    isChoiceAvailable: (choice: DialogueChoice) => boolean;
+  }
+): {
   choiceViews: DialogueChoiceView[];
   dialogueChoiceIndex: number;
 } {
@@ -157,7 +186,7 @@ export function renderDialogueNode(scene: Phaser.Scene, options: {
     });
 
     const normalizedIndex = dialogueChoiceIndex >= node.choices.length ? 0 : dialogueChoiceIndex;
-    ui.hintText.setText("↑↓ 선택  |  E 또는 버튼 결정  |  ESC 종료");
+    ui.hintText.setText("↑↓ 선택 | E 또는 버튼 결정 | ESC 종료");
     ui.actionButtonText.setText("E 선택");
     refreshDialogueChoiceStyles(choiceViews, normalizedIndex, isChoiceAvailable);
     return {
@@ -167,7 +196,7 @@ export function renderDialogueNode(scene: Phaser.Scene, options: {
   }
 
   ui.actionButtonText.setText(node.nextNodeId || node.action ? "E 다음" : "E 종료");
-  ui.hintText.setText(`${node.nextNodeId || node.action ? "E 다음" : "E 종료"}  |  ESC 종료`);
+  ui.hintText.setText(`${node.nextNodeId || node.action ? "E 다음" : "E 종료"} | ESC 종료`);
   return {
     choiceViews: [],
     dialogueChoiceIndex,
