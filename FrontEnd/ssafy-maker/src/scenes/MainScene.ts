@@ -30,6 +30,7 @@ import {
   findMatchingFixedEvent,
   getFixedEventEntries
 } from "@features/story/jsonDialogueAdapter";
+import { matchesFixedEventLocation } from "@features/story/fixedEventLocation";
 import {
   clearDialogueChoices,
   createDialogueUi,
@@ -139,6 +140,10 @@ type AreaNpcView = {
   eventId?: string;
   isScheduled?: boolean;
 };
+
+type ScheduledNpcSlot = Pick<AreaNpcConfig, "x" | "y" | "labelOffsetX" | "labelOffsetY" | "flashColor">;
+type ScheduledNpcArea = Extract<AreaId, "world" | "downtown" | "campus">;
+type ScheduledNpcPositionMap = Record<ScheduledNpcArea, Record<(typeof TIME_CYCLE)[number], ScheduledNpcSlot[]>>;
 
 type InventoryItemTemplate = {
   templateId: string;
@@ -403,13 +408,7 @@ const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
     }
   ],
   campus: [
-    { dialogueId: "campus_senior", x: 924, y: 390, labelOffsetX: -36, labelOffsetY: 24, flashColor: 0x3f6e90 },
-    { dialogueId: "npc_myungjin", x: 550, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0xffa500, textureKey: "npc_thingham" },
-    { dialogueId: "npc_yeonwoong", x: 620, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0x00ff00, textureKey: "npc_woong" },
-    { dialogueId: "npc_hyoryeon", x: 690, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0xff00ff, textureKey: "npc_hyo" },
-    { dialogueId: "npc_jiwoo", x: 760, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0x00ffff, textureKey: "npc_jyu" },
-    { dialogueId: "npc_jongmin", x: 830, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0xffff00, textureKey: "npc_jin" },
-    { dialogueId: "npc_minsu", x: 585, y: 460, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0x4169e1, textureKey: "npc_chamdom" }
+    { dialogueId: "campus_senior", x: 924, y: 390, labelOffsetX: -36, labelOffsetY: 24, flashColor: 0x3f6e90 }
   ]
 };
 
@@ -435,19 +434,97 @@ const FIXED_EVENT_NPC_LABELS: Partial<Record<string, string>> = {
   NPC_CONSULTANT_HYUNSEOK: "이현석 컨설턴트",
 };
 
-const FIXED_EVENT_NPC_DEMO_POSITIONS: Record<"campus" | "world", Array<Pick<AreaNpcConfig, "x" | "y" | "labelOffsetX" | "labelOffsetY" | "flashColor">>> = {
-  campus: [
-    { x: 650, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-    { x: 735, y: 390, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-    { x: 830, y: 420, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-    { x: 910, y: 360, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-  ],
-  world: [
-    { x: 548, y: 278, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-    { x: 612, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-    { x: 452, y: 264, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-    { x: 500, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-  ],
+const FIXED_EVENT_NPC_DISPLAY_LABELS: Partial<Record<string, string>> = {
+  NPC_CLASSMATE_MYUNGJIN: "명진",
+  NPC_CLASSMATE_JIWOO: "지우",
+  NPC_CLASSMATE_YEONWOONG: "연웅",
+  NPC_CLASSMATE_HYORYEON: "효련",
+  NPC_CLASSMATE_JONGMIN: "종민",
+  NPC_PRO_SUNMI: "조선미 프로",
+  NPC_PRO_DOYEON: "김도연 프로",
+  NPC_CONSULTANT_HYUNSEOK: "이현석 컨설턴트",
+};
+
+const SCHEDULED_NPC_SLOT_COUNT = 4;
+const SCHEDULED_NPC_POSITION_MAP: ScheduledNpcPositionMap = {
+  campus: {
+    [TIME_CYCLE[0]]: [
+      { x: 250, y: 214, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 330, y: 238, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 410, y: 214, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 490, y: 238, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[1]]: [
+      { x: 600, y: 292, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 678, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 756, y: 292, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 834, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[2]]: [
+      { x: 280, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 360, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 440, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 520, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[3]]: [
+      { x: 690, y: 418, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 764, y: 444, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 838, y: 418, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 912, y: 444, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+  },
+  downtown: {
+    [TIME_CYCLE[0]]: [
+      { x: 272, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 350, y: 274, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 428, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 506, y: 274, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[1]]: [
+      { x: 520, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 598, y: 358, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 676, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 754, y: 358, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[2]]: [
+      { x: 346, y: 438, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 424, y: 464, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 502, y: 438, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 580, y: 464, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[3]]: [
+      { x: 688, y: 432, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 762, y: 456, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 836, y: 432, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 910, y: 456, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+  },
+  world: {
+    [TIME_CYCLE[0]]: [
+      { x: 448, y: 246, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 510, y: 272, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 572, y: 246, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 634, y: 272, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[1]]: [
+      { x: 452, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 514, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 576, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 638, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[2]]: [
+      { x: 444, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 506, y: 356, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 568, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 630, y: 356, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[3]]: [
+      { x: 438, y: 380, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 500, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 562, y: 380, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 624, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+  },
 };
 
 const AREA_TILESET_IMAGE_KEY = "map_tiles_full_asset";
@@ -614,14 +691,14 @@ export class MainScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayerAvatarAssets(this);
-    this.load.image("fixed-npc-myungjin", "assets/game/npc/명진.png");
-    this.load.image("fixed-npc-jiwoo", "assets/game/npc/지우.png");
-    this.load.image("fixed-npc-yeonwoong", "assets/game/npc/연웅.png");
-    this.load.image("fixed-npc-hyoryeon", "assets/game/npc/효련.png");
-    this.load.image("fixed-npc-jongmin", "assets/game/npc/종민.png");
-    this.load.image("fixed-npc-sunmi", "assets/game/npc/조선미 프로.png");
-    this.load.image("fixed-npc-doyeon", "assets/game/npc/김도연 프로.png");
-    this.load.image("fixed-npc-hyunseok", "assets/game/npc/이현석 컨설턴트.png");
+    this.load.image("fixed-npc-myungjin", "assets/game/npc/myungjin.png");
+    this.load.image("fixed-npc-jiwoo", "assets/game/npc/jiwoo.png");
+    this.load.image("fixed-npc-yeonwoong", "assets/game/npc/yeonwoong.png");
+    this.load.image("fixed-npc-hyoryeon", "assets/game/npc/hyoryeon.png");
+    this.load.image("fixed-npc-jongmin", "assets/game/npc/jongmin.png");
+    this.load.image("fixed-npc-sunmi", "assets/game/npc/sunmi-pro.png");
+    this.load.image("fixed-npc-doyeon", "assets/game/npc/doyeon-pro.png");
+    this.load.image("fixed-npc-hyunseok", "assets/game/npc/hyunseok-consultant.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.ui_practice, "assets/game/ui/UIpractice.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.rest_api_db, "assets/game/ui/DBconsult.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.team_project, "assets/game/ui/TeamPJT.png");
@@ -635,13 +712,6 @@ export class MainScene extends Phaser.Scene {
     this.load.image("shop-item-keyboard", "assets/game/ui/conv_items/keyboard.png");
     this.load.image("shop-item-mouse", "assets/game/ui/conv_items/mouse.png");
 
-    // NPC Sprites
-    this.load.image("npc_thingham", "assets/game/npc/thingham.png");
-    this.load.image("npc_woong", "assets/game/npc/woong.png");
-    this.load.image("npc_hyo", "assets/game/npc/hyo.png");
-    this.load.image("npc_jyu", "assets/game/npc/jyu.png");
-    this.load.image("npc_jin", "assets/game/npc/jin.png");
-    this.load.image("npc_chamdom", "assets/game/npc/chamdom.png");
   }
 
   create(): void {
@@ -825,10 +895,10 @@ export class MainScene extends Phaser.Scene {
       this.highlightWorldPlace(nearbyPlace?.id ?? null);
       this.hud.setInteractionPrompt(
         nearbyNpcView
-          ? this.withPlannerPrompt("E ????  |  WASD / Arrow ??  |  ESC ??")
+          ? this.withPlannerPrompt("E 대화하기  |  WASD / Arrow 이동  |  ESC 메뉴")
           : nearbyPlace
-            ? this.withPlannerPrompt("E ?? ??/?? ??  |  WASD / Arrow ??  |  ESC ??")
-            : this.withPlannerPrompt("WASD / Arrow ??  |  ESC ??")
+            ? this.withPlannerPrompt("E 장소 이동/상호작용  |  WASD / Arrow 이동  |  ESC 메뉴")
+            : this.withPlannerPrompt("WASD / Arrow 이동  |  ESC 메뉴")
       );
       if (nearbyNpcView && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
         this.handleNpcInteraction(nearbyNpcView);
@@ -1382,13 +1452,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   private createScheduledNpcViews(): void {
-    (Object.entries(FIXED_EVENT_NPC_DEMO_POSITIONS) as Array<
-      ["campus" | "world", Array<Pick<AreaNpcConfig, "x" | "y" | "labelOffsetX" | "labelOffsetY" | "flashColor">>]
-    >).forEach(([area, positions]) => {
+    (["campus", "downtown", "world"] as const).forEach((area) => {
       const root = area === "world" ? this.worldMapRoot : this.getAreaRoot(area);
       if (!root) return;
 
-      positions.forEach((position, index) => {
+      for (let index = 0; index < SCHEDULED_NPC_SLOT_COUNT; index += 1) {
+        const position = SCHEDULED_NPC_POSITION_MAP[area][TIME_CYCLE[0]][index];
         const marker = this.add.rectangle(position.x, position.y, 34, 42, 0x6e4f2b, 0.15);
         marker.setStrokeStyle(2, 0x4b351b, 1);
         marker.setVisible(false);
@@ -1426,9 +1495,29 @@ export class MainScene extends Phaser.Scene {
           isScheduled: true,
           eventId: `scheduled-slot-${area}-${index}`
         });
-      });
+      }
     });
     this.refreshScheduledNpcViews();
+  }
+
+  private getScheduledNpcAreaForEvent(event: ReturnType<typeof findMatchingFixedEvent>): ScheduledNpcArea {
+    if (matchesFixedEventLocation(event?.location, "home")) {
+      return "world";
+    }
+    if (matchesFixedEventLocation(event?.location, "downtown")) {
+      return "downtown";
+    }
+    return "campus";
+  }
+
+  private getScheduledNpcSlotsForEvent(event: ReturnType<typeof findMatchingFixedEvent>): ScheduledNpcSlot[] {
+    const area = this.getScheduledNpcAreaForEvent(event);
+    const eventTime = event?.triggerTiming?.timeOfDay;
+    const timeLabel =
+      typeof eventTime === "string" && TIME_CYCLE.includes(eventTime as (typeof TIME_CYCLE)[number])
+        ? (eventTime as (typeof TIME_CYCLE)[number])
+        : this.hudState.timeLabel;
+    return SCHEDULED_NPC_POSITION_MAP[area][timeLabel] ?? SCHEDULED_NPC_POSITION_MAP[area][TIME_CYCLE[0]];
   }
 
   private getDialogueScript(dialogueId: NpcDialogueId): NpcDialogueScript | null {
@@ -1536,12 +1625,25 @@ export class MainScene extends Phaser.Scene {
   private refreshScheduledNpcViews(): void {
     const event = this.getCurrentFixedEventEntry();
     const participantIds = this.getFixedEventParticipantIds(event);
-    const targetArea = this.getCurrentFixedEventLocation() === "home" ? "world" : "campus";
+    const targetArea = this.getScheduledNpcAreaForEvent(event);
+    const scheduledSlots = this.getScheduledNpcSlotsForEvent(event);
 
     this.scheduledNpcViews.forEach((view, index) => {
       const speakerId = view.area === targetArea ? participantIds[index] : undefined;
       const textureKey = speakerId ? FIXED_EVENT_NPC_ASSET_KEYS[speakerId] : undefined;
-      const visible = Boolean(speakerId && textureKey);
+      const slot = view.area === targetArea ? scheduledSlots[index] : undefined;
+      const visible = Boolean(speakerId && textureKey && slot);
+
+      if (slot) {
+        view.config.x = slot.x;
+        view.config.y = slot.y;
+        view.config.labelOffsetX = slot.labelOffsetX;
+        view.config.labelOffsetY = slot.labelOffsetY;
+        view.config.flashColor = slot.flashColor;
+        view.marker.setPosition(slot.x, slot.y);
+        view.label.setPosition(this.px(slot.x + slot.labelOffsetX), this.px(slot.y + slot.labelOffsetY));
+        view.portrait?.setPosition(slot.x, slot.y - 6);
+      }
 
       view.eventId = visible ? event?.eventId ?? null ?? undefined : undefined;
       view.marker.setVisible(visible && this.currentArea === view.area);
@@ -1551,7 +1653,7 @@ export class MainScene extends Phaser.Scene {
         return;
       }
 
-      view.label.setText(FIXED_EVENT_NPC_LABELS[speakerId] ?? speakerId);
+      view.label.setText(FIXED_EVENT_NPC_DISPLAY_LABELS[speakerId] ?? FIXED_EVENT_NPC_LABELS[speakerId] ?? speakerId);
       view.portrait?.setTexture(textureKey);
       view.portrait?.setScale(1.6);
     });
@@ -1634,8 +1736,8 @@ export class MainScene extends Phaser.Scene {
   private getPlaceUnavailableMessage(placeId: WorldPlaceId): { title: string; description: string } | null {
     if (placeId === "cafe" && this.isNightTime()) {
       return {
-        title: "移댄럹",
-        description: "吏湲덉? ?댁? ?딆뒿?덈떎.\n諛ㅼ뿉???댁슜?????놁뒿?덈떎."
+        title: "영업 종료",
+        description: "지금은 이용할 수 없습니다.\n밤에는 카페를 이용할 수 없습니다."
       };
     }
 
@@ -1650,14 +1752,14 @@ export class MainScene extends Phaser.Scene {
     if (buildingId === "hof" && !this.isEveningOrNight()) {
       return {
         title: config.title,
-        description: "吏湲덉? ?댁? ?딆뒿?덈떎.\n?명봽 ?뚮컮????곴낵 諛ㅼ뿉留?媛?ν빀?덈떎."
+        description: "지금은 이용할 수 없습니다.\n호프는 저녁과 밤에만 이용할 수 있습니다."
       };
     }
 
     if (this.isNightTime() && (buildingId === "gym" || buildingId === "ramenthings" || buildingId === "lottery")) {
       return {
         title: config.title,
-        description: "吏湲덉? ?댁? ?딆뒿?덈떎.\n諛ㅼ뿉???댁슜?????놁뒿?덈떎."
+        description: "지금은 이용할 수 없습니다.\n밤에는 해당 장소를 이용할 수 없습니다."
       };
     }
 
@@ -1673,7 +1775,7 @@ export class MainScene extends Phaser.Scene {
       height: 270,
       title,
       description,
-      actionText: "?뺤씤",
+      actionText: "확인",
       showCloseButton: false,
       backgroundImage,
       getBodyStyle: this.getBodyStyle.bind(this),
@@ -1888,7 +1990,7 @@ export class MainScene extends Phaser.Scene {
     this.closeWeeklyPlanActivity();
     this.weeklyPlanActivityRoot = createWeeklyPlanActivityModal(this, {
       title,
-      statusText: `${option.label} ?섎뒗 以?..`,
+      statusText: `${option.label} 하는 중...`, 
       description: option.description,
       accentColor: option.color,
       backgroundImage,
@@ -1968,7 +2070,7 @@ export class MainScene extends Phaser.Scene {
       const eventName =
         typeof event.eventName === "string" && event.eventName.trim().length > 0
           ? event.eventName.trim()
-          : "???";
+          : "이벤트";
       fixedEventSlots.set(slotIndex, eventName);
     });
 
@@ -2913,7 +3015,7 @@ export class MainScene extends Phaser.Scene {
           req.stat === "hp"
             ? "HP"
             : req.stat === "gold"
-              ? "?ы솕"
+              ? "돈"
               : STAT_LABEL[req.stat as StatKey];
         if (typeof req.min === "number" && typeof req.max === "number") {
           return `${label} ${req.min}~${req.max}`;
@@ -2962,7 +3064,7 @@ export class MainScene extends Phaser.Scene {
           key === "hp"
             ? "HP"
             : key === "gold"
-              ? "?ы솕"
+              ? "돈"
               : STAT_LABEL[key as StatKey];
         return `${label} ${value > 0 ? "+" : ""}${value}`;
       })
