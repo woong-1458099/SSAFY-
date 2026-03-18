@@ -120,12 +120,13 @@ type AreaNpcConfig = {
   labelOffsetX: number;
   labelOffsetY: number;
   flashColor: number;
+  textureKey?: string;
 };
 
 type AreaNpcView = {
   area: Exclude<AreaId, "world">;
   config: AreaNpcConfig;
-  marker: Phaser.GameObjects.Rectangle;
+  marker: Phaser.GameObjects.Shape | Phaser.GameObjects.Sprite;
   label: Phaser.GameObjects.Text;
 };
 
@@ -365,6 +366,19 @@ const STAT_LABEL: Record<StatKey, string> = {
   stress: "\uC2A4\uD2B8\uB808\uC2A4"
 };
 
+const MINIGAME_SCENE_MAP: Record<string, string> = {
+  gym: "GymScene",
+  hof: "DrinkingScene",
+  ramenthings: "CookingScene",
+  lottery: "LottoScene",
+  playDrinking: "DrinkingScene",
+  playInterview: "InterviewScene",
+  playGym: "GymScene",
+  playRhythm: "RhythmScene",
+  playConflict: "ConflictResolveScene",
+  playCooking: "CookingScene"
+};
+
 const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
   downtown: [
     {
@@ -377,22 +391,13 @@ const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
     }
   ],
   campus: [
-    {
-      dialogueId: "campus_senior",
-      x: 924,
-      y: 390,
-      labelOffsetX: -36,
-      labelOffsetY: 24,
-      flashColor: 0x3f6e90
-    },
-    {
-      dialogueId: "campus_script_npc",
-      x: 760,
-      y: 442,
-      labelOffsetX: -42,
-      labelOffsetY: 24,
-      flashColor: 0x7a56b8
-    }
+    { dialogueId: "campus_senior", x: 924, y: 390, labelOffsetX: -36, labelOffsetY: 24, flashColor: 0x3f6e90 },
+    { dialogueId: "npc_myungjin", x: 550, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0xffa500, textureKey: "npc_thingham" },
+    { dialogueId: "npc_yeonwoong", x: 620, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0x00ff00, textureKey: "npc_woong" },
+    { dialogueId: "npc_hyoryeon", x: 690, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0xff00ff, textureKey: "npc_hyo" },
+    { dialogueId: "npc_jiwoo", x: 760, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0x00ffff, textureKey: "npc_jyu" },
+    { dialogueId: "npc_jongmin", x: 830, y: 410, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0xffff00, textureKey: "npc_jin" },
+    { dialogueId: "npc_minsu", x: 585, y: 460, labelOffsetX: -24, labelOffsetY: 24, flashColor: 0x4169e1, textureKey: "npc_chamdom" }
   ]
 };
 
@@ -568,6 +573,14 @@ export class MainScene extends Phaser.Scene {
     this.load.image("shop-item-soju", "assets/game/ui/conv_items/soju.png");
     this.load.image("shop-item-keyboard", "assets/game/ui/conv_items/keyboard.png");
     this.load.image("shop-item-mouse", "assets/game/ui/conv_items/mouse.png");
+
+    // NPC Sprites
+    this.load.image("npc_thingham", "assets/game/npc/thingham.png");
+    this.load.image("npc_woong", "assets/game/npc/woong.png");
+    this.load.image("npc_hyo", "assets/game/npc/hyo.png");
+    this.load.image("npc_jyu", "assets/game/npc/jyu.png");
+    this.load.image("npc_jin", "assets/game/npc/jin.png");
+    this.load.image("npc_chamdom", "assets/game/npc/chamdom.png");
   }
 
   create(): void {
@@ -1258,8 +1271,18 @@ export class MainScene extends Phaser.Scene {
 
       configs.forEach((config) => {
         const script = this.getDialogueScript(config.dialogueId);
-        const marker = this.add.rectangle(config.x, config.y, 28, 34, 0x6e4f2b, 1);
-        marker.setStrokeStyle(2, 0x4b351b, 1);
+        let marker: Phaser.GameObjects.Shape | Phaser.GameObjects.Sprite;
+
+        if (config.textureKey) {
+          const sprite = this.add.sprite(config.x, config.y, config.textureKey);
+          sprite.setScale(2); // 에셋 크기에 따라 조정 필요할 수 있음
+          marker = sprite;
+        } else {
+          const rect = this.add.rectangle(config.x, config.y, 28, 34, 0x6e4f2b, 1);
+          rect.setStrokeStyle(2, 0x4b351b, 1);
+          marker = rect;
+        }
+
         const label = this.add.text(
           this.px(config.x + config.labelOffsetX),
           this.px(config.y + config.labelOffsetY),
@@ -1301,8 +1324,12 @@ export class MainScene extends Phaser.Scene {
       view.marker.setVisible(visible);
       view.label.setVisible(visible);
       if (visible) {
-        view.marker.setFillStyle(0x6e4f2b, 1);
-        view.marker.setStrokeStyle(2, 0x4b351b, 1);
+        if (view.marker instanceof Phaser.GameObjects.Shape) {
+          view.marker.setFillStyle(0x6e4f2b, 1);
+          view.marker.setStrokeStyle(2, 0x4b351b, 1);
+        } else if (view.marker instanceof Phaser.GameObjects.Sprite) {
+          view.marker.clearTint();
+        }
       }
     });
   }
@@ -1329,8 +1356,16 @@ export class MainScene extends Phaser.Scene {
     this.activeAreaNpcView = activeView;
     this.areaNpcViews.forEach((view) => {
       const isActive = activeView?.config.dialogueId === view.config.dialogueId && activeView.area === view.area;
-      view.marker.setFillStyle(isActive ? view.config.flashColor : 0x6e4f2b, 1);
-      view.marker.setStrokeStyle(2, isActive ? 0xf2e8b6 : 0x4b351b, 1);
+      if (view.marker instanceof Phaser.GameObjects.Shape) {
+        view.marker.setFillStyle(isActive ? view.config.flashColor : 0x6e4f2b, 1);
+        view.marker.setStrokeStyle(2, isActive ? 0xf2e8b6 : 0x4b351b, 1);
+      } else if (view.marker instanceof Phaser.GameObjects.Sprite) {
+        if (isActive) {
+          view.marker.setTint(view.config.flashColor);
+        } else {
+          view.marker.clearTint();
+        }
+      }
       view.label.setColor(isActive ? "#fff6d0" : "#f6e6c8");
     });
   }
@@ -1772,16 +1807,8 @@ export class MainScene extends Phaser.Scene {
     this.updateHudState(patch);
     this.showSystemToast(result.toastMessage);
 
-    // 미니게임 연동 (스탯 적용 후 실행)
-    if (buildingId === "gym") {
-      this.scene.start("GymScene", { returnSceneKey: SceneKey.Main });
-    } else if (buildingId === "hof") {
-      this.scene.start("DrinkingScene", { returnSceneKey: SceneKey.Main });
-    } else if (buildingId === "ramenthings") {
-      this.scene.start("CookingScene", { returnSceneKey: SceneKey.Main });
-    } else if (buildingId === "lottery") {
-      this.scene.start("LottoScene", { returnSceneKey: SceneKey.Main });
-    }
+    // 미니게임 연동 (중앙 런처 사용)
+    this.startMinigame(buildingId);
   }
 
   private toggleMenu(): void {
@@ -2384,7 +2411,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private handleNpcInteraction(npcView: AreaNpcView): void {
-    npcView.marker.setFillStyle(npcView.config.flashColor, 1);
+    if (npcView.marker instanceof Phaser.GameObjects.Shape) {
+      npcView.marker.setFillStyle(npcView.config.flashColor, 1);
+    } else if (npcView.marker instanceof Phaser.GameObjects.Sprite) {
+      npcView.marker.setTint(npcView.config.flashColor);
+    }
     this.time.delayedCall(160, () => {
       this.refreshAreaNpcHighlight(this.activeAreaNpcView);
     });
@@ -2590,25 +2621,17 @@ export class MainScene extends Phaser.Scene {
       });
       return;
     }
-    if (action === "playDrinking") {
-      this.scene.start("DrinkingScene", { returnSceneKey: SceneKey.Main });
-      return;
+
+    // 미니게임 연동 (중앙 런처 사용)
+    if (action && action.startsWith("play")) {
+      this.startMinigame(action);
     }
-    if (action === "playInterview") {
-      this.scene.start("InterviewScene", { returnSceneKey: SceneKey.Main });
-      return;
-    }
-    if (action === "playGym") {
-      this.scene.start("GymScene", { returnSceneKey: SceneKey.Main });
-      return;
-    }
-    if (action === "playRhythm") {
-      this.scene.start("RhythmScene", { returnSceneKey: SceneKey.Main });
-      return;
-    }
-    if (action === "playConflict") {
-      this.scene.start("ConflictResolveScene", { returnSceneKey: SceneKey.Main });
-      return;
+  }
+
+  private startMinigame(key: string): void {
+    const sceneKey = MINIGAME_SCENE_MAP[key];
+    if (sceneKey) {
+      this.scene.start(sceneKey, { returnSceneKey: SceneKey.Main });
     }
   }
 

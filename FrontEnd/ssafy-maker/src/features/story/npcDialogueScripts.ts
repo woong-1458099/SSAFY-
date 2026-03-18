@@ -1,6 +1,6 @@
 export type StoryStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
 
-export type DialogueAction = "openShop" | "openMiniGame" | "playDrinking" | "playInterview" | "playGym" | "playRhythm" | "playConflict";
+export type DialogueAction = "openShop" | "openMiniGame" | "playDrinking" | "playInterview" | "playGym" | "playRhythm" | "playConflict" | "playCooking";
 
 export type DialogueRequirement = {
   stat: StoryStatKey;
@@ -28,7 +28,16 @@ export type DialogueNode = {
   action?: DialogueAction;
 };
 
-export type NpcDialogueId = "downtown_shopkeeper" | "campus_senior" | "campus_script_npc";
+export type NpcDialogueId =
+  | "downtown_shopkeeper"
+  | "campus_senior"
+  | "campus_script_npc"
+  | "npc_myungjin"
+  | "npc_yeonwoong"
+  | "npc_hyoryeon"
+  | "npc_jiwoo"
+  | "npc_jongmin"
+  | "npc_minsu";
 
 export type NpcDialogueScript = {
   npcId: NpcDialogueId;
@@ -205,6 +214,102 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         id: "bye_result",
         speaker: "스크립트 NPC",
         text: "준비되면 새 대사로 바꿔줘."
+      }
+    }
+  },
+  npc_myungjin: {
+    npcId: "npc_myungjin",
+    npcLabel: "명진",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "명진",
+        text: "안녕! 면접 준비는 잘 돼가? 실제처럼 연습 한번 해볼래?",
+        choices: [
+          { id: "play", text: "면접 연습 시작하기", action: "playInterview" },
+          { id: "bye", text: "나중에 올게." }
+        ]
+      }
+    }
+  },
+  npc_yeonwoong: {
+    npcId: "npc_yeonwoong",
+    npcLabel: "연웅",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "연웅",
+        text: "배고프지 않아? 내가 기가 막힌 라면 레시피를 알고 있는데...",
+        choices: [
+          { id: "play", text: "라면 끓이기 도전", action: "playCooking" },
+          { id: "bye", text: "다음에 먹을게." }
+        ]
+      }
+    }
+  },
+  npc_hyoryeon: {
+    npcId: "npc_hyoryeon",
+    npcLabel: "효련",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "효련",
+        text: "공부만 하면 머리 아프잖아. 노래 한 곡 하면서 스트레스 풀래?",
+        choices: [
+          { id: "play", text: "리듬 게임 시작", action: "playRhythm" },
+          { id: "bye", text: "지금은 바빠." }
+        ]
+      }
+    }
+  },
+  npc_jiwoo: {
+    npcId: "npc_jiwoo",
+    npcLabel: "지우",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "지우",
+        text: "팀 프로젝트하다 보면 갈등이 생기기 마련이지. 같이 해결책을 찾아볼까?",
+        choices: [
+          { id: "play", text: "갈등 해결 시뮬레이션", action: "playConflict" },
+          { id: "bye", text: "혼자 생각해볼게." }
+        ]
+      }
+    }
+  },
+  npc_jongmin: {
+    npcId: "npc_jongmin",
+    npcLabel: "종민",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "종민",
+        text: "개발자는 체력이 국력이야! 같이 운동해서 기초 체력 좀 길러둘까?",
+        choices: [
+          { id: "play", text: "기초 체력 단련", action: "playGym" },
+          { id: "bye", text: "오늘 좀 피곤하네." }
+        ]
+      }
+    }
+  },
+  npc_minsu: {
+    npcId: "npc_minsu",
+    npcLabel: "민수",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "민수",
+        text: "오늘 정말 고생 많았어! 팀원들이랑 가볍게 맥주 한잔하면서 회포 풀까?",
+        choices: [
+          { id: "play", text: "맥주 파티 시작", action: "playDrinking" },
+          { id: "bye", text: "술은 다음에!" }
+        ]
       }
     }
   }
