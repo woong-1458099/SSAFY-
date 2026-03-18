@@ -39,6 +39,7 @@ const EMOTION_LABELS = {
 type DialogueEmotionToken = keyof typeof EMOTION_LABELS;
 
 const warnedEmotionTokens = new Set<string>();
+const MAX_WARNED_EMOTION_TOKENS = 32;
 
 function getEmotionLabel(node: DialogueNode): string | null {
   const emotionToken = typeof node.emotion === "string" ? node.emotion.trim().toUpperCase() : "";
@@ -48,7 +49,10 @@ function getEmotionLabel(node: DialogueNode): string | null {
     return EMOTION_LABELS[emotionToken as DialogueEmotionToken];
   }
 
-  if (!warnedEmotionTokens.has(emotionToken)) {
+  if (import.meta.env.DEV && !warnedEmotionTokens.has(emotionToken)) {
+    if (warnedEmotionTokens.size >= MAX_WARNED_EMOTION_TOKENS) {
+      warnedEmotionTokens.clear();
+    }
     warnedEmotionTokens.add(emotionToken);
     console.warn("[dialogue-ui] unsupported emotion token", emotionToken);
   }

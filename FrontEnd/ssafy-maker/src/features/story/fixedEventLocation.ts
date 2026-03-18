@@ -19,7 +19,9 @@ export function normalizeFixedEventLocationToken(value: unknown): string {
 export function matchesFixedEventLocation(rawLocation: unknown, currentLocation: string): boolean {
   const location = normalizeFixedEventLocationToken(rawLocation);
   const current = normalizeFixedEventLocationToken(currentLocation);
-  if (!location || !current) return true;
+
+  if (!location) return true;
+  if (!current) return false;
   if (location === current) return true;
 
   return Object.entries(FIXED_EVENT_LOCATION_ALIASES).some(([canonical, aliases]) => {

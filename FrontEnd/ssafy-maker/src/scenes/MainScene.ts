@@ -2371,11 +2371,9 @@ export class MainScene extends Phaser.Scene {
     if (typeof payload.lastAppliedWeeklyPlanSlotKey === "string" || payload.lastAppliedWeeklyPlanSlotKey === null) {
       this.lastAppliedWeeklyPlanSlotKey = payload.lastAppliedWeeklyPlanSlotKey ?? null;
     }
-    if (Array.isArray(payload.completedFixedEventIds)) {
-      this.completedFixedEventIds = payload.completedFixedEventIds.filter(
-        (entry): entry is string => typeof entry === "string" && entry.length > 0
-      );
-    }
+    this.completedFixedEventIds = Array.isArray(payload.completedFixedEventIds)
+      ? payload.completedFixedEventIds.filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+      : [];
 
     this.restoreStatsFromSave(payload.statsState);
     this.restoreInventoryFromSave(payload);
