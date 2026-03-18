@@ -24,8 +24,20 @@ export type FixedEventChoiceCondition = {
   trait?: string;
 };
 
+export type FixedEventConditionKey = keyof FixedEventChoiceCondition;
+export type FixedEventStatChangeKey =
+  | "social"
+  | "code"
+  | "gold"
+  | "hp"
+  | "stress"
+  | "luck"
+  | "fe"
+  | "be"
+  | "teamwork";
+
 export type FixedEventChoiceResult = {
-  statChanges?: Record<string, number>;
+  statChanges?: Partial<Record<FixedEventStatChangeKey, number>>;
   feedbackText?: string;
   feedbackDialogues?: FixedEventDialogueEntry[];
 };
@@ -135,6 +147,20 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
   if (!condition || typeof condition !== "object") return [];
 
   const requirements: DialogueRequirement[] = [];
+  const unsupportedKeys = Object.keys(condition).filter(
+    (key) =>
+      key !== "social" &&
+      key !== "code" &&
+      key !== "gold" &&
+      key !== "luck" &&
+      key !== "hp" &&
+      key !== "stress" &&
+      key !== "trait"
+  );
+
+  if (unsupportedKeys.length > 0) {
+    console.warn("[fixed-event] unsupported choice condition keys", unsupportedKeys);
+  }
 
   if (typeof condition.social === "number") {
     requirements.push({ stat: "teamwork", min: Math.round(condition.social), label: `협업 ${Math.round(condition.social)} 이상` });
@@ -160,10 +186,11 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
   return requirements;
 }
 
-function mapStatChanges(changes: Record<string, number> | undefined): DialogueChoice["statChanges"] {
+function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>> | undefined): DialogueChoice["statChanges"] {
   if (!changes || typeof changes !== "object") return undefined;
 
   const mapped: NonNullable<DialogueChoice["statChanges"]> = {};
+  const unsupportedKeys: string[] = [];
 
   Object.entries(changes).forEach(([rawKey, rawValue]) => {
     if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
@@ -194,9 +221,14 @@ function mapStatChanges(changes: Record<string, number> | undefined): DialogueCh
         mapped[rawKey] = (mapped[rawKey] ?? 0) + value;
         break;
       default:
+        unsupportedKeys.push(rawKey);
         break;
     }
   });
+
+  if (unsupportedKeys.length > 0) {
+    console.warn("[fixed-event] unsupported stat change keys", unsupportedKeys);
+  }
 
   return Object.keys(mapped).length > 0 ? mapped : undefined;
 }
