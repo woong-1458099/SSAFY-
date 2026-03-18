@@ -95,9 +95,9 @@
   - `candidate-whitelist.conf`
 
 ## 9. whitelist 현재 상태
-현재 공통 whitelist 허용값:
-- `112.158.208.25`
-- `59.20.195.127`
+공통 whitelist는 런타임 `active-whitelist.conf` 기준으로 운영한다.
+실제 허용 IP 목록은 저장소 문서에 직접 기록하지 않는다.
+필요 시 서버의 `/home/ubuntu/deploy/nginx/whitelist/active-whitelist.conf` 에서 확인한다.
 
 모든 운영자 도구를 전부 열지 않고, 기본은 whitelist 보호를 유지한다.
 
