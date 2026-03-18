@@ -114,6 +114,36 @@ function normalizeActionType(value: unknown): DialogueChoiceActionType {
   return "NORMAL";
 }
 
+function normalizeChoiceText(value: unknown, fallback: string, playerName: string, actionType: DialogueChoiceActionType): string {
+  const text = normalizeTextWithPlayerName(value, fallback, playerName).trim();
+  let startIndex = 0;
+
+  while (startIndex < text.length) {
+    const char = text[startIndex];
+    const code = text.charCodeAt(startIndex);
+    const isAsciiLetter = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+    const isKorean = code >= 0xac00 && code <= 0xd7a3;
+    const isQuote = char === '"' || char === "'";
+    const isBracket = char === '[';
+    if (isAsciiLetter || isKorean || isQuote || isBracket) {
+      break;
+    }
+    startIndex += 1;
+  }
+
+  let normalized = text.slice(startIndex);
+  if (actionType !== "LOCKED") {
+    return normalized;
+  }
+
+  const closingBracketIndex = normalized.indexOf(']');
+  if (normalized.startsWith('[') && closingBracketIndex > -1) {
+    normalized = normalized.slice(closingBracketIndex + 1).trimStart();
+  }
+
+  return normalized.trim();
+}
+
 function resolveSpeakerLabel(entry: FixedEventDialogueEntry, fallbackNpcLabel: string): string {
   if (entry.speakerName && entry.speakerName.trim().length > 0) {
     return entry.speakerName;
@@ -304,6 +334,7 @@ export function buildDialogueScriptFromFixedEventEntry(
     finalDialogueNode.nextNodeId = undefined;
     finalDialogueNode.choices = choices.map((choice, index): DialogueChoice => {
       const choiceId = choice.choiceId ?? index + 1;
+      const actionType = normalizeActionType(choice.actionType);
       const requirements = mapConditionToRequirements(choice.condition);
       const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : [];
       const feedbackStartNodeId = feedbackDialogues.length > 0 ? `json_choice_feedback_${choiceId}_1` : undefined;
@@ -314,9 +345,10 @@ export function buildDialogueScriptFromFixedEventEntry(
 
       return {
         id: `json_choice_${choiceId}`,
-        text: normalizeTextWithPlayerName(choice.text, `선택지 ${index + 1}`, playerName),
+        text: normalizeChoiceText(choice.text, `??? ${index + 1}`, playerName, actionType),
         nextNodeId: feedbackStartNodeId,
-        actionType: normalizeActionType(choice.actionType),
+        actionType,
+
         requirements,
         lockedReason,
         statChanges: mapStatChanges(choice.result?.statChanges),

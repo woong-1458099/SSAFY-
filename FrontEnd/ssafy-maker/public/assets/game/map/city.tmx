@@ -4,8 +4,6 @@
 
  <tileset firstgid="1" source="FullTileSet.tsx"/>
 
- <tileset firstgid="958" source="../../../../../../../../../Documents/PhaserProjects/ssafy-maker/assets/game/map/FullTileSet.tsx"/>
-
  <layer id="1" name="floor" width="32" height="18">
 
   <data encoding="csv">
