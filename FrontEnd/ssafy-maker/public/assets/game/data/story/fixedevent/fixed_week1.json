@@ -16,7 +16,7 @@
         "text": "입과 첫날 자기소개 시간. 동기들이 화려한 스펙을 뽐낸다."
       },
       {
-        "speakerId": "NPC_UNKNOWN",
+        "speakerId": "NPC_CLASSMATE_EXTRA_A",
         "speakerName": "동기 A",
         "emotion": "NORMAL",
         "text": "\"안녕하세요 △△회사 인턴 경험 후, ☆☆부트캠프 수료 이력이 있습니다. 싸피에서 또 배울 것들이 기대되네요! 하하, 잘 부탁드립니다.\""
@@ -90,7 +90,7 @@
         "text": "스타트캠프 로보퀘스트(레고 자동차 자율주행) 시간.\n동기들이 모터 제어 알고리즘을 분석하며 키보드를 두드릴 때, 나는 설명서를 보며 바퀴 레고 블록만 만지작거린다. 코드가 어떻게 돌아가는지 전혀 모르겠다…"
       },
       {
-        "speakerId": "NPC_MYUNGJIN",
+        "speakerId": "NPC_CLASSMATE_MYUNGJIN",
         "speakerName": "명진",
         "emotion": "NORMAL",
         "text": "\"그럼 oo씨는… 이제 뭘 하실래요?\""
@@ -106,7 +106,7 @@
           "statChanges": { "hp": -10 },
           "feedbackDialogues": [
             {
-              "speakerId": "NPC_TEAMMATE",
+              "speakerId": "NPC_CLASSMATE_JIWOO",
               "speakerName": "지우",
               "emotion": "NORMAL",
               "text": "\"아, 네. 감사합니다. 음... 혹시 거기 옆에 있는 빨간색 2x4 블록 좀 집어주실 수 있나요? 아니, 그거 말고 그 옆에요.\""
@@ -137,7 +137,7 @@
           "statChanges": { "code": 5, "social": 5 },
           "feedbackDialogues": [
             {
-              "speakerId": "NPC_YEONWOONG",
+              "speakerId": "NPC_CLASSMATE_YEONWOONG",
               "speakerName": "연웅",
               "emotion": "SURPRISED",
               "text": "\"와, 하드웨어 엔지니어셨어요?!\""
@@ -162,7 +162,7 @@
           "statChanges": { "hp": -10, "social": -10 },
           "feedbackDialogues": [
             {
-              "speakerId": "NPC_HYORYEON",
+              "speakerId": "NPC_CLASSMATE_HYORYEON",
               "speakerName": "효련",
               "emotion": "SPEECHLESS",
               "text": "\"하하, 이런 미친.....\""
@@ -223,7 +223,7 @@
           "statChanges": { "social": 5, "code": 5 },
           "feedbackDialogues": [
             {
-              "speakerId": "NPC_PARTNER",
+              "speakerId": "NPC_CLASSMATE_MYUNGJIN",
               "speakerName": "명진",
               "emotion": "SMILE",
               "text": "\"아, 2중 for문 헷갈리죠! 바깥쪽 i가 행(줄)이고, 안쪽 j가 그 줄에 찍히는 별의 개수라고 생각하면 조금 쉬워요. 한 줄씩 같이 찍어볼까요?\""
@@ -244,8 +244,8 @@
           "statChanges": { "hp": -30, "code": -10 },
           "feedbackDialogues": [
             {
-              "speakerId": "NPC_COACH",
-              "speakerName": "민석 코치님",
+              "speakerId": "NPC_COACH_MINSEOK",
+              "speakerName": "최민석 코치",
               "emotion": "TIRED",
               "text": "\"하하, {playerName}님... 학생 때 수학 문제도 노가다 식으로 푸셨나요? 어지럽네요...\""
             },

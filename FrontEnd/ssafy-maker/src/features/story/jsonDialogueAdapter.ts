@@ -22,6 +22,7 @@ export type FixedEventChoiceCondition = {
   luck?: number;
   hp?: number;
   stress?: number;
+  stress_max?: number;
   trait?: string;
 };
 
@@ -33,6 +34,8 @@ export type FixedEventStatChangeKey =
   | "hp"
   | "stress"
   | "luck"
+  | "favor_pro"
+  | "madness"
   | "fe"
   | "be"
   | "teamwork";
@@ -135,6 +138,7 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
       key !== "luck" &&
       key !== "hp" &&
       key !== "stress" &&
+      key !== "stress_max" &&
       key !== "trait"
   );
 
@@ -162,6 +166,9 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
   if (typeof condition.stress === "number") {
     requirements.push({ stat: "stress", max: Math.round(condition.stress), label: `스트레스 ${Math.round(condition.stress)} 이하` });
   }
+  if (typeof condition.stress_max === "number") {
+    requirements.push({ stat: "stress", max: Math.round(condition.stress_max), label: `스트레스 ${Math.round(condition.stress_max)} 이하` });
+  }
 
   return requirements;
 }
@@ -180,6 +187,9 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
       case "social":
         mapped.teamwork = (mapped.teamwork ?? 0) + value;
         break;
+      case "favor_pro":
+        mapped.teamwork = (mapped.teamwork ?? 0) + value;
+        break;
       case "code": {
         const feDelta = value >= 0 ? Math.ceil(value / 2) : Math.floor(value / 2);
         const beDelta = value - feDelta;
@@ -187,6 +197,9 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
         mapped.be = (mapped.be ?? 0) + beDelta;
         break;
       }
+      case "madness":
+        mapped.stress = (mapped.stress ?? 0) + value;
+        break;
       case "gold":
         mapped.gold = (mapped.gold ?? 0) + value;
         break;
