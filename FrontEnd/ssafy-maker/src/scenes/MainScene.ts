@@ -131,10 +131,13 @@ type AreaNpcConfig = {
 };
 
 type AreaNpcView = {
-  area: Exclude<AreaId, "world">;
+  area: AreaId;
   config: AreaNpcConfig;
   marker: Phaser.GameObjects.Shape | Phaser.GameObjects.Sprite;
   label: Phaser.GameObjects.Text;
+  portrait?: Phaser.GameObjects.Image;
+  eventId?: string;
+  isScheduled?: boolean;
 };
 
 type InventoryItemTemplate = {
@@ -410,8 +413,45 @@ const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
   ]
 };
 
+const FIXED_EVENT_NPC_ASSET_KEYS: Partial<Record<string, string>> = {
+  NPC_CLASSMATE_MYUNGJIN: "fixed-npc-myungjin",
+  NPC_CLASSMATE_JIWOO: "fixed-npc-jiwoo",
+  NPC_CLASSMATE_YEONWOONG: "fixed-npc-yeonwoong",
+  NPC_CLASSMATE_HYORYEON: "fixed-npc-hyoryeon",
+  NPC_CLASSMATE_JONGMIN: "fixed-npc-jongmin",
+  NPC_PRO_SUNMI: "fixed-npc-sunmi",
+  NPC_PRO_DOYEON: "fixed-npc-doyeon",
+  NPC_CONSULTANT_HYUNSEOK: "fixed-npc-hyunseok",
+};
+
+const FIXED_EVENT_NPC_LABELS: Partial<Record<string, string>> = {
+  NPC_CLASSMATE_MYUNGJIN: "명진",
+  NPC_CLASSMATE_JIWOO: "지우",
+  NPC_CLASSMATE_YEONWOONG: "연웅",
+  NPC_CLASSMATE_HYORYEON: "효련",
+  NPC_CLASSMATE_JONGMIN: "종민",
+  NPC_PRO_SUNMI: "조선미 프로",
+  NPC_PRO_DOYEON: "김도연 프로",
+  NPC_CONSULTANT_HYUNSEOK: "이현석 컨설턴트",
+};
+
+const FIXED_EVENT_NPC_DEMO_POSITIONS: Record<"campus" | "world", Array<Pick<AreaNpcConfig, "x" | "y" | "labelOffsetX" | "labelOffsetY" | "flashColor">>> = {
+  campus: [
+    { x: 650, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+    { x: 735, y: 390, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+    { x: 830, y: 420, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+    { x: 910, y: 360, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+  ],
+  world: [
+    { x: 548, y: 278, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+    { x: 612, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+    { x: 452, y: 264, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+    { x: 500, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+  ],
+};
+
 const AREA_TILESET_IMAGE_KEY = "map_tiles_full_asset";
-const AREA_TILESET_MARGIN = 8;
+const AREA_TILESET_MARGIN = 0;
 const AREA_TMX_TEXT_KEYS: Record<AreaId, string> = {
   world: "map_tmx_world",
   downtown: "map_tmx_downtown",
@@ -452,6 +492,7 @@ export class MainScene extends Phaser.Scene {
   private playerFacing: "left" | "right" | "up" | "down" = "down";
   private areaNpcViews: AreaNpcView[] = [];
   private activeAreaNpcView: AreaNpcView | null = null;
+  private scheduledNpcViews: AreaNpcView[] = [];
   private worldMapRoot?: Phaser.GameObjects.Container;
   private worldForegroundRoot?: Phaser.GameObjects.Container;
   private downtownMapRoot?: Phaser.GameObjects.Container;
@@ -573,6 +614,14 @@ export class MainScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayerAvatarAssets(this);
+    this.load.image("fixed-npc-myungjin", "assets/game/npc/명진.png");
+    this.load.image("fixed-npc-jiwoo", "assets/game/npc/지우.png");
+    this.load.image("fixed-npc-yeonwoong", "assets/game/npc/연웅.png");
+    this.load.image("fixed-npc-hyoryeon", "assets/game/npc/효련.png");
+    this.load.image("fixed-npc-jongmin", "assets/game/npc/종민.png");
+    this.load.image("fixed-npc-sunmi", "assets/game/npc/조선미 프로.png");
+    this.load.image("fixed-npc-doyeon", "assets/game/npc/김도연 프로.png");
+    this.load.image("fixed-npc-hyunseok", "assets/game/npc/이현석 컨설턴트.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.ui_practice, "assets/game/ui/UIpractice.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.rest_api_db, "assets/game/ui/DBconsult.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.team_project, "assets/game/ui/TeamPJT.png");
@@ -602,6 +651,7 @@ export class MainScene extends Phaser.Scene {
 
     this.buildAreaMaps();
     this.createAreaNpcViews();
+    this.createScheduledNpcViews();
 
     this.playerAvatar = this.getSelectedPlayerAvatar();
     this.createPlayerAvatar();
@@ -769,14 +819,20 @@ export class MainScene extends Phaser.Scene {
     if (this.currentArea === "world") {
       this.player.setVelocity(move.x * GAME_CONSTANTS.PLAYER_SPEED, move.y * GAME_CONSTANTS.PLAYER_SPEED);
       this.updatePlayerAvatarAnimation(move);
+      const nearbyNpcView = this.getNearestAreaNpcView(this.currentArea, 74);
+      this.refreshAreaNpcHighlight(nearbyNpcView);
       const nearbyPlace = this.getNearestWorldPlace(74);
       this.highlightWorldPlace(nearbyPlace?.id ?? null);
       this.hud.setInteractionPrompt(
-        nearbyPlace
-          ? this.withPlannerPrompt("E \uC7A5\uC18C \uC774\uB3D9/\uAE30\uB2A5 \uC0AC\uC6A9  |  WASD / Arrow \uC774\uB3D9  |  ESC \uBA54\uB274")
-          : this.withPlannerPrompt("WASD / Arrow \uC774\uB3D9  |  ESC \uBA54\uB274")
+        nearbyNpcView
+          ? this.withPlannerPrompt("E ????  |  WASD / Arrow ??  |  ESC ??")
+          : nearbyPlace
+            ? this.withPlannerPrompt("E ?? ??/?? ??  |  WASD / Arrow ??  |  ESC ??")
+            : this.withPlannerPrompt("WASD / Arrow ??  |  ESC ??")
       );
-      if (nearbyPlace && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      if (nearbyNpcView && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+        this.handleNpcInteraction(nearbyNpcView);
+      } else if (nearbyPlace && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
         this.handleWorldPlaceInteraction(nearbyPlace);
       }
       this.enforceAreaCollision();
@@ -1325,13 +1381,63 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  private createScheduledNpcViews(): void {
+    (Object.entries(FIXED_EVENT_NPC_DEMO_POSITIONS) as Array<
+      ["campus" | "world", Array<Pick<AreaNpcConfig, "x" | "y" | "labelOffsetX" | "labelOffsetY" | "flashColor">>]
+    >).forEach(([area, positions]) => {
+      const root = area === "world" ? this.worldMapRoot : this.getAreaRoot(area);
+      if (!root) return;
+
+      positions.forEach((position, index) => {
+        const marker = this.add.rectangle(position.x, position.y, 34, 42, 0x6e4f2b, 0.15);
+        marker.setStrokeStyle(2, 0x4b351b, 1);
+        marker.setVisible(false);
+
+        const portrait = this.add.image(position.x, position.y - 6, "fixed-npc-myungjin");
+        portrait.setScale(1.6);
+        portrait.setVisible(false);
+
+        const label = this.add.text(
+          this.px(position.x + position.labelOffsetX),
+          this.px(position.y + position.labelOffsetY),
+          "",
+          {
+            fontFamily: this.uiFontFamily,
+            color: "#f6e6c8",
+            fontSize: "14px",
+            resolution: 2
+          }
+        );
+        label.setVisible(false);
+        root.add([marker, portrait, label]);
+        this.scheduledNpcViews.push({
+          area,
+          config: {
+            dialogueId: "fixed_event_runtime",
+            x: position.x,
+            y: position.y,
+            labelOffsetX: position.labelOffsetX,
+            labelOffsetY: position.labelOffsetY,
+            flashColor: position.flashColor
+          },
+          marker,
+          portrait,
+          label,
+          isScheduled: true,
+          eventId: `scheduled-slot-${area}-${index}`
+        });
+      });
+    });
+    this.refreshScheduledNpcViews();
+  }
+
   private getDialogueScript(dialogueId: NpcDialogueId): NpcDialogueScript | null {
     if (this.runtimeDialogueScripts[dialogueId]) {
       return this.runtimeDialogueScripts[dialogueId] ?? null;
     }
 
     if (dialogueId === "campus_script_npc") {
-      const rawJson = this.cache.json.get("story_fixed_week1");
+      const rawJson = this.getFixedEventDataForWeek(this.hudState.week);
       const jsonScript = buildDialogueScriptFromFixedEventJson(dialogueId, rawJson, "스크립트 NPC", this.getPlayerName());
       if (jsonScript) {
         this.runtimeDialogueScripts[dialogueId] = jsonScript;
@@ -1348,37 +1454,30 @@ export class MainScene extends Phaser.Scene {
     return name.length > 0 ? name : "플레이어";
   }
 
+  private getFixedEventCacheKey(week: number): string {
+    const clampedWeek = Phaser.Math.Clamp(Math.round(week), 1, 4);
+    return `story_fixed_week${clampedWeek}`;
+  }
+
+  private getFixedEventDataForWeek(week: number): unknown {
+    return this.cache.json.get(this.getFixedEventCacheKey(week));
+  }
+
   private maybeStartFixedEvent(): boolean {
     if (this.dialogueOpen || this.menuOpen || this.shopOpen || this.placePopupOpen || this.weeklyPlanActivityOpen || this.weeklyPlannerPopupOpen || this.endingFlowStarted) {
       return false;
     }
 
-    const matchingEvent = findMatchingFixedEvent(
-      this.cache.json.get("story_fixed_week1"),
-      {
-        week: this.hudState.week,
-        day: this.dayCycleIndex + 1,
-        timeOfDay: this.hudState.timeLabel,
-        location: this.getCurrentFixedEventLocation()
-      },
-      this.completedFixedEventIds
-    );
+    const matchingEvent = this.getCurrentFixedEventEntry();
     if (!matchingEvent) {
       return false;
     }
 
-    const runtimeScript = buildDialogueScriptFromFixedEventEntry("fixed_event_runtime", matchingEvent, {
-      fallbackNpcLabel: "이벤트",
-      playerName: this.getPlayerName()
-    });
-    if (!runtimeScript) {
+    if (this.getFixedEventParticipantIds(matchingEvent).length > 0) {
       return false;
     }
 
-    this.runtimeDialogueScripts.fixed_event_runtime = runtimeScript;
-    this.activeFixedEventId = typeof matchingEvent.eventId === "string" ? matchingEvent.eventId : null;
-    this.startNpcDialogue("fixed_event_runtime");
-    return true;
+    return this.startCurrentFixedEventDialogue(matchingEvent);
   }
 
   private getCurrentFixedEventLocation(): string {
@@ -1388,7 +1487,87 @@ export class MainScene extends Phaser.Scene {
     if (this.currentArea === "downtown") {
       return "downtown";
     }
+    if (this.currentArea === "world" && this.lastSelectedWorldPlace === "home") {
+      return "home";
+    }
     return "world";
+  }
+
+  private getCurrentFixedEventEntry(): ReturnType<typeof findMatchingFixedEvent> {
+    return findMatchingFixedEvent(
+      this.getFixedEventDataForWeek(this.hudState.week),
+      {
+        week: this.hudState.week,
+        day: this.dayCycleIndex + 1,
+        timeOfDay: this.hudState.timeLabel,
+        location: this.getCurrentFixedEventLocation()
+      },
+      this.completedFixedEventIds
+    );
+  }
+
+  private getFixedEventParticipantIds(event: ReturnType<typeof findMatchingFixedEvent>): string[] {
+    if (!event) return [];
+    const participantIds = new Set<string>();
+    const excludedIds = new Set([
+      "SYSTEM",
+      "PLAYER",
+      "NPC_CLASSMATE_EXTRA_A",
+      "NPC_COACH_MINSEOK",
+      "NPC_COACH_HYEWON"
+    ]);
+
+    const addSpeaker = (speakerId: unknown): void => {
+      if (typeof speakerId !== "string") return;
+      const trimmed = speakerId.trim();
+      if (!trimmed || excludedIds.has(trimmed)) return;
+      if (!FIXED_EVENT_NPC_ASSET_KEYS[trimmed]) return;
+      participantIds.add(trimmed);
+    };
+
+    (event.dialogues ?? []).forEach((entry) => addSpeaker(entry.speakerId));
+    (event.choices ?? []).forEach((choice) => {
+      (choice.result?.feedbackDialogues ?? []).forEach((entry) => addSpeaker(entry.speakerId));
+    });
+
+    return [...participantIds];
+  }
+
+  private refreshScheduledNpcViews(): void {
+    const event = this.getCurrentFixedEventEntry();
+    const participantIds = this.getFixedEventParticipantIds(event);
+    const targetArea = this.getCurrentFixedEventLocation() === "home" ? "world" : "campus";
+
+    this.scheduledNpcViews.forEach((view, index) => {
+      const speakerId = view.area === targetArea ? participantIds[index] : undefined;
+      const textureKey = speakerId ? FIXED_EVENT_NPC_ASSET_KEYS[speakerId] : undefined;
+      const visible = Boolean(speakerId && textureKey);
+
+      view.eventId = visible ? event?.eventId ?? null ?? undefined : undefined;
+      view.marker.setVisible(visible && this.currentArea === view.area);
+      view.label.setVisible(visible && this.currentArea === view.area);
+      view.portrait?.setVisible(visible && this.currentArea === view.area);
+      if (!visible || !speakerId || !textureKey) {
+        return;
+      }
+
+      view.label.setText(FIXED_EVENT_NPC_LABELS[speakerId] ?? speakerId);
+      view.portrait?.setTexture(textureKey);
+      view.portrait?.setScale(1.6);
+    });
+  }
+
+  private startCurrentFixedEventDialogue(event: ReturnType<typeof findMatchingFixedEvent>): boolean {
+    if (!event) return false;
+    const runtimeScript = buildDialogueScriptFromFixedEventEntry("fixed_event_runtime", event, {
+      fallbackNpcLabel: "이벤트",
+      playerName: this.getPlayerName()
+    });
+    if (!runtimeScript) return false;
+    this.runtimeDialogueScripts.fixed_event_runtime = runtimeScript;
+    this.activeFixedEventId = typeof event.eventId === "string" ? event.eventId : null;
+    this.startNpcDialogue("fixed_event_runtime");
+    return true;
   }
 
   private refreshAreaNpcVisibility(area: AreaId): void {
@@ -1396,6 +1575,7 @@ export class MainScene extends Phaser.Scene {
       const visible = area !== "world" && view.area === area;
       view.marker.setVisible(visible);
       view.label.setVisible(visible);
+      view.portrait?.setVisible(visible);
       if (visible) {
         if (view.marker instanceof Phaser.GameObjects.Shape) {
           view.marker.setFillStyle(0x6e4f2b, 1);
@@ -1405,15 +1585,14 @@ export class MainScene extends Phaser.Scene {
         }
       }
     });
+    this.refreshScheduledNpcViews();
   }
 
   private getNearestAreaNpcView(area: AreaId, maxDistance: number): AreaNpcView | null {
-    if (area === "world") return null;
-
     let nearestView: AreaNpcView | null = null;
     let nearestDistance = Number.POSITIVE_INFINITY;
 
-    this.areaNpcViews.forEach((view) => {
+    [...this.areaNpcViews, ...this.scheduledNpcViews].forEach((view) => {
       if (view.area !== area || !view.marker.visible) return;
       const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, view.config.x, view.config.y);
       if (distance <= maxDistance && distance < nearestDistance) {
@@ -1427,7 +1606,7 @@ export class MainScene extends Phaser.Scene {
 
   private refreshAreaNpcHighlight(activeView: AreaNpcView | null): void {
     this.activeAreaNpcView = activeView;
-    this.areaNpcViews.forEach((view) => {
+    [...this.areaNpcViews, ...this.scheduledNpcViews].forEach((view) => {
       const isActive = activeView?.config.dialogueId === view.config.dialogueId && activeView.area === view.area;
       if (view.marker instanceof Phaser.GameObjects.Shape) {
         view.marker.setFillStyle(isActive ? view.config.flashColor : 0x6e4f2b, 1);
@@ -1440,6 +1619,7 @@ export class MainScene extends Phaser.Scene {
         }
       }
       view.label.setColor(isActive ? "#fff6d0" : "#f6e6c8");
+      view.portrait?.setScale(isActive ? 1.72 : 1.6);
     });
   }
 
@@ -1768,7 +1948,7 @@ export class MainScene extends Phaser.Scene {
 
   private getFixedEventSlotsForWeek(week: number): Map<number, string> {
     const fixedEventSlots = new Map<number, string>();
-    const fixedEvents = getFixedEventEntries(this.cache.json.get("story_fixed_week1"));
+    const fixedEvents = getFixedEventEntries(this.getFixedEventDataForWeek(week));
 
     fixedEvents.forEach((event) => {
       if (event.eventType !== "FIXED") return;
@@ -1788,7 +1968,7 @@ export class MainScene extends Phaser.Scene {
       const eventName =
         typeof event.eventName === "string" && event.eventName.trim().length > 0
           ? event.eventName.trim()
-          : "이벤트";
+          : "???";
       fixedEventSlots.set(slotIndex, eventName);
     });
 
@@ -2536,6 +2716,16 @@ export class MainScene extends Phaser.Scene {
     this.time.delayedCall(160, () => {
       this.refreshAreaNpcHighlight(this.activeAreaNpcView);
     });
+
+    if (npcView.isScheduled) {
+      const event = this.getCurrentFixedEventEntry();
+      if (!event || npcView.eventId !== event.eventId) {
+        this.showSystemToast("진행할 이벤트가 없습니다");
+        return;
+      }
+      this.startCurrentFixedEventDialogue(event);
+      return;
+    }
 
     this.startNpcDialogue(npcView.config.dialogueId);
   }
@@ -3371,6 +3561,9 @@ export class MainScene extends Phaser.Scene {
       this.refreshStatsUi();
     }
     this.hud.applyState(this.hudState);
+    if (this.scheduledNpcViews.length > 0) {
+      this.refreshScheduledNpcViews();
+    }
   }
 
   private spendActionPoint(): boolean {

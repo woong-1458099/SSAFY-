@@ -10,6 +10,7 @@ services:
       - /home/ubuntu/deploy/nginx/upstreams:/etc/nginx/upstreams:ro
       - /home/ubuntu/certs/cloudflare:/etc/nginx/certs:ro
       - /home/ubuntu/deploy/frontend:/usr/share/nginx/frontend:ro
+      - /home/ubuntu/deploy/nginx/whitelist:/etc/nginx/whitelist:ro
     networks:
       - core-net
 
