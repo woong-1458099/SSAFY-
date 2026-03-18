@@ -406,6 +406,7 @@ const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
 };
 
 const AREA_TILESET_IMAGE_KEY = "map_tiles_full_asset";
+const AREA_TILESET_MARGIN = 8;
 const AREA_TMX_TEXT_KEYS: Record<AreaId, string> = {
   world: "map_tmx_world",
   downtown: "map_tmx_downtown",
@@ -1112,7 +1113,7 @@ export class MainScene extends Phaser.Scene {
             AREA_TILESET_IMAGE_KEY,
             parsed.tileWidth,
             parsed.tileHeight,
-            0,
+            AREA_TILESET_MARGIN,
             0,
             tileset.firstgid
           )
@@ -1120,7 +1121,15 @@ export class MainScene extends Phaser.Scene {
         .filter((tileset): tileset is Phaser.Tilemaps.Tileset => Boolean(tileset));
 
       if (tilesets.length === 0) {
-        const fallbackTileset = map.addTilesetImage(`${textKey}_tileset_fallback`, AREA_TILESET_IMAGE_KEY, parsed.tileWidth, parsed.tileHeight, 0, 0, 1);
+        const fallbackTileset = map.addTilesetImage(
+          `${textKey}_tileset_fallback`,
+          AREA_TILESET_IMAGE_KEY,
+          parsed.tileWidth,
+          parsed.tileHeight,
+          AREA_TILESET_MARGIN,
+          0,
+          1
+        );
         if (fallbackTileset) {
           tilesets.push(fallbackTileset);
         }
@@ -2997,16 +3006,24 @@ export class MainScene extends Phaser.Scene {
 
   private applyStatDelta(delta: Partial<Record<StatKey, number>>, multiplier: 1 | -1 = 1): void {
     let changed = false;
+    let stressChanged = false;
 
     (Object.keys(delta) as StatKey[]).forEach((key) => {
       const value = delta[key];
       if (!value) return;
       this.statsState[key] = Phaser.Math.Clamp(this.statsState[key] + value * multiplier, 0, 100);
       changed = true;
+      if (key === "stress") {
+        stressChanged = true;
+      }
     });
 
     if (changed) {
       this.refreshStatsUi();
+      if (stressChanged) {
+        this.hudState.stress = this.statsState.stress;
+        this.hud.applyState({ stress: this.hudState.stress });
+      }
     }
   }
 
