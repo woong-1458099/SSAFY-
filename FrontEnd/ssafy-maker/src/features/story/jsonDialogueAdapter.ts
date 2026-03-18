@@ -1,32 +1,122 @@
-import type { DialogueChoice, DialogueNode, NpcDialogueId, NpcDialogueScript } from "./npcDialogueScripts";
+import type {
+  DialogueChoice,
+  DialogueChoiceActionType,
+  DialogueNode,
+  DialogueRequirement,
+  NpcDialogueId,
+  NpcDialogueScript,
+} from "./npcDialogueScripts";
 
-type FixedEventDialogueEntry = {
+export type FixedEventDialogueEntry = {
   speakerId?: string;
   speakerName?: string;
+  emotion?: string;
   text?: string;
 };
 
-type FixedEventChoiceEntry = {
+export type FixedEventChoiceCondition = {
+  social?: number;
+  code?: number;
+  gold?: number;
+  luck?: number;
+  hp?: number;
+  stress?: number;
+  trait?: string;
+};
+
+export type FixedEventChoiceResult = {
+  statChanges?: Record<string, number>;
+  feedbackText?: string;
+  feedbackDialogues?: FixedEventDialogueEntry[];
+};
+
+export type FixedEventChoiceEntry = {
   choiceId?: number;
+  actionType?: string;
+  condition?: FixedEventChoiceCondition | null;
   text?: string;
-  result?: {
-    feedbackText?: string;
-  };
+  result?: FixedEventChoiceResult;
 };
 
-type FixedEventEntry = {
+export type FixedEventTriggerTiming = {
+  week?: number;
+  day?: number;
+  timeOfDay?: string;
+};
+
+export type FixedEventEntry = {
+  eventId?: string;
   eventName?: string;
+  eventType?: string;
+  triggerTiming?: FixedEventTriggerTiming;
+  location?: string;
+  isRepeatable?: boolean;
   dialogues?: FixedEventDialogueEntry[];
   choices?: FixedEventChoiceEntry[];
 };
 
+type FixedEventMatchContext = {
+  week: number;
+  day: number;
+  timeOfDay: string;
+  location: string;
+};
+
+type BuildDialogueOptions = {
+  fallbackNpcLabel: string;
+  playerName?: string;
+};
+
 const SPEAKER_LABEL_BY_ID: Record<string, string> = {
-  SYSTEM: "SYSTEM",
-  PLAYER: "PLAYER"
+  SYSTEM: "시스템",
+  PLAYER: "나",
+  NPC_UNKNOWN: "동기",
+};
+
+const LOCATION_ALIASES: Record<string, string[]> = {
+  campus: ["캠퍼스", "강의동", "inssafy", "캠퍼스내부"],
+  downtown: ["번화가", "시내", "city"],
+  world: ["전체지도", "월드", "맵"],
+  home: ["집", "home"],
+  cafe: ["카페", "cafe"],
+  store: ["편의점", "store"],
 };
 
 function normalizeText(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+}
+
+function normalizeToken(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function replacePlayerNameToken(text: string, playerName: string): string {
+  return text.replace(/\{playerName\}/g, playerName);
+}
+
+function normalizeTextWithPlayerName(value: unknown, fallback: string, playerName: string): string {
+  return replacePlayerNameToken(normalizeText(value, fallback), playerName);
+}
+
+function normalizeActionType(value: unknown): DialogueChoiceActionType {
+  const token = typeof value === "string" ? value.trim().toUpperCase() : "";
+  if (token === "LOCKED" || token === "MADNESS") {
+    return token;
+  }
+  return "NORMAL";
+}
+
+function matchesEventLocation(rawLocation: unknown, currentLocation: string): boolean {
+  const location = normalizeToken(rawLocation);
+  const current = normalizeToken(currentLocation);
+  if (!location || !current) return true;
+  if (location === current) return true;
+
+  return Object.entries(LOCATION_ALIASES).some(([canonical, aliases]) => {
+    const normalizedValues = [canonical, ...aliases].map((value) => normalizeToken(value));
+    return normalizedValues.includes(location) && normalizedValues.includes(current);
+  });
 }
 
 function resolveSpeakerLabel(entry: FixedEventDialogueEntry, fallbackNpcLabel: string): string {
@@ -41,22 +131,116 @@ function resolveSpeakerLabel(entry: FixedEventDialogueEntry, fallbackNpcLabel: s
   return fallbackNpcLabel;
 }
 
-export function buildDialogueScriptFromFixedEventJson(
-  dialogueId: NpcDialogueId,
+function mapConditionToRequirements(condition: FixedEventChoiceCondition | null | undefined): DialogueRequirement[] {
+  if (!condition || typeof condition !== "object") return [];
+
+  const requirements: DialogueRequirement[] = [];
+
+  if (typeof condition.social === "number") {
+    requirements.push({ stat: "teamwork", min: Math.round(condition.social), label: `협업 ${Math.round(condition.social)} 이상` });
+  }
+  if (typeof condition.code === "number") {
+    const value = Math.round(condition.code);
+    requirements.push({ stat: "fe", min: value, label: `코딩 ${value} 이상` });
+    requirements.push({ stat: "be", min: value, label: `코딩 ${value} 이상` });
+  }
+  if (typeof condition.gold === "number") {
+    requirements.push({ stat: "money", min: Math.round(condition.gold), label: `재화 ${Math.round(condition.gold)}` });
+  }
+  if (typeof condition.luck === "number") {
+    requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `운 ${Math.round(condition.luck)} 이상` });
+  }
+  if (typeof condition.hp === "number") {
+    requirements.push({ stat: "hp", min: Math.round(condition.hp), label: `HP ${Math.round(condition.hp)} 이상` });
+  }
+  if (typeof condition.stress === "number") {
+    requirements.push({ stat: "stress", max: Math.round(condition.stress), label: `스트레스 ${Math.round(condition.stress)} 이하` });
+  }
+
+  return requirements;
+}
+
+function mapStatChanges(changes: Record<string, number> | undefined): DialogueChoice["statChanges"] {
+  if (!changes || typeof changes !== "object") return undefined;
+
+  const mapped: NonNullable<DialogueChoice["statChanges"]> = {};
+
+  Object.entries(changes).forEach(([rawKey, rawValue]) => {
+    if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
+    const value = Math.round(rawValue);
+
+    switch (rawKey) {
+      case "social":
+        mapped.teamwork = (mapped.teamwork ?? 0) + value;
+        break;
+      case "code": {
+        const feDelta = value >= 0 ? Math.ceil(value / 2) : Math.floor(value / 2);
+        const beDelta = value - feDelta;
+        mapped.fe = (mapped.fe ?? 0) + feDelta;
+        mapped.be = (mapped.be ?? 0) + beDelta;
+        break;
+      }
+      case "gold":
+        mapped.money = (mapped.money ?? 0) + value;
+        break;
+      case "hp":
+        mapped.hp = (mapped.hp ?? 0) + value;
+        break;
+      case "stress":
+      case "luck":
+      case "fe":
+      case "be":
+      case "teamwork":
+        mapped[rawKey] = (mapped[rawKey] ?? 0) + value;
+        break;
+      default:
+        break;
+    }
+  });
+
+  return Object.keys(mapped).length > 0 ? mapped : undefined;
+}
+
+export function getFixedEventEntries(rawData: unknown): FixedEventEntry[] {
+  return Array.isArray(rawData) ? rawData.filter((entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")) : [];
+}
+
+export function findMatchingFixedEvent(
   rawData: unknown,
-  fallbackNpcLabel: string
+  context: FixedEventMatchContext,
+  completedEventIds: string[]
+): FixedEventEntry | null {
+  const completedSet = new Set(completedEventIds);
+  const targetTime = normalizeToken(context.timeOfDay);
+
+  return (
+    getFixedEventEntries(rawData).find((event) => {
+      const timing = event.triggerTiming;
+      if (!timing || event.eventType !== "FIXED") return false;
+
+      const eventId = typeof event.eventId === "string" ? event.eventId : "";
+      if (event.isRepeatable !== true && eventId && completedSet.has(eventId)) {
+        return false;
+      }
+
+      const sameWeek = Math.round(timing.week ?? -1) === context.week;
+      const sameDay = Math.round(timing.day ?? -1) === context.day;
+      const sameTime = normalizeToken(timing.timeOfDay) === targetTime;
+      const sameLocation = matchesEventLocation(event.location, context.location);
+      return sameWeek && sameDay && sameTime && sameLocation;
+    }) ?? null
+  );
+}
+
+export function buildDialogueScriptFromFixedEventEntry(
+  dialogueId: NpcDialogueId,
+  event: FixedEventEntry,
+  options: BuildDialogueOptions | string
 ): NpcDialogueScript | null {
-  if (!Array.isArray(rawData) || rawData.length === 0) {
-    return null;
-  }
-
-  const firstEvent = rawData[0] as FixedEventEntry | undefined;
-  if (!firstEvent) {
-    return null;
-  }
-
-  const dialogues = Array.isArray(firstEvent.dialogues) ? firstEvent.dialogues : [];
-  const choices = Array.isArray(firstEvent.choices) ? firstEvent.choices : [];
+  const fallbackNpcLabel = typeof options === "string" ? options : options.fallbackNpcLabel;
+  const playerName = typeof options === "string" ? "플레이어" : options.playerName ?? "플레이어";
+  const dialogues = Array.isArray(event.dialogues) ? event.dialogues : [];
+  const choices = Array.isArray(event.choices) ? event.choices : [];
   if (dialogues.length === 0) {
     return null;
   }
@@ -73,45 +257,88 @@ export function buildDialogueScriptFromFixedEventJson(
         ? `json_dialogue_${index + 2}`
         : choices.length > 0
           ? undefined
-          : "json_end";
+          : undefined;
 
     nodes[id] = {
       id,
       speaker: resolveSpeakerLabel(entry, npcLabel),
-      text: normalizeText(entry.text, "..."),
-      nextNodeId
+      speakerId: typeof entry.speakerId === "string" ? entry.speakerId : undefined,
+      emotion: typeof entry.emotion === "string" ? entry.emotion : undefined,
+      text: normalizeTextWithPlayerName(entry.text, "...", playerName),
+      nextNodeId,
     };
   });
 
   if (choices.length > 0) {
     const finalDialogueNode = nodes[`json_dialogue_${dialogues.length}`];
-    finalDialogueNode.choices = choices.map((choice, index): DialogueChoice => ({
-      id: `json_choice_${choice.choiceId ?? index + 1}`,
-      text: normalizeText(choice.text, `선택지 ${index + 1}`),
-      nextNodeId: `json_choice_result_${choice.choiceId ?? index + 1}`
-    }));
+    finalDialogueNode.choices = choices.map((choice, index): DialogueChoice => {
+      const choiceId = choice.choiceId ?? index + 1;
+      const requirements = mapConditionToRequirements(choice.condition);
+      const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result?.feedbackDialogues : [];
+      const feedbackStartNodeId = feedbackDialogues.length > 0 ? `json_choice_feedback_${choiceId}_1` : undefined;
+      const lockedReason =
+        typeof choice.condition?.trait === "string" && choice.condition.trait.trim().length > 0
+          ? `${choice.condition.trait} 조건은 아직 특성 시스템 연결 전입니다`
+          : undefined;
+
+      return {
+        id: `json_choice_${choiceId}`,
+        text: normalizeTextWithPlayerName(choice.text, `선택지 ${index + 1}`, playerName),
+        nextNodeId: feedbackStartNodeId,
+        actionType: normalizeActionType(choice.actionType),
+        requirements,
+        lockedReason,
+        statChanges: mapStatChanges(choice.result?.statChanges),
+        feedbackText: feedbackDialogues.length === 0 ? normalizeTextWithPlayerName(choice.result?.feedbackText, "", playerName) : undefined,
+      };
+    });
 
     choices.forEach((choice, index) => {
       const choiceId = choice.choiceId ?? index + 1;
-      nodes[`json_choice_result_${choiceId}`] = {
-        id: `json_choice_result_${choiceId}`,
-        speaker: npcLabel,
-        text: normalizeText(choice.result?.feedbackText, "결과가 반영되었습니다."),
-        nextNodeId: "json_end"
-      };
+      const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : [];
+      if (feedbackDialogues.length === 0) {
+        return;
+      }
+
+      feedbackDialogues.forEach((entry, feedbackIndex) => {
+        const id = `json_choice_feedback_${choiceId}_${feedbackIndex + 1}`;
+        const nextNodeId =
+          feedbackIndex < feedbackDialogues.length - 1
+            ? `json_choice_feedback_${choiceId}_${feedbackIndex + 2}`
+            : undefined;
+        nodes[id] = {
+          id,
+          speaker: resolveSpeakerLabel(entry, npcLabel),
+          speakerId: typeof entry.speakerId === "string" ? entry.speakerId : undefined,
+          emotion: typeof entry.emotion === "string" ? entry.emotion : undefined,
+          text: normalizeTextWithPlayerName(entry.text, "...", playerName),
+          nextNodeId,
+        };
+      });
     });
   }
-
-  nodes.json_end = {
-    id: "json_end",
-    speaker: npcLabel,
-    text: normalizeText(firstEvent.eventName, "이벤트가 종료되었습니다.")
-  };
 
   return {
     npcId: dialogueId,
     npcLabel,
     startNodeId: "json_dialogue_1",
-    nodes
+    nodes,
   };
+}
+
+export function buildDialogueScriptFromFixedEventJson(
+  dialogueId: NpcDialogueId,
+  rawData: unknown,
+  fallbackNpcLabel: string,
+  playerName = "플레이어"
+): NpcDialogueScript | null {
+  const firstEvent = getFixedEventEntries(rawData)[0];
+  if (!firstEvent) {
+    return null;
+  }
+
+  return buildDialogueScriptFromFixedEventEntry(dialogueId, firstEvent, {
+    fallbackNpcLabel,
+    playerName,
+  });
 }

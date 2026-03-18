@@ -23,6 +23,39 @@ type TextStyleFactory = (
   fontStyle?: "normal" | "bold"
 ) => Phaser.Types.GameObjects.Text.TextStyle;
 
+const EMOTION_LABELS: Record<string, string> = {
+  NORMAL: "평온",
+  ANGRY: "분노",
+  FLUSTERED: "당황",
+  SHY: "수줍",
+  HAPPY: "기쁨",
+  SAD: "침울",
+  SURPRISED: "놀람",
+  SMILE: "미소",
+  SPEECHLESS: "말없음",
+  TIRED: "지침",
+};
+
+function formatSpeakerTitle(node: DialogueNode): string {
+  const emotionToken = typeof node.emotion === "string" ? node.emotion.trim().toUpperCase() : "";
+  const emotionLabel = EMOTION_LABELS[emotionToken];
+  if (!emotionLabel) {
+    return node.speaker;
+  }
+  return `${node.speaker} · ${emotionLabel}`;
+}
+
+function getSpeakerColor(node: DialogueNode): string {
+  const speakerId = typeof node.speakerId === "string" ? node.speakerId.trim().toUpperCase() : "";
+  if (speakerId === "SYSTEM") {
+    return "#ffe39c";
+  }
+  if (speakerId === "PLAYER") {
+    return "#aee3ff";
+  }
+  return "#e8f4ff";
+}
+
 export function createDialogueUi(scene: Phaser.Scene, options: {
   px: (value: number) => number;
   getBodyStyle: TextStyleFactory;
@@ -78,7 +111,7 @@ export function createDialogueUi(scene: Phaser.Scene, options: {
     bodyText: body,
     hintText: hint,
     actionButtonBg,
-    actionButtonText
+    actionButtonText,
   };
 }
 
@@ -101,7 +134,8 @@ export function renderDialogueNode(scene: Phaser.Scene, options: {
   dialogueChoiceIndex: number;
 } {
   const { node, root, px, getBodyStyle, ui, dialogueChoiceIndex, getRequirementText, isChoiceAvailable } = options;
-  ui.speakerText.setText(node.speaker);
+  ui.speakerText.setText(formatSpeakerTitle(node));
+  ui.speakerText.setColor(getSpeakerColor(node));
   ui.bodyText.setText(node.text);
 
   if (node.choices?.length) {
@@ -118,17 +152,17 @@ export function renderDialogueNode(scene: Phaser.Scene, options: {
       return {
         text: line,
         choice,
-        requirementText: getRequirementText(choice)
+        requirementText: getRequirementText(choice),
       };
     });
 
     const normalizedIndex = dialogueChoiceIndex >= node.choices.length ? 0 : dialogueChoiceIndex;
-    ui.hintText.setText("↑/↓ 선택  |  E 또는 버튼 결정  |  ESC 종료");
+    ui.hintText.setText("↑↓ 선택  |  E 또는 버튼 결정  |  ESC 종료");
     ui.actionButtonText.setText("E 선택");
     refreshDialogueChoiceStyles(choiceViews, normalizedIndex, isChoiceAvailable);
     return {
       choiceViews,
-      dialogueChoiceIndex: normalizedIndex
+      dialogueChoiceIndex: normalizedIndex,
     };
   }
 
@@ -136,7 +170,7 @@ export function renderDialogueNode(scene: Phaser.Scene, options: {
   ui.hintText.setText(`${node.nextNodeId || node.action ? "E 다음" : "E 종료"}  |  ESC 종료`);
   return {
     choiceViews: [],
-    dialogueChoiceIndex
+    dialogueChoiceIndex,
   };
 }
 
@@ -148,16 +182,31 @@ export function refreshDialogueChoiceStyles(
   choiceViews.forEach((view, index) => {
     const selected = index === dialogueChoiceIndex;
     const available = isChoiceAvailable(view.choice);
-    const prefix = selected ? "▶ " : "   ";
+    const actionType = view.choice.actionType ?? "NORMAL";
+    const prefix = actionType === "LOCKED" ? "🔒 " : actionType === "MADNESS" ? "⚠ " : selected ? "▶ " : "   ";
     let text = `${prefix}${view.choice.text}`;
     if (view.requirementText.length > 0) {
       text += ` (${view.requirementText})`;
     }
     if (!available) {
-      text += " [조건 미충족]";
+      text += " [조건 미달]";
     }
     view.text.setText(text);
-    view.text.setColor(available ? (selected ? "#f0f8ff" : "#bfd9f8") : "#7f9cbc");
+
+    const baseColor =
+      actionType === "MADNESS"
+        ? "#ff9b9b"
+        : actionType === "LOCKED"
+          ? "#f3d58d"
+          : "#bfd9f8";
+    const selectedColor =
+      actionType === "MADNESS"
+        ? "#ffd4d4"
+        : actionType === "LOCKED"
+          ? "#fff2bf"
+          : "#f0f8ff";
+
+    view.text.setColor(available ? (selected ? selectedColor : baseColor) : "#7f9cbc");
     view.text.setAlpha(available ? 1 : 0.78);
   });
 }

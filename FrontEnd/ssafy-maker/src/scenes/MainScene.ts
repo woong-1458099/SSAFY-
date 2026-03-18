@@ -19,12 +19,16 @@ import {
   NPC_DIALOGUE_SCRIPTS,
   type DialogueAction,
   type DialogueChoice,
+  type DialogueStatKey,
   type DialogueNode,
   type NpcDialogueId,
-  type NpcDialogueScript,
-  type StoryStatKey
+  type NpcDialogueScript
 } from "@features/story/npcDialogueScripts";
-import { buildDialogueScriptFromFixedEventJson } from "@features/story/jsonDialogueAdapter";
+import {
+  buildDialogueScriptFromFixedEventEntry,
+  buildDialogueScriptFromFixedEventJson,
+  findMatchingFixedEvent
+} from "@features/story/jsonDialogueAdapter";
 import {
   clearDialogueChoices,
   createDialogueUi,
@@ -343,7 +347,9 @@ type ScrollableTabPage = {
   offset: number;
 };
 
-type MainSavePayload = SaveGamePayload<AreaId, WorldPlaceId, StatKey, EquipmentSlotKey, WeeklyPlanOptionId>;
+type MainSavePayload = SaveGamePayload<AreaId, WorldPlaceId, StatKey, EquipmentSlotKey, WeeklyPlanOptionId> & {
+  completedFixedEventIds: string[];
+};
 
 type MainSceneInitData = {
   saveSlotId?: string;
@@ -489,6 +495,8 @@ export class MainScene extends Phaser.Scene {
   private weeklyPlan: WeeklyPlanOptionId[] = createDefaultWeeklyPlan();
   private weeklyPlanWeek = 0;
   private lastAppliedWeeklyPlanSlotKey: string | null = null;
+  private completedFixedEventIds: string[] = [];
+  private activeFixedEventId: string | null = null;
 
   private readonly inventorySlots: Array<InventoryItemStack | null> = Array.from({ length: 16 }, () => null);
   private readonly equippedSlots: Record<EquipmentSlotKey, InventoryItemTemplate | null> = {
@@ -725,6 +733,10 @@ export class MainScene extends Phaser.Scene {
 
     if (!this.endingFlowStarted && this.plannerKey && Phaser.Input.Keyboard.JustDown(this.plannerKey)) {
       this.openWeeklyPlannerPopup();
+      return;
+    }
+
+    if (this.maybeStartFixedEvent()) {
       return;
     }
 
@@ -1285,7 +1297,7 @@ export class MainScene extends Phaser.Scene {
 
     if (dialogueId === "campus_script_npc") {
       const rawJson = this.cache.json.get("story_fixed_week1");
-      const jsonScript = buildDialogueScriptFromFixedEventJson(dialogueId, rawJson, "스크립트 NPC");
+      const jsonScript = buildDialogueScriptFromFixedEventJson(dialogueId, rawJson, "스크립트 NPC", this.getPlayerName());
       if (jsonScript) {
         this.runtimeDialogueScripts[dialogueId] = jsonScript;
         return jsonScript;
@@ -1293,6 +1305,55 @@ export class MainScene extends Phaser.Scene {
     }
 
     return NPC_DIALOGUE_SCRIPTS[dialogueId] ?? null;
+  }
+
+  private getPlayerName(): string {
+    const raw = this.registry.get("playerData") as { name?: string } | undefined;
+    const name = typeof raw?.name === "string" ? raw.name.trim() : "";
+    return name.length > 0 ? name : "플레이어";
+  }
+
+  private maybeStartFixedEvent(): boolean {
+    if (this.dialogueOpen || this.menuOpen || this.shopOpen || this.placePopupOpen || this.weeklyPlanActivityOpen || this.weeklyPlannerPopupOpen || this.endingFlowStarted) {
+      return false;
+    }
+
+    const matchingEvent = findMatchingFixedEvent(
+      this.cache.json.get("story_fixed_week1"),
+      {
+        week: this.hudState.week,
+        day: this.dayCycleIndex + 1,
+        timeOfDay: this.hudState.timeLabel,
+        location: this.getCurrentFixedEventLocation()
+      },
+      this.completedFixedEventIds
+    );
+    if (!matchingEvent) {
+      return false;
+    }
+
+    const runtimeScript = buildDialogueScriptFromFixedEventEntry("fixed_event_runtime", matchingEvent, {
+      fallbackNpcLabel: "이벤트",
+      playerName: this.getPlayerName()
+    });
+    if (!runtimeScript) {
+      return false;
+    }
+
+    this.runtimeDialogueScripts.fixed_event_runtime = runtimeScript;
+    this.activeFixedEventId = typeof matchingEvent.eventId === "string" ? matchingEvent.eventId : null;
+    this.startNpcDialogue("fixed_event_runtime");
+    return true;
+  }
+
+  private getCurrentFixedEventLocation(): string {
+    if (this.currentArea === "campus") {
+      return "campus";
+    }
+    if (this.currentArea === "downtown") {
+      return "downtown";
+    }
+    return "world";
   }
 
   private refreshAreaNpcVisibility(area: AreaId): void {
@@ -2222,21 +2283,24 @@ export class MainScene extends Phaser.Scene {
   }
 
   private captureGameSavePayload(): MainSavePayload {
-    return captureGameSavePayload({
-      currentArea: this.currentArea,
-      lastSelectedWorldPlace: this.lastSelectedWorldPlace,
-      playerPosition: { x: this.player.x, y: this.player.y },
-      hudState: this.hudState,
-      statsState: this.statsState,
-      actionPoint: this.actionPoint,
-      timeCycleIndex: this.timeCycleIndex,
-      dayCycleIndex: this.dayCycleIndex,
-      weeklyPlan: this.weeklyPlan,
-      weeklyPlanWeek: this.weeklyPlanWeek,
-      lastAppliedWeeklyPlanSlotKey: this.lastAppliedWeeklyPlanSlotKey,
-      inventorySlots: this.inventorySlots,
-      equippedSlots: this.equippedSlots
-    });
+    return {
+      ...captureGameSavePayload({
+        currentArea: this.currentArea,
+        lastSelectedWorldPlace: this.lastSelectedWorldPlace,
+        playerPosition: { x: this.player.x, y: this.player.y },
+        hudState: this.hudState,
+        statsState: this.statsState,
+        actionPoint: this.actionPoint,
+        timeCycleIndex: this.timeCycleIndex,
+        dayCycleIndex: this.dayCycleIndex,
+        weeklyPlan: this.weeklyPlan,
+        weeklyPlanWeek: this.weeklyPlanWeek,
+        lastAppliedWeeklyPlanSlotKey: this.lastAppliedWeeklyPlanSlotKey,
+        inventorySlots: this.inventorySlots,
+        equippedSlots: this.equippedSlots
+      }),
+      completedFixedEventIds: [...this.completedFixedEventIds]
+    };
   }
 
   private applyGameSavePayload(rawPayload: Record<string, unknown>): boolean {
@@ -2265,6 +2329,11 @@ export class MainScene extends Phaser.Scene {
     }
     if (typeof payload.lastAppliedWeeklyPlanSlotKey === "string" || payload.lastAppliedWeeklyPlanSlotKey === null) {
       this.lastAppliedWeeklyPlanSlotKey = payload.lastAppliedWeeklyPlanSlotKey ?? null;
+    }
+    if (Array.isArray(payload.completedFixedEventIds)) {
+      this.completedFixedEventIds = payload.completedFixedEventIds.filter(
+        (entry): entry is string => typeof entry === "string" && entry.length > 0
+      );
     }
 
     this.restoreStatsFromSave(payload.statsState);
@@ -2445,6 +2514,12 @@ export class MainScene extends Phaser.Scene {
         return;
       }
 
+      if (selectedChoice.feedbackText) {
+        this.showSystemToast(selectedChoice.feedbackText);
+      }
+      if (this.activeDialogueId === "fixed_event_runtime" && this.activeFixedEventId && !this.completedFixedEventIds.includes(this.activeFixedEventId)) {
+        this.completedFixedEventIds.push(this.activeFixedEventId);
+      }
       this.closeDialogue();
       if (selectedChoice.action) {
         this.runDialogueAction(selectedChoice.action);
@@ -2460,6 +2535,9 @@ export class MainScene extends Phaser.Scene {
     }
 
     const action = node.action;
+    if (this.activeDialogueId === "fixed_event_runtime" && this.activeFixedEventId && !this.completedFixedEventIds.includes(this.activeFixedEventId)) {
+      this.completedFixedEventIds.push(this.activeFixedEventId);
+    }
     this.closeDialogue();
     if (action) {
       this.runDialogueAction(action);
@@ -2511,6 +2589,7 @@ export class MainScene extends Phaser.Scene {
     this.dialogueOpen = false;
     this.activeDialogueId = null;
     this.activeDialogueNodeId = null;
+    this.activeFixedEventId = null;
     this.dialogueChoiceIndex = 0;
     this.clearDialogueChoices();
     this.dialogueRoot?.setVisible(false);
@@ -2523,10 +2602,20 @@ export class MainScene extends Phaser.Scene {
     return script.nodes[this.activeDialogueNodeId] ?? null;
   }
 
+  private getDialogueMetricValue(stat: DialogueStatKey): number {
+    if (stat === "hp") {
+      return this.hudState.hp;
+    }
+    if (stat === "money") {
+      return this.hudState.money;
+    }
+    return this.statsState[stat as StatKey];
+  }
+
   private isDialogueChoiceAvailable(choice: DialogueChoice): boolean {
     const requirements = choice.requirements ?? [];
     return requirements.every((req) => {
-      const value = this.statsState[req.stat as StatKey];
+      const value = this.getDialogueMetricValue(req.stat);
       if (typeof req.min === "number" && value < req.min) return false;
       if (typeof req.max === "number" && value > req.max) return false;
       return true;
@@ -2540,7 +2629,12 @@ export class MainScene extends Phaser.Scene {
     return requirements
       .map((req) => {
         if (req.label) return req.label;
-        const label = STAT_LABEL[req.stat as StatKey];
+        const label =
+          req.stat === "hp"
+            ? "HP"
+            : req.stat === "money"
+              ? "재화"
+              : STAT_LABEL[req.stat as StatKey];
         if (typeof req.min === "number" && typeof req.max === "number") {
           return `${label} ${req.min}~${req.max}`;
         }
@@ -2557,12 +2651,41 @@ export class MainScene extends Phaser.Scene {
 
   private applyDialogueChoiceStatChanges(choice: DialogueChoice): void {
     if (!choice.statChanges) return;
-    const entries = Object.entries(choice.statChanges) as Array<[StoryStatKey, number]>;
+    const entries = Object.entries(choice.statChanges) as Array<[DialogueStatKey, number]>;
     if (entries.length === 0) return;
 
-    this.applyStatDelta(choice.statChanges as Partial<Record<StatKey, number>>, 1);
+    const statDelta: Partial<Record<StatKey, number>> = {};
+    const hudPatch: Partial<HudState> = {};
+
+    entries.forEach(([key, value]) => {
+      if (key === "hp") {
+        hudPatch.hp = Phaser.Math.Clamp(this.hudState.hp + value, 0, this.hudState.hpMax);
+        return;
+      }
+      if (key === "money") {
+        hudPatch.money = Math.max(0, this.hudState.money + value);
+        return;
+      }
+      statDelta[key as StatKey] = value;
+    });
+
+    if (Object.keys(statDelta).length > 0) {
+      this.applyStatDelta(statDelta, 1);
+    }
+    if (Object.keys(hudPatch).length > 0) {
+      this.updateHudState(hudPatch);
+    }
+
     const summary = entries
-      .map(([key, value]) => `${STAT_LABEL[key as StatKey]} ${value > 0 ? "+" : ""}${value}`)
+      .map(([key, value]) => {
+        const label =
+          key === "hp"
+            ? "HP"
+            : key === "money"
+              ? "재화"
+              : STAT_LABEL[key as StatKey];
+        return `${label} ${value > 0 ? "+" : ""}${value}`;
+      })
       .join(", ");
     this.showSystemToast(`\uB2A5\uB825\uCE58 \uBCC0\uD654: ${summary}`);
   }
