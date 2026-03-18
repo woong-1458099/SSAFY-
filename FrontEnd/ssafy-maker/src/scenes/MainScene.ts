@@ -1423,14 +1423,17 @@ export class MainScene extends Phaser.Scene {
       placeBackgroundKey && this.textures.exists(placeBackgroundKey)
         ? this.add.image(centerX, centerY, placeBackgroundKey).setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT)
         : null;
-    const content = getPlacePopupContent(placeId);
+    const content =
+      placeId === "cafe" || placeId === "store"
+        ? getPlacePopupContent(placeId)
+        : getDowntownBuildingConfig(placeId as DowntownBuildingId);
     this.placePopupRoot = createPlaceActionModal({
       scene: this,
       width: 530,
       height: 290,
       title: content.title,
       description: content.description,
-      actionText: content.actionText,
+      actionText: content.actionText ?? "이용하기",
       backgroundImage: placeBackgroundImage,
       getBodyStyle: this.getBodyStyle.bind(this),
       createActionButton: this.createActionButton.bind(this),
@@ -1439,7 +1442,9 @@ export class MainScene extends Phaser.Scene {
       onAction: () => this.usePlaceFeature(placeId),
       onClose: () => this.closePlacePopup()
     });
-    this.placePopupRoot.setDepth(920);
+    if (this.placePopupRoot) {
+      this.placePopupRoot.setDepth(920);
+    }
     this.placePopupOpen = true;
   }
 
@@ -1499,7 +1504,7 @@ export class MainScene extends Phaser.Scene {
     if (result.kind === "cafe") {
       const cost = result.cost;
       if (this.hudState.money < cost) {
-        this.showSystemToast("\uB3C8\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4");
+        this.showSystemToast("돈이 부족합니다");
         return;
       }
       if (!this.spendActionPoint()) {
@@ -1508,11 +1513,6 @@ export class MainScene extends Phaser.Scene {
 
       const nextHp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, this.hudState.hpMax);
       const nextStress = Phaser.Math.Clamp(this.hudState.stress + result.stressDelta, 0, 100);
-      this.updateHudState({
-        hp: nextHp,
-        stress: nextStress,
-        money: this.hudState.money + result.moneyDelta
-      });
       this.closePlacePopup();
       this.showSystemToast(result.toastMessage);
       return;
@@ -1755,22 +1755,33 @@ export class MainScene extends Phaser.Scene {
     if (typeof result.hpMaxDelta === "number") {
       const nextHpMax = Math.max(1, Math.round(this.hudState.hpMax + result.hpMaxDelta));
       patch.hpMax = nextHpMax;
-      patch.hp = Phaser.Math.Clamp(this.hudState.hp, 0, nextHpMax);
-    } else if (typeof result.hpDelta === "number") {
-      patch.hp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, this.hudState.hpMax);
+    }
+    if (typeof result.hpDelta === "number") {
+      patch.hp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, patch.hpMax ?? this.hudState.hpMax);
     }
     if (typeof result.stressDelta === "number") {
       patch.stress = Phaser.Math.Clamp(this.hudState.stress + result.stressDelta, 0, 100);
     }
     if (typeof result.moneyDelta === "number") {
-      patch.money = Math.max(0, this.hudState.money + result.moneyDelta);
+      patch.money = this.hudState.money + result.moneyDelta;
     }
-    this.updateHudState(patch);
     if (result.statDelta) {
       this.applyStatDelta(result.statDelta);
     }
-    this.closePlacePopup();
+
+    this.updateHudState(patch);
     this.showSystemToast(result.toastMessage);
+
+    // 미니게임 연동 (스탯 적용 후 실행)
+    if (buildingId === "gym") {
+      this.scene.start("GymScene", { returnSceneKey: SceneKey.Main });
+    } else if (buildingId === "hof") {
+      this.scene.start("DrinkingScene", { returnSceneKey: SceneKey.Main });
+    } else if (buildingId === "ramenthings") {
+      this.scene.start("CookingScene", { returnSceneKey: SceneKey.Main });
+    } else if (buildingId === "lottery") {
+      this.scene.start("LottoScene", { returnSceneKey: SceneKey.Main });
+    }
   }
 
   private toggleMenu(): void {
@@ -2575,8 +2586,29 @@ export class MainScene extends Phaser.Scene {
     }
     if (action === "openMiniGame") {
       openLegacyMinigameMenu(this, SceneKey.Main, () => {
-        this.showSystemToast("\uBBF8\uB2C8\uAC8C\uC784 \uC13C\uD130 \uC785\uC7A5");
+        this.showSystemToast("미니게임 센터 입장");
       });
+      return;
+    }
+    if (action === "playDrinking") {
+      this.scene.start("DrinkingScene", { returnSceneKey: SceneKey.Main });
+      return;
+    }
+    if (action === "playInterview") {
+      this.scene.start("InterviewScene", { returnSceneKey: SceneKey.Main });
+      return;
+    }
+    if (action === "playGym") {
+      this.scene.start("GymScene", { returnSceneKey: SceneKey.Main });
+      return;
+    }
+    if (action === "playRhythm") {
+      this.scene.start("RhythmScene", { returnSceneKey: SceneKey.Main });
+      return;
+    }
+    if (action === "playConflict") {
+      this.scene.start("ConflictResolveScene", { returnSceneKey: SceneKey.Main });
+      return;
     }
   }
 

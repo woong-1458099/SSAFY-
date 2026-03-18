@@ -96,7 +96,8 @@ export function getDowntownBuildingConfig(
   if (buildingId === "gym") {
     return {
       title: "헬스장",
-      description: "간단 운동 프로그램 1,000G\n최대 체력 +10 / 스트레스 감소",
+      description: "간단 운동 프로그램 (미니게임)\n성공 시 최대 체력 상승 및 스트레스 감소",
+      actionText: "운동하기",
     };
   }
   if (buildingId === "karaoke") {
@@ -107,9 +108,9 @@ export function getDowntownBuildingConfig(
   }
   if (buildingId === "hof") {
     return {
-      title: "호프 알바",
-      description: "저녁 알바로 1,800G 획득\n재화 획득 / 체력 감소 / 스트레스 증가",
-      actionText: "일하기",
+      title: "역전할머니 호프",
+      description: "맥주 한 잔과 팀원들과의 대화\n스트레스 대폭 감소",
+      actionText: "맥주 마시기",
     };
   }
   return {

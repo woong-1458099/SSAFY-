@@ -1,6 +1,6 @@
 export type StoryStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
 
-export type DialogueAction = "openShop" | "openMiniGame";
+export type DialogueAction = "openShop" | "openMiniGame" | "playDrinking" | "playInterview" | "playGym" | "playRhythm" | "playConflict";
 
 export type DialogueRequirement = {
   stat: StoryStatKey;
@@ -143,6 +143,11 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
             text: "오늘은 가볍게 조언만 들을게요.",
             nextNodeId: "rest_result",
             statChanges: { stress: -2 }
+          },
+          {
+            id: "play_drinking_test",
+            text: "[테스트] 같이 맥주 한잔해요!",
+            action: "playDrinking"
           }
         ]
       },
