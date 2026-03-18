@@ -25,12 +25,16 @@ type ActionButtonFn = (options: {
   onClick: () => void;
 }) => Phaser.GameObjects.Container;
 
+const FIXED_EVENT_SLOT_COLOR = 0x7a4268;
+const FIXED_EVENT_BADGE_COLOR = 0x321631;
+
 export function createWeeklyPlannerModal(params: {
   scene: Phaser.Scene;
   week: number;
   dayLabels: readonly string[];
   initialPlan: WeeklyPlanOptionId[];
   completedSlotIndices?: ReadonlySet<number>;
+  fixedEventSlots?: ReadonlyMap<number, string>;
   getBodyStyle: BodyStyleFn;
   createActionButton: ActionButtonFn;
   uiPanelInnerBorderColor: number;
@@ -43,6 +47,7 @@ export function createWeeklyPlannerModal(params: {
     dayLabels,
     initialPlan,
     completedSlotIndices,
+    fixedEventSlots,
     getBodyStyle,
     createActionButton,
     uiPanelInnerBorderColor,
@@ -63,7 +68,7 @@ export function createWeeklyPlannerModal(params: {
   const title = scene.add.text(centerX, centerY - 258, "주간 계획표", getBodyStyle(34, "#e6f3ff", "bold"));
   title.setOrigin(0.5);
   const subtitle = scene.add.text(
-    centerX - 54,
+    centerX - 62,
     centerY - 220,
     `${week}주차 평일 오전/오후 일정을 선택하세요`,
     getBodyStyle(19, "#b6d6fb", "bold")
@@ -87,16 +92,22 @@ export function createWeeklyPlannerModal(params: {
   pmHeader.setOrigin(0.5);
   slotObjects.push(amHeader, pmHeader);
 
-  WEEKLY_PLAN_OPTIONS.forEach((option, index) => {
+  const legendEntries = [
+    ...WEEKLY_PLAN_OPTIONS.map((option) => ({
+      color: option.color,
+      label: `${option.label} | ${option.description}`,
+    })),
+    {
+      color: FIXED_EVENT_SLOT_COLOR,
+      label: "이벤트 | 고정 이벤트로 변경 불가",
+    },
+  ];
+
+  legendEntries.forEach((entry, index) => {
     const legendY = centerY - 252 + index * 28;
-    const legend = scene.add.rectangle(centerX + 205, legendY, 18, 18, option.color, 1);
+    const legend = scene.add.rectangle(centerX + 205, legendY, 18, 18, entry.color, 1);
     legend.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
-    const legendText = scene.add.text(
-      centerX + 225,
-      legendY,
-      `${option.label} | ${option.description}`,
-      getBodyStyle(15, "#d7e9ff", "bold")
-    );
+    const legendText = scene.add.text(centerX + 225, legendY, entry.label, getBodyStyle(15, "#d7e9ff", "bold"));
     legendText.setOrigin(0, 0.5);
     slotObjects.push(legend, legendText);
   });
@@ -107,12 +118,25 @@ export function createWeeklyPlannerModal(params: {
     badgeText: Phaser.GameObjects.Text,
     infoText: Phaser.GameObjects.Text,
     optionId: WeeklyPlanOptionId,
-    completed: boolean
-  ) => {
+    completed: boolean,
+    fixedEventName?: string
+  ): void => {
     const option = getWeeklyPlanOption(optionId);
+    const baseBadgeText = badgeText.text.replace(" 완료", "").replace(" 이벤트", "");
+    const isFixedEvent = typeof fixedEventName === "string" && fixedEventName.trim().length > 0;
+
+    if (isFixedEvent) {
+      bg.setFillStyle(FIXED_EVENT_SLOT_COLOR, 0.96);
+      badgeBg.setFillStyle(FIXED_EVENT_BADGE_COLOR, 0.98);
+      badgeText.setText(`${baseBadgeText} 이벤트`);
+      infoText.setText(`${fixedEventName}  |  고정 이벤트`);
+      bg.disableInteractive();
+      return;
+    }
+
     bg.setFillStyle(completed ? 0x4c5f76 : option.color, completed ? 0.82 : 0.95);
     badgeBg.setFillStyle(completed ? 0x22384f : 0x133150, 0.96);
-    badgeText.setText(completed ? `${badgeText.text.replace(" 완료", "")} 완료` : badgeText.text.replace(" 완료", ""));
+    badgeText.setText(completed ? `${baseBadgeText} 완료` : baseBadgeText);
     infoText.setText(completed ? `${option.label}  |  완료` : `${option.label}  |  ${option.description}`);
     bg.disableInteractive();
     if (!completed) {
@@ -139,9 +163,10 @@ export function createWeeklyPlannerModal(params: {
       infoText.setOrigin(0, 0.5);
 
       const completed = completedSlotIndices?.has(slotIndex) ?? false;
-      refreshSlot(bg, badgeBg, badgeText, infoText, draftPlan[slotIndex], completed);
+      const fixedEventName = fixedEventSlots?.get(slotIndex);
+      refreshSlot(bg, badgeBg, badgeText, infoText, draftPlan[slotIndex], completed, fixedEventName);
       bg.on("pointerdown", () => {
-        if (completedSlotIndices?.has(slotIndex)) {
+        if (completedSlotIndices?.has(slotIndex) || fixedEventSlots?.has(slotIndex)) {
           return;
         }
         const currentIndex = WEEKLY_PLAN_OPTIONS.findIndex((option) => option.id === draftPlan[slotIndex]);
@@ -163,5 +188,7 @@ export function createWeeklyPlannerModal(params: {
     onClick: () => onConfirm([...draftPlan]),
   });
 
-  return scene.add.container(0, 0, [overlay, panelOuter, panel, title, subtitle, ...slotObjects, confirmBtn]);
+  const root = scene.add.container(0, 0, [overlay, panelOuter, panel, title, subtitle, ...slotObjects, confirmBtn]);
+  root.setScrollFactor(0);
+  return root;
 }
