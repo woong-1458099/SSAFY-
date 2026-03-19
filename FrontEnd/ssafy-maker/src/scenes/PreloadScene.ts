@@ -30,9 +30,13 @@ export class PreloadScene extends Phaser.Scene {
         fontSize: "28px"
       })
       .setDepth(10);
-
     this.time.delayedCall(150, () => {
-      this.scene.start(SceneKey.Login);
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("minigame") === "true") {
+        this.scene.start("MenuScene");
+      } else {
+        this.scene.start(SceneKey.Login);
+      }
     });
   }
 }
