@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import type { DialogueChoice, DialogueNode } from "@features/story/npcDialogueScripts";
 
@@ -55,16 +55,16 @@ function getDialoguePanelLayout(px: (value: number) => number): {
 }
 
 const EMOTION_LABELS = {
-  NORMAL: "평온",
-  ANGRY: "분노",
-  FLUSTERED: "당황",
-  SHY: "수줍",
-  HAPPY: "기쁨",
-  SAD: "슬픔",
-  SURPRISED: "놀람",
-  SMILE: "미소",
-  SPEECHLESS: "멍함",
-  TIRED: "지침",
+  NORMAL: "\\uD3C9\\uC628",
+  ANGRY: "\\uBD84\\uB178",
+  FLUSTERED: "\\uB2F9\\uD669",
+  SHY: "\\uC218\\uC90D",
+  HAPPY: "\\uAE30\\uC068",
+  SAD: "\\uC2AC\\uD514",
+  SURPRISED: "\\uB180\\uB78C",
+  SMILE: "\\uBBF8\\uC18C",
+  SPEECHLESS: "\\uBA4D\\uD568",
+  TIRED: "\\uC9C0\\uCE68",
 } as const;
 
 type DialogueEmotionToken = keyof typeof EMOTION_LABELS;
@@ -95,7 +95,7 @@ function formatSpeakerTitle(node: DialogueNode): string {
   if (!emotionLabel) {
     return node.speaker;
   }
-  return `${node.speaker} · ${emotionLabel}`;
+  return `${node.speaker} 쨌 ${emotionLabel}`;
 }
 
 function getSpeakerColor(node: DialogueNode): string {
@@ -149,7 +149,7 @@ export function createDialogueUi(
   const actionButtonText = scene.add.text(
     panelLeft + panelWidth - 90,
     panelTop + panelHeight - 39,
-    "Space 다음",
+    "Space ?ㅼ쓬",
     getBodyStyle(16, "#e6f3ff", "bold")
   );
   actionButtonText.setOrigin(0.5);
@@ -219,8 +219,8 @@ export function renderDialogueNode(
     });
 
     const normalizedIndex = dialogueChoiceIndex >= node.choices.length ? 0 : dialogueChoiceIndex;
-    ui.hintText.setText("↑↓ 선택 | Space 결정 | ESC 종료");
-    ui.actionButtonText.setText("Space 선택");
+    ui.hintText.setText("?묅넃 ?좏깮 | Space 寃곗젙 | ESC 醫낅즺");
+    ui.actionButtonText.setText("Space ?좏깮");
     refreshDialogueChoiceStyles(choiceViews, normalizedIndex, isChoiceAvailable);
     let nextChoiceY = choiceStartY;
     choiceViews.forEach((view) => {
@@ -233,8 +233,8 @@ export function renderDialogueNode(
     };
   }
 
-  ui.actionButtonText.setText(node.nextNodeId || node.action ? "Space 다음" : "Space 종료");
-  ui.hintText.setText(`${node.nextNodeId || node.action ? "Space 다음" : "Space 종료"} | ESC 종료`);
+  ui.actionButtonText.setText(node.nextNodeId || node.action ? "Space ?ㅼ쓬" : "Space 醫낅즺");
+  ui.hintText.setText(`${node.nextNodeId || node.action ? "Space ?ㅼ쓬" : "Space 醫낅즺"} | ESC 醫낅즺`);
   return {
     choiceViews: [],
     dialogueChoiceIndex,
@@ -250,13 +250,13 @@ export function refreshDialogueChoiceStyles(
     const selected = index === dialogueChoiceIndex;
     const available = isChoiceAvailable(view.choice);
     const actionType = view.choice.actionType ?? "NORMAL";
-    const prefix = actionType === "LOCKED" ? "🔒 " : actionType === "MADNESS" ? "⚠ " : selected ? "▶ " : "   ";
+    const prefix = actionType === "LOCKED" ? "?뵏 " : actionType === "MADNESS" ? "??" : selected ? "??" : "   ";
     let text = `${prefix}${view.choice.text}`;
     if (view.requirementText.length > 0) {
       text += ` (${view.requirementText})`;
     }
     if (!available) {
-      text += " [조건 미달]";
+      text += " [議곌굔 誘몃떖]";
     }
     view.text.setText(text);
 
@@ -277,3 +277,4 @@ export function refreshDialogueChoiceStyles(
     view.text.setAlpha(available ? 1 : 0.78);
   });
 }
+

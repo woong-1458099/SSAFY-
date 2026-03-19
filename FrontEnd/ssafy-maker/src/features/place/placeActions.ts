@@ -70,10 +70,10 @@ export function resolvePlaceAction(placeId: Extract<PlaceId, "cafe" | "store">):
   if (placeId === "cafe") {
     return {
       kind: "cafe",
-      cost: 1200,
+      cost: 10000,
       hpDelta: 8,
       stressDelta: -12,
-      moneyDelta: -1200,
+      moneyDelta: -10000,
       toastMessage: "카페에서 휴식했습니다",
     };
   }
@@ -90,79 +90,77 @@ export function getDowntownBuildingConfig(
   if (buildingId === "ramenthings") {
     return {
       title: "라멘띵스",
-      description: "따뜻한 라멘 한 그릇 1,400G\n체력 회복 / 스트레스 감소",
+      description: "이용 비용: 12,000G\n특제 라멘 한 그릇\n체력 회복 / 스트레스 감소",
     };
   }
   if (buildingId === "gym") {
     return {
       title: "헬스장",
-      description: "간단 운동 프로그램 (미니게임)\n성공 시 최대 체력 상승 및 스트레스 감소",
+      description: "이용 비용: 8,000G\n간단 운동 프로그램 (미니게임)\n최대 체력 증가 / 스트레스 감소 / 협업 소폭 증가",
       actionText: "운동하기",
     };
   }
   if (buildingId === "karaoke") {
     return {
       title: "노래방",
-      description: "마음껏 노래하기 1,300G\n스트레스 감소 / 협업 소폭 증가",
+      description: "이용 비용: 11,000G\n마음껏 노래하기\n스트레스 대폭 감소 / 협업 증가",
     };
   }
   if (buildingId === "hof") {
     return {
-      title: "역전할머니 호프",
-      description: "맥주 한 잔과 팀원들과의 대화\n스트레스 대폭 감소",
+      title: "전통할머니호프",
+      description: "이용 비용: 0G\n맥주 한 잔과 사람들과의 대화\n스트레스 감소 / 협업 증가 / 완료 시 +15,000G",
       actionText: "맥주 마시기",
     };
   }
   return {
     title: "복권판매점",
-    description: "복권 1장 800G\n행운에 따라 잃을 수도 벌 수도 있습니다.",
+    description: "이용 비용: 8,000G\n5등 25,000G / 4등 170,000G / 3등 850,000G\n2등 8,500,000G / 1등 로또 엔딩",
+    actionText: "복권 구매",
   };
 }
 
 export function resolveDowntownBuildingAction(
-  buildingId: DowntownBuildingId,
-  lotteryDelta = 0
+  buildingId: DowntownBuildingId
 ): DowntownBuildingResolution {
   if (buildingId === "ramenthings") {
     return {
-      cost: 1400,
-      hpDelta: 12,
-      stressDelta: -8,
+      cost: 12000,
+      hpDelta: 14,
+      stressDelta: -9,
       toastMessage: "라멘을 먹고 회복했습니다",
     };
   }
   if (buildingId === "gym") {
     return {
-      cost: 1000,
+      cost: 8000,
       hpMaxDelta: 10,
-      stressDelta: -7,
-      statDelta: { teamwork: 2 },
+      stressDelta: -6,
+      statDelta: { teamwork: 1 },
       toastMessage: "운동 완료 (최대 체력 +10)",
     };
   }
   if (buildingId === "karaoke") {
     return {
-      cost: 1300,
-      hpDelta: -3,
-      stressDelta: -14,
-      statDelta: { teamwork: 4 },
+      cost: 11000,
+      hpDelta: -2,
+      stressDelta: -16,
+      statDelta: { teamwork: 3 },
       toastMessage: "노래방 이용 완료",
     };
   }
   if (buildingId === "hof") {
     return {
       cost: 0,
-      hpDelta: -10,
-      stressDelta: 8,
-      moneyDelta: 1800,
+      hpDelta: -8,
+      stressDelta: -6,
+      moneyDelta: 15000,
       statDelta: { teamwork: 2 },
-      toastMessage: "호프 알바 완료 +1800G",
+      toastMessage: "호프 알바 완료 +15000G",
     };
   }
   return {
-    cost: 800,
-    moneyDelta: lotteryDelta,
-    statDelta: { luck: 1 },
-    toastMessage: lotteryDelta >= 0 ? `복권 당첨! +${lotteryDelta}G` : `아쉬워요 ${lotteryDelta}G`,
+    cost: 8000,
+    toastMessage: "복권을 구매했습니다",
   };
 }

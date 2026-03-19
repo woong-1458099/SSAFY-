@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import type { SaveSlotData } from "@core/managers/SaveManager";
 import type { HudState } from "@features/ui/components/game-hud";
 
@@ -46,13 +46,13 @@ export function getSaveSlotMetaText<
   EquipmentSlotKey extends string,
   WeeklyPlanOptionId extends string,
 >(slotData: SaveSlotData | null): string {
-  if (!slotData) return "빈칸";
+  if (!slotData) return "\uBE48 \uC800\uC7A5 \uC2AC\uB86F";
 
   const payload = slotData.payload as Partial<
     SaveGamePayload<AreaId, WorldPlaceId, StatKey, EquipmentSlotKey, WeeklyPlanOptionId>
   >;
   const hud = payload.hudState as Partial<HudState> | undefined;
-  const weekText = typeof hud?.week === "number" ? `${hud.week}주차` : "";
+  const weekText = typeof hud?.week === "number" ? `${hud.week}\uC8FC\uCC28` : "";
   const dayText = typeof hud?.dayLabel === "string" ? hud.dayLabel : "";
   const timeText = typeof hud?.timeLabel === "string" ? hud.timeLabel : "";
   const locationText = typeof hud?.locationLabel === "string" ? hud.locationLabel : "";
@@ -70,7 +70,7 @@ export function getSaveSlotMetaText<
 
 export function formatSaveTime(iso: string): string {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "저장 데이터";
+  if (Number.isNaN(date.getTime())) return "\uC54C \uC218 \uC5C6\uB294 \uC2DC\uAC04";
   return date.toLocaleString("ko-KR", {
     month: "2-digit",
     day: "2-digit",

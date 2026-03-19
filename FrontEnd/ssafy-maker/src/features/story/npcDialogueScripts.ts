@@ -1,4 +1,4 @@
-export type StoryStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
+﻿export type StoryStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
 export type DialogueStatKey = StoryStatKey | "hp" | "gold";
 export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
 
@@ -35,8 +35,6 @@ export type DialogueNode = {
 };
 
 export type NpcDialogueId =
-  | "downtown_shopkeeper"
-  | "campus_senior"
   | "campus_script_npc"
   | "npc_myungjin"
   | "npc_yeonwoong"
@@ -56,321 +54,167 @@ export type NpcDialogueScript = {
   nodes: Record<string, DialogueNode>;
 };
 
-// Sample scripts for two NPCs.
-// Replace or expand these nodes when real narrative scripts are ready.
 export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
-  downtown_shopkeeper: {
-    npcId: "downtown_shopkeeper",
-    npcLabel: "상점 주인",
-    startNodeId: "intro",
-    nodes: {
-      intro: {
-        id: "intro",
-        speaker: "상점 주인",
-        text: "어서 와. 오늘은 뭘 도와줄까?",
-        choices: [
-          {
-            id: "open_shop",
-            text: "물건을 보고 싶어요.",
-            nextNodeId: "shop_open"
-          },
-          {
-            id: "coding_tip",
-            text: "FE 장비 추천해 주세요.",
-            nextNodeId: "coding_tip_result",
-            requirements: [{ stat: "fe", min: 25, label: "FE 25 이상" }],
-            lockedReason: "FE가 조금 더 필요해.",
-            statChanges: { fe: 2, be: 1, stress: 1 }
-          },
-          {
-            id: "discount",
-            text: "할인 받을 수 있을까요?",
-            nextNodeId: "discount_result",
-            requirements: [{ stat: "luck", min: 15, label: "운 15 이상" }],
-            lockedReason: "운이 좋아야 흥정이 통하지.",
-            statChanges: { luck: 1 }
-          },
-          {
-            id: "bye",
-            text: "다음에 올게요.",
-            nextNodeId: "bye_result"
-          }
-        ]
-      },
-      shop_open: {
-        id: "shop_open",
-        speaker: "상점 주인",
-        text: "좋아, 진열장을 열어둘게.",
-        action: "openShop"
-      },
-      coding_tip_result: {
-        id: "coding_tip_result",
-        speaker: "상점 주인",
-        text: "타건감 좋은 키보드를 먼저 써봐. 손이 금방 익을 거야."
-      },
-      discount_result: {
-        id: "discount_result",
-        speaker: "상점 주인",
-        text: "오늘은 기분이 좋네. 다음 방문 때 작은 서비스 줄게."
-      },
-      bye_result: {
-        id: "bye_result",
-        speaker: "상점 주인",
-        text: "필요할 때 다시 와."
-      }
-    }
-  },
-  campus_senior: {
-    npcId: "campus_senior",
-    npcLabel: "캠퍼스 선배",
-    startNodeId: "intro",
-    nodes: {
-      intro: {
-        id: "intro",
-        speaker: "캠퍼스 선배",
-        text: "모의 면접할래? 선택에 따라 성장 방향이 달라져.",
-        choices: [
-          {
-            id: "basic_training",
-            text: "기본 협업 트레이닝 부탁해요.",
-            nextNodeId: "basic_training_result",
-            requirements: [{ stat: "teamwork", min: 20, label: "협업 20 이상" }],
-            lockedReason: "기본 협업부터 더 끌어올리자.",
-            statChanges: { teamwork: 3, luck: 1 }
-          },
-          {
-            id: "advanced_training",
-            text: "고급 협업 시뮬레이션 도전할게요.",
-            nextNodeId: "advanced_training_result",
-            requirements: [{ stat: "teamwork", min: 45, label: "협업 45 이상" }],
-            lockedReason: "협업 45 이상부터 가능해.",
-            statChanges: { teamwork: 4, fe: 1, be: 1, stress: 3 }
-          },
-          {
-            id: "open_minigame",
-            text: "미니게임 센터로 들어갈게요.",
-            nextNodeId: "open_minigame_result",
-            requirements: [
-              { stat: "fe", min: 20, label: "FE 20 이상" },
-              { stat: "be", min: 20, label: "BE 20 이상" }
-            ],
-            lockedReason: "FE 20 / BE 20 이상이어야 입장 가능해.",
-            statChanges: { luck: 1 }
-          },
-          {
-            id: "rest",
-            text: "오늘은 가볍게 조언만 들을게요.",
-            nextNodeId: "rest_result",
-            statChanges: { stress: -2 }
-          },
-          {
-            id: "play_drinking_test",
-            text: "[테스트] 같이 맥주 한잔해요!",
-            action: "playDrinking"
-          }
-        ]
-      },
-      basic_training_result: {
-        id: "basic_training_result",
-        speaker: "캠퍼스 선배",
-        text: "좋아. 질문의 핵심부터 말하는 습관을 유지해."
-      },
-      advanced_training_result: {
-        id: "advanced_training_result",
-        speaker: "캠퍼스 선배",
-        text: "난이도 높은 상황에서도 팀과 리듬을 맞추는 게 포인트야."
-      },
-      open_minigame_result: {
-        id: "open_minigame_result",
-        speaker: "캠퍼스 선배",
-        text: "좋아, 센터 문을 열어둘게.",
-        action: "openMiniGame"
-      },
-      rest_result: {
-        id: "rest_result",
-        speaker: "캠퍼스 선배",
-        text: "휴식도 전략이야. 다음엔 실전으로 가보자."
-      }
-    }
-  },
   campus_script_npc: {
     npcId: "campus_script_npc",
-    npcLabel: "스크립트 NPC",
+    npcLabel: "\uC2A4\uD06C\uB9BD\uD2B8 NPC",
     startNodeId: "intro",
     nodes: {
       intro: {
         id: "intro",
-        speaker: "스크립트 NPC",
-        text: "나중에 JSON 스크립트를 연결할 테스트용 NPC야. 지금은 임시 대사만 보여주고 있어.",
+        speaker: "\uC2A4\uD06C\uB9BD\uD2B8 NPC",
+        text: "\uC9C0\uAE08\uC740 \uACE0\uC815 \uC774\uBCA4\uD2B8 JSON \uC5F0\uB3D9 \uD14C\uC2A4\uD2B8\uC6A9 NPC\uC608\uC694.",
         choices: [
           {
-            id: "placeholder_info",
-            text: "지금은 어떤 역할이야?",
-            nextNodeId: "placeholder_info_result"
+            id: "role",
+            text: "\uC9C0\uAE08\uC740 \uBB34\uC2A8 \uC5ED\uD560\uC774\uC57C?",
+            nextNodeId: "role_result"
           },
           {
             id: "bye",
-            text: "나중에 다시 올게.",
+            text: "\uB2E4\uC74C\uC5D0 \uB2E4\uC2DC \uBCFC\uAC8C.",
             nextNodeId: "bye_result"
           }
         ]
       },
-      placeholder_info_result: {
-        id: "placeholder_info_result",
-        speaker: "스크립트 NPC",
-        text: "새 JSON 대사 파일을 붙이기 전까지 이 자리를 맡고 있을게."
+      role_result: {
+        id: "role_result",
+        speaker: "\uC2A4\uD06C\uB9BD\uD2B8 NPC",
+        text: "\uC2A4\uD1A0\uB9AC \uD30C\uC774\uD504\uB77C\uC778\uC774 \uC815\uC0C1\uC801\uC73C\uB85C \uB3CC\uC544\uAC00\uB294\uC9C0 \uD655\uC778\uD558\uB294 \uC911\uC774\uC57C."
       },
       bye_result: {
         id: "bye_result",
-        speaker: "스크립트 NPC",
-        text: "준비되면 새 대사로 바꿔줘."
+        speaker: "\uC2A4\uD06C\uB9BD\uD2B8 NPC",
+        text: "\uD544\uC694\uD558\uBA74 \uC5B8\uC81C\uB4E0 \uB2E4\uC2DC \uBD88\uB7EC."
       }
     }
   },
   npc_myungjin: {
     npcId: "npc_myungjin",
-    npcLabel: "명진",
+    npcLabel: "\uBA85\uC9C4",
     startNodeId: "intro",
     nodes: {
       intro: {
         id: "intro",
-        speaker: "명진",
-        text: "안녕! 면접 준비는 잘 돼가? 실제처럼 연습 한번 해볼래?",
-        choices: [
-          { id: "play", text: "나중에 다시 올게!" }
-        ]
+        speaker: "\uBA85\uC9C4",
+        text: "\uC624\uB298\uB3C4 \uD300 \uC77C\uC740 \uCC28\uBD84\uD558\uAC8C \uC815\uB9AC\uD558\uBA74 \uB3FC.",
+        choices: [{ id: "bye", text: "\uC54C\uACA0\uC5B4, \uACE0\uB9C8\uC6CC." }]
       }
     }
   },
   npc_yeonwoong: {
     npcId: "npc_yeonwoong",
-    npcLabel: "연웅",
+    npcLabel: "\uC5F0\uC6C5",
     startNodeId: "intro",
     nodes: {
       intro: {
         id: "intro",
-        speaker: "연웅",
-        text: "배고프지 않아? 내가 기가 막힌 라면 레시피를 알고 있는데...",
-        choices: [
-          { id: "play", text: "레시피 좀 다듬어 봐야겠어!" }
-        ]
+        speaker: "\uC5F0\uC6C5",
+        text: "\uBB38\uC81C \uD558\uB098\uC529 \uB05D\uAE4C\uC9C0 \uBC00\uC5B4\uBD99\uC774\uBA74 \uB290\uC2E4\uB825\uC774 \uC798 \uC62C\uB77C\uC694.",
+        choices: [{ id: "bye", text: "\uC870\uC5B8 \uACE0\uB9C8\uC6CC!" }]
       }
     }
   },
   npc_hyoryeon: {
     npcId: "npc_hyoryeon",
-    npcLabel: "효련",
+    npcLabel: "\uD6A8\uB828",
     startNodeId: "intro",
     nodes: {
       intro: {
         id: "intro",
-        speaker: "효련",
-        text: "공부만 하면 머리 아프잖아. 노래 한 곡 하면서 스트레스 풀래?",
-        choices: [
-          { id: "play", text: "스트레스 풀리네!" }
-        ]
+        speaker: "\uD6A8\uB828",
+        text: "\uB204\uC801\uB418\uBA74 \uC9C0\uCE58\uB2C8\uAE4C \uD14C\uD0C0\uC784\uC774\uB77C\uB3C4 \uC544\uAF34\uC9C0 \uB9C8.",
+        choices: [{ id: "bye", text: "\uC5B4, \uC7A0\uAE50 \uC26C\uC5B4\uAC08\uAC8C." }]
       }
     }
   },
   npc_jiwoo: {
     npcId: "npc_jiwoo",
-    npcLabel: "지우",
+    npcLabel: "\uC9C0\uC6B0",
     startNodeId: "intro",
     nodes: {
       intro: {
         id: "intro",
-        speaker: "지우",
-        text: "팀 프로젝트하다 보면 갈등이 생기기 마련이지. 같이 해결책을 찾아볼까?",
-        choices: [
-          { id: "bye", text: "혼자 생각해볼게." }
-        ]
+        speaker: "\uC9C0\uC6B0",
+        text: "\uD300 \uD504\uB85C\uC81D\uD2B8\uB294 \uACB0\uAD6D \uC18C\uD1B5\uC774 \uC808\uBC18\uC774\uC57C. \uB9D0\uC744 \uB9CE\uC774 \uB9DE\uCDB0\uBCF4\uC790.",
+        choices: [{ id: "bye", text: "\uC751, \uAC19\uC774 \uB9DE\uCDB0\uBCF4\uC790." }]
       }
     }
   },
   npc_jongmin: {
     npcId: "npc_jongmin",
-    npcLabel: "종민",
+    npcLabel: "\uC885\uBBFC",
     startNodeId: "intro",
     nodes: {
       intro: {
         id: "intro",
-        speaker: "종민",
-        text: "개발자는 체력이 국력이야! 같이 운동해서 기초 체력 좀 길러둘까?",
-        choices: [
-          { id: "play", text: "알겠어, 나중에 꼭 할게!" }
-        ]
-      }
-    }
-  },
-  campus_sunmi: {
-    npcId: "campus_sunmi",
-    npcLabel: "조선미 프로",
-    startNodeId: "intro",
-    nodes: {
-      intro: {
-        id: "intro",
-        speaker: "조선미 프로",
-        text: "기본에 충실하세요! 질문 있나요?",
-        choices: [
-          { id: "bye", text: "나중에 다시 올게요." }
-        ]
-      }
-    }
-  },
-  campus_doyeon: {
-    npcId: "campus_doyeon",
-    npcLabel: "김도연 프로",
-    startNodeId: "intro",
-    nodes: {
-      intro: {
-        id: "intro",
-        speaker: "김도연 프로",
-        text: "요즘 프로젝트 진행은 잘 되고 있나요? 화이팅하세요!",
-        choices: [
-          { id: "bye", text: "감사합니다!" }
-        ]
-      }
-    }
-  },
-  campus_hyunseok: {
-    npcId: "campus_hyunseok",
-    npcLabel: "이현석 컨설턴트",
-    startNodeId: "intro",
-    nodes: {
-      intro: {
-        id: "intro",
-        speaker: "이현석 컨설턴트",
-        text: "스프링 프레임워크는 확실히 이해하고 넘어가야 합니다. 화이팅!",
-        choices: [
-          { id: "bye", text: "열심히 하겠습니다!" }
-        ]
+        speaker: "\uC885\uBBFC",
+        text: "\uCCB4\uB825\uB3C4 \uC2E4\uB825\uC774\uC57C. \uC624\uB798 \uBC84\uD2F0\uB824\uBA74 \uD398\uC774\uC2A4 \uC870\uC808\uC774 \uC911\uC694\uD574.",
+        choices: [{ id: "bye", text: "\uC624\uB298\uC740 \uBB34\uB9AC\uD558\uC9C0 \uC54A\uC744\uAC8C." }]
       }
     }
   },
   npc_minsu: {
     npcId: "npc_minsu",
-    npcLabel: "민수",
+    npcLabel: "\uBBFC\uC218",
     startNodeId: "intro",
     nodes: {
       intro: {
         id: "intro",
-        speaker: "민수",
-        text: "오늘 정말 고생 많았어! 팀원들이랑 가볍게 맥주 한잔하면서 회포 풀까?",
-        choices: [
-          { id: "play", text: "다음에 같이 회포 풀자!" }
-        ]
+        speaker: "\uBBFC\uC218",
+        text: "\uBAA8\uB974\uB294 \uAC74 \uBC14\uB85C \uBB3B\uB294 \uAC8C \uBE60\uB974\uB2E4. \uD63C\uC790 \uB04C\uC5B4\uC548\uC9C0 \uB9D0\uACE0.",
+        choices: [{ id: "bye", text: "\uADF8\uB7F4\uAC8C, \uACE0\uB9C8\uC6CC." }]
+      }
+    }
+  },
+  campus_sunmi: {
+    npcId: "campus_sunmi",
+    npcLabel: "\uC870\uC120\uBBF8 \uD504\uB85C",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "\uC870\uC120\uBBF8 \uD504\uB85C",
+        text: "\uAE30\uBCF8\uAE30\uB97C \uCC28\uADFC\uCC28\uADFC \uC313\uC73C\uBA74 \uB418\uB2C8 \uB108\uBB34 \uC870\uAE09\uD574\uD558\uC9C0 \uB9C8\uC138\uC694.",
+        choices: [{ id: "bye", text: "\uB124, \uBA85\uC2EC\uD560\uAC8C\uC694." }]
+      }
+    }
+  },
+  campus_doyeon: {
+    npcId: "campus_doyeon",
+    npcLabel: "\uAE40\uB3C4\uC5F0 \uD504\uB85C",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "\uAE40\uB3C4\uC5F0 \uD504\uB85C",
+        text: "\uD750\uB984\uC744 \uC774\uD574\uD558\uBA74 \uC138\uBD80 \uBB38\uBC95\uC740 \uB530\uB77C\uC635\uB2C8\uB2E4. \uAC80\uC0C9\uD558\uB294 \uC2B5\uAD00\uB3C4 \uC2E4\uB825\uC774\uC5D0\uC694.",
+        choices: [{ id: "bye", text: "\uC54C\uACA0\uC2B5\uB2C8\uB2E4!" }]
+      }
+    }
+  },
+  campus_hyunseok: {
+    npcId: "campus_hyunseok",
+    npcLabel: "\uC774\uD604\uC11D \uCEE8\uC124\uD134\uD2B8",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "\uC774\uD604\uC11D \uCEE8\uC124\uD134\uD2B8",
+        text: "\uC694\uC998 \uD504\uB85C\uC81D\uD2B8 \uC9C4\uD589\uC740 \uC5B4\uB5A4\uAC00\uC694? \uBB38\uC81C\uAC00 \uC788\uC73C\uBA74 \uBE68\uB9AC \uACF5\uC720\uD558\uC138\uC694.",
+        choices: [{ id: "bye", text: "\uB124, \uD655\uC778\uD574\uBCFC\uAC8C\uC694." }]
       }
     }
   },
   fixed_event_runtime: {
     npcId: "fixed_event_runtime",
-    npcLabel: "이벤트",
+    npcLabel: "\uC774\uBCA4\uD2B8",
     startNodeId: "placeholder",
     nodes: {
       placeholder: {
         id: "placeholder",
-        speaker: "이벤트",
-        text: "이벤트 데이터를 불러오는 중입니다."
+        speaker: "\uC774\uBCA4\uD2B8",
+        text: "\uC774\uBCA4\uD2B8 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4."
       }
     }
   }

@@ -23,7 +23,10 @@
         "condition": null,
         "text": "[기본] 패키지를 지웠다 깔았다 무한 반복한다.",
         "result": {
-          "statChanges": { "hp": -20, "stress": 20 },
+          "statChanges": {
+            "hp": -20,
+            "stress": 20
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -39,10 +42,15 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "code": 100 },
+        "condition": {
+          "code": 100
+        },
         "text": "🔒 [코딩 100] \"버전 문제다.\" package.json과 requirements.txt를 깔끔하게 일치시킨다.",
         "result": {
-          "statChanges": { "code": 15, "social": 5 },
+          "statChanges": {
+            "code": 15,
+            "social": 5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -58,10 +66,14 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "luck": 120 },
+        "condition": {
+          "luck": 120
+        },
         "text": "🔒 [운빨 120] 스택오버플로우에서 인도 개발자가 올려둔 '초기 세팅 한 방 스크립트'를 발견했다!",
         "result": {
-          "statChanges": { "luck": 20 },
+          "statChanges": {
+            "luck": 20
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -80,7 +92,10 @@
         "condition": null,
         "text": "🤪 [광기] 모니터 앞에 제사상을 차리고 npm run serve를 누르며 합장한다.",
         "result": {
-          "statChanges": { "stress": -10, "madness": 20 },
+          "statChanges": {
+            "stress": -10,
+            "madness": 20
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -119,7 +134,10 @@
         "condition": null,
         "text": "[기본] 머리를 쥐어뜯으며 1시간째 코드만 뗐다 붙였다 한다.",
         "result": {
-          "statChanges": { "stress": 25, "code": -5 },
+          "statChanges": {
+            "stress": 25,
+            "code": -5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -135,10 +153,14 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "code": 115 },
+        "condition": {
+          "code": 115
+        },
         "text": "🔒 [코딩 115] \"기본으로 돌아가자.\" 정규표현식(Regex)을 백지부터 다시 짜서 완벽하게 방어한다.",
         "result": {
-          "statChanges": { "code": 20 },
+          "statChanges": {
+            "code": 20
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -154,10 +176,14 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "luck": 140 },
+        "condition": {
+          "luck": 140
+        },
         "text": "🔒 [운빨 140] 홧김에 친 오타가 우연히 예외를 완벽하게 걸러내는 기적의 정규식이 되었다!",
         "result": {
-          "statChanges": { "luck": 20 },
+          "statChanges": {
+            "luck": 20
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -176,7 +202,10 @@
         "condition": null,
         "text": "🤪 [광기] \"비밀번호는 모두 '1234'로 통일한다. 보안은 유저의 몫이다.\" 얼렁뚱땅 넘어간다.",
         "result": {
-          "statChanges": { "code": -30, "madness": 20 },
+          "statChanges": {
+            "code": -30,
+            "madness": 20
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -237,7 +266,10 @@
         "condition": null,
         "text": "[기본] \"당연히 취뽀지! 자소서 쓰고 면접 준비하고... 진짜 시작은 지금부터 아니겠어?\"",
         "result": {
-          "statChanges": { "stress": 10, "hp": -5 },
+          "statChanges": {
+            "stress": 10,
+            "hp": -5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -259,10 +291,15 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "social": 70 },
+        "condition": {
+          "social": 70
+        },
         "text": "🔒 [사교 70] \"일단 일주일은 코딩이고 뭐고 다 잊고 놀 거야! 우리 다 같이 마치고 소주나 한잔하자!\"",
         "result": {
-          "statChanges": { "social": 15, "stress": -20 },
+          "statChanges": {
+            "social": 15,
+            "stress": -20
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -290,10 +327,15 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "code": 70 },
+        "condition": {
+          "code": 70
+        },
         "text": "🔒 [코딩 70] \"난 이번에 한 관통 프로젝트 좀 더 디벨롭해서 실제 서비스로 런칭해 보려고. 아직 아키텍처가 눈에 아른거려.\"",
         "result": {
-          "statChanges": { "code": 15, "hp": -10 },
+          "statChanges": {
+            "code": 15,
+            "hp": -10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -315,10 +357,16 @@
       {
         "choiceId": 4,
         "actionType": "ROMANCE_EVENT",
-        "condition": { "playerGender": "FEMALE" },
+        "condition": {
+          "playerGender": "FEMALE"
+        },
         "text": "🌸 [연애] \"글쎄..? 난 좀 놀고 싶긴 한데... 혼자서는 좀 그렇구...\"",
         "result": {
-          "statChanges": { "stress": -10, "social": 10, "favor_minsu": 15 },
+          "statChanges": {
+            "stress": -10,
+            "social": 10,
+            "favor_minsu": 15
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -350,10 +398,16 @@
       {
         "choiceId": 5,
         "actionType": "ROMANCE_EVENT",
-        "condition": { "playerGender": "MALE" },
+        "condition": {
+          "playerGender": "MALE"
+        },
         "text": "🌸 [연애] \"글쎄..? 난 좀 놀고 싶긴 한데... 혼자서는 좀 그렇구...\"",
         "result": {
-          "statChanges": { "stress": -10, "social": 10, "favor_hyo": 15 },
+          "statChanges": {
+            "stress": -10,
+            "social": 10,
+            "favor_hyo": 15
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",

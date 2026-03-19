@@ -34,6 +34,7 @@ export type FixedEventNpcPresentation = {
 };
 
 export const FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT = 4;
+export const FIXED_EVENT_NPC_LABEL_COLOR = "#000000";
 
 const FIXED_EVENT_NPC_LABELS: Partial<Record<string, string>> = {
   NPC_CLASSMATE_MYUNGJIN: "\uBA85\uC9C4",
@@ -49,163 +50,56 @@ const FIXED_EVENT_NPC_LABELS: Partial<Record<string, string>> = {
 const EVENT_FIELD_SPEAKER_EXCLUDED_IDS = new Set(["SYSTEM", "PLAYER"]);
 
 const FIXED_EVENT_CANONICAL_LOCATIONS: FixedEventLocationId[] = ["campus", "downtown", "world", "home", "cafe", "store"];
+const FIXED_EVENT_SHARED_SLOT: FixedEventNpcSlot = {
+  x: 800,
+  y: 530,
+  labelOffsetX: 0,
+  labelOffsetY: 34,
+  flashColor: 0xb97ad8,
+};
+
+function createSharedFixedEventNpcSlots(): FixedEventNpcSlot[] {
+  return Array.from({ length: FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT }, () => ({
+    ...FIXED_EVENT_SHARED_SLOT,
+  }));
+}
 
 const FIXED_EVENT_NPC_SLOTS: FixedEventNpcSlotMap = {
   campus: {
-    [TIME_CYCLE[0]]: [
-      { x: 250, y: 214, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 330, y: 238, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 410, y: 214, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 490, y: 238, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 600, y: 292, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 678, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 756, y: 292, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 834, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 280, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 360, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 440, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 520, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 690, y: 418, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 764, y: 444, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 838, y: 418, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 912, y: 444, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
+    [TIME_CYCLE[0]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[1]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[2]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[3]]: createSharedFixedEventNpcSlots(),
   },
   downtown: {
-    [TIME_CYCLE[0]]: [
-      { x: 272, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 350, y: 274, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 428, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 506, y: 274, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 520, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 598, y: 358, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 676, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 754, y: 358, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 346, y: 438, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 424, y: 464, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 502, y: 438, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 580, y: 464, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 688, y: 432, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 762, y: 456, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 836, y: 432, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 910, y: 456, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
+    [TIME_CYCLE[0]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[1]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[2]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[3]]: createSharedFixedEventNpcSlots(),
   },
   world: {
-    [TIME_CYCLE[0]]: [
-      { x: 448, y: 246, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 510, y: 272, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 572, y: 246, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 634, y: 272, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 452, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 514, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 576, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 638, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 444, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 506, y: 356, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 568, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 630, y: 356, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 438, y: 380, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 500, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 562, y: 380, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 624, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
+    [TIME_CYCLE[0]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[1]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[2]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[3]]: createSharedFixedEventNpcSlots(),
   },
   home: {
-    [TIME_CYCLE[0]]: [
-      { x: 440, y: 250, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 496, y: 278, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 552, y: 250, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 608, y: 278, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 440, y: 250, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 496, y: 278, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 552, y: 250, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 608, y: 278, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 432, y: 300, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 488, y: 328, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 544, y: 300, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 600, y: 328, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 424, y: 346, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 480, y: 372, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 536, y: 346, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 592, y: 372, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
+    [TIME_CYCLE[0]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[1]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[2]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[3]]: createSharedFixedEventNpcSlots(),
   },
   cafe: {
-    [TIME_CYCLE[0]]: [
-      { x: 350, y: 462, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 404, y: 486, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 458, y: 462, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 512, y: 486, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 350, y: 462, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 404, y: 486, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 458, y: 462, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 512, y: 486, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 336, y: 508, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 392, y: 534, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 448, y: 508, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 504, y: 534, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 322, y: 548, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 378, y: 572, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 434, y: 548, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 490, y: 572, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
+    [TIME_CYCLE[0]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[1]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[2]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[3]]: createSharedFixedEventNpcSlots(),
   },
   store: {
-    [TIME_CYCLE[0]]: [
-      { x: 730, y: 232, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 786, y: 258, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 842, y: 232, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 898, y: 258, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 730, y: 232, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 786, y: 258, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 842, y: 232, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 898, y: 258, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 716, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 772, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 828, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 884, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 702, y: 338, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 758, y: 364, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 814, y: 338, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 870, y: 364, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
+    [TIME_CYCLE[0]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[1]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[2]]: createSharedFixedEventNpcSlots(),
+    [TIME_CYCLE[3]]: createSharedFixedEventNpcSlots(),
   },
 };
 

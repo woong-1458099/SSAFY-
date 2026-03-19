@@ -32,6 +32,8 @@ export type DowntownBuildingView = {
   right: number;
   top: number;
   bottom: number;
+  defaultFillColor: number;
+  defaultFillAlpha: number;
   defaultStrokeColor: number;
   defaultStrokeAlpha: number;
 };
@@ -252,6 +254,8 @@ export function buildDowntownArea(context: BuildAreaContext): DowntownAreaBuildR
       downtownUsesTmx ? 0x000000 : building.color,
       downtownUsesTmx ? 0.001 : 1
     );
+    const defaultFillColor = downtownUsesTmx ? 0x000000 : building.color;
+    const defaultFillAlpha = downtownUsesTmx ? 0.001 : 1;
     if (!downtownUsesTmx) {
       hitBox.setStrokeStyle(3, 0x6d522f, 1);
     }
@@ -262,6 +266,8 @@ export function buildDowntownArea(context: BuildAreaContext): DowntownAreaBuildR
       right: mappedCenter.x + mappedSize.width / 2,
       top: mappedCenter.y - mappedSize.height / 2,
       bottom: mappedCenter.y + mappedSize.height / 2,
+      defaultFillColor,
+      defaultFillAlpha,
       defaultStrokeColor: 0x6d522f,
       defaultStrokeAlpha: downtownUsesTmx ? 0 : 1
     });

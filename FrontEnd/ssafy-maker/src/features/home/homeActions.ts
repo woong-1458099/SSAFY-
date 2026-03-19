@@ -11,7 +11,7 @@ export type HomeActionResolution = {
 export const HOME_ACTION_LABELS: Record<HomeActionId, string> = {
   sleep: "잠자기 (행동력 1)  -  스트레스 감소, 체력 회복",
   study: "공부하기 (행동력 1)  -  FE/BE 증가, 스트레스/체력 변화",
-  game: "게임하기 (행동력 1)  -  FE/BE 소폭 감소, 스트레스 감소",
+  game: "게임하기 (행동력 1)  -  스트레스 감소, 운 소폭 증가",
 };
 
 export function resolveHomeAction(action: HomeActionId): HomeActionResolution {
@@ -32,9 +32,9 @@ export function resolveHomeAction(action: HomeActionId): HomeActionResolution {
       };
     case "game":
       return {
-        hpDelta: -6,
-        stressDelta: -12,
-        statDelta: { fe: -2, be: -2 },
+        hpDelta: -4,
+        stressDelta: -14,
+        statDelta: { luck: 1 },
         toastMessage: "게임하기 완료",
       };
   }

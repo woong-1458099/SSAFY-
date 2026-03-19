@@ -61,7 +61,7 @@ export class GameHud {
     dayLabel: "\uC6D4\uC694\uC77C",
     hp: 80,
     hpMax: 100,
-    money: 12000,
+    money: 50000,
     stress: 20
   };
 

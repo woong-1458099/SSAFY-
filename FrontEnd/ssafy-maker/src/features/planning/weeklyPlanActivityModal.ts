@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import { createPanelOuterBorder } from "@features/ui/components/uiPrimitives";
 
 type TextStyleFactory = (
@@ -11,19 +11,19 @@ function resolveWeeklyPlanStatusText(
   rawStatusText: string,
   backgroundImage?: Phaser.GameObjects.Image | null
 ): string {
-  if (!/[?�]/.test(rawStatusText) && rawStatusText.trim().length > 0) {
+  if (!/[?占?]/.test(rawStatusText) && rawStatusText.trim().length > 0) {
     return rawStatusText;
   }
 
   switch (backgroundImage?.texture.key) {
     case "weekly-plan-ui-practice":
-      return "UI 구현 실습 진행 중...";
+      return "UI \uAD6C\uD604 \uC5F0\uC2B5 \uC9C4\uD589 \uC911...";
     case "weekly-plan-rest-api-db":
-      return "REST API와 데이터베이스 설계 진행 중...";
+      return "REST API\uC640 \uB370\uC774\uD130\uBCA0\uC774\uC2A4 \uC124\uACC4 \uC9C4\uD589 \uC911...";
     case "weekly-plan-team-project":
-      return "팀 프로젝트 진행 중...";
+      return "\uD300 \uD504\uB85C\uC81D\uD2B8 \uC9C4\uD589 \uC911...";
     default:
-      return "강의 진행 중...";
+      return "\uAC15\uC758 \uC9C4\uD589 \uC911...";
   }
 }
 
@@ -94,7 +94,7 @@ export function createWeeklyPlanActivityModal(
   const hint = scene.add.text(
     centerX,
     centerY + 180,
-    "일정 진행 후 다음 시간대로 이동합니다.",
+    "\uC77C\uC815 \uC9C4\uD589 \uD6C4 \uB2E4\uC74C \uC2DC\uAC04\uB300\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4",
     getBodyStyle(15, "#90b3d4")
   );
   hint.setOrigin(0.5);

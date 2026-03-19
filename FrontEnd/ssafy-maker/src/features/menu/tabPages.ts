@@ -11,6 +11,7 @@ type TextStyleFactory = (
   color?: string,
   fontStyle?: "normal" | "bold"
 ) => Phaser.Types.GameObjects.Text.TextStyle;
+
 type VolumeKey = "bgm" | "sfx" | "ambience";
 
 export function createSettingsPage(scene: Phaser.Scene, options: {
@@ -27,7 +28,7 @@ export function createSettingsPage(scene: Phaser.Scene, options: {
   const body = scene.add.text(
     px(bounds.x + 24),
     px(bounds.y + 58),
-    "ESC: 메뉴 열기/닫기\nWASD/방향키: 이동\nE: NPC 대화\nQ: 전체 지도",
+    "ESC: 메뉴 열기/닫기\nWASD/방향키: 이동\nSpace: NPC 대화\nQ: 전체 지도",
     getBodyStyle(23)
   );
   body.setLineSpacing(10);
