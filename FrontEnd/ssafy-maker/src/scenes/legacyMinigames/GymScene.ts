@@ -44,6 +44,10 @@ export default class GymScene extends Phaser.Scene {
     this.goodCount = 0;
     this.missCount = 0;
 
+    // 입력 디바운스
+    this.lastPressTime = 0;
+    this.inputLocked = false;
+
     // 배경
     this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
 
@@ -94,6 +98,10 @@ export default class GymScene extends Phaser.Scene {
 
     // 입력
     this.input.keyboard.on('keydown-SPACE', this.handlePress, this);
+
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
 
     // 타이머
     this.timerEvent = this.time.addEvent({
@@ -161,9 +169,15 @@ export default class GymScene extends Phaser.Scene {
   }
 
   handlePress() {
-    if (this.gameOver || this.waiting) return;
+    if (this.gameOver || this.waiting || this.inputLocked) return;
+
+    // 디바운스: 최소 100ms 간격
+    const now = this.time.now;
+    if (now - this.lastPressTime < 100) return;
+    this.lastPressTime = now;
 
     this.waiting = true; // 판정 후 잠시 대기
+    this.inputLocked = true;
 
     const absPos = Math.abs(this.gaugePos);
     let judgment = '';
@@ -219,6 +233,8 @@ export default class GymScene extends Phaser.Scene {
 
     // 게이지 리셋
     this.time.delayedCall(400, () => {
+      if (!this.scene.isActive()) return; // 씬이 이미 종료된 경우 무시
+
       if (this.reps >= MAX_REPS) {
         this.gameOver = true;
         this.timerEvent.remove();
@@ -227,6 +243,7 @@ export default class GymScene extends Phaser.Scene {
         this.gaugePos = -1; // 왼쪽에서 다시 시작
         this.gaugeDirection = 1;
         this.waiting = false;
+        this.inputLocked = false;
       }
     });
   }

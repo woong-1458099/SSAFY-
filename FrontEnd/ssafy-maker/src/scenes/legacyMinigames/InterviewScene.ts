@@ -195,6 +195,10 @@ export default class InterviewScene extends Phaser.Scene {
     this.timerEvent = this.time.addEvent({
       delay: 1000, loop: true, callback: this.tick, callbackScope: this
     });
+
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
   }
 
   loadQuestion() {

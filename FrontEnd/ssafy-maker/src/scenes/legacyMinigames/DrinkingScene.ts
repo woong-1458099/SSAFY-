@@ -157,8 +157,18 @@ export default class DrinkingScene extends Phaser.Scene {
       this.input.keyboard.on('keydown-SPACE', this.handleClick, this);
     }
 
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
+
     // 라운드 시작
     this.time.delayedCall(800, () => this.startRound());
+  }
+
+  shutdown() {
+    if (this.input.keyboard) {
+      this.input.keyboard.off('keydown-SPACE', this.handleClick, this);
+    }
   }
 
   drawNpc(x: number, y: number) {

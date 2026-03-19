@@ -84,6 +84,10 @@ export default class TankScene extends Phaser.Scene {
       if (this.started && !this.gameOver) this.playerFire();
     });
 
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
+
     this.showCountdown();
   }
 
