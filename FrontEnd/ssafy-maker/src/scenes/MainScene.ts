@@ -399,7 +399,6 @@ const MINIGAME_SCENE_MAP: Record<string, string> = {
   playInterview: "InterviewScene",
   playGym: "GymScene",
   playRhythm: "RhythmScene",
-  playConflict: "ConflictResolveScene",
   playCooking: "CookingScene"
 };
 
