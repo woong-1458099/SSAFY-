@@ -6,10 +6,16 @@ import { applyLegacyViewport } from './viewport';
 const PF = '"Press Start 2P"';
 const W = 800;
 const H = 600;
+const BORDER = 30;
 
+// 포켓 좌표를 borderThickness 기반으로 계산
 const pocketPositions = [
-  { x: 35, y: 35 }, { x: W / 2, y: 30 }, { x: W - 35, y: 35 },
-  { x: 35, y: H - 35 }, { x: W / 2, y: H - 30 }, { x: W - 35, y: H - 35 }
+  { x: BORDER + 5, y: BORDER + 5 },
+  { x: W / 2, y: BORDER },
+  { x: W - BORDER - 5, y: BORDER + 5 },
+  { x: BORDER + 5, y: H - BORDER - 5 },
+  { x: W / 2, y: H - BORDER },
+  { x: W - BORDER - 5, y: H - BORDER - 5 }
 ];
 
 export default class BilliardsScene extends Phaser.Scene {
@@ -291,8 +297,17 @@ export default class BilliardsScene extends Phaser.Scene {
   }
 
   shutdown() {
+    // 입력 이벤트 정리
     this.input.off('pointerdown');
     this.input.off('pointermove');
     this.input.off('pointerup');
+
+    // 배열 정리
+    this.balls = [];
+    this.cueBall = null;
+
+    // Graphics 정리
+    if (this.line) this.line.destroy();
+    if (this.powerBar) this.powerBar.destroy();
   }
 }
