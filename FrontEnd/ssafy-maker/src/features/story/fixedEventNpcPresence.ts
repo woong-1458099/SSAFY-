@@ -230,6 +230,35 @@ function normalizeFixedEventTimeLabel(value: unknown): FixedEventTimeLabel {
   return TIME_CYCLE[0];
 }
 
+function normalizeFixedEventNpcSlots(
+  location: FixedEventLocationId,
+  timeLabel: FixedEventTimeLabel,
+  slots: FixedEventNpcSlot[]
+): FixedEventNpcSlot[] {
+  const fallbackSlots = FIXED_EVENT_NPC_SLOTS[location][TIME_CYCLE[0]] ?? [];
+
+  if (slots.length === FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT) {
+    return slots;
+  }
+
+  console.warn("[fixed-event] unexpected scheduled NPC slot count", {
+    location,
+    timeLabel,
+    expected: FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT,
+    actual: slots.length
+  });
+
+  return Array.from({ length: FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT }, (_, index) => slots[index] ?? fallbackSlots[index]).filter(
+    (slot): slot is FixedEventNpcSlot => Boolean(slot)
+  );
+}
+
+function getFixedEventNpcSlotsForLocation(location: FixedEventLocationId, timeOfDay: unknown): FixedEventNpcSlot[] {
+  const timeLabel = normalizeFixedEventTimeLabel(timeOfDay);
+  const slots = FIXED_EVENT_NPC_SLOTS[location][timeLabel] ?? FIXED_EVENT_NPC_SLOTS[location][TIME_CYCLE[0]] ?? [];
+  return normalizeFixedEventNpcSlots(location, timeLabel, slots);
+}
+
 function buildNpcEntry(entry: FixedEventDialogueEntry): FixedEventNpcEntry | null {
   if (typeof entry.speakerId !== "string") return null;
 
@@ -293,8 +322,7 @@ export function resolveFixedEventRenderArea(location: FixedEventLocationId): Fix
 }
 
 export function getDefaultFixedEventNpcSlotsForArea(area: FixedEventRenderArea, timeOfDay: unknown): FixedEventNpcSlot[] {
-  const timeLabel = normalizeFixedEventTimeLabel(timeOfDay);
-  return FIXED_EVENT_NPC_SLOTS[area][timeLabel] ?? FIXED_EVENT_NPC_SLOTS[area][TIME_CYCLE[0]];
+  return getFixedEventNpcSlotsForLocation(area, timeOfDay);
 }
 
 export function getFixedEventPresentNpcs(event: FixedEventEntry | null | undefined): FixedEventNpcEntry[] {
@@ -326,10 +354,10 @@ export function buildFixedEventNpcPresentation(
 
   const location = resolveFixedEventLocationId(event.location, context.currentLocation);
   const renderArea = resolveFixedEventRenderArea(location);
-  const timeLabel = normalizeFixedEventTimeLabel(
+  const slots = getFixedEventNpcSlotsForLocation(
+    location,
     typeof event.triggerTiming?.timeOfDay === "string" ? event.triggerTiming.timeOfDay : context.timeOfDay
   );
-  const slots = FIXED_EVENT_NPC_SLOTS[location][timeLabel] ?? FIXED_EVENT_NPC_SLOTS[location][TIME_CYCLE[0]];
 
   return {
     eventId: typeof event.eventId === "string" && event.eventId.trim().length > 0 ? event.eventId.trim() : undefined,

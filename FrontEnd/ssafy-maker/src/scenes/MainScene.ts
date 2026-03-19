@@ -32,7 +32,6 @@ import {
 } from "@features/story/jsonDialogueAdapter";
 import {
   buildFixedEventNpcPresentation,
-  FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT,
   getDefaultFixedEventNpcSlotsForArea,
   getFixedEventPresentNpcs,
   resolveCurrentFixedEventLocation,
@@ -1465,14 +1464,6 @@ export class MainScene extends Phaser.Scene {
       if (!root) return;
 
       const defaultSlots = getDefaultFixedEventNpcSlotsForArea(area, TIME_CYCLE[0]);
-      if (defaultSlots.length !== FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT) {
-        console.warn("[fixed-event] unexpected scheduled NPC slot count", {
-          area,
-          expected: FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT,
-          actual: defaultSlots.length
-        });
-      }
-
       defaultSlots.forEach((position, index) => {
         const marker = this.add.rectangle(position.x, position.y, 34, 42, 0x6e4f2b, 0.15);
         marker.setStrokeStyle(2, 0x4b351b, 1);
