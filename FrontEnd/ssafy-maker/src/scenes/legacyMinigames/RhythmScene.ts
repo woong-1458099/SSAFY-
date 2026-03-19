@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 const SONGS = [{ title: 'SSAFY RHYTHM', notes: [{ key: 'A', time: 1000 }, { key: 'W', time: 1500 }, { key: 'J', time: 2000 }, { key: 'I', time: 2500 }, { key: 'A', time: 3000 }, { key: 'J', time: 3500 }, { key: 'W', time: 4000 }, { key: 'I', time: 4500 }, { key: 'A', time: 5000 }, { key: 'W', time: 5000 }, { key: 'J', time: 5500 }, { key: 'I', time: 6000 }, { key: 'A', time: 6500 }, { key: 'W', time: 7000 }, { key: 'J', time: 7500 }, { key: 'I', time: 7500 }, { key: 'A', time: 8000 }, { key: 'W', time: 8500 }, { key: 'J', time: 9000 }, { key: 'I', time: 9500 }] }];
@@ -17,12 +18,17 @@ const DIFFICULTY_SETTINGS = {
 export default class RhythmScene extends Phaser.Scene {
   private difficulty: 'Easy' | 'Normal' | 'Hard' = 'Normal';
   private config = DIFFICULTY_SETTINGS.Normal;
+  private returnSceneKey = 'MainScene';
 
   constructor() { super({ key: 'RhythmScene' }); }
 
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
+
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
     const W = 800, H = 600;
     
     // Initial State
@@ -205,7 +211,7 @@ export default class RhythmScene extends Phaser.Scene {
     this.add.text(W / 2 + 200, 270, grade, { fontSize: '60px', color: gradeColor, fontFamily: PF }).setOrigin(0.5);
     this.add.text(W / 2, 415, this.config.reward, { fontSize: '10px', color: '#aaddff', fontFamily: PF }).setOrigin(0.5);
     this.createBtn(270, 490, 'RETRY', 0x001888, 0x4499ff, () => this.scene.restart());
-    this.createBtn(530, 490, 'MENU', 0x440088, 0xcc55ff, () => this.scene.start('MenuScene'));
+    this.createBtn(530, 490, 'EXIT', 0x440088, 0xcc55ff, () => returnToScene(this, this.returnSceneKey));
   }
 
   createBtn(x, y, label, bg, border, cb) {

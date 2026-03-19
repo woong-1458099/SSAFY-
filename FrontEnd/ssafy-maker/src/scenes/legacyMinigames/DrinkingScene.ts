@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { applyLegacyViewport } from './viewport';
 import { installMinigamePause } from './installMinigamePause';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 
@@ -251,7 +252,7 @@ export default class DrinkingScene extends Phaser.Scene {
     this.add.text(W/2, H/2 + 110, '[ RETRY ]', { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => this.scene.restart());
     this.add.text(W/2, H/2 + 160, '[ EXIT ]', { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => {
       this.sound.stopAll();
-      this.scene.start(this.returnSceneKey);
+      returnToScene(this, this.returnSceneKey);
     });
   }
 }

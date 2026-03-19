@@ -119,7 +119,7 @@ export default class MenuScene extends Phaser.Scene {
 
   startSelectedGame(sceneKey) {
     this.cameras.main.flash(160, 255, 255, 255, false);
-    this.time.delayedCall(160, () => this.scene.start(sceneKey));
+    this.time.delayedCall(160, () => this.scene.start(sceneKey, { returnSceneKey: this.returnSceneKey }));
   }
 
   returnToMainWorld() {

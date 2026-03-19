@@ -1,6 +1,7 @@
 // @ts-nocheck
 import Phaser from 'phaser';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 const W = 800;
@@ -16,7 +17,13 @@ const getBallColor = (num) => {
 };
 
 export default class LottoScene extends Phaser.Scene {
+  private returnSceneKey = 'MainScene';
+
   constructor() { super({ key: 'LottoScene' }); }
+
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
 
   create() {
     applyLegacyViewport(this);
@@ -113,7 +120,7 @@ export default class LottoScene extends Phaser.Scene {
     this.exitBtn.on('pointerdown', () => {
       if (this.isDrawing) return; // 추첨 중에는 나갈 수 없음
       this.cleanup();
-      this.scene.start('MenuScene');
+      returnToScene(this, this.returnSceneKey);
     });
     this.exitBtn.on('pointerover', () => this.exitBtn.setColor('#ffffff'));
     this.exitBtn.on('pointerout', () => this.exitBtn.setColor('#888888'));

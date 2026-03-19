@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 const W = 800;
@@ -21,13 +22,19 @@ const WORDS = [
 ];
 
 export default class TypingScene extends Phaser.Scene {
+  private returnSceneKey = 'MainScene';
+
   constructor() {
     super({ key: 'TypingScene' });
   }
 
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
+
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
 
     this.score = 0;
     this.lives = 5;
@@ -390,7 +397,7 @@ export default class TypingScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 420, '다시하기', 0x004422, 0x44ff88, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 420, '메뉴', 0x222244, 0x6666aa, () => this.scene.start('MenuScene'));
+    this.createBtn(W / 2 + 120, 420, '나가기', 0x222244, 0x6666aa, () => returnToScene(this, this.returnSceneKey));
   }
 
   createBtn(x, y, label, bg, border, cb) {

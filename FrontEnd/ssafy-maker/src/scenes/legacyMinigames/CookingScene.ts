@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 const W = 800;
@@ -27,9 +28,15 @@ const DISHES = [
 ];
 
 export default class CookingScene extends Phaser.Scene {
+  private returnSceneKey = 'MainScene';
+
   constructor() { super({ key: 'CookingScene' }); }
 
-   private bgm!: Phaser.Sound.BaseSound;
+  private bgm!: Phaser.Sound.BaseSound;
+
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
 
   preload() {
     this.load.audio('bgm_ramen', 'assets/game/audio/BGM/ramen_game.mp3');
@@ -44,7 +51,7 @@ export default class CookingScene extends Phaser.Scene {
 
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
 
     this.score = 0;
     this.timeLeft = 25;
@@ -251,7 +258,7 @@ update() {
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 470, '다시하기', 0x442200, 0xff8822, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 470, '메뉴', 0x222222, 0x666666, () => this.scene.start('MenuScene'));
+    this.createBtn(W / 2 + 120, 470, '나가기', 0x222222, 0x666666, () => returnToScene(this, this.returnSceneKey));
   }
 
   createBtn(x, y, label, bg, border, cb) {

@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { applyLegacyViewport } from './viewport';
 import { installMinigamePause } from './installMinigamePause';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 const W = 800;
@@ -129,11 +130,17 @@ const CATEGORY_COLORS = {
 };
 
 export default class InterviewScene extends Phaser.Scene {
+  private returnSceneKey = 'MainScene';
+
   constructor() { super({ key: 'InterviewScene' }); }
+
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
 
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
 
     this.questions = Phaser.Utils.Array.Shuffle([...QUESTIONS]).slice(0, 8);
     this.currentQ = 0;
@@ -407,7 +414,7 @@ export default class InterviewScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 440, '다시하기', 0x002266, 0x4499ff, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 440, '메뉴', 0x440066, 0xcc55ff, () => this.scene.start('MenuScene'));
+    this.createBtn(W / 2 + 120, 440, '나가기', 0x440066, 0xcc55ff, () => returnToScene(this, this.returnSceneKey));
   }
 
   createBtn(x, y, label, bg, border, cb) {
