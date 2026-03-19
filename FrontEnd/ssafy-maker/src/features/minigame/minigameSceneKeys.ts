@@ -4,8 +4,10 @@ export const LEGACY_MINIGAME_PAUSE_SCENE_KEY = "MinigamePauseScene" as const;
 export const LEGACY_MINIGAME_SCENE_KEYS = [
   "QuizScene",
   "RhythmScene",
+  "ConflictResolveScene",
   "InterviewScene",
   "RunnerScene",
+  "BilliardsScene",
   "TankScene",
 
   "TypingScene",

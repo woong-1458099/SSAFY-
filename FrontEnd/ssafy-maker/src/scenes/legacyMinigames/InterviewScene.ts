@@ -8,7 +8,6 @@ const W = 800;
 const H = 600;
 
 const QUESTIONS = [
-  // WEB
   {
     question: 'REST API에서 PUT과 PATCH의 차이는?',
     options: ['PUT: 전체 수정, PATCH: 부분 수정', 'PUT: 삭제, PATCH: 수정', 'PUT: 조회, PATCH: 생성', '둘 다 동일한 기능'],
@@ -20,84 +19,29 @@ const QUESTIONS = [
     answer: 1, category: 'WEB'
   },
   {
-    question: 'CORS(Cross-Origin Resource Sharing)란?',
-    options: ['서버 간 통신 프로토콜', '다른 출처 리소스 공유 정책', '데이터 암호화 방식', '캐싱 전략'],
-    answer: 1, category: 'WEB'
-  },
-
-  // FE
-  {
     question: 'React useEffect의 빈 배열 []의 의미는?',
     options: ['업데이트마다 실행', '언마운트 시만 실행', '마운트 시 한 번만 실행', '아무것도 실행 안함'],
     answer: 2, category: 'FE'
   },
-  {
-    question: 'JavaScript == 와 === 차이는?',
-    options: ['==: 타입+값, ===: 값만', '==: 값만, ===: 타입+값 모두', '둘 다 동일하게 동작', '==: 객체, ===: 원시값'],
-    answer: 1, category: 'FE'
-  },
-  {
-    question: 'Virtual DOM의 장점은?',
-    options: ['메모리 사용량 감소', '실제 DOM 조작 최소화', 'SEO 향상', '보안 강화'],
-    answer: 1, category: 'FE'
-  },
-  {
-    question: 'CSR과 SSR의 차이는?',
-    options: ['CSR: 서버 렌더링, SSR: 클라이언트', 'CSR: 클라이언트 렌더링, SSR: 서버', '둘 다 동일한 방식', 'CSR: 정적, SSR: 동적'],
-    answer: 1, category: 'FE'
-  },
-
-  // BE
-  {
-    question: 'Spring @Autowired의 역할은?',
-    options: ['HTTP 요청 매핑', '의존성 자동 주입', '트랜잭션 관리', '예외 처리'],
-    answer: 1, category: 'BE'
-  },
-  {
-    question: 'JWT(JSON Web Token)의 구성 요소는?',
-    options: ['ID, PW, Token', 'Header, Payload, Signature', 'Key, Value, Hash', 'Auth, Session, Cookie'],
-    answer: 1, category: 'BE'
-  },
-  {
-    question: 'Spring @Transactional의 역할은?',
-    options: ['의존성 주입', '트랜잭션 관리', 'HTTP 매핑', '예외 처리'],
-    answer: 1, category: 'BE'
-  },
-
-  // DB
   {
     question: 'SQL INNER JOIN과 LEFT JOIN 차이는?',
     options: ['INNER: 왼쪽만, LEFT: 오른쪽만', 'INNER: 교집합, LEFT: 왼쪽 전체 포함', 'INNER: 합집합, LEFT: 교집합', '둘 다 동일한 결과'],
     answer: 1, category: 'DB'
   },
   {
-    question: '데이터베이스 인덱스의 장점은?',
-    options: ['저장 공간 절약', '검색 속도 향상', '데이터 무결성', '동시성 제어'],
-    answer: 1, category: 'DB'
-  },
-  {
-    question: 'NoSQL과 RDBMS의 차이는?',
-    options: ['NoSQL: 정형, RDBMS: 비정형', 'NoSQL: 스키마 유연, RDBMS: 고정 스키마', '둘 다 동일', 'NoSQL: SQL 사용, RDBMS: 미사용'],
-    answer: 1, category: 'DB'
-  },
-
-  // GIT
-  {
     question: 'Git merge와 rebase의 차이는?',
     options: ['merge: 이력 유지, rebase: 이력 재정렬', 'merge: 브랜치 삭제, rebase: 브랜치 생성', 'merge: 로컬용, rebase: 원격용', '둘 다 동일한 기능'],
     answer: 0, category: 'GIT'
   },
   {
-    question: 'Git stash의 용도는?',
-    options: ['커밋 삭제', '변경사항 임시 저장', '브랜치 생성', '원격 동기화'],
-    answer: 1, category: 'GIT'
-  },
-
-  // CS
-  {
     question: 'OOP 4대 특성이 아닌 것은?',
     options: ['캡슐화', '상속', '동기화', '다형성'],
     answer: 2, category: 'CS'
+  },
+  {
+    question: 'Spring @Autowired의 역할은?',
+    options: ['HTTP 요청 매핑', '의존성 자동 주입', '트랜잭션 관리', '예외 처리'],
+    answer: 1, category: 'BE'
   },
   {
     question: 'TCP와 UDP의 차이는?',
@@ -105,21 +49,14 @@ const QUESTIONS = [
     answer: 1, category: 'CS'
   },
   {
-    question: '프로세스와 스레드의 차이는?',
-    options: ['프로세스: 메모리 공유, 스레드: 독립', '프로세스: 독립 메모리, 스레드: 메모리 공유', '둘 다 동일', '프로세스가 더 가볍다'],
-    answer: 1, category: 'CS'
-  },
-
-  // INFRA
-  {
     question: 'Docker 이미지와 컨테이너의 관계는?',
     options: ['이미지: 실행 인스턴스, 컨테이너: 템플릿', '둘 다 동일한 개념', '이미지: 템플릿, 컨테이너: 실행 인스턴스', '이미지: 네트워크, 컨테이너: 스토리지'],
     answer: 2, category: 'INFRA'
   },
   {
-    question: 'CI/CD의 의미는?',
-    options: ['코드 검사/배포', '지속적 통합/배포', '컨테이너 생성/삭제', '클라우드 연결/해제'],
-    answer: 1, category: 'INFRA'
+    question: 'JavaScript == 와 === 차이는?',
+    options: ['==: 타입+값, ===: 값만', '==: 값만, ===: 타입+값 모두', '둘 다 동일하게 동작', '==: 객체, ===: 원시값'],
+    answer: 1, category: 'FE'
   },
 ];
 
@@ -135,7 +72,7 @@ export default class InterviewScene extends Phaser.Scene {
     applyLegacyViewport(this);
     installMinigamePause(this);
 
-    this.questions = Phaser.Utils.Array.Shuffle([...QUESTIONS]).slice(0, 8);
+    this.questions = Phaser.Utils.Array.Shuffle([...QUESTIONS]).slice(0, 5);
     this.currentQ = 0;
     this.score = 0;
     this.timeLeft = 20;
@@ -157,7 +94,7 @@ export default class InterviewScene extends Phaser.Scene {
       fontSize: '14px', color: '#00ff88', fontFamily: PF
     });
 
-    this.progressTxt = this.add.text(W / 2, 55, '1 / 8', {
+    this.progressTxt = this.add.text(W / 2, 55, '1 / 5', {
       fontSize: '14px', color: '#ffffff', fontFamily: PF
     }).setOrigin(0.5);
 
@@ -209,7 +146,7 @@ export default class InterviewScene extends Phaser.Scene {
 
     this.categoryBadge.setFillStyle(catColor);
     this.categoryTxt.setText(q.category);
-    this.progressTxt.setText(`${this.currentQ + 1} / 8`);
+    this.progressTxt.setText(`${this.currentQ + 1} / 5`);
     this.questionTxt.setText(q.question);
 
     // 기존 옵션 제거
@@ -300,7 +237,7 @@ export default class InterviewScene extends Phaser.Scene {
 
     this.time.delayedCall(1300, () => {
       this.currentQ++;
-      if (this.currentQ >= 8) this.endGame();
+      if (this.currentQ >= 5) this.endGame();
       else this.loadQuestion();
     });
   }
@@ -337,7 +274,7 @@ export default class InterviewScene extends Phaser.Scene {
 
       this.time.delayedCall(1300, () => {
         this.currentQ++;
-        if (this.currentQ >= 8) this.endGame();
+        if (this.currentQ >= 5) this.endGame();
         else this.loadQuestion();
       });
     }
@@ -364,17 +301,17 @@ export default class InterviewScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     let grade, gradeColor, msg, reward;
-    if (correct === 8) {
+    if (correct === 5) {
       grade = 'S';
       gradeColor = '#FFD700';
       msg = '🏆 PERFECT! 면접 합격!';
       reward = '지능 +10, GP +30';
-    } else if (correct >= 6) {
+    } else if (correct >= 4) {
       grade = 'A';
       gradeColor = '#00ff88';
       msg = '✅ 합격권!';
       reward = '지능 +7, GP +20';
-    } else if (correct >= 4) {
+    } else if (correct >= 3) {
       grade = 'B';
       gradeColor = '#4499ff';
       msg = '😤 아슬아슬...';
@@ -394,7 +331,7 @@ export default class InterviewScene extends Phaser.Scene {
       fontSize: '14px', color: gradeColor, fontFamily: PF
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 320, `정답: ${correct} / 8`, {
+    this.add.text(W / 2, 320, `정답: ${correct} / 5`, {
       fontSize: '14px', color: '#88ccff', fontFamily: PF
     }).setOrigin(0.5);
 
