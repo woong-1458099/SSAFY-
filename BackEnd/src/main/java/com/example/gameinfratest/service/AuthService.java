@@ -5,6 +5,7 @@ import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.auth.AuthAction;
 import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.auth.KeycloakTokenResponse;
+import com.example.gameinfratest.config.AppUrlProperties;
 import com.example.gameinfratest.config.KeycloakAuthProperties;
 import com.example.gameinfratest.support.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,7 +27,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.GrantedAuthority;
@@ -49,22 +49,21 @@ public class AuthService {
     private static final String SESSION_ACTION_KEY = "auth.bff.action";
     private static final String OIDC_SCOPE = "openid profile email";
 
-    private final String publicBaseUrl;
-    private final String frontendBaseUrl;
+    private final List<String> publicBaseUrls;
+    private final List<String> frontendBaseUrls;
     private final KeycloakAuthProperties keycloakAuthProperties;
     private final UserService userService;
     private final JwtDecoder jwtDecoder;
     private final RestClient restClient;
 
     public AuthService(
-            @Value("${app.urls.public-base-url:}") String publicBaseUrl,
-            @Value("${app.urls.frontend-base-url:}") String frontendBaseUrl,
+            AppUrlProperties appUrlProperties,
             KeycloakAuthProperties keycloakAuthProperties,
             UserService userService,
             JwtDecoder jwtDecoder
     ) {
-        this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
-        this.frontendBaseUrl = trimTrailingSlash(frontendBaseUrl);
+        this.publicBaseUrls = appUrlProperties.configuredPublicBaseUrls();
+        this.frontendBaseUrls = appUrlProperties.configuredFrontendBaseUrls();
         this.keycloakAuthProperties = keycloakAuthProperties;
         this.userService = userService;
         this.jwtDecoder = jwtDecoder;
@@ -76,8 +75,8 @@ public class AuthService {
         if (!keycloakAuthProperties.enabled()) {
             return;
         }
-        requireConfiguredBaseUrl(publicBaseUrl, "app.urls.public-base-url");
-        requireConfiguredBaseUrl(frontendBaseUrl, "app.urls.frontend-base-url");
+        requireConfiguredBaseUrls(publicBaseUrls, "app.urls.public-base-urls");
+        requireConfiguredBaseUrls(frontendBaseUrls, "app.urls.frontend-base-urls");
     }
 
     public String buildAuthorizationUrl(HttpSession session, HttpServletRequest request, AuthAction action) {
@@ -86,7 +85,7 @@ public class AuthService {
         String state = UUID.randomUUID().toString().replace("-", "");
         String verifier = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
         String challenge = createCodeChallenge(verifier);
-        String callbackUri = callbackUri();
+        String callbackUri = callbackUri(request);
 
         session.setAttribute(SESSION_STATE_KEY, state);
         session.setAttribute(SESSION_VERIFIER_KEY, verifier);
@@ -142,9 +141,10 @@ public class AuthService {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_STATE_INVALID", "authentication state is invalid");
         }
 
+        String callbackUri = callbackUri(request);
         log.info("auth callback received sessionId={} codePresent={} callbackUri={} keycloakServer={}",
-                session.getId(), true, callbackUri(), keycloakAuthProperties.serverRealmUrl());
-        KeycloakTokenResponse tokenResponse = exchangeCode(code, verifier, callbackUri());
+                session.getId(), true, callbackUri, keycloakAuthProperties.serverRealmUrl());
+        KeycloakTokenResponse tokenResponse = exchangeCode(code, verifier, callbackUri);
         Jwt jwt = jwtDecoder.decode(tokenResponse.accessToken());
         UserResponse user = userService.upsertFromJwt(jwt);
 
@@ -200,19 +200,19 @@ public class AuthService {
         }
 
         Map<String, Object> uriVariables = new java.util.LinkedHashMap<>();
-        uriVariables.put("postLogoutRedirectUri", frontendRootUri());
+        uriVariables.put("postLogoutRedirectUri", frontendRootUri(request));
         uriVariables.put("clientId", keycloakAuthProperties.clientId());
         if (resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank()) {
             uriVariables.put("idTokenHint", resolvedIdTokenHint);
         }
 
         String logoutUrl = builder.encode().buildAndExpand(uriVariables).toUriString();
-        log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
+        log.info("auth logout prepared redirect={} idTokenHintPresent={}", frontendRootUri(request), resolvedIdTokenHint != null && !resolvedIdTokenHint.isBlank());
         return new LogoutResponse(logoutUrl);
     }
 
-    public String frontendRootUri() {
-        return requireConfiguredBaseUrl(frontendBaseUrl, "app.urls.frontend-base-url") + "/";
+    public String frontendRootUri(HttpServletRequest request) {
+        return resolveConfiguredBaseUrl(request, frontendBaseUrls, "app.urls.frontend-base-urls") + "/";
     }
 
     private KeycloakTokenResponse exchangeCode(String code, String verifier, String callbackUri) {
@@ -247,8 +247,8 @@ public class AuthService {
         }
     }
 
-    private String callbackUri() {
-        return requireConfiguredBaseUrl(publicBaseUrl, "app.urls.public-base-url") + "/api/auth/callback";
+    private String callbackUri(HttpServletRequest request) {
+        return resolveConfiguredBaseUrl(request, publicBaseUrls, "app.urls.public-base-urls") + "/api/auth/callback";
     }
 
     private String trimTrailingSlash(String value) {
@@ -286,6 +286,83 @@ public class AuthService {
         } catch (URISyntaxException exception) {
             throw new IllegalStateException(propertyName + " must be a valid URL", exception);
         }
+    }
+
+    private List<String> requireConfiguredBaseUrls(List<String> values, String propertyName) {
+        if (values == null || values.isEmpty()) {
+            throw new IllegalStateException(propertyName + " must not be blank");
+        }
+        return values.stream()
+                .map(value -> requireConfiguredBaseUrl(value, propertyName))
+                .distinct()
+                .toList();
+    }
+
+    private String resolveConfiguredBaseUrl(HttpServletRequest request, List<String> configuredBaseUrls, String propertyName) {
+        List<String> validatedBaseUrls = requireConfiguredBaseUrls(configuredBaseUrls, propertyName);
+        if (validatedBaseUrls.size() == 1) {
+            return validatedBaseUrls.get(0);
+        }
+
+        String requestBaseUrl = requestBaseUrl(request);
+        if (requestBaseUrl != null) {
+            for (String configuredBaseUrl : validatedBaseUrls) {
+                if (sameBaseUrl(configuredBaseUrl, requestBaseUrl)) {
+                    return configuredBaseUrl;
+                }
+            }
+            log.warn("request base url did not match configured property={} requestBaseUrl={} configuredBaseUrls={}",
+                    propertyName, requestBaseUrl, validatedBaseUrls);
+        }
+
+        return validatedBaseUrls.get(0);
+    }
+
+    private String requestBaseUrl(HttpServletRequest request) {
+        if (request == null || request.getScheme() == null || request.getServerName() == null || request.getServerName().isBlank()) {
+            return null;
+        }
+
+        String scheme = request.getScheme().toLowerCase(Locale.ROOT);
+        String host = request.getServerName().toLowerCase(Locale.ROOT);
+        int port = request.getServerPort();
+        boolean defaultPort = ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
+
+        if (port <= 0 || defaultPort) {
+            return scheme + "://" + host;
+        }
+        return scheme + "://" + host + ":" + port;
+    }
+
+    private boolean sameBaseUrl(String configuredBaseUrl, String requestBaseUrl) {
+        try {
+            URI configuredUri = new URI(configuredBaseUrl);
+            URI requestUri = new URI(requestBaseUrl);
+            return configuredUri.getScheme().equalsIgnoreCase(requestUri.getScheme())
+                    && configuredUri.getHost().equalsIgnoreCase(requestUri.getHost())
+                    && effectivePort(configuredUri) == effectivePort(requestUri)
+                    && normalizePath(configuredUri.getPath()).equals(normalizePath(requestUri.getPath()));
+        } catch (URISyntaxException exception) {
+            return configuredBaseUrl.equalsIgnoreCase(requestBaseUrl);
+        }
+    }
+
+    private int effectivePort(URI uri) {
+        if (uri.getPort() >= 0) {
+            return uri.getPort();
+        }
+        return switch (uri.getScheme().toLowerCase(Locale.ROOT)) {
+            case "http" -> 80;
+            case "https" -> 443;
+            default -> -1;
+        };
+    }
+
+    private String normalizePath(String path) {
+        if (path == null || path.isBlank() || "/".equals(path)) {
+            return "";
+        }
+        return trimTrailingSlash(path);
     }
 
     private void clearPendingAuth(HttpSession session) {
