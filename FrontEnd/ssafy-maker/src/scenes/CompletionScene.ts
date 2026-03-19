@@ -1,8 +1,18 @@
 import Phaser from "phaser";
+import type { EndingFlowPayload } from "@features/progression/types/ending";
 import { SceneKey } from "@shared/enums/sceneKey";
 
 export class CompletionScene extends Phaser.Scene {
-  private resultData: any;
+  private resultData: EndingFlowPayload = {
+    fe: 0,
+    be: 0,
+    teamwork: 0,
+    luck: 0,
+    hp: 0,
+    week: 6,
+    dayLabel: "금요일",
+    timeLabel: "밤"
+  };
   private FONT_FAMILY = 'PFStardustBold';
   
   private readonly narrationTexts = [
@@ -26,6 +36,19 @@ export class CompletionScene extends Phaser.Scene {
 
   constructor() {
     super(SceneKey.Completion);
+  }
+
+  init(data?: Partial<EndingFlowPayload>): void {
+    this.resultData = {
+      fe: data?.fe ?? 0,
+      be: data?.be ?? 0,
+      teamwork: data?.teamwork ?? 0,
+      luck: data?.luck ?? 0,
+      hp: data?.hp ?? 0,
+      week: data?.week ?? 6,
+      dayLabel: data?.dayLabel ?? "금요일",
+      timeLabel: data?.timeLabel ?? "밤"
+    };
   }
 
   preload(): void {
@@ -197,7 +220,7 @@ export class CompletionScene extends Phaser.Scene {
 
     trueEndingBtn.on("pointerdown", () => {
       this.sound.stopAll();
-      this.scene.start((SceneKey as any).TrueEnding || 'TrueEndingScene');
+      this.scene.start(SceneKey.FinalSummary, this.resultData);
     });
 
     uiContainer.add([completeTitle, trueEndingBtn]);
@@ -213,7 +236,7 @@ export class CompletionScene extends Phaser.Scene {
     skipBtn.on('pointerdown', () => {
       this.sound.stopAll();
       if (this.typewriterEvent) this.typewriterEvent.destroy();
-      this.scene.start((SceneKey as any).NewCharacter || 'NewCharacterScene');
+      this.scene.start(SceneKey.FinalSummary, this.resultData);
     });
   }
 }

@@ -14,17 +14,29 @@ import {
   UI_PANEL_INNER_BORDER_COLOR,
   UI_PANEL_OUTER_BORDER_COLOR
 } from "@features/ui/components/uiPrimitives";
-import { PLACE_BACKGROUND_KEYS } from "@shared/constants/placeBackgroundKeys";
 import {
   NPC_DIALOGUE_SCRIPTS,
   type DialogueAction,
   type DialogueChoice,
+  type DialogueStatKey,
   type DialogueNode,
   type NpcDialogueId,
-  type NpcDialogueScript,
-  type StoryStatKey
+  type NpcDialogueScript
 } from "@features/story/npcDialogueScripts";
-import { buildDialogueScriptFromFixedEventJson } from "@features/story/jsonDialogueAdapter";
+import {
+  buildDialogueScriptFromFixedEventEntry,
+  buildDialogueScriptFromFixedEventJson,
+  findMatchingFixedEvent,
+  getFixedEventEntries
+} from "@features/story/jsonDialogueAdapter";
+import {
+  buildFixedEventNpcPresentation,
+  getDefaultFixedEventNpcSlotsForArea,
+  getFixedEventPresentNpcs,
+  resolveCurrentFixedEventLocation,
+  type FixedEventNpcSlot,
+  type FixedEventRenderArea
+} from "@features/story/fixedEventNpcPresence";
 import {
   clearDialogueChoices,
   createDialogueUi,
@@ -33,12 +45,8 @@ import {
   type DialogueChoiceView
 } from "@features/story/dialogueUi";
 import {
-  buildAreaCollisionConfigFromTmxText,
-  buildInteractionZonesFromTmxText,
   findNearestWalkablePoint,
   isBlockedByAreaCollision,
-  mapPointToAreaBounds,
-  mapSizeToAreaBounds,
   parseTmxMap,
   type AreaCollisionConfig,
   type AreaRenderBounds
@@ -65,6 +73,8 @@ import {
 import {
   createDefaultWeeklyPlan,
   WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS,
+  WEEKLY_PLAN_DAY_INDICES,
+  WEEKLY_PLAN_TIME_LABELS,
   getCurrentWeeklyPlanSlotKey,
   getWeeklyPlanOption,
   getWeeklyPlanSlotIndex,
@@ -76,6 +86,28 @@ import {
 } from "@features/planning/weeklyPlan";
 import { createWeeklyPlannerModal } from "@features/planning/weeklyPlannerModal";
 import { createWeeklyPlanActivityModal } from "@features/planning/weeklyPlanActivityModal";
+import {
+  applyMainSceneBackgroundTexture,
+  createMainSceneAudioSettingsBindings,
+  createMainSceneBackgroundImage,
+  destroyMainSceneLoopSound,
+  syncMainSceneAreaBgm
+} from "@features/main-scene/mainSceneMedia";
+import {
+  buildCampusArea,
+  buildDowntownArea,
+  buildWorldArea,
+  type DowntownBuildingView
+} from "@features/main-scene/areas/areaSceneBuilders";
+import {
+  AREA_ENTRY_POINT,
+  AREA_LABEL,
+  WORLD_PLACE_NODES,
+  type AreaId,
+  type WorldPlaceId,
+  type WorldPlaceNode
+} from "@features/main-scene/areas/areaSceneConfig";
+import { findNearestDowntownBuilding } from "@features/place/downtownBuildings";
 import {
   getDowntownBuildingBackgroundTextureKey,
   getDowntownBuildingConfig,
@@ -99,19 +131,7 @@ import { createSettingsPage as createSettingsPageContent, createStatsPage as cre
 
 type TabKey = "inventory" | "stats" | "settings" | "save";
 type EquipmentSlotKey = "keyboard" | "mouse";
-type AreaId = "world" | "downtown" | "campus";
-type WorldPlaceId = "home" | "downtown" | "campus" | "cafe" | "store";
 type StatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
-
-type WorldPlaceNode = {
-  id: WorldPlaceId;
-  label: string;
-  x: number;
-  y: number;
-  zoneWidth: number;
-  zoneHeight: number;
-  movable: boolean;
-};
 
 type AreaNpcConfig = {
   dialogueId: NpcDialogueId;
@@ -120,14 +140,22 @@ type AreaNpcConfig = {
   labelOffsetX: number;
   labelOffsetY: number;
   flashColor: number;
+  textureKey?: string;
 };
 
 type AreaNpcView = {
-  area: Exclude<AreaId, "world">;
+  area: AreaId;
   config: AreaNpcConfig;
-  marker: Phaser.GameObjects.Rectangle;
+  marker: Phaser.GameObjects.Shape | Phaser.GameObjects.Sprite;
   label: Phaser.GameObjects.Text;
+  portrait?: Phaser.GameObjects.Image;
+  eventId?: string;
+  isScheduled?: boolean;
 };
+
+type ScheduledNpcSlot = FixedEventNpcSlot;
+type ScheduledNpcArea = FixedEventRenderArea;
+type ScheduledNpcPositionMap = Record<ScheduledNpcArea, Record<(typeof TIME_CYCLE)[number], ScheduledNpcSlot[]>>;
 
 type InventoryItemTemplate = {
   templateId: string;
@@ -286,25 +314,6 @@ const STARTER_ITEM_TEMPLATES: InventoryItemTemplate[] = [
   SHOP_ITEM_TEMPLATES[5]
 ];
 
-const WORLD_PLACE_NODES: WorldPlaceNode[] = [
-  { id: "campus", label: "\uCEA0\uD37C\uC2A4", x: 190, y: 180, zoneWidth: 190, zoneHeight: 150, movable: true },
-  { id: "home", label: "\uC9D1", x: 500, y: 210, zoneWidth: 180, zoneHeight: 150, movable: false },
-  { id: "store", label: "\uD3B8\uC758\uC810", x: 830, y: 250, zoneWidth: 150, zoneHeight: 120, movable: false },
-  { id: "cafe", label: "\uCE74\uD398", x: 420, y: 520, zoneWidth: 150, zoneHeight: 120, movable: false },
-  { id: "downtown", label: "\uBC88\uD654\uAC00", x: 730, y: 180, zoneWidth: 170, zoneHeight: 140, movable: true }
-];
-
-const AREA_LABEL: Record<AreaId, string> = {
-  world: "\uC804\uCCB4 \uC9C0\uB3C4",
-  downtown: "\uBC88\uD654\uAC00",
-  campus: "\uCEA0\uD37C\uC2A4"
-};
-
-const AREA_ENTRY_POINT: Record<Exclude<AreaId, "world">, { x: number; y: number }> = {
-  downtown: { x: 216, y: 520 },
-  campus: { x: 220, y: 520 }
-};
-
 const DOWNTOWN_BUILDINGS: Array<{ id: DowntownBuildingId; label: string; x: number; y: number; w: number; h: number; color: number }> = [
   { id: "gym", label: "\uD5EC\uC2A4\uC7A5", x: 290, y: 278, w: 150, h: 106, color: 0xb79f86 },
   { id: "ramenthings", label: "라멘띵스", x: 492, y: 262, w: 166, h: 108, color: 0xd4a875 },
@@ -343,7 +352,9 @@ type ScrollableTabPage = {
   offset: number;
 };
 
-type MainSavePayload = SaveGamePayload<AreaId, WorldPlaceId, StatKey, EquipmentSlotKey, WeeklyPlanOptionId>;
+type MainSavePayload = SaveGamePayload<AreaId, WorldPlaceId, StatKey, EquipmentSlotKey, WeeklyPlanOptionId> & {
+  completedFixedEventIds: string[];
+};
 
 type MainSceneInitData = {
   saveSlotId?: string;
@@ -365,6 +376,18 @@ const STAT_LABEL: Record<StatKey, string> = {
   stress: "\uC2A4\uD2B8\uB808\uC2A4"
 };
 
+const MINIGAME_SCENE_MAP: Record<string, string> = {
+  gym: "GymScene",
+  hof: "DrinkingScene",
+  ramenthings: "CookingScene",
+  lottery: "LottoScene",
+  playDrinking: "DrinkingScene",
+  playInterview: "InterviewScene",
+  playGym: "GymScene",
+  playRhythm: "RhythmScene",
+  playCooking: "CookingScene"
+};
+
 const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
   downtown: [
     {
@@ -377,26 +400,127 @@ const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
     }
   ],
   campus: [
-    {
-      dialogueId: "campus_senior",
-      x: 924,
-      y: 390,
-      labelOffsetX: -36,
-      labelOffsetY: 24,
-      flashColor: 0x3f6e90
-    },
-    {
-      dialogueId: "campus_script_npc",
-      x: 760,
-      y: 442,
-      labelOffsetX: -42,
-      labelOffsetY: 24,
-      flashColor: 0x7a56b8
-    }
+    { dialogueId: "campus_senior", x: 924, y: 390, labelOffsetX: -36, labelOffsetY: 24, flashColor: 0x3f6e90 }
   ]
 };
 
+const FIXED_EVENT_NPC_ASSET_KEYS: Partial<Record<string, string>> = {
+  NPC_CLASSMATE_MYUNGJIN: "fixed-npc-myungjin",
+  NPC_CLASSMATE_JIWOO: "fixed-npc-jiwoo",
+  NPC_CLASSMATE_YEONWOONG: "fixed-npc-yeonwoong",
+  NPC_CLASSMATE_HYORYEON: "fixed-npc-hyoryeon",
+  NPC_CLASSMATE_JONGMIN: "fixed-npc-jongmin",
+  NPC_PRO_SUNMI: "fixed-npc-sunmi",
+  NPC_PRO_DOYEON: "fixed-npc-doyeon",
+  NPC_CONSULTANT_HYUNSEOK: "fixed-npc-hyunseok",
+};
+
+const FIXED_EVENT_NPC_LABELS: Partial<Record<string, string>> = {
+  NPC_CLASSMATE_MYUNGJIN: "명진",
+  NPC_CLASSMATE_JIWOO: "지우",
+  NPC_CLASSMATE_YEONWOONG: "연웅",
+  NPC_CLASSMATE_HYORYEON: "효련",
+  NPC_CLASSMATE_JONGMIN: "종민",
+  NPC_PRO_SUNMI: "조선미 프로",
+  NPC_PRO_DOYEON: "김도연 프로",
+  NPC_CONSULTANT_HYUNSEOK: "이현석 컨설턴트",
+};
+
+const FIXED_EVENT_NPC_DISPLAY_LABELS: Partial<Record<string, string>> = {
+  NPC_CLASSMATE_MYUNGJIN: "명진",
+  NPC_CLASSMATE_JIWOO: "지우",
+  NPC_CLASSMATE_YEONWOONG: "연웅",
+  NPC_CLASSMATE_HYORYEON: "효련",
+  NPC_CLASSMATE_JONGMIN: "종민",
+  NPC_PRO_SUNMI: "조선미 프로",
+  NPC_PRO_DOYEON: "김도연 프로",
+  NPC_CONSULTANT_HYUNSEOK: "이현석 컨설턴트",
+};
+
+const SCHEDULED_NPC_SLOT_COUNT = 4;
+const SCHEDULED_NPC_POSITION_MAP: ScheduledNpcPositionMap = {
+  campus: {
+    [TIME_CYCLE[0]]: [
+      { x: 250, y: 214, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 330, y: 238, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 410, y: 214, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 490, y: 238, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[1]]: [
+      { x: 600, y: 292, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 678, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 756, y: 292, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 834, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[2]]: [
+      { x: 280, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 360, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 440, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 520, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[3]]: [
+      { x: 690, y: 418, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 764, y: 444, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 838, y: 418, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 912, y: 444, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+  },
+  downtown: {
+    [TIME_CYCLE[0]]: [
+      { x: 272, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 350, y: 274, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 428, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 506, y: 274, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[1]]: [
+      { x: 520, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 598, y: 358, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 676, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 754, y: 358, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[2]]: [
+      { x: 346, y: 438, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 424, y: 464, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 502, y: 438, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 580, y: 464, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[3]]: [
+      { x: 688, y: 432, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 762, y: 456, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 836, y: 432, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 910, y: 456, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+  },
+  world: {
+    [TIME_CYCLE[0]]: [
+      { x: 448, y: 246, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 510, y: 272, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 572, y: 246, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 634, y: 272, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[1]]: [
+      { x: 452, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 514, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 576, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 638, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[2]]: [
+      { x: 444, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 506, y: 356, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 568, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 630, y: 356, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+    [TIME_CYCLE[3]]: [
+      { x: 438, y: 380, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
+      { x: 500, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
+      { x: 562, y: 380, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
+      { x: 624, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
+    ],
+  },
+};
+
 const AREA_TILESET_IMAGE_KEY = "map_tiles_full_asset";
+const AREA_TILESET_MARGIN = 0;
 const AREA_TMX_TEXT_KEYS: Record<AreaId, string> = {
   world: "map_tmx_world",
   downtown: "map_tmx_downtown",
@@ -411,7 +535,7 @@ const AREA_COLLISION_LAYER_NAMES: Record<AreaId, string[]> = {
 
 const AREA_INTERACTION_LAYER_NAMES: Record<AreaId, string[]> = {
   world: ["build"],
-  downtown: ["tile layer 4", "tile layer 5(4)"],
+  downtown: ["build(total)"],
   campus: ["tile layer 2", "tile layer 4(2)"]
 };
 
@@ -437,6 +561,8 @@ export class MainScene extends Phaser.Scene {
   private playerFacing: "left" | "right" | "up" | "down" = "down";
   private areaNpcViews: AreaNpcView[] = [];
   private activeAreaNpcView: AreaNpcView | null = null;
+  private scheduledNpcViews: AreaNpcView[] = [];
+  private downtownBuildingViews: DowntownBuildingView[] = [];
   private worldMapRoot?: Phaser.GameObjects.Container;
   private worldForegroundRoot?: Phaser.GameObjects.Container;
   private downtownMapRoot?: Phaser.GameObjects.Container;
@@ -469,6 +595,7 @@ export class MainScene extends Phaser.Scene {
   private selectedSaveSlotId = "slot-1";
   private readonly uiFontFamily = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
   private readonly audioManager = new AudioManager();
+  private areaBgm?: Phaser.Sound.BaseSound;
   private readonly uiPanelInnerBorderColor = UI_PANEL_INNER_BORDER_COLOR;
   private readonly uiPanelOuterBorderColor = UI_PANEL_OUTER_BORDER_COLOR;
   private systemToastRoot?: Phaser.GameObjects.Container;
@@ -489,6 +616,8 @@ export class MainScene extends Phaser.Scene {
   private weeklyPlan: WeeklyPlanOptionId[] = createDefaultWeeklyPlan();
   private weeklyPlanWeek = 0;
   private lastAppliedWeeklyPlanSlotKey: string | null = null;
+  private completedFixedEventIds: string[] = [];
+  private activeFixedEventId: string | null = null;
 
   private readonly inventorySlots: Array<InventoryItemStack | null> = Array.from({ length: 16 }, () => null);
   private readonly equippedSlots: Record<EquipmentSlotKey, InventoryItemTemplate | null> = {
@@ -556,6 +685,14 @@ export class MainScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayerAvatarAssets(this);
+    this.load.image("fixed-npc-myungjin", "assets/game/npc/myungjin.png");
+    this.load.image("fixed-npc-jiwoo", "assets/game/npc/jiwoo.png");
+    this.load.image("fixed-npc-yeonwoong", "assets/game/npc/yeonwoong.png");
+    this.load.image("fixed-npc-hyoryeon", "assets/game/npc/hyoryeon.png");
+    this.load.image("fixed-npc-jongmin", "assets/game/npc/jongmin.png");
+    this.load.image("fixed-npc-sunmi", "assets/game/npc/sunmi-pro.png");
+    this.load.image("fixed-npc-doyeon", "assets/game/npc/doyeon-pro.png");
+    this.load.image("fixed-npc-hyunseok", "assets/game/npc/hyunseok-consultant.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.ui_practice, "assets/game/ui/UIpractice.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.rest_api_db, "assets/game/ui/DBconsult.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.team_project, "assets/game/ui/TeamPJT.png");
@@ -568,6 +705,7 @@ export class MainScene extends Phaser.Scene {
     this.load.image("shop-item-soju", "assets/game/ui/conv_items/soju.png");
     this.load.image("shop-item-keyboard", "assets/game/ui/conv_items/keyboard.png");
     this.load.image("shop-item-mouse", "assets/game/ui/conv_items/mouse.png");
+
   }
 
   create(): void {
@@ -577,6 +715,7 @@ export class MainScene extends Phaser.Scene {
 
     this.buildAreaMaps();
     this.createAreaNpcViews();
+    this.createScheduledNpcViews();
 
     this.playerAvatar = this.getSelectedPlayerAvatar();
     this.createPlayerAvatar();
@@ -618,6 +757,8 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.syncPlayerAvatarVisuals, this);
       this.input.off("wheel", this.handleMenuWheel, this);
+      destroyMainSceneLoopSound(this.areaBgm);
+      this.areaBgm = undefined;
       this.hud.destroy();
       this.pendingInventoryPickup?.timer.destroy();
       this.pendingInventoryPickup = undefined;
@@ -708,7 +849,7 @@ export class MainScene extends Phaser.Scene {
         this.closeShop();
         return;
       }
-      this.hud.setInteractionPrompt("E / ESC 닫기");
+      this.hud.setInteractionPrompt("E / ESC로 닫기");
       return;
     }
 
@@ -719,12 +860,16 @@ export class MainScene extends Phaser.Scene {
         this.closePlacePopup();
         return;
       }
-      this.hud.setInteractionPrompt("E 닫기");
+      this.hud.setInteractionPrompt("E로 닫기");
       return;
     }
 
     if (!this.endingFlowStarted && this.plannerKey && Phaser.Input.Keyboard.JustDown(this.plannerKey)) {
       this.openWeeklyPlannerPopup();
+      return;
+    }
+
+    if (this.maybeStartFixedEvent()) {
       return;
     }
 
@@ -740,14 +885,20 @@ export class MainScene extends Phaser.Scene {
     if (this.currentArea === "world") {
       this.player.setVelocity(move.x * GAME_CONSTANTS.PLAYER_SPEED, move.y * GAME_CONSTANTS.PLAYER_SPEED);
       this.updatePlayerAvatarAnimation(move);
+      const nearbyNpcView = this.getNearestAreaNpcView(this.currentArea, 74);
+      this.refreshAreaNpcHighlight(nearbyNpcView);
       const nearbyPlace = this.getNearestWorldPlace(74);
       this.highlightWorldPlace(nearbyPlace?.id ?? null);
       this.hud.setInteractionPrompt(
-        nearbyPlace
-          ? this.withPlannerPrompt("E \uC7A5\uC18C \uC774\uB3D9/\uAE30\uB2A5 \uC0AC\uC6A9  |  WASD / Arrow \uC774\uB3D9  |  ESC \uBA54\uB274")
-          : this.withPlannerPrompt("WASD / Arrow \uC774\uB3D9  |  ESC \uBA54\uB274")
+        nearbyNpcView
+          ? this.withPlannerPrompt("E 대화하기  |  WASD / Arrow 이동  |  ESC 메뉴")
+          : nearbyPlace
+            ? this.withPlannerPrompt("E 장소 이동/상호작용  |  WASD / Arrow 이동  |  ESC 메뉴")
+            : this.withPlannerPrompt("WASD / Arrow 이동  |  ESC 메뉴")
       );
-      if (nearbyPlace && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      if (nearbyNpcView && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+        this.handleNpcInteraction(nearbyNpcView);
+      } else if (nearbyPlace && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
         this.handleWorldPlaceInteraction(nearbyPlace);
       }
       this.enforceAreaCollision();
@@ -759,246 +910,56 @@ export class MainScene extends Phaser.Scene {
     this.updatePlayerAvatarAnimation(move);
 
     const nearbyNpcView = this.getNearestAreaNpcView(this.currentArea, 74);
+    const nearbyDowntownBuilding = this.currentArea === "downtown" ? this.getNearestDowntownBuilding(96) : null;
     this.refreshAreaNpcHighlight(nearbyNpcView);
-    const prompt = nearbyNpcView ? "E \uB300\uD654\uD558\uAE30  |  Q \uC804\uCCB4 \uC9C0\uB3C4" : "Q \uC804\uCCB4 \uC9C0\uB3C4";
+    this.refreshDowntownBuildingHighlight(nearbyDowntownBuilding);
+    const prompt = nearbyNpcView
+      ? "E \uB300\uD654\uD558\uAE30  |  Q \uC804\uCCB4 \uC9C0\uB3C4"
+      : nearbyDowntownBuilding
+        ? "E \uAC74\uBB3C \uC0C1\uD638\uC791\uC6A9  |  Q \uC804\uCCB4 \uC9C0\uB3C4"
+        : "Q \uC804\uCCB4 \uC9C0\uB3C4";
     this.hud.setInteractionPrompt(this.withPlannerPrompt(prompt));
 
     if (nearbyNpcView && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       this.handleNpcInteraction(nearbyNpcView);
+    } else if (nearbyDowntownBuilding && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      this.openDowntownBuildingPopup(nearbyDowntownBuilding);
     }
 
     this.enforceAreaCollision();
   }
 
   private buildAreaMaps(): void {
-    const worldRoot = this.add.container(0, 0);
-    worldRoot.setDepth(0);
-    const worldForegroundRoot = this.add.container(0, 0);
-    worldForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
-    const worldObjects: Phaser.GameObjects.GameObject[] = [];
-    const worldTmxBounds = this.buildAreaTmxBackground(worldRoot, worldForegroundRoot, "world", AREA_TMX_TEXT_KEYS.world);
-    const worldUsesTmx = Boolean(worldTmxBounds);
-    const worldTmxText = worldTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.world) : "";
-    this.areaCollisionConfigs.world = worldTmxBounds
-      ? buildAreaCollisionConfigFromTmxText(
-          typeof worldTmxText === "string" ? worldTmxText : "",
-          worldTmxBounds,
-          AREA_COLLISION_LAYER_NAMES.world
-        ) ?? undefined
-      : undefined;
+    const buildContext = {
+      scene: this,
+      px: (value: number) => this.px(value),
+      getBodyStyle: (sizePx: number, color?: string, fontStyle?: "normal" | "bold") =>
+        this.getBodyStyle(sizePx, color, fontStyle),
+      buildAreaTmxBackground: (
+        root: Phaser.GameObjects.Container,
+        foregroundRoot: Phaser.GameObjects.Container,
+        areaId: AreaId,
+        textKey: string
+      ) => this.buildAreaTmxBackground(root, foregroundRoot, areaId, textKey)
+    };
 
-    if (!worldUsesTmx) {
-      const worldBg = this.add.rectangle(
-        this.px(GAME_CONSTANTS.WIDTH / 2),
-        this.px(GAME_CONSTANTS.HEIGHT / 2),
-        GAME_CONSTANTS.WIDTH,
-        GAME_CONSTANTS.HEIGHT,
-        0x8aaa73,
-        1
-      );
-      const worldBoard = this.add.rectangle(
-        this.px(GAME_CONSTANTS.WIDTH / 2),
-        this.px(GAME_CONSTANTS.HEIGHT / 2),
-        this.px(GAME_CONSTANTS.WIDTH - 150),
-        this.px(GAME_CONSTANTS.HEIGHT - 120),
-        0xd6c49e,
-        1
-      );
-      worldBoard.setStrokeStyle(4, 0x7d5f36, 1);
-      const horizontalRoad = this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), 820, 56, 0xb6986f, 1);
-      horizontalRoad.setStrokeStyle(2, 0x7d5f36, 1);
-      const verticalRoad = this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), 56, 430, 0xb6986f, 1);
-      verticalRoad.setStrokeStyle(2, 0x7d5f36, 1);
-      worldObjects.push(worldBg, worldBoard, horizontalRoad, verticalRoad);
-    }
+    const worldArea = buildWorldArea(buildContext);
+    this.worldMapRoot = worldArea.root;
+    this.worldForegroundRoot = worldArea.foregroundRoot;
+    this.worldPlaceViews = worldArea.placeViews;
+    this.worldPlaceInteractionZones = worldArea.interactionZones;
+    this.areaCollisionConfigs.world = worldArea.collisionConfig;
 
-    const tmxWorldZones = worldTmxBounds
-      ? buildInteractionZonesFromTmxText(
-          typeof worldTmxText === "string" ? worldTmxText : "",
-          worldTmxBounds,
-          AREA_INTERACTION_LAYER_NAMES.world,
-          WORLD_PLACE_NODES.map((node) => ({ id: node.id, x: node.x, y: node.y })),
-          4,
-          128
-        )
-      : null;
+    const downtownArea = buildDowntownArea(buildContext);
+    this.downtownMapRoot = downtownArea.root;
+    this.downtownForegroundRoot = downtownArea.foregroundRoot;
+    this.downtownBuildingViews = downtownArea.buildingViews;
+    this.areaCollisionConfigs.downtown = downtownArea.collisionConfig;
 
-    const title = this.add.text(
-      this.px(GAME_CONSTANTS.WIDTH / 2),
-      86,
-      "\uC804\uCCB4 \uC9C0\uB3C4",
-      this.getBodyStyle(40, worldUsesTmx ? "#f2ead7" : "#3e2d1a", "bold")
-    );
-    title.setOrigin(0.5);
-    worldObjects.push(title);
-
-    WORLD_PLACE_NODES.forEach((place) => {
-      const mapped = mapPointToAreaBounds(place.x, place.y, worldTmxBounds, (value) => this.px(value));
-      const zone = tmxWorldZones?.[place.id];
-      const mappedZoneSize = zone
-        ? { width: zone.width, height: zone.height }
-        : mapSizeToAreaBounds(place.zoneWidth, place.zoneHeight, worldTmxBounds, (value) => this.px(value));
-      const zoneCenter = zone ? { x: zone.centerX, y: zone.centerY } : mapped;
-      const markerSize = mapSizeToAreaBounds(40, 28, worldTmxBounds, (value) => this.px(value));
-      const marker = this.add.rectangle(zoneCenter.x, zoneCenter.y, markerSize.width, markerSize.height, place.movable ? 0xe7d593 : 0xc9a67f, 1);
-      marker.setStrokeStyle(2, 0x5d4426, 1);
-      marker.setVisible(false);
-
-      const mappedLabel = zone
-        ? { x: zone.centerX, y: zone.centerY + mappedZoneSize.height / 2 + 8 }
-        : mapPointToAreaBounds(place.x, place.y + 28, worldTmxBounds, (value) => this.px(value));
-      const label = this.add.text(mappedLabel.x, mappedLabel.y, place.label, this.getBodyStyle(18, "#3d2d1d", "bold"));
-      label.setOrigin(0.5, 0);
-      label.setVisible(false);
-
-      this.worldPlaceViews[place.id] = { marker, label };
-      this.worldPlaceInteractionZones[place.id] = new Phaser.Geom.Rectangle(
-        this.px(zoneCenter.x - mappedZoneSize.width / 2),
-        this.px(zoneCenter.y - mappedZoneSize.height / 2),
-        this.px(mappedZoneSize.width),
-        this.px(mappedZoneSize.height)
-      );
-      worldObjects.push(marker, label);
-    });
-
-    worldRoot.add(worldObjects);
-    this.worldMapRoot = worldRoot;
-    this.worldForegroundRoot = worldForegroundRoot;
-
-    const downtownRoot = this.add.container(0, 0);
-    downtownRoot.setDepth(0);
-    const downtownForegroundRoot = this.add.container(0, 0);
-    downtownForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
-    const downtownTmxBounds = this.buildAreaTmxBackground(downtownRoot, downtownForegroundRoot, "downtown", AREA_TMX_TEXT_KEYS.downtown);
-    const downtownUsesTmx = Boolean(downtownTmxBounds);
-    const downtownTmxText = downtownTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.downtown) : "";
-    this.areaCollisionConfigs.downtown = downtownTmxBounds
-      ? buildAreaCollisionConfigFromTmxText(
-          typeof downtownTmxText === "string" ? downtownTmxText : "",
-          downtownTmxBounds,
-          AREA_COLLISION_LAYER_NAMES.downtown
-        ) ?? undefined
-      : undefined;
-    const downtownZones = downtownTmxBounds
-      ? buildInteractionZonesFromTmxText(
-          typeof downtownTmxText === "string" ? downtownTmxText : "",
-          downtownTmxBounds,
-          AREA_INTERACTION_LAYER_NAMES.downtown,
-          DOWNTOWN_BUILDINGS.map((building) => ({ id: building.id, x: building.x, y: building.y })),
-          4,
-          96
-        )
-      : null;
-    const areaTitle = this.add.text(
-      this.px(GAME_CONSTANTS.WIDTH / 2),
-      82,
-      "\uBC88\uD654\uAC00",
-      this.getBodyStyle(38, downtownUsesTmx ? "#f2ead7" : "#f4ecd8", "bold")
-    );
-    areaTitle.setOrigin(0.5);
-    const buildingObjects: Phaser.GameObjects.GameObject[] = [];
-    const downtownDecorObjects: Phaser.GameObjects.GameObject[] = [];
-
-    if (!downtownUsesTmx) {
-      const downtownBg = this.add.rectangle(
-        this.px(GAME_CONSTANTS.WIDTH / 2),
-        this.px(GAME_CONSTANTS.HEIGHT / 2),
-        GAME_CONSTANTS.WIDTH,
-        GAME_CONSTANTS.HEIGHT,
-        0x7ea274,
-        1
-      );
-      const downtownRoad = this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT * 0.63), 1120, 170, 0xa78c68, 1);
-      downtownRoad.setStrokeStyle(3, 0x6d522f, 1);
-      const shopFront = this.add.rectangle(this.px(930), this.px(332), 190, 140, 0xd6b98a, 1);
-      shopFront.setStrokeStyle(3, 0x6d522f, 1);
-      const shopSign = this.add.text(930, 332, "\uC0C1\uC810", this.getBodyStyle(27, "#3e2d1a", "bold"));
-      shopSign.setOrigin(0.5);
-      downtownDecorObjects.push(downtownBg, downtownRoad, shopFront, shopSign);
-    }
-
-    DOWNTOWN_BUILDINGS.forEach((building) => {
-      const zone = downtownZones?.[building.id];
-      const mappedCenter = zone
-        ? { x: zone.centerX, y: zone.centerY }
-        : mapPointToAreaBounds(building.x, building.y, downtownTmxBounds, (value) => this.px(value));
-      const mappedSize = zone
-        ? { width: zone.width, height: zone.height }
-        : mapSizeToAreaBounds(building.w, building.h, downtownTmxBounds, (value) => this.px(value));
-
-      const hitBox = this.add.rectangle(
-        mappedCenter.x,
-        mappedCenter.y,
-        mappedSize.width,
-        mappedSize.height,
-        downtownUsesTmx ? 0x000000 : building.color,
-        downtownUsesTmx ? 0.001 : 1
-      );
-      if (!downtownUsesTmx) {
-        hitBox.setStrokeStyle(3, 0x6d522f, 1);
-      }
-      hitBox.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
-        if (this.currentArea !== "downtown" || this.menuOpen || this.shopOpen || this.placePopupOpen) return;
-        this.openDowntownBuildingPopup(building.id);
-      });
-
-      buildingObjects.push(hitBox);
-
-      if (!downtownUsesTmx) {
-        const sign = this.add.rectangle(this.px(building.x), this.px(building.y - building.h / 2 + 16), this.px(building.w - 18), 24, 0xe8d1a7, 1);
-        sign.setStrokeStyle(2, 0x7d5f36, 1);
-        const signLabel = this.add.text(this.px(building.x), this.px(building.y - building.h / 2 + 16), building.label, this.getBodyStyle(15, "#3d2a16", "bold"));
-        signLabel.setOrigin(0.5);
-        buildingObjects.push(sign, signLabel);
-      }
-    });
-
-    downtownRoot.add([...downtownDecorObjects, ...buildingObjects, areaTitle]);
-    downtownRoot.setVisible(false);
-    this.downtownMapRoot = downtownRoot;
-    this.downtownForegroundRoot = downtownForegroundRoot;
-
-    const campusRoot = this.add.container(0, 0);
-    campusRoot.setDepth(0);
-    const campusForegroundRoot = this.add.container(0, 0);
-    campusForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
-    const campusTmxBounds = this.buildAreaTmxBackground(campusRoot, campusForegroundRoot, "campus", AREA_TMX_TEXT_KEYS.campus);
-    const campusUsesTmx = Boolean(campusTmxBounds);
-    const campusTmxText = campusTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.campus) : "";
-    this.areaCollisionConfigs.campus = campusTmxBounds
-      ? buildAreaCollisionConfigFromTmxText(
-          typeof campusTmxText === "string" ? campusTmxText : "",
-          campusTmxBounds,
-          AREA_COLLISION_LAYER_NAMES.campus
-        ) ?? undefined
-      : undefined;
-    const campusObjects: Phaser.GameObjects.GameObject[] = [];
-    if (!campusUsesTmx) {
-      const campusBg = this.add.rectangle(
-        this.px(GAME_CONSTANTS.WIDTH / 2),
-        this.px(GAME_CONSTANTS.HEIGHT / 2),
-        GAME_CONSTANTS.WIDTH,
-        GAME_CONSTANTS.HEIGHT,
-        0x86ad82,
-        1
-      );
-      const lawn = this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT * 0.62), 980, 280, 0x9dc08a, 1);
-      lawn.setStrokeStyle(3, 0x5a7e4f, 1);
-      const building = this.add.rectangle(this.px(920), this.px(300), 280, 180, 0xd7c9a9, 1);
-      building.setStrokeStyle(3, 0x7d5f36, 1);
-      const buildingLabel = this.add.text(920, 300, "\uAC15\uC758\uB3D9", this.getBodyStyle(30, "#3e2d1a", "bold"));
-      buildingLabel.setOrigin(0.5);
-      const tree1 = this.add.rectangle(286, 280, 64, 64, 0x6f955f, 1).setStrokeStyle(2, 0x3f5f32, 1);
-      const tree2 = this.add.rectangle(352, 330, 64, 64, 0x6f955f, 1).setStrokeStyle(2, 0x3f5f32, 1);
-      campusObjects.push(campusBg, lawn, building, buildingLabel, tree1, tree2);
-    }
-    const campusTitle = this.add.text(this.px(GAME_CONSTANTS.WIDTH / 2), 82, "\uCEA0\uD37C\uC2A4", this.getBodyStyle(38, "#f2ead7", "bold"));
-    campusTitle.setOrigin(0.5);
-    campusObjects.push(campusTitle);
-    campusRoot.add(campusObjects);
-    campusRoot.setVisible(false);
-    this.campusMapRoot = campusRoot;
-    this.campusForegroundRoot = campusForegroundRoot;
+    const campusArea = buildCampusArea(buildContext);
+    this.campusMapRoot = campusArea.root;
+    this.campusForegroundRoot = campusArea.foregroundRoot;
+    this.areaCollisionConfigs.campus = campusArea.collisionConfig;
   }
 
 
@@ -1097,7 +1058,7 @@ export class MainScene extends Phaser.Scene {
             AREA_TILESET_IMAGE_KEY,
             parsed.tileWidth,
             parsed.tileHeight,
-            0,
+            AREA_TILESET_MARGIN,
             0,
             tileset.firstgid
           )
@@ -1105,7 +1066,15 @@ export class MainScene extends Phaser.Scene {
         .filter((tileset): tileset is Phaser.Tilemaps.Tileset => Boolean(tileset));
 
       if (tilesets.length === 0) {
-        const fallbackTileset = map.addTilesetImage(`${textKey}_tileset_fallback`, AREA_TILESET_IMAGE_KEY, parsed.tileWidth, parsed.tileHeight, 0, 0, 1);
+        const fallbackTileset = map.addTilesetImage(
+          `${textKey}_tileset_fallback`,
+          AREA_TILESET_IMAGE_KEY,
+          parsed.tileWidth,
+          parsed.tileHeight,
+          AREA_TILESET_MARGIN,
+          0,
+          1
+        );
         if (fallbackTileset) {
           tilesets.push(fallbackTileset);
         }
@@ -1142,6 +1111,12 @@ export class MainScene extends Phaser.Scene {
 
   private enterArea(area: AreaId, worldPlace: WorldPlaceId = this.lastSelectedWorldPlace): void {
     this.currentArea = area;
+    this.areaBgm = syncMainSceneAreaBgm({
+      scene: this,
+      audioManager: this.audioManager,
+      currentBgm: this.areaBgm,
+      area
+    });
     this.closeShop();
     this.closeDialogue();
     this.closePlacePopup();
@@ -1165,6 +1140,7 @@ export class MainScene extends Phaser.Scene {
       this.highlightWorldPlace(spawnFrom.id);
       this.refreshAreaNpcVisibility(area);
       this.refreshAreaNpcHighlight(null);
+      this.refreshDowntownBuildingHighlight(null);
       this.controlHintText?.setText("WASD / Arrow: \uC774\uB3D9  |  E: \uC7A5\uC18C \uC0C1\uD638\uC791\uC6A9  |  ESC: \uBA54\uB274");
       this.updateHudState({ locationLabel: AREA_LABEL.world });
       this.lastSafePlayerPosition = { x: this.player.x, y: this.player.y };
@@ -1184,6 +1160,7 @@ export class MainScene extends Phaser.Scene {
     this.lastSafePlayerPosition = { x: this.player.x, y: this.player.y };
     this.refreshAreaNpcVisibility(area);
     this.refreshAreaNpcHighlight(null);
+    this.refreshDowntownBuildingHighlight(null);
   }
 
   private buildWorldSpawnPoint(placeId: WorldPlaceId, fallbackX: number, fallbackY: number): { x: number; y: number } {
@@ -1258,8 +1235,18 @@ export class MainScene extends Phaser.Scene {
 
       configs.forEach((config) => {
         const script = this.getDialogueScript(config.dialogueId);
-        const marker = this.add.rectangle(config.x, config.y, 28, 34, 0x6e4f2b, 1);
-        marker.setStrokeStyle(2, 0x4b351b, 1);
+        let marker: Phaser.GameObjects.Shape | Phaser.GameObjects.Sprite;
+
+        if (config.textureKey) {
+          const sprite = this.add.sprite(config.x, config.y, config.textureKey);
+          sprite.setScale(2); // 에셋 크기에 따라 조정 필요할 수 있음
+          marker = sprite;
+        } else {
+          const rect = this.add.rectangle(config.x, config.y, 28, 34, 0x6e4f2b, 1);
+          rect.setStrokeStyle(2, 0x4b351b, 1);
+          marker = rect;
+        }
+
         const label = this.add.text(
           this.px(config.x + config.labelOffsetX),
           this.px(config.y + config.labelOffsetY),
@@ -1278,14 +1265,63 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  private createScheduledNpcViews(): void {
+    (["campus", "downtown", "world"] as const).forEach((area) => {
+      const root = area === "world" ? this.worldMapRoot : this.getAreaRoot(area);
+      if (!root) return;
+
+      const defaultSlots = getDefaultFixedEventNpcSlotsForArea(area, TIME_CYCLE[0]);
+      defaultSlots.forEach((position, index) => {
+        const marker = this.add.rectangle(position.x, position.y, 34, 42, 0x6e4f2b, 0.15);
+        marker.setStrokeStyle(2, 0x4b351b, 1);
+        marker.setVisible(false);
+
+        const portrait = this.add.image(position.x, position.y - 6, "fixed-npc-myungjin");
+        portrait.setScale(1.6);
+        portrait.setVisible(false);
+
+        const label = this.add.text(
+          this.px(position.x + position.labelOffsetX),
+          this.px(position.y + position.labelOffsetY),
+          "",
+          {
+            fontFamily: this.uiFontFamily,
+            color: "#f6e6c8",
+            fontSize: "14px",
+            resolution: 2
+          }
+        );
+        label.setVisible(false);
+        root.add([marker, portrait, label]);
+        this.scheduledNpcViews.push({
+          area,
+          config: {
+            dialogueId: "fixed_event_runtime",
+            x: position.x,
+            y: position.y,
+            labelOffsetX: position.labelOffsetX,
+            labelOffsetY: position.labelOffsetY,
+            flashColor: position.flashColor
+          },
+          marker,
+          portrait,
+          label,
+          isScheduled: true,
+          eventId: `scheduled-slot-${area}-${index}`
+        });
+      });
+    });
+    this.refreshScheduledNpcViews();
+  }
+
   private getDialogueScript(dialogueId: NpcDialogueId): NpcDialogueScript | null {
     if (this.runtimeDialogueScripts[dialogueId]) {
       return this.runtimeDialogueScripts[dialogueId] ?? null;
     }
 
     if (dialogueId === "campus_script_npc") {
-      const rawJson = this.cache.json.get("story_fixed_week1");
-      const jsonScript = buildDialogueScriptFromFixedEventJson(dialogueId, rawJson, "스크립트 NPC");
+      const rawJson = this.getFixedEventDataForWeek(this.hudState.week);
+      const jsonScript = buildDialogueScriptFromFixedEventJson(dialogueId, rawJson, "스크립트 NPC", this.getPlayerName());
       if (jsonScript) {
         this.runtimeDialogueScripts[dialogueId] = jsonScript;
         return jsonScript;
@@ -1295,25 +1331,153 @@ export class MainScene extends Phaser.Scene {
     return NPC_DIALOGUE_SCRIPTS[dialogueId] ?? null;
   }
 
+  private getPlayerName(): string {
+    const raw = this.registry.get("playerData") as { name?: string } | undefined;
+    const name = typeof raw?.name === "string" ? raw.name.trim() : "";
+    return name.length > 0 ? name : "플레이어";
+  }
+
+  private getFixedEventCacheKey(week: number): string {
+    const clampedWeek = Phaser.Math.Clamp(Math.round(week), 1, 4);
+    return `story_fixed_week${clampedWeek}`;
+  }
+
+  private getFixedEventDataForWeek(week: number): unknown {
+    return this.cache.json.get(this.getFixedEventCacheKey(week));
+  }
+
+  private maybeStartFixedEvent(): boolean {
+    if (this.dialogueOpen || this.menuOpen || this.shopOpen || this.placePopupOpen || this.weeklyPlanActivityOpen || this.weeklyPlannerPopupOpen || this.endingFlowStarted) {
+      return false;
+    }
+
+    const matchingEvent = this.getCurrentFixedEventEntry();
+    if (!matchingEvent) {
+      return false;
+    }
+
+    if (getFixedEventPresentNpcs(matchingEvent).length > 0) {
+      return false;
+    }
+
+    return this.startCurrentFixedEventDialogue(matchingEvent);
+  }
+
+  private getCurrentFixedEventEntry(): ReturnType<typeof findMatchingFixedEvent> {
+    const currentLocation = resolveCurrentFixedEventLocation(this.currentArea, this.lastSelectedWorldPlace);
+    return findMatchingFixedEvent(
+      this.getFixedEventDataForWeek(this.hudState.week),
+      {
+        week: this.hudState.week,
+        day: this.dayCycleIndex + 1,
+        timeOfDay: this.hudState.timeLabel,
+        location: currentLocation
+      },
+      this.completedFixedEventIds
+    );
+  }
+
+  private refreshScheduledNpcViews(): void {
+    const event = this.getCurrentFixedEventEntry();
+    const currentLocation = resolveCurrentFixedEventLocation(this.currentArea, this.lastSelectedWorldPlace);
+    const presentation = buildFixedEventNpcPresentation(event, {
+      currentLocation,
+      timeOfDay: this.hudState.timeLabel
+    });
+
+    this.scheduledNpcViews.forEach((view, index) => {
+      const fallbackSlot = getDefaultFixedEventNpcSlotsForArea(view.area, this.hudState.timeLabel)[index];
+      const participant = presentation?.renderArea === view.area ? presentation.participants[index] : undefined;
+      const slot = participant?.slot ?? fallbackSlot;
+      const visible = Boolean(participant && slot);
+
+      if (slot) {
+        view.config.x = slot.x;
+        view.config.y = slot.y;
+        view.config.labelOffsetX = slot.labelOffsetX;
+        view.config.labelOffsetY = slot.labelOffsetY;
+        view.config.flashColor = slot.flashColor;
+        view.marker.setPosition(slot.x, slot.y);
+        view.label.setPosition(this.px(slot.x + slot.labelOffsetX), this.px(slot.y + slot.labelOffsetY));
+        view.portrait?.setPosition(slot.x, slot.y - 6);
+      }
+
+      view.eventId = visible ? presentation?.eventId : undefined;
+      view.marker.setVisible(visible && this.currentArea === view.area);
+      view.label.setVisible(visible && this.currentArea === view.area);
+      view.portrait?.setVisible(visible && this.currentArea === view.area);
+      if (!visible || !participant) {
+        return;
+      }
+
+      view.label.setText(participant.label);
+      view.portrait?.setTexture(participant.textureKey);
+      view.portrait?.setScale(1.6);
+    });
+  }
+
+  private startCurrentFixedEventDialogue(event: ReturnType<typeof findMatchingFixedEvent>): boolean {
+    if (!event) return false;
+    const runtimeScript = buildDialogueScriptFromFixedEventEntry("fixed_event_runtime", event, {
+      fallbackNpcLabel: "이벤트",
+      playerName: this.getPlayerName()
+    });
+    if (!runtimeScript) return false;
+    this.runtimeDialogueScripts.fixed_event_runtime = runtimeScript;
+    this.activeFixedEventId = typeof event.eventId === "string" ? event.eventId : null;
+    this.startNpcDialogue("fixed_event_runtime");
+    return true;
+  }
+
   private refreshAreaNpcVisibility(area: AreaId): void {
     this.areaNpcViews.forEach((view) => {
       const visible = area !== "world" && view.area === area;
       view.marker.setVisible(visible);
       view.label.setVisible(visible);
+      view.portrait?.setVisible(visible);
       if (visible) {
-        view.marker.setFillStyle(0x6e4f2b, 1);
-        view.marker.setStrokeStyle(2, 0x4b351b, 1);
+        if (view.marker instanceof Phaser.GameObjects.Shape) {
+          view.marker.setFillStyle(0x6e4f2b, 1);
+          view.marker.setStrokeStyle(2, 0x4b351b, 1);
+        } else if (view.marker instanceof Phaser.GameObjects.Sprite) {
+          view.marker.clearTint();
+        }
       }
+    });
+    this.refreshScheduledNpcViews();
+  }
+
+  private getNearestDowntownBuilding(maxDistance: number): DowntownBuildingId | null {
+    return findNearestDowntownBuilding(
+      this.downtownBuildingViews.map((view) => ({
+        id: view.id,
+        left: view.left,
+        right: view.right,
+        top: view.top,
+        bottom: view.bottom
+      })),
+      this.player.x,
+      this.player.y,
+      maxDistance
+    );
+  }
+
+  private refreshDowntownBuildingHighlight(activeId: DowntownBuildingId | null): void {
+    this.downtownBuildingViews.forEach((view) => {
+      const isActive = activeId === view.id && this.currentArea === "downtown";
+      view.hitBox.setStrokeStyle(
+        isActive ? 4 : 3,
+        isActive ? 0xf2e8b6 : view.defaultStrokeColor,
+        isActive ? 1 : view.defaultStrokeAlpha
+      );
     });
   }
 
   private getNearestAreaNpcView(area: AreaId, maxDistance: number): AreaNpcView | null {
-    if (area === "world") return null;
-
     let nearestView: AreaNpcView | null = null;
     let nearestDistance = Number.POSITIVE_INFINITY;
 
-    this.areaNpcViews.forEach((view) => {
+    [...this.areaNpcViews, ...this.scheduledNpcViews].forEach((view) => {
       if (view.area !== area || !view.marker.visible) return;
       const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, view.config.x, view.config.y);
       if (distance <= maxDistance && distance < nearestDistance) {
@@ -1327,11 +1491,20 @@ export class MainScene extends Phaser.Scene {
 
   private refreshAreaNpcHighlight(activeView: AreaNpcView | null): void {
     this.activeAreaNpcView = activeView;
-    this.areaNpcViews.forEach((view) => {
+    [...this.areaNpcViews, ...this.scheduledNpcViews].forEach((view) => {
       const isActive = activeView?.config.dialogueId === view.config.dialogueId && activeView.area === view.area;
-      view.marker.setFillStyle(isActive ? view.config.flashColor : 0x6e4f2b, 1);
-      view.marker.setStrokeStyle(2, isActive ? 0xf2e8b6 : 0x4b351b, 1);
+      if (view.marker instanceof Phaser.GameObjects.Shape) {
+        view.marker.setFillStyle(isActive ? view.config.flashColor : 0x6e4f2b, 1);
+        view.marker.setStrokeStyle(2, isActive ? 0xf2e8b6 : 0x4b351b, 1);
+      } else if (view.marker instanceof Phaser.GameObjects.Sprite) {
+        if (isActive) {
+          view.marker.setTint(view.config.flashColor);
+        } else {
+          view.marker.clearTint();
+        }
+      }
       view.label.setColor(isActive ? "#fff6d0" : "#f6e6c8");
+      view.portrait?.setScale(isActive ? 1.72 : 1.6);
     });
   }
 
@@ -1346,8 +1519,8 @@ export class MainScene extends Phaser.Scene {
   private getPlaceUnavailableMessage(placeId: WorldPlaceId): { title: string; description: string } | null {
     if (placeId === "cafe" && this.isNightTime()) {
       return {
-        title: "카페",
-        description: "지금은 열지 않습니다.\n밤에는 이용할 수 없습니다."
+        title: "영업 종료",
+        description: "지금은 이용할 수 없습니다.\n밤에는 카페를 이용할 수 없습니다."
       };
     }
 
@@ -1362,14 +1535,14 @@ export class MainScene extends Phaser.Scene {
     if (buildingId === "hof" && !this.isEveningOrNight()) {
       return {
         title: config.title,
-        description: "지금은 열지 않습니다.\n호프 알바는 저녁과 밤에만 가능합니다."
+        description: "지금은 이용할 수 없습니다.\n호프는 저녁과 밤에만 이용할 수 있습니다."
       };
     }
 
     if (this.isNightTime() && (buildingId === "gym" || buildingId === "ramenthings" || buildingId === "lottery")) {
       return {
         title: config.title,
-        description: "지금은 열지 않습니다.\n밤에는 이용할 수 없습니다."
+        description: "지금은 이용할 수 없습니다.\n밤에는 해당 장소를 이용할 수 없습니다."
       };
     }
 
@@ -1378,7 +1551,7 @@ export class MainScene extends Phaser.Scene {
 
   private openUnavailablePlacePopup(title: string, description: string, backgroundKey: string | null): void {
     this.closePlacePopup();
-    const backgroundImage = this.createPlaceBackgroundImage(backgroundKey);
+    const backgroundImage = createMainSceneBackgroundImage(this, (value) => this.px(value), backgroundKey);
     this.placePopupRoot = createPlaceActionModal({
       scene: this,
       width: 500,
@@ -1416,21 +1589,19 @@ export class MainScene extends Phaser.Scene {
 
     this.closePlacePopup();
 
-    const centerX = this.px(GAME_CONSTANTS.WIDTH / 2);
-    const centerY = this.px(GAME_CONSTANTS.HEIGHT / 2);
     const placeBackgroundKey = getPlaceBackgroundTextureKey(placeId);
-    const placeBackgroundImage =
-      placeBackgroundKey && this.textures.exists(placeBackgroundKey)
-        ? this.add.image(centerX, centerY, placeBackgroundKey).setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT)
-        : null;
-    const content = getPlacePopupContent(placeId);
+    const placeBackgroundImage = createMainSceneBackgroundImage(this, (value) => this.px(value), placeBackgroundKey);
+    const content =
+      placeId === "cafe" || placeId === "store"
+        ? getPlacePopupContent(placeId)
+        : getDowntownBuildingConfig(placeId as DowntownBuildingId);
     this.placePopupRoot = createPlaceActionModal({
       scene: this,
       width: 530,
       height: 290,
       title: content.title,
       description: content.description,
-      actionText: content.actionText,
+      actionText: content.actionText ?? "이용하기",
       backgroundImage: placeBackgroundImage,
       getBodyStyle: this.getBodyStyle.bind(this),
       createActionButton: this.createActionButton.bind(this),
@@ -1439,20 +1610,10 @@ export class MainScene extends Phaser.Scene {
       onAction: () => this.usePlaceFeature(placeId),
       onClose: () => this.closePlacePopup()
     });
-    this.placePopupRoot.setDepth(920);
+    if (this.placePopupRoot) {
+      this.placePopupRoot.setDepth(920);
+    }
     this.placePopupOpen = true;
-  }
-
-  private createPlaceBackgroundImage(textureKey: string | null): Phaser.GameObjects.Image | null {
-    if (!textureKey || !this.textures.exists(textureKey)) return null;
-    return this.add
-      .image(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), textureKey)
-      .setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT);
-  }
-
-  private createTextureImage(textureKey: string | null): Phaser.GameObjects.Image | null {
-    if (!textureKey || !this.textures.exists(textureKey)) return null;
-    return this.add.image(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), textureKey);
   }
 
   private applyItemIconImage(
@@ -1499,7 +1660,7 @@ export class MainScene extends Phaser.Scene {
     if (result.kind === "cafe") {
       const cost = result.cost;
       if (this.hudState.money < cost) {
-        this.showSystemToast("\uB3C8\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4");
+        this.showSystemToast("돈이 부족합니다");
         return;
       }
       if (!this.spendActionPoint()) {
@@ -1508,11 +1669,6 @@ export class MainScene extends Phaser.Scene {
 
       const nextHp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, this.hudState.hpMax);
       const nextStress = Phaser.Math.Clamp(this.hudState.stress + result.stressDelta, 0, 100);
-      this.updateHudState({
-        hp: nextHp,
-        stress: nextStress,
-        money: this.hudState.money + result.moneyDelta
-      });
       this.closePlacePopup();
       this.showSystemToast(result.toastMessage);
       return;
@@ -1525,7 +1681,7 @@ export class MainScene extends Phaser.Scene {
 
   private openHomeActionPopup(): void {
     this.closePlacePopup();
-    const homeBackgroundImage = this.createPlaceBackgroundImage(getPlaceBackgroundTextureKey("home"));
+    const homeBackgroundImage = createMainSceneBackgroundImage(this, (value) => this.px(value), getPlaceBackgroundTextureKey("home"));
     this.placePopupRoot = createHomeActionModal({
       scene: this,
       actionPoint: this.actionPoint,
@@ -1584,6 +1740,9 @@ export class MainScene extends Phaser.Scene {
     if (this.weeklyPlanActivityOpen || this.weeklyPlanWeek < this.hudState.week) {
       return false;
     }
+    if (this.getCurrentFixedEventSlotName()) {
+      return false;
+    }
 
     const slotKey = this.getCurrentWeeklyPlanSlotKey();
     if (!slotKey || this.lastAppliedWeeklyPlanSlotKey === slotKey) {
@@ -1592,12 +1751,17 @@ export class MainScene extends Phaser.Scene {
 
     const slotIndex = getWeeklyPlanSlotIndex(this.dayCycleIndex, this.timeCycleIndex);
     const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex] ?? WEEKLY_PLAN_OPTIONS[0].id);
-    const backgroundImage = this.createTextureImage(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS[option.id]);
+    const backgroundImage = createMainSceneBackgroundImage(
+      this,
+      (value) => this.px(value),
+      WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS[option.id],
+      false
+    );
     const title = `${DAY_CYCLE[this.dayCycleIndex]} ${TIME_CYCLE[this.timeCycleIndex]}`;
     this.closeWeeklyPlanActivity();
     this.weeklyPlanActivityRoot = createWeeklyPlanActivityModal(this, {
       title,
-      statusText: `${option.label} 하는 중...`,
+      statusText: `${option.label} 하는 중...`, 
       description: option.description,
       accentColor: option.color,
       backgroundImage,
@@ -1637,7 +1801,6 @@ export class MainScene extends Phaser.Scene {
   private withPlannerPrompt(message: string): string {
     return `${message}  |  P 계획표`;
   }
-
   private getCompletedWeeklyPlanSlotIndices(): Set<number> {
     const completed = new Set<number>();
     if (this.weeklyPlanWeek !== this.hudState.week || !this.lastAppliedWeeklyPlanSlotKey) {
@@ -1656,6 +1819,42 @@ export class MainScene extends Phaser.Scene {
     return completed;
   }
 
+  private getFixedEventSlotsForWeek(week: number): Map<number, string> {
+    const fixedEventSlots = new Map<number, string>();
+    const fixedEvents = getFixedEventEntries(this.getFixedEventDataForWeek(week));
+
+    fixedEvents.forEach((event) => {
+      if (event.eventType !== "FIXED") return;
+
+      const timing = event.triggerTiming;
+      if (!timing) return;
+      if (Math.round(timing.week ?? -1) !== week) return;
+
+      const day = Math.round(timing.day ?? -1);
+      if (day < 1 || day > WEEKLY_PLAN_DAY_INDICES.length) return;
+
+      const normalizedTime = typeof timing.timeOfDay === "string" ? timing.timeOfDay.trim() : "";
+      const timeIndex = TIME_CYCLE.findIndex((label) => label.trim() === normalizedTime);
+      if (timeIndex < 0 || timeIndex >= WEEKLY_PLAN_TIME_LABELS.length) return;
+
+      const slotIndex = getWeeklyPlanSlotIndex(day - 1, timeIndex);
+      const eventName =
+        typeof event.eventName === "string" && event.eventName.trim().length > 0
+          ? event.eventName.trim()
+          : "이벤트";
+      fixedEventSlots.set(slotIndex, eventName);
+    });
+
+    return fixedEventSlots;
+  }
+
+  private getCurrentFixedEventSlotName(): string | null {
+    if (!this.getCurrentWeeklyPlanSlotKey()) return null;
+
+    const slotIndex = getWeeklyPlanSlotIndex(this.dayCycleIndex, this.timeCycleIndex);
+    return this.getFixedEventSlotsForWeek(this.hudState.week).get(slotIndex) ?? null;
+  }
+
   private openWeeklyPlannerPopup(): void {
     this.closePlacePopup();
     this.weeklyPlannerPopupOpen = true;
@@ -1666,6 +1865,7 @@ export class MainScene extends Phaser.Scene {
       dayLabels: DAY_CYCLE,
       initialPlan: this.weeklyPlan,
       completedSlotIndices: this.getCompletedWeeklyPlanSlotIndices(),
+      fixedEventSlots: this.getFixedEventSlotsForWeek(this.hudState.week),
       getBodyStyle: this.getBodyStyle.bind(this),
       createActionButton: this.createActionButton.bind(this),
       uiPanelInnerBorderColor: this.uiPanelInnerBorderColor,
@@ -1678,10 +1878,9 @@ export class MainScene extends Phaser.Scene {
           this.lastAppliedWeeklyPlanSlotKey = null;
         }
         this.closePlacePopup();
-        this.showSystemToast(
-          isPlanningNewWeek
-            ? `${this.hudState.week}주차 계획을 확정했습니다`
-            : `${this.hudState.week}주차 계획을 수정했습니다`
+        this.showSystemToast(isPlanningNewWeek
+          ? String(this.hudState.week) + "주차 계획표를 확정했습니다"
+          : String(this.hudState.week) + "주차 계획표를 수정했습니다"
         );
         if (isPlanningNewWeek) {
           this.maybeStartWeeklyPlanActivity();
@@ -1704,7 +1903,11 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.closePlacePopup();
-    const buildingBackgroundImage = this.createPlaceBackgroundImage(getDowntownBuildingBackgroundTextureKey(buildingId));
+    const buildingBackgroundImage = createMainSceneBackgroundImage(
+      this,
+      (value) => this.px(value),
+      getDowntownBuildingBackgroundTextureKey(buildingId)
+    );
     const config = getDowntownBuildingConfig(buildingId);
     this.placePopupRoot = createPlaceActionModal({
       scene: this,
@@ -1755,22 +1958,25 @@ export class MainScene extends Phaser.Scene {
     if (typeof result.hpMaxDelta === "number") {
       const nextHpMax = Math.max(1, Math.round(this.hudState.hpMax + result.hpMaxDelta));
       patch.hpMax = nextHpMax;
-      patch.hp = Phaser.Math.Clamp(this.hudState.hp, 0, nextHpMax);
-    } else if (typeof result.hpDelta === "number") {
-      patch.hp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, this.hudState.hpMax);
+    }
+    if (typeof result.hpDelta === "number") {
+      patch.hp = Phaser.Math.Clamp(this.hudState.hp + result.hpDelta, 0, patch.hpMax ?? this.hudState.hpMax);
     }
     if (typeof result.stressDelta === "number") {
       patch.stress = Phaser.Math.Clamp(this.hudState.stress + result.stressDelta, 0, 100);
     }
     if (typeof result.moneyDelta === "number") {
-      patch.money = Math.max(0, this.hudState.money + result.moneyDelta);
+      patch.money = this.hudState.money + result.moneyDelta;
     }
-    this.updateHudState(patch);
     if (result.statDelta) {
       this.applyStatDelta(result.statDelta);
     }
-    this.closePlacePopup();
+
+    this.updateHudState(patch);
     this.showSystemToast(result.toastMessage);
+
+    // 미니게임 연동 (중앙 런처 사용)
+    this.startMinigame(buildingId);
   }
 
   private toggleMenu(): void {
@@ -2061,16 +2267,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   private createSettingsPage(bounds: Phaser.Geom.Rectangle): Phaser.GameObjects.Container {
+    const audioSettings = createMainSceneAudioSettingsBindings(this.audioManager);
     return createSettingsPageContent(this, {
       bounds,
       px: (value) => this.px(value),
       getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
-      getVolumes: () => this.audioManager.getVolumes(),
-      setVolume: (key, value) => {
-        if (key === "bgm") this.audioManager.setBgmVolume(value);
-        if (key === "sfx") this.audioManager.setSfxVolume(value);
-        if (key === "ambience") this.audioManager.setAmbienceVolume(value);
-      }
+      getVolumes: audioSettings.getVolumes,
+      setVolume: audioSettings.setVolume
     });
   }
 
@@ -2222,21 +2425,24 @@ export class MainScene extends Phaser.Scene {
   }
 
   private captureGameSavePayload(): MainSavePayload {
-    return captureGameSavePayload({
-      currentArea: this.currentArea,
-      lastSelectedWorldPlace: this.lastSelectedWorldPlace,
-      playerPosition: { x: this.player.x, y: this.player.y },
-      hudState: this.hudState,
-      statsState: this.statsState,
-      actionPoint: this.actionPoint,
-      timeCycleIndex: this.timeCycleIndex,
-      dayCycleIndex: this.dayCycleIndex,
-      weeklyPlan: this.weeklyPlan,
-      weeklyPlanWeek: this.weeklyPlanWeek,
-      lastAppliedWeeklyPlanSlotKey: this.lastAppliedWeeklyPlanSlotKey,
-      inventorySlots: this.inventorySlots,
-      equippedSlots: this.equippedSlots
-    });
+    return {
+      ...captureGameSavePayload({
+        currentArea: this.currentArea,
+        lastSelectedWorldPlace: this.lastSelectedWorldPlace,
+        playerPosition: { x: this.player.x, y: this.player.y },
+        hudState: this.hudState,
+        statsState: this.statsState,
+        actionPoint: this.actionPoint,
+        timeCycleIndex: this.timeCycleIndex,
+        dayCycleIndex: this.dayCycleIndex,
+        weeklyPlan: this.weeklyPlan,
+        weeklyPlanWeek: this.weeklyPlanWeek,
+        lastAppliedWeeklyPlanSlotKey: this.lastAppliedWeeklyPlanSlotKey,
+        inventorySlots: this.inventorySlots,
+        equippedSlots: this.equippedSlots
+      }),
+      completedFixedEventIds: [...this.completedFixedEventIds]
+    };
   }
 
   private applyGameSavePayload(rawPayload: Record<string, unknown>): boolean {
@@ -2266,6 +2472,9 @@ export class MainScene extends Phaser.Scene {
     if (typeof payload.lastAppliedWeeklyPlanSlotKey === "string" || payload.lastAppliedWeeklyPlanSlotKey === null) {
       this.lastAppliedWeeklyPlanSlotKey = payload.lastAppliedWeeklyPlanSlotKey ?? null;
     }
+    this.completedFixedEventIds = Array.isArray(payload.completedFixedEventIds)
+      ? payload.completedFixedEventIds.filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+      : [];
 
     this.restoreStatsFromSave(payload.statsState);
     this.restoreInventoryFromSave(payload);
@@ -2373,10 +2582,24 @@ export class MainScene extends Phaser.Scene {
   }
 
   private handleNpcInteraction(npcView: AreaNpcView): void {
-    npcView.marker.setFillStyle(npcView.config.flashColor, 1);
+    if (npcView.marker instanceof Phaser.GameObjects.Shape) {
+      npcView.marker.setFillStyle(npcView.config.flashColor, 1);
+    } else if (npcView.marker instanceof Phaser.GameObjects.Sprite) {
+      npcView.marker.setTint(npcView.config.flashColor);
+    }
     this.time.delayedCall(160, () => {
       this.refreshAreaNpcHighlight(this.activeAreaNpcView);
     });
+
+    if (npcView.isScheduled) {
+      const event = this.getCurrentFixedEventEntry();
+      if (!event || npcView.eventId !== event.eventId) {
+        this.showSystemToast("진행할 이벤트가 없습니다");
+        return;
+      }
+      this.startCurrentFixedEventDialogue(event);
+      return;
+    }
 
     this.startNpcDialogue(npcView.config.dialogueId);
   }
@@ -2445,6 +2668,12 @@ export class MainScene extends Phaser.Scene {
         return;
       }
 
+      if (selectedChoice.feedbackText) {
+        this.showSystemToast(selectedChoice.feedbackText);
+      }
+      if (this.activeDialogueId === "fixed_event_runtime" && this.activeFixedEventId && !this.completedFixedEventIds.includes(this.activeFixedEventId)) {
+        this.completedFixedEventIds.push(this.activeFixedEventId);
+      }
       this.closeDialogue();
       if (selectedChoice.action) {
         this.runDialogueAction(selectedChoice.action);
@@ -2460,6 +2689,9 @@ export class MainScene extends Phaser.Scene {
     }
 
     const action = node.action;
+    if (this.activeDialogueId === "fixed_event_runtime" && this.activeFixedEventId && !this.completedFixedEventIds.includes(this.activeFixedEventId)) {
+      this.completedFixedEventIds.push(this.activeFixedEventId);
+    }
     this.closeDialogue();
     if (action) {
       this.runDialogueAction(action);
@@ -2511,6 +2743,7 @@ export class MainScene extends Phaser.Scene {
     this.dialogueOpen = false;
     this.activeDialogueId = null;
     this.activeDialogueNodeId = null;
+    this.activeFixedEventId = null;
     this.dialogueChoiceIndex = 0;
     this.clearDialogueChoices();
     this.dialogueRoot?.setVisible(false);
@@ -2523,10 +2756,20 @@ export class MainScene extends Phaser.Scene {
     return script.nodes[this.activeDialogueNodeId] ?? null;
   }
 
+  private getDialogueMetricValue(stat: DialogueStatKey): number {
+    if (stat === "hp") {
+      return this.hudState.hp;
+    }
+    if (stat === "gold") {
+      return this.hudState.money;
+    }
+    return this.statsState[stat as StatKey];
+  }
+
   private isDialogueChoiceAvailable(choice: DialogueChoice): boolean {
     const requirements = choice.requirements ?? [];
     return requirements.every((req) => {
-      const value = this.statsState[req.stat as StatKey];
+      const value = this.getDialogueMetricValue(req.stat);
       if (typeof req.min === "number" && value < req.min) return false;
       if (typeof req.max === "number" && value > req.max) return false;
       return true;
@@ -2540,7 +2783,12 @@ export class MainScene extends Phaser.Scene {
     return requirements
       .map((req) => {
         if (req.label) return req.label;
-        const label = STAT_LABEL[req.stat as StatKey];
+        const label =
+          req.stat === "hp"
+            ? "HP"
+            : req.stat === "gold"
+              ? "돈"
+              : STAT_LABEL[req.stat as StatKey];
         if (typeof req.min === "number" && typeof req.max === "number") {
           return `${label} ${req.min}~${req.max}`;
         }
@@ -2557,12 +2805,41 @@ export class MainScene extends Phaser.Scene {
 
   private applyDialogueChoiceStatChanges(choice: DialogueChoice): void {
     if (!choice.statChanges) return;
-    const entries = Object.entries(choice.statChanges) as Array<[StoryStatKey, number]>;
+    const entries = Object.entries(choice.statChanges) as Array<[DialogueStatKey, number]>;
     if (entries.length === 0) return;
 
-    this.applyStatDelta(choice.statChanges as Partial<Record<StatKey, number>>, 1);
+    const statDelta: Partial<Record<StatKey, number>> = {};
+    const hudPatch: Partial<HudState> = {};
+
+    entries.forEach(([key, value]) => {
+      if (key === "hp") {
+        hudPatch.hp = Phaser.Math.Clamp(this.hudState.hp + value, 0, this.hudState.hpMax);
+        return;
+      }
+      if (key === "gold") {
+        hudPatch.money = Math.max(0, this.hudState.money + value);
+        return;
+      }
+      statDelta[key as StatKey] = value;
+    });
+
+    if (Object.keys(statDelta).length > 0) {
+      this.applyStatDelta(statDelta, 1);
+    }
+    if (Object.keys(hudPatch).length > 0) {
+      this.updateHudState(hudPatch);
+    }
+
     const summary = entries
-      .map(([key, value]) => `${STAT_LABEL[key as StatKey]} ${value > 0 ? "+" : ""}${value}`)
+      .map(([key, value]) => {
+        const label =
+          key === "hp"
+            ? "HP"
+            : key === "gold"
+              ? "돈"
+              : STAT_LABEL[key as StatKey];
+        return `${label} ${value > 0 ? "+" : ""}${value}`;
+      })
       .join(", ");
     this.showSystemToast(`\uB2A5\uB825\uCE58 \uBCC0\uD654: ${summary}`);
   }
@@ -2575,8 +2852,21 @@ export class MainScene extends Phaser.Scene {
     }
     if (action === "openMiniGame") {
       openLegacyMinigameMenu(this, SceneKey.Main, () => {
-        this.showSystemToast("\uBBF8\uB2C8\uAC8C\uC784 \uC13C\uD130 \uC785\uC7A5");
+        this.showSystemToast("미니게임 센터 입장");
       });
+      return;
+    }
+
+    // 미니게임 연동 (중앙 런처 사용)
+    if (action && action.startsWith("play")) {
+      this.startMinigame(action);
+    }
+  }
+
+  private startMinigame(key: string): void {
+    const sceneKey = MINIGAME_SCENE_MAP[key];
+    if (sceneKey) {
+      this.scene.start(sceneKey, { returnSceneKey: SceneKey.Main });
     }
   }
 
@@ -2584,7 +2874,7 @@ export class MainScene extends Phaser.Scene {
     const centerX = this.px(GAME_CONSTANTS.WIDTH / 2);
     const centerY = this.px(GAME_CONSTANTS.HEIGHT / 2);
 
-    const backgroundImage = this.createPlaceBackgroundImage(PLACE_BACKGROUND_KEYS.store);
+    const backgroundImage = createMainSceneBackgroundImage(this, (value) => this.px(value), getPlaceBackgroundTextureKey("store"));
     if (backgroundImage) {
       backgroundImage.setVisible(false);
     }
@@ -2658,19 +2948,8 @@ export class MainScene extends Phaser.Scene {
   private openShop(backgroundTextureKey: string | null = null): void {
     if (!this.shopRoot) return;
 
-    if (this.shopBackgroundImage) {
-      if (backgroundTextureKey && this.textures.exists(backgroundTextureKey)) {
-        this.shopBackgroundImage.setTexture(backgroundTextureKey);
-        this.shopBackgroundImage.setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT);
-        this.shopBackgroundImage.setVisible(true);
-        this.shopOverlay?.setFillStyle(0x000000, 0.42);
-      } else {
-        this.shopBackgroundImage.setVisible(false);
-        this.shopOverlay?.setFillStyle(0x000000, 0.35);
-      }
-    } else {
-      this.shopOverlay?.setFillStyle(0x000000, 0.35);
-    }
+    const hasBackground = applyMainSceneBackgroundTexture(this, this.shopBackgroundImage, backgroundTextureKey);
+    this.shopOverlay?.setFillStyle(0x000000, hasBackground ? 0.42 : 0.35);
 
     this.shopOpen = true;
     this.shopRoot.setVisible(true);
@@ -2835,16 +3114,24 @@ export class MainScene extends Phaser.Scene {
 
   private applyStatDelta(delta: Partial<Record<StatKey, number>>, multiplier: 1 | -1 = 1): void {
     let changed = false;
+    let stressChanged = false;
 
     (Object.keys(delta) as StatKey[]).forEach((key) => {
       const value = delta[key];
       if (!value) return;
       this.statsState[key] = Phaser.Math.Clamp(this.statsState[key] + value * multiplier, 0, 100);
       changed = true;
+      if (key === "stress") {
+        stressChanged = true;
+      }
     });
 
     if (changed) {
       this.refreshStatsUi();
+      if (stressChanged) {
+        this.hudState.stress = this.statsState.stress;
+        this.hud.applyState({ stress: this.hudState.stress });
+      }
     }
   }
 
@@ -3137,6 +3424,9 @@ export class MainScene extends Phaser.Scene {
       this.refreshStatsUi();
     }
     this.hud.applyState(this.hudState);
+    if (this.scheduledNpcViews.length > 0) {
+      this.refreshScheduledNpcViews();
+    }
   }
 
   private spendActionPoint(): boolean {
@@ -3215,6 +3505,7 @@ export class MainScene extends Phaser.Scene {
     this.endingFlowStarted = true;
     this.player.setVelocity(0, 0);
     this.saveGameToSlot("auto", true);
-    this.scene.start(SceneKey.FinalSummary, this.buildEndingPayload());
+    this.scene.start(SceneKey.Completion, this.buildEndingPayload());
   }
 }
+

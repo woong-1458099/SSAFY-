@@ -16,25 +16,26 @@ export const WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS: Record<WeeklyPlanOptionId, strin
   rest_api_db: "weekly-plan-rest-api-db",
   team_project: "weekly-plan-team-project",
 };
+
 export const WEEKLY_PLAN_OPTIONS: WeeklyPlanOption[] = [
   {
     id: "ui_practice",
     label: "UI 구현 실습",
-    description: "FE 능력치 상승",
+    description: "FE 능력치 획득",
     statDelta: { fe: 4 },
     color: 0x4c8ed9,
   },
   {
     id: "rest_api_db",
     label: "REST API와 데이터베이스 설계",
+    description: "BE 능력치 획득",
     statDelta: { be: 4 },
-    description: "BE 능력치 상승",
     color: 0x3d9d7a,
   },
   {
     id: "team_project",
     label: "팀 프로젝트",
-    description: "협업 능력치 상승",
+    description: "협업 능력치 획득",
     statDelta: { teamwork: 4 },
     color: 0xb68543,
   },

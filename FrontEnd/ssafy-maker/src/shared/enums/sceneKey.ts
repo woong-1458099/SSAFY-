@@ -7,6 +7,7 @@ export enum SceneKey {
   Main = "MainScene",
   Intro = "IntroScene",
   NewCharacter = "NewCharacterScene",
+  Completion = "CompletionScene",
   FinalSummary = "FinalSummaryScene",
   EndingIntro = "EndingIntroScene",
   EndingComic = "EndingComicScene",

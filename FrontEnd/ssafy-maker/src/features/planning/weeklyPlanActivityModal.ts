@@ -7,16 +7,39 @@ type TextStyleFactory = (
   fontStyle?: "normal" | "bold"
 ) => Phaser.Types.GameObjects.Text.TextStyle;
 
-export function createWeeklyPlanActivityModal(scene: Phaser.Scene, options: {
-  title: string;
-  statusText: string;
-  description: string;
-  accentColor: number;
-  backgroundImage?: Phaser.GameObjects.Image | null;
-  getBodyStyle: TextStyleFactory;
-  uiPanelInnerBorderColor: number;
-  uiPanelOuterBorderColor: number;
-}): Phaser.GameObjects.Container {
+function resolveWeeklyPlanStatusText(
+  rawStatusText: string,
+  backgroundImage?: Phaser.GameObjects.Image | null
+): string {
+  if (!/[?�]/.test(rawStatusText) && rawStatusText.trim().length > 0) {
+    return rawStatusText;
+  }
+
+  switch (backgroundImage?.texture.key) {
+    case "weekly-plan-ui-practice":
+      return "UI 구현 실습 진행 중...";
+    case "weekly-plan-rest-api-db":
+      return "REST API와 데이터베이스 설계 진행 중...";
+    case "weekly-plan-team-project":
+      return "팀 프로젝트 진행 중...";
+    default:
+      return "강의 진행 중...";
+  }
+}
+
+export function createWeeklyPlanActivityModal(
+  scene: Phaser.Scene,
+  options: {
+    title: string;
+    statusText: string;
+    description: string;
+    accentColor: number;
+    backgroundImage?: Phaser.GameObjects.Image | null;
+    getBodyStyle: TextStyleFactory;
+    uiPanelInnerBorderColor: number;
+    uiPanelOuterBorderColor: number;
+  }
+): Phaser.GameObjects.Container {
   const {
     title,
     statusText,
@@ -25,8 +48,9 @@ export function createWeeklyPlanActivityModal(scene: Phaser.Scene, options: {
     backgroundImage,
     getBodyStyle,
     uiPanelInnerBorderColor,
-    uiPanelOuterBorderColor
+    uiPanelOuterBorderColor,
   } = options;
+  const resolvedStatusText = resolveWeeklyPlanStatusText(statusText, backgroundImage);
 
   const width = 640;
   const height = 430;
@@ -61,13 +85,18 @@ export function createWeeklyPlanActivityModal(scene: Phaser.Scene, options: {
   const badgeText = scene.add.text(centerX, centerY - 194, title, getBodyStyle(16, "#f4fbff", "bold"));
   badgeText.setOrigin(0.5);
 
-  const status = scene.add.text(centerX, centerY + 104, statusText, getBodyStyle(28, "#f0f7ff", "bold"));
+  const status = scene.add.text(centerX, centerY + 104, resolvedStatusText, getBodyStyle(28, "#f0f7ff", "bold"));
   status.setOrigin(0.5);
 
   const body = scene.add.text(centerX, centerY + 146, description, getBodyStyle(18, "#c8dbef"));
   body.setOrigin(0.5);
 
-  const hint = scene.add.text(centerX, centerY + 180, "일정 진행 후 다음 시간대로 이동합니다.", getBodyStyle(15, "#90b3d4"));
+  const hint = scene.add.text(
+    centerX,
+    centerY + 180,
+    "일정 진행 후 다음 시간대로 이동합니다.",
+    getBodyStyle(15, "#90b3d4")
+  );
   hint.setOrigin(0.5);
 
   const objects: Phaser.GameObjects.GameObject[] = [
@@ -81,7 +110,7 @@ export function createWeeklyPlanActivityModal(scene: Phaser.Scene, options: {
     badgeText,
     status,
     body,
-    hint
+    hint,
   ];
 
   const root = scene.add.container(0, 0, objects);

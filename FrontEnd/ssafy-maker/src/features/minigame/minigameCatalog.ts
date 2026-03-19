@@ -26,21 +26,21 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     key: "RhythmScene",
     title: "리듬",
     sub: "키보드 리듬 입력",
-    desc: "A S D F",
+    desc: "A W J I",
     reward: "집중 +7, 골드 +20",
     bgColor: 0x005518,
     borderColor: 0x33ff88,
     glowColor: 0x007722
   },
   {
-    key: "DragScene",
-    title: "정렬",
-    sub: "코드 순서 맞추기",
-    desc: "60초 / 드래그",
-    reward: "지능 +10, 골드 +30",
-    bgColor: 0x440088,
-    borderColor: 0xcc55ff,
-    glowColor: 0x6600aa
+    key: "TankScene",
+    title: "탱크 워",
+    sub: "적 탱크 파괴",
+    desc: "생존 및 섬멸",
+    reward: "집중 +10, 골드 +40",
+    bgColor: 0x332200,
+    borderColor: 0x88ff00,
+    glowColor: 0x443300
   },
 
   {
@@ -87,7 +87,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
   {
     key: "GymScene",
     title: "헬스장",
-    sub: "좌우 교대 입력",
+    sub: "스페이스 연타",
     desc: "15렙 / 30초",
     reward: "체력 +10, 골드 +20",
     bgColor: 0x1a0800,
@@ -113,5 +113,25 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     bgColor: 0x001133,
     borderColor: 0xffff00,
     glowColor: 0x002244
-  }
+  },
+  {
+    key: 'InterviewScene',
+    title: 'TECH INTERVIEW',
+    sub: '기술 면접 대비',
+    desc: '15SEC / 5 QUESTIONS',
+    reward: 'INT +10    GP +30',
+    bgColor: 0x1a0033,
+    borderColor: 0xFFD700,
+    glowColor: 0x330066,
+  },
+  {
+    key: 'DrinkingScene',
+    title: '할맥 부어라 마시기',
+    sub: '거품 조절 챌린지',
+    desc: '5 ROUNDS / BEER',
+    reward: 'STRESS -20    GP +10',
+    bgColor: 0x221100,
+    borderColor: 0xffaa00,
+    glowColor: 0x442200,
+  },
 ];

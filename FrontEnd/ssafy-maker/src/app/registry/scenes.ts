@@ -6,6 +6,7 @@ import { TitleScene } from "@scenes/TitleScene";
 import { IntroScene } from "@scenes/IntroScene";
 import { NewCharacterScene } from "@scenes/NewCharacterScene";
 import { MainScene } from "@scenes/MainScene";
+import { CompletionScene } from "@scenes/CompletionScene";
 import { FinalSummaryScene } from "@scenes/FinalSummaryScene";
 import { EndingIntroScene } from "@scenes/EndingIntroScene";
 import { EndingComicScene } from "@scenes/EndingComicScene";
@@ -13,7 +14,6 @@ import { EndingComicScene } from "@scenes/EndingComicScene";
 import LegacyBusinessSmileScene from "@scenes/legacyMinigames/BusinessSmileScene";
 import LegacyCookingScene from "@scenes/legacyMinigames/CookingScene";
 import LegacyDontSmileScene from "@scenes/legacyMinigames/DontSmileScene";
-import LegacyDragScene from "@scenes/legacyMinigames/DragScene";
 import LegacyGymScene from "@scenes/legacyMinigames/GymScene";
 import LegacyLottoScene from "@scenes/legacyMinigames/LottoScene";
 import LegacyMenuScene from "@scenes/legacyMinigames/MenuScene";
@@ -22,6 +22,9 @@ import LegacyQuizScene from "@scenes/legacyMinigames/QuizScene";
 import LegacyRhythmScene from "@scenes/legacyMinigames/RhythmScene";
 import LegacyRunnerScene from "@scenes/legacyMinigames/RunnerScene";
 import LegacyTypingScene from "@scenes/legacyMinigames/TypingScene";
+import LegacyInterviewScene from "@scenes/legacyMinigames/InterviewScene";
+import LegacyDrinkingScene from "@scenes/legacyMinigames/DrinkingScene";
+import LegacyTankScene from "@scenes/legacyMinigames/TankScene";
 
 // Scene registration must be managed only in this file.
 export const SCENE_REGISTRY = [
@@ -33,6 +36,7 @@ export const SCENE_REGISTRY = [
   IntroScene,
   NewCharacterScene,
   MainScene,
+  CompletionScene,
   FinalSummaryScene,
   EndingIntroScene,
   EndingComicScene,
@@ -40,8 +44,6 @@ export const SCENE_REGISTRY = [
   LegacyMinigamePauseScene,
   LegacyQuizScene,
   LegacyRhythmScene,
-  LegacyDragScene,
-
   LegacyRunnerScene,
 
   LegacyTypingScene,
@@ -49,5 +51,8 @@ export const SCENE_REGISTRY = [
   LegacyDontSmileScene,
   LegacyGymScene,
   LegacyCookingScene,
-  LegacyLottoScene
+  LegacyLottoScene,
+  LegacyInterviewScene,
+  LegacyDrinkingScene,
+  LegacyTankScene
 ];

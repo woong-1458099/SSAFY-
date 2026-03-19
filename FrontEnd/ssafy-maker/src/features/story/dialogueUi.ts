@@ -23,13 +23,76 @@ type TextStyleFactory = (
   fontStyle?: "normal" | "bold"
 ) => Phaser.Types.GameObjects.Text.TextStyle;
 
-export function createDialogueUi(scene: Phaser.Scene, options: {
-  px: (value: number) => number;
-  getBodyStyle: TextStyleFactory;
-  createPanelOuterBorder: (centerX: number, centerY: number, panelWidth: number, panelHeight: number) => Phaser.GameObjects.Rectangle;
-  panelInnerBorderColor: number;
-  onAction: () => void;
-}): DialogueUiRefs {
+const EMOTION_LABELS = {
+  NORMAL: "평온",
+  ANGRY: "분노",
+  FLUSTERED: "당황",
+  SHY: "수줍",
+  HAPPY: "기쁨",
+  SAD: "슬픔",
+  SURPRISED: "놀람",
+  SMILE: "미소",
+  SPEECHLESS: "멍함",
+  TIRED: "지침",
+} as const;
+
+type DialogueEmotionToken = keyof typeof EMOTION_LABELS;
+
+const warnedEmotionTokens = new Set<string>();
+const MAX_WARNED_EMOTION_TOKENS = 32;
+
+function getEmotionLabel(node: DialogueNode): string | null {
+  const emotionToken = typeof node.emotion === "string" ? node.emotion.trim().toUpperCase() : "";
+  if (!emotionToken) return null;
+
+  if (emotionToken in EMOTION_LABELS) {
+    return EMOTION_LABELS[emotionToken as DialogueEmotionToken];
+  }
+
+  if (import.meta.env.DEV && !warnedEmotionTokens.has(emotionToken)) {
+    if (warnedEmotionTokens.size >= MAX_WARNED_EMOTION_TOKENS) {
+      warnedEmotionTokens.clear();
+    }
+    warnedEmotionTokens.add(emotionToken);
+    console.warn("[dialogue-ui] unsupported emotion token", emotionToken);
+  }
+  return null;
+}
+
+function formatSpeakerTitle(node: DialogueNode): string {
+  const emotionLabel = getEmotionLabel(node);
+  if (!emotionLabel) {
+    return node.speaker;
+  }
+  return `${node.speaker} · ${emotionLabel}`;
+}
+
+function getSpeakerColor(node: DialogueNode): string {
+  const speakerId = typeof node.speakerId === "string" ? node.speakerId.trim().toUpperCase() : "";
+  if (speakerId === "SYSTEM") {
+    return "#ffe39c";
+  }
+  if (speakerId === "PLAYER") {
+    return "#aee3ff";
+  }
+  return "#e8f4ff";
+}
+
+export function createDialogueUi(
+  scene: Phaser.Scene,
+  options: {
+    px: (value: number) => number;
+    getBodyStyle: TextStyleFactory;
+    createPanelOuterBorder: (
+      centerX: number,
+      centerY: number,
+      panelWidth: number,
+      panelHeight: number
+    ) => Phaser.GameObjects.Rectangle;
+    panelInnerBorderColor: number;
+    onAction: () => void;
+  }
+): DialogueUiRefs {
   const { px, getBodyStyle, createPanelOuterBorder, panelInnerBorderColor, onAction } = options;
   const panelWidth = px(GAME_CONSTANTS.WIDTH - 84);
   const panelHeight = 220;
@@ -78,7 +141,7 @@ export function createDialogueUi(scene: Phaser.Scene, options: {
     bodyText: body,
     hintText: hint,
     actionButtonBg,
-    actionButtonText
+    actionButtonText,
   };
 }
 
@@ -87,21 +150,25 @@ export function clearDialogueChoices(choiceViews: DialogueChoiceView[]): Dialogu
   return [];
 }
 
-export function renderDialogueNode(scene: Phaser.Scene, options: {
-  node: DialogueNode;
-  root?: Phaser.GameObjects.Container;
-  px: (value: number) => number;
-  getBodyStyle: TextStyleFactory;
-  ui: Omit<DialogueUiRefs, "root" | "actionButtonBg">;
-  dialogueChoiceIndex: number;
-  getRequirementText: (choice: DialogueChoice) => string;
-  isChoiceAvailable: (choice: DialogueChoice) => boolean;
-}): {
+export function renderDialogueNode(
+  scene: Phaser.Scene,
+  options: {
+    node: DialogueNode;
+    root?: Phaser.GameObjects.Container;
+    px: (value: number) => number;
+    getBodyStyle: TextStyleFactory;
+    ui: Omit<DialogueUiRefs, "root" | "actionButtonBg">;
+    dialogueChoiceIndex: number;
+    getRequirementText: (choice: DialogueChoice) => string;
+    isChoiceAvailable: (choice: DialogueChoice) => boolean;
+  }
+): {
   choiceViews: DialogueChoiceView[];
   dialogueChoiceIndex: number;
 } {
   const { node, root, px, getBodyStyle, ui, dialogueChoiceIndex, getRequirementText, isChoiceAvailable } = options;
-  ui.speakerText.setText(node.speaker);
+  ui.speakerText.setText(formatSpeakerTitle(node));
+  ui.speakerText.setColor(getSpeakerColor(node));
   ui.bodyText.setText(node.text);
 
   if (node.choices?.length) {
@@ -118,25 +185,25 @@ export function renderDialogueNode(scene: Phaser.Scene, options: {
       return {
         text: line,
         choice,
-        requirementText: getRequirementText(choice)
+        requirementText: getRequirementText(choice),
       };
     });
 
     const normalizedIndex = dialogueChoiceIndex >= node.choices.length ? 0 : dialogueChoiceIndex;
-    ui.hintText.setText("↑/↓ 선택  |  E 또는 버튼 결정  |  ESC 종료");
+    ui.hintText.setText("↑↓ 선택 | E 또는 버튼 결정 | ESC 종료");
     ui.actionButtonText.setText("E 선택");
     refreshDialogueChoiceStyles(choiceViews, normalizedIndex, isChoiceAvailable);
     return {
       choiceViews,
-      dialogueChoiceIndex: normalizedIndex
+      dialogueChoiceIndex: normalizedIndex,
     };
   }
 
   ui.actionButtonText.setText(node.nextNodeId || node.action ? "E 다음" : "E 종료");
-  ui.hintText.setText(`${node.nextNodeId || node.action ? "E 다음" : "E 종료"}  |  ESC 종료`);
+  ui.hintText.setText(`${node.nextNodeId || node.action ? "E 다음" : "E 종료"} | ESC 종료`);
   return {
     choiceViews: [],
-    dialogueChoiceIndex
+    dialogueChoiceIndex,
   };
 }
 
@@ -148,16 +215,31 @@ export function refreshDialogueChoiceStyles(
   choiceViews.forEach((view, index) => {
     const selected = index === dialogueChoiceIndex;
     const available = isChoiceAvailable(view.choice);
-    const prefix = selected ? "▶ " : "   ";
+    const actionType = view.choice.actionType ?? "NORMAL";
+    const prefix = actionType === "LOCKED" ? "🔒 " : actionType === "MADNESS" ? "⚠ " : selected ? "▶ " : "   ";
     let text = `${prefix}${view.choice.text}`;
     if (view.requirementText.length > 0) {
       text += ` (${view.requirementText})`;
     }
     if (!available) {
-      text += " [조건 미충족]";
+      text += " [조건 미달]";
     }
     view.text.setText(text);
-    view.text.setColor(available ? (selected ? "#f0f8ff" : "#bfd9f8") : "#7f9cbc");
+
+    const baseColor =
+      actionType === "MADNESS"
+        ? "#ff9b9b"
+        : actionType === "LOCKED"
+          ? "#f3d58d"
+          : "#bfd9f8";
+    const selectedColor =
+      actionType === "MADNESS"
+        ? "#ffd4d4"
+        : actionType === "LOCKED"
+          ? "#fff2bf"
+          : "#f0f8ff";
+
+    view.text.setColor(available ? (selected ? selectedColor : baseColor) : "#7f9cbc");
     view.text.setAlpha(available ? 1 : 0.78);
   });
 }
