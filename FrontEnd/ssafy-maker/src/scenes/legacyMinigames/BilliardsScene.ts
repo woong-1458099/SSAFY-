@@ -84,11 +84,12 @@ export default class BilliardsScene extends Phaser.Scene {
     this.powerBar = this.add.graphics();
 
     this.input.on('pointerdown', (pointer) => {
-      if (this.gameOver) return;
+      if (this.gameOver || !this.cueBall) return;
       const dist = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.cueBall.x, this.cueBall.y);
-      if (dist < 40 && this.cueBall.getData('speed') < 5) {
+      const speed = this.cueBall.getData('speed') || 0;
+      if (dist < 50 && speed < 10) {
         this.isDragging = true;
-        this.hintTxt.setVisible(false);
+        if (this.hintTxt) this.hintTxt.setVisible(false);
       }
     });
 
