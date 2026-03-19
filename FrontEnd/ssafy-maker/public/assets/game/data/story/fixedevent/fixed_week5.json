@@ -8,7 +8,7 @@
       "day": 1,
       "timeOfDay": "오전" 
     },
-    "location": "강의장",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {
@@ -104,8 +104,7 @@
   {
     "eventId": "EVT_ROMANCE_MINSU_W5_D2_RECURSION",
     "eventName": "재귀함수의 굴레",
-    "eventType": "RANDOM",
-    "targetGender": "FEMALE",
+    "eventType": "FIXED",
     "triggerTiming": {
       "week": 5,
       "day": 2,
@@ -227,7 +226,7 @@
       "day": 4,
       "timeOfDay": "오후"
     },
-    "location": "상담실",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {

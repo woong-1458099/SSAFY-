@@ -1,5 +1,6 @@
 import { TIME_CYCLE } from "@features/progression/services/timeProgression";
 import { matchesFixedEventLocation, normalizeFixedEventLocationToken } from "./fixedEventLocation";
+import { FIXED_EVENT_INTERACTION_NPC_ASSET_KEYS, getFixedEventInteractionDialogues } from "./fixedEventTriggerPolicy";
 import type { FixedEventDialogueEntry, FixedEventEntry } from "./jsonDialogueAdapter";
 
 export type FixedEventRenderArea = "campus" | "downtown" | "world";
@@ -33,18 +34,6 @@ export type FixedEventNpcPresentation = {
 };
 
 export const FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT = 4;
-
-const FIXED_EVENT_NPC_ASSET_KEYS: Partial<Record<string, string>> = {
-  NPC_CLASSMATE_MINSU: "fixed-npc-minsu",
-  NPC_CLASSMATE_MYUNGJIN: "fixed-npc-myungjin",
-  NPC_CLASSMATE_JIWOO: "fixed-npc-jiwoo",
-  NPC_CLASSMATE_YEONWOONG: "fixed-npc-yeonwoong",
-  NPC_CLASSMATE_HYORYEON: "fixed-npc-hyoryeon",
-  NPC_CLASSMATE_JONGMIN: "fixed-npc-jongmin",
-  NPC_PRO_SUNMI: "fixed-npc-sunmi",
-  NPC_PRO_DOYEON: "fixed-npc-doyeon",
-  NPC_CONSULTANT_HYUNSEOK: "fixed-npc-hyunseok",
-};
 
 const FIXED_EVENT_NPC_LABELS: Partial<Record<string, string>> = {
   NPC_CLASSMATE_MYUNGJIN: "\uBA85\uC9C4",
@@ -266,7 +255,7 @@ function buildNpcEntry(entry: FixedEventDialogueEntry): FixedEventNpcEntry | nul
   const speakerId = entry.speakerId.trim();
   if (!speakerId || EVENT_FIELD_SPEAKER_EXCLUDED_IDS.has(speakerId)) return null;
 
-  const textureKey = FIXED_EVENT_NPC_ASSET_KEYS[speakerId];
+  const textureKey = FIXED_EVENT_INTERACTION_NPC_ASSET_KEYS[speakerId];
   if (!textureKey) return null;
 
   const label =
@@ -328,17 +317,7 @@ export function getDefaultFixedEventNpcSlotsForArea(area: FixedEventRenderArea, 
 
 export function getFixedEventPresentNpcs(event: FixedEventEntry | null | undefined): FixedEventNpcEntry[] {
   if (!event) return [];
-
-  const directParticipants = collectUniqueEventNpcs(Array.isArray(event.dialogues) ? event.dialogues : []);
-  if (directParticipants.length > 0) {
-    return directParticipants;
-  }
-
-  const branchParticipants = collectUniqueEventNpcs(
-    (event.choices ?? []).flatMap((choice) => (Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : []))
-  );
-
-  return branchParticipants.length === 1 ? branchParticipants : [];
+  return collectUniqueEventNpcs(getFixedEventInteractionDialogues(event));
 }
 
 export function buildFixedEventNpcPresentation(

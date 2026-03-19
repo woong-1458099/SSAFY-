@@ -8,7 +8,7 @@
       "day": 1,
       "timeOfDay": "오전"
     },
-    "location": "캠퍼스 내부",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {
@@ -82,7 +82,7 @@
       "day": 2,
       "timeOfDay": "오후"
     },
-    "location": "캠퍼스 내부",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {
@@ -185,7 +185,7 @@
       "day": 5,
       "timeOfDay": "오전"
     },
-    "location": "캠퍼스 내부",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {

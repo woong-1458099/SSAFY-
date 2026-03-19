@@ -33,11 +33,16 @@ import {
 import {
   buildFixedEventNpcPresentation,
   getDefaultFixedEventNpcSlotsForArea,
-  getFixedEventPresentNpcs,
   resolveCurrentFixedEventLocation,
   type FixedEventNpcSlot,
   type FixedEventRenderArea
 } from "@features/story/fixedEventNpcPresence";
+import {
+  collectActiveFixedEventSlotNpcTextureKeys,
+  collectFixedEventHiddenNpcTextureKeys,
+  shouldHideAreaNpcForFixedEvent,
+} from "@features/story/fixedEventNpcOverlapPolicy";
+import { getFixedEventTriggerPolicy } from "@features/story/fixedEventTriggerPolicy";
 import {
   clearDialogueChoices,
   createDialogueUi,
@@ -168,6 +173,25 @@ type InventoryItemTemplate = {
 type InventoryItemStack = {
   template: InventoryItemTemplate;
   quantity: number;
+};
+
+const DEFAULT_HUD_STATE: HudState = {
+  timeLabel: "오전",
+  locationLabel: "전체 지도",
+  week: 1,
+  dayLabel: "월요일",
+  hp: 82,
+  hpMax: 100,
+  money: 12000,
+  stress: 20
+};
+
+const DEFAULT_STATS_STATE: Record<StatKey, number> = {
+  fe: 20,
+  be: 20,
+  teamwork: 40,
+  luck: 10,
+  stress: 20
 };
 
 const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
@@ -345,6 +369,7 @@ type ScrollableTabPage = {
 
 type MainSavePayload = SaveGamePayload<AreaId, WorldPlaceId, StatKey, EquipmentSlotKey, WeeklyPlanOptionId> & {
   completedFixedEventIds: string[];
+  hiddenFixedEventNpcTextureKeys: string[];
 };
 
 type MainSceneInitData = {
@@ -456,6 +481,7 @@ export class MainScene extends Phaser.Scene {
   private saveSlotViews: SaveSlotView[] = [];
   private savePinnedObjects: Phaser.GameObjects.GameObject[] = [];
   private selectedSaveSlotId = "slot-1";
+  private hiddenFixedEventNpcTextureKeys: string[] = [];
   private readonly uiFontFamily = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
   private readonly audioManager = new AudioManager();
   private areaBgm?: Phaser.Sound.BaseSound;
@@ -506,19 +532,11 @@ export class MainScene extends Phaser.Scene {
   private activeDialogueId: NpcDialogueId | null = null;
   private activeDialogueNodeId: string | null = null;
   private dialogueChoiceIndex = 0;
+  private dialogueChoicesVisible = false;
   private runtimeDialogueScripts: Partial<Record<NpcDialogueId, NpcDialogueScript>> = {};
 
   private hud!: GameHud;
-  private hudState: HudState = {
-    timeLabel: "\uC624\uC804",
-    locationLabel: "\uC804\uCCB4 \uC9C0\uB3C4",
-    week: 1,
-    dayLabel: "\uC6D4\uC694\uC77C",
-    hp: 82,
-    hpMax: 100,
-    money: 12000,
-    stress: 20
-  };
+  private hudState: HudState = { ...DEFAULT_HUD_STATE };
 
   private menuRoot?: Phaser.GameObjects.Container;
   private menuOpen = false;
@@ -529,13 +547,7 @@ export class MainScene extends Phaser.Scene {
   private tabScrollPages: Partial<Record<TabKey, ScrollableTabPage>> = {};
   private tabVisuals: Record<TabKey, TabVisual> = {} as Record<TabKey, TabVisual>;
   private activeTab: TabKey = "inventory";
-  private statsState: Record<StatKey, number> = {
-    fe: 20,
-    be: 20,
-    teamwork: 40,
-    luck: 10,
-    stress: 20
-  };
+  private statsState: Record<StatKey, number> = { ...DEFAULT_STATS_STATE };
   private statViews: Partial<Record<StatKey, StatView>> = {};
 
   constructor() {
@@ -544,6 +556,50 @@ export class MainScene extends Phaser.Scene {
 
   init(data: MainSceneInitData): void {
     this.initialSaveSlotId = typeof data?.saveSlotId === "string" ? data.saveSlotId : null;
+  }
+
+  private resetRunState(): void {
+    this.areaNpcViews = [];
+    this.scheduledNpcViews = [];
+    this.downtownBuildingViews = [];
+    this.saveSlotViews = [];
+    this.inventorySlotViews = [];
+    this.savePinnedObjects = [];
+    this.runtimeDialogueScripts = {};
+    this.completedFixedEventIds = [];
+    this.hiddenFixedEventNpcTextureKeys = [];
+    this.activeFixedEventId = null;
+    this.activeDialogueId = null;
+    this.activeDialogueNodeId = null;
+    this.dialogueChoiceIndex = 0;
+    this.dialogueChoicesVisible = false;
+    this.dialogueOpen = false;
+    this.menuOpen = false;
+    this.shopOpen = false;
+    this.placePopupOpen = false;
+    this.weeklyPlanActivityOpen = false;
+    this.weeklyPlannerPopupOpen = false;
+    this.endingFlowStarted = false;
+    this.pendingInventoryPickup = undefined;
+    this.carriedItem = null;
+    this.carriedFromIndex = null;
+    this.activeTab = "inventory";
+    this.currentArea = "world";
+    this.lastSelectedWorldPlace = "downtown";
+    this.lastSafePlayerPosition = null;
+    this.actionPoint = this.maxActionPoint;
+    this.timeCycleIndex = 0;
+    this.dayCycleIndex = 0;
+    this.weeklyPlan = createDefaultWeeklyPlan();
+    this.weeklyPlanWeek = 0;
+    this.lastAppliedWeeklyPlanSlotKey = null;
+    this.selectedSaveSlotId = "slot-1";
+    this.hudState = { ...DEFAULT_HUD_STATE };
+    this.statsState = { ...DEFAULT_STATS_STATE };
+
+    this.inventorySlots.fill(null);
+    this.equippedSlots.keyboard = null;
+    this.equippedSlots.mouse = null;
   }
 
   preload(): void {
@@ -574,14 +630,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.areaNpcViews = [];
-    this.scheduledNpcViews = [];
-    this.downtownBuildingViews = [];
-    this.saveSlotViews = [];
-    this.inventorySlotViews = [];
-    this.savePinnedObjects = [];
-    this.runtimeDialogueScripts = {};
-    this.completedFixedEventIds = [];
+    this.resetRunState();
 
     this.cameras.main.setBackgroundColor("#3e7d4a");
     this.cameras.main.roundPixels = true;
@@ -1226,7 +1275,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private getFixedEventCacheKey(week: number): string {
-    const clampedWeek = Phaser.Math.Clamp(Math.round(week), 1, 5);
+    const clampedWeek = Phaser.Math.Clamp(Math.round(week), 1, 6);
     return `story_fixed_week${clampedWeek}`;
   }
 
@@ -1244,7 +1293,7 @@ export class MainScene extends Phaser.Scene {
       return false;
     }
 
-    if (getFixedEventPresentNpcs(matchingEvent).length > 0) {
+    if (getFixedEventTriggerPolicy(matchingEvent) === "npc_interaction") {
       return false;
     }
 
@@ -1265,13 +1314,42 @@ export class MainScene extends Phaser.Scene {
     );
   }
 
-  private refreshScheduledNpcViews(): void {
+  private getCurrentFixedEventPresentation(): ReturnType<typeof buildFixedEventNpcPresentation> {
     const event = this.getCurrentFixedEventEntry();
     const currentLocation = resolveCurrentFixedEventLocation(this.currentArea, this.lastSelectedWorldPlace);
-    const presentation = buildFixedEventNpcPresentation(event, {
+    return buildFixedEventNpcPresentation(event, {
       currentLocation,
       timeOfDay: this.hudState.timeLabel
     });
+  }
+
+  private hideCurrentFixedEventBaseNpcsUntilNextDay(): void {
+    const hiddenTextureKeys = collectFixedEventHiddenNpcTextureKeys(
+      this.getCurrentFixedEventPresentation(),
+      this.hiddenFixedEventNpcTextureKeys
+    );
+    this.hiddenFixedEventNpcTextureKeys = [...hiddenTextureKeys];
+  }
+
+  private getHiddenFixedEventNpcTextureKeys(): Set<string> {
+    const activeSlotTextureKeys = collectActiveFixedEventSlotNpcTextureKeys(
+      this.getFixedEventDataForWeek(this.hudState.week),
+      {
+        week: this.hudState.week,
+        day: this.dayCycleIndex + 1,
+        timeOfDay: this.hudState.timeLabel
+      },
+      this.completedFixedEventIds
+    );
+
+    return collectFixedEventHiddenNpcTextureKeys(
+      this.getCurrentFixedEventPresentation(),
+      [...activeSlotTextureKeys, ...this.hiddenFixedEventNpcTextureKeys]
+    );
+  }
+
+  private refreshScheduledNpcViews(): void {
+    const presentation = this.getCurrentFixedEventPresentation();
 
     this.scheduledNpcViews.forEach((view, index) => {
       const fallbackSlot = getDefaultFixedEventNpcSlotsForArea(view.area, this.hudState.timeLabel)[index];
@@ -1311,6 +1389,7 @@ export class MainScene extends Phaser.Scene {
       playerName: this.getPlayerName()
     });
     if (!runtimeScript) return false;
+    this.hideCurrentFixedEventBaseNpcsUntilNextDay();
     this.runtimeDialogueScripts.fixed_event_runtime = runtimeScript;
     this.activeFixedEventId = typeof event.eventId === "string" ? event.eventId : null;
     this.startNpcDialogue("fixed_event_runtime");
@@ -1318,8 +1397,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private refreshAreaNpcVisibility(area: AreaId): void {
+    const hiddenTextureKeys = this.getHiddenFixedEventNpcTextureKeys();
+
     this.areaNpcViews.forEach((view) => {
-      const visible = view.area === area;
+      const visible = view.area === area && !shouldHideAreaNpcForFixedEvent(view.config, hiddenTextureKeys);
       view.marker.setVisible(visible);
       view.label.setVisible(visible);
       view.portrait?.setVisible(visible);
@@ -2331,7 +2412,8 @@ export class MainScene extends Phaser.Scene {
         inventorySlots: this.inventorySlots,
         equippedSlots: this.equippedSlots
       }),
-      completedFixedEventIds: [...this.completedFixedEventIds]
+      completedFixedEventIds: [...this.completedFixedEventIds],
+      hiddenFixedEventNpcTextureKeys: [...this.hiddenFixedEventNpcTextureKeys]
     };
   }
 
@@ -2364,6 +2446,9 @@ export class MainScene extends Phaser.Scene {
     }
     this.completedFixedEventIds = Array.isArray(payload.completedFixedEventIds)
       ? payload.completedFixedEventIds.filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+      : [];
+    this.hiddenFixedEventNpcTextureKeys = Array.isArray(payload.hiddenFixedEventNpcTextureKeys)
+      ? payload.hiddenFixedEventNpcTextureKeys.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
       : [];
 
     this.restoreStatsFromSave(payload.statsState);
@@ -2510,6 +2595,7 @@ export class MainScene extends Phaser.Scene {
     this.activeDialogueId = dialogueId;
     this.activeDialogueNodeId = startNode.id;
     this.dialogueChoiceIndex = 0;
+    this.dialogueChoicesVisible = false;
     this.dialogueOpen = true;
     this.dialogueRoot?.setVisible(true);
     this.renderDialogueNode();
@@ -2522,7 +2608,7 @@ export class MainScene extends Phaser.Scene {
 
     const hasChoices = Boolean(node.choices?.length);
 
-    if (hasChoices) {
+    if (hasChoices && this.dialogueChoicesVisible) {
       const choices = node.choices ?? [];
       if (choices.length > 1 && this.upKey && Phaser.Input.Keyboard.JustDown(this.upKey)) {
         this.dialogueChoiceIndex = Phaser.Math.Wrap(this.dialogueChoiceIndex - 1, 0, choices.length);
@@ -2541,6 +2627,12 @@ export class MainScene extends Phaser.Scene {
 
   private resolveDialogueAdvance(node: DialogueNode): void {
     if (node.choices?.length) {
+      if (!this.dialogueChoicesVisible) {
+        this.dialogueChoicesVisible = true;
+        this.renderDialogueNode();
+        return;
+      }
+
       const selectedChoice = node.choices[this.dialogueChoiceIndex];
       if (!selectedChoice) return;
 
@@ -2554,6 +2646,7 @@ export class MainScene extends Phaser.Scene {
       if (selectedChoice.nextNodeId) {
         this.activeDialogueNodeId = selectedChoice.nextNodeId;
         this.dialogueChoiceIndex = 0;
+        this.dialogueChoicesVisible = false;
         this.renderDialogueNode();
         return;
       }
@@ -2571,6 +2664,7 @@ export class MainScene extends Phaser.Scene {
     if (node.nextNodeId) {
       this.activeDialogueNodeId = node.nextNodeId;
       this.dialogueChoiceIndex = 0;
+      this.dialogueChoicesVisible = false;
       this.renderDialogueNode();
       return;
     }
@@ -2620,7 +2714,14 @@ export class MainScene extends Phaser.Scene {
     }
 
     const rendered = renderDialogueNode(this, {
-      node,
+      node:
+        node.choices?.length && !this.dialogueChoicesVisible
+          ? {
+              ...node,
+              choices: undefined,
+              nextNodeId: "__reveal_choices__",
+            }
+          : node,
       root: this.dialogueRoot,
       px: (value) => this.px(value),
       getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
@@ -2654,6 +2755,7 @@ export class MainScene extends Phaser.Scene {
     this.activeDialogueNodeId = null;
     this.activeFixedEventId = null;
     this.dialogueChoiceIndex = 0;
+    this.dialogueChoicesVisible = false;
     this.clearDialogueChoices();
     this.dialogueRoot?.setVisible(false);
   }
@@ -3334,7 +3436,9 @@ export class MainScene extends Phaser.Scene {
       this.refreshStatsUi();
     }
     this.hud.applyState(this.hudState);
-    if (this.scheduledNpcViews.length > 0) {
+    if (this.areaNpcViews.length > 0) {
+      this.refreshAreaNpcVisibility(this.currentArea);
+    } else if (this.scheduledNpcViews.length > 0) {
       this.refreshScheduledNpcViews();
     }
   }
@@ -3368,6 +3472,10 @@ export class MainScene extends Phaser.Scene {
     result: ReturnType<typeof advanceTimeProgress>,
     onSettled?: () => void
   ): void {
+    if (result.dayPassed) {
+      this.hiddenFixedEventNpcTextureKeys = [];
+    }
+
     this.actionPoint = result.actionPoint;
     this.timeCycleIndex = result.timeCycleIndex;
     this.dayCycleIndex = result.dayCycleIndex;

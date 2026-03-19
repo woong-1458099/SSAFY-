@@ -23,6 +23,37 @@ type TextStyleFactory = (
   fontStyle?: "normal" | "bold"
 ) => Phaser.Types.GameObjects.Text.TextStyle;
 
+const DIALOGUE_PANEL_WIDTH = GAME_CONSTANTS.WIDTH - 84;
+const DIALOGUE_PANEL_HEIGHT = 360;
+const DIALOGUE_PANEL_BOTTOM_MARGIN = 22;
+const DIALOGUE_PANEL_HORIZONTAL_PADDING = 22;
+const DIALOGUE_BODY_TOP_OFFSET = 52;
+
+function getDialoguePanelLayout(px: (value: number) => number): {
+  panelWidth: number;
+  panelHeight: number;
+  centerX: number;
+  panelCenterY: number;
+  panelLeft: number;
+  panelTop: number;
+} {
+  const panelWidth = px(DIALOGUE_PANEL_WIDTH);
+  const panelHeight = px(DIALOGUE_PANEL_HEIGHT);
+  const centerX = px(GAME_CONSTANTS.WIDTH / 2);
+  const panelCenterY = px(GAME_CONSTANTS.HEIGHT - DIALOGUE_PANEL_BOTTOM_MARGIN - DIALOGUE_PANEL_HEIGHT / 2);
+  const panelLeft = px(centerX - panelWidth / 2);
+  const panelTop = px(panelCenterY - panelHeight / 2);
+
+  return {
+    panelWidth,
+    panelHeight,
+    centerX,
+    panelCenterY,
+    panelLeft,
+    panelTop,
+  };
+}
+
 const EMOTION_LABELS = {
   NORMAL: "평온",
   ANGRY: "분노",
@@ -94,23 +125,18 @@ export function createDialogueUi(
   }
 ): DialogueUiRefs {
   const { px, getBodyStyle, createPanelOuterBorder, panelInnerBorderColor, onAction } = options;
-  const panelWidth = px(GAME_CONSTANTS.WIDTH - 84);
-  const panelHeight = 220;
-  const centerX = px(GAME_CONSTANTS.WIDTH / 2);
-  const panelCenterY = px(GAME_CONSTANTS.HEIGHT - 132);
-  const panelLeft = px(centerX - panelWidth / 2);
-  const panelTop = px(panelCenterY - panelHeight / 2);
+  const { panelWidth, panelHeight, centerX, panelCenterY, panelLeft, panelTop } = getDialoguePanelLayout(px);
 
   const panelOuter = createPanelOuterBorder(centerX, panelCenterY, panelWidth, panelHeight);
   const panel = scene.add.rectangle(centerX, panelCenterY, panelWidth, panelHeight, 0x132e4f, 0.94);
   panel.setStrokeStyle(2, panelInnerBorderColor, 1);
 
-  const speaker = scene.add.text(panelLeft + 22, panelTop + 16, "", getBodyStyle(21, "#e8f4ff", "bold"));
+  const speaker = scene.add.text(panelLeft + DIALOGUE_PANEL_HORIZONTAL_PADDING, panelTop + 16, "", getBodyStyle(21, "#e8f4ff", "bold"));
   speaker.setOrigin(0, 0);
 
-  const body = scene.add.text(panelLeft + 22, panelTop + 52, "", getBodyStyle(19, "#cde3ff"));
+  const body = scene.add.text(panelLeft + DIALOGUE_PANEL_HORIZONTAL_PADDING, panelTop + DIALOGUE_BODY_TOP_OFFSET, "", getBodyStyle(19, "#cde3ff"));
   body.setOrigin(0, 0);
-  body.setWordWrapWidth(px(panelWidth - 44), true);
+  body.setWordWrapWidth(px(panelWidth - DIALOGUE_PANEL_HORIZONTAL_PADDING * 2), true);
   body.setLineSpacing(8);
 
   const actionButtonBg = scene.add.rectangle(panelLeft + panelWidth - 90, panelTop + panelHeight - 38, 132, 34, 0x2c5888, 1);
@@ -167,20 +193,23 @@ export function renderDialogueNode(
   dialogueChoiceIndex: number;
 } {
   const { node, root, px, getBodyStyle, ui, dialogueChoiceIndex, getRequirementText, isChoiceAvailable } = options;
+  const { panelWidth, panelHeight, panelLeft, panelTop } = getDialoguePanelLayout(px);
+  const hasChoices = Boolean(node.choices?.length);
   ui.speakerText.setText(formatSpeakerTitle(node));
   ui.speakerText.setColor(getSpeakerColor(node));
-  ui.bodyText.setText(node.text);
+  ui.bodyText.setText(hasChoices ? "" : node.text);
 
-  if (node.choices?.length) {
-    const choiceStartY = px(GAME_CONSTANTS.HEIGHT - 122);
-    const choiceSpacing = 26;
-    const choiceX = px(74);
-    const wrapWidth = px(GAME_CONSTANTS.WIDTH - 148);
+  if (hasChoices) {
+    const choiceSpacing = 10;
+    const choiceX = panelLeft + DIALOGUE_PANEL_HORIZONTAL_PADDING;
+    const choiceStartY = panelTop + DIALOGUE_BODY_TOP_OFFSET;
+    const wrapWidth = px(panelWidth - DIALOGUE_PANEL_HORIZONTAL_PADDING * 2);
 
     const choiceViews = node.choices.map((choice, index) => {
-      const line = scene.add.text(choiceX, choiceStartY + index * choiceSpacing, "", getBodyStyle(17, "#d2e7ff"));
+      const line = scene.add.text(choiceX, choiceStartY, "", getBodyStyle(15, "#d2e7ff"));
       line.setOrigin(0, 0);
       line.setWordWrapWidth(wrapWidth, true);
+      line.setLineSpacing(4);
       root?.add(line);
       return {
         text: line,
@@ -193,6 +222,11 @@ export function renderDialogueNode(
     ui.hintText.setText("↑↓ 선택 | Space 결정 | ESC 종료");
     ui.actionButtonText.setText("Space 선택");
     refreshDialogueChoiceStyles(choiceViews, normalizedIndex, isChoiceAvailable);
+    let nextChoiceY = choiceStartY;
+    choiceViews.forEach((view) => {
+      view.text.setPosition(choiceX, nextChoiceY);
+      nextChoiceY += view.text.height + choiceSpacing;
+    });
     return {
       choiceViews,
       dialogueChoiceIndex: normalizedIndex,
