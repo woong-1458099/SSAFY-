@@ -2,7 +2,7 @@ export type StoryStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
 export type DialogueStatKey = StoryStatKey | "hp" | "gold";
 export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
 
-export type DialogueAction = "openShop" | "openMiniGame" | "playDrinking" | "playInterview" | "playGym" | "playRhythm" | "playCooking";
+export type DialogueAction = "openShop" | "openMiniGame" | "playDrinking" | "playInterview" | "playGym" | "playRhythm" | "playConflict" | "playCooking";
 
 export type DialogueRequirement = {
   stat: DialogueStatKey;
@@ -282,6 +282,7 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         speaker: "지우",
         text: "팀 프로젝트하다 보면 갈등이 생기기 마련이지. 같이 해결책을 찾아볼까?",
         choices: [
+          { id: "play", text: "갈등 해결 시뮬레이션", action: "playConflict" },
           { id: "bye", text: "혼자 생각해볼게." }
         ]
       }

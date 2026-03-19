@@ -18,14 +18,10 @@ export default class TankScene extends Phaser.Scene {
 
     this.gameOver = false;
     this.started = false;
-    this.playerLives = 3;
-    this.enemyLives = 3;
-    this.playerBullets = [];
-    this.enemyBullets = [];
-    this.lastPlayerShot = 0;
-    this.lastEnemyShot = 0;
-    this.shootCooldown = 400;
-    this.playerAimAngle = -Math.PI / 2; // 초기: 위쪽
+    this.score = 0;
+    this.spawnTimer = 0;
+    this.bullets = [];
+    this.enemies = [];
 
     // Background
     this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
@@ -36,73 +32,40 @@ export default class TankScene extends Phaser.Scene {
     for (let i = 0; i < W; i += 40) grid.lineBetween(i, 0, i, H);
     for (let i = 0; i < H; i += 40) grid.lineBetween(0, i, W, i);
 
-    // Center dividing line
-    this.add.rectangle(W / 2, H / 2, W - 40, 4, 0x444488, 0.5);
+    // UI
+    this.add.rectangle(W / 2, 25, W, 50, 0x1a1a1a, 0.95);
+    this.add.text(W / 2, 15, '🎮 탱크 워', { fontSize: '18px', color: '#88ff00', fontFamily: PF }).setOrigin(0.5);
+    this.scoreTxt = this.add.text(20, 35, 'SCORE: 0', { fontSize: '11px', color: '#ffffff', fontFamily: PF });
+    this.hintTxt = this.add.text(W / 2, H - 25, 'WASD: 이동 | 클릭: 발사', { fontSize: '10px', color: '#88ff88', fontFamily: PF }).setOrigin(0.5);
 
-    // Arena border
-    const border = this.add.graphics();
-    border.lineStyle(4, 0x88ff00);
-    border.strokeRect(20, 20, W - 40, H - 40);
+    // Player Tank
+    this.player = this.add.container(W / 2, H / 2);
+    const tankBody = this.add.rectangle(0, 0, 40, 48, 0x334400).setStrokeStyle(3, 0x88ff00);
+    const tankTrackL = this.add.rectangle(-22, 0, 8, 52, 0x222200).setStrokeStyle(1, 0x556600);
+    const tankTrackR = this.add.rectangle(22, 0, 8, 52, 0x222200).setStrokeStyle(1, 0x556600);
+    const tankTop = this.add.circle(0, 0, 14, 0x445500).setStrokeStyle(2, 0x88ff00);
+    this.turret = this.add.rectangle(0, -30, 8, 36, 0x556622).setOrigin(0.5, 1).setStrokeStyle(2, 0xaaff44);
+    this.player.add([tankTrackL, tankTrackR, tankBody, tankTop, this.turret]);
+    this.player.setDepth(10);
 
-    // UI - Player lives (bottom left)
-    this.add.text(30, H - 35, 'PLAYER', { fontSize: '10px', color: '#44aaff', fontFamily: PF });
-    this.playerLivesIcons = [];
-    for (let i = 0; i < 3; i++) {
-      const heart = this.add.text(100 + i * 25, H - 38, '❤️', { fontSize: '14px' });
-      this.playerLivesIcons.push(heart);
-    }
-
-    // UI - Enemy lives (top right)
-    this.add.text(W - 170, 15, 'ENEMY', { fontSize: '10px', color: '#ff4466', fontFamily: PF });
-    this.enemyLivesIcons = [];
-    for (let i = 0; i < 3; i++) {
-      const heart = this.add.text(W - 100 + i * 25, 12, '❤️', { fontSize: '14px' });
-      this.enemyLivesIcons.push(heart);
-    }
-
-    // Title
-    this.add.text(W / 2, 15, '🎮 탱크 배틀', { fontSize: '16px', color: '#88ff00', fontFamily: PF }).setOrigin(0.5);
-
-    // Hint
-    this.hintTxt = this.add.text(W / 2, H - 18, 'WASD: 이동 | 방향키: 조준 | SPACE: 발사', { fontSize: '10px', color: '#88ff88', fontFamily: PF }).setOrigin(0.5);
-
-    // Create Player Tank (bottom - Blue/Green)
-    this.player = this.createTank(W / 2, H - 100, 0x334400, 0x88ff00, true);
-
-    // Create Enemy Tank (top - Red)
-    this.enemy = this.createTank(W / 2, 100, 0x440000, 0xff4466, false);
-    this.enemyTargetX = this.enemy.x;
-    this.enemyTargetY = this.enemy.y;
-    this.enemyMoveTimer = 0;
+    this.playerVX = 0;
+    this.playerVY = 0;
 
     // Controls
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE');
 
-    // Space fire
+    // Mouse fire
+    this.input.on('pointerdown', () => {
+      if (this.started && !this.gameOver) this.fireBullet();
+    });
+
+    // Space bar fire
     this.input.keyboard.on('keydown-SPACE', () => {
-      if (this.started && !this.gameOver) this.playerFire();
+      if (this.started && !this.gameOver) this.fireBullet();
     });
 
     this.showCountdown();
-  }
-
-  createTank(x, y, bodyColor, accentColor, isPlayer) {
-    const tank = this.add.container(x, y);
-
-    const trackL = this.add.rectangle(-18, 0, 8, 44, 0x222200).setStrokeStyle(1, accentColor);
-    const trackR = this.add.rectangle(18, 0, 8, 44, 0x222200).setStrokeStyle(1, accentColor);
-    const body = this.add.rectangle(0, 0, 32, 40, bodyColor).setStrokeStyle(3, accentColor);
-    const top = this.add.circle(0, 0, 12, bodyColor).setStrokeStyle(2, accentColor);
-    const turret = this.add.rectangle(0, -24, 6, 28, accentColor).setOrigin(0.5, 1);
-
-    tank.add([trackL, trackR, body, top, turret]);
-    tank.setDepth(10);
-    tank.setData('turret', turret);
-    tank.setData('isPlayer', isPlayer);
-    tank.setData('invincible', false);
-
-    return tank;
   }
 
   showCountdown() {
@@ -121,7 +84,9 @@ export default class TankScene extends Phaser.Scene {
           countTxt.setText('FIGHT!').setColor('#ffff00');
           this.tweens.add({
             targets: countTxt,
-            alpha: 0, scaleX: 2, scaleY: 2,
+            alpha: 0,
+            scaleX: 2,
+            scaleY: 2,
             duration: 400,
             onComplete: () => {
               countTxt.destroy();
@@ -134,239 +99,171 @@ export default class TankScene extends Phaser.Scene {
     });
   }
 
-  playerFire() {
-    const now = this.time.now;
-    if (now - this.lastPlayerShot < this.shootCooldown) return;
-    this.lastPlayerShot = now;
-
-    this.fireBullet(this.player.x, this.player.y, this.playerAimAngle, true);
-  }
-
-  enemyFire() {
-    const now = this.time.now;
-    if (now - this.lastEnemyShot < this.shootCooldown * 1.8) return;
-    this.lastEnemyShot = now;
-
-    // Enemy aims at player
-    const aimAngle = Phaser.Math.Angle.Between(this.enemy.x, this.enemy.y, this.player.x, this.player.y);
-    this.fireBullet(this.enemy.x, this.enemy.y, aimAngle, false);
-  }
-
-  fireBullet(x, y, angle, isPlayer) {
-    const bx = x + Math.cos(angle) * 35;
-    const by = y + Math.sin(angle) * 35;
+  fireBullet() {
+    const angle = this.turret.rotation - Math.PI / 2;
+    const bx = this.player.x + Math.cos(angle) * 40;
+    const by = this.player.y + Math.sin(angle) * 40;
 
     const bullet = this.add.container(bx, by);
-    const bulletBody = this.add.rectangle(0, 0, 6, 12, isPlayer ? 0x88ff00 : 0xff4466);
-    bulletBody.setStrokeStyle(1, isPlayer ? 0xaaffaa : 0xffaaaa);
+    const bulletBody = this.add.rectangle(0, 0, 6, 14, 0xffff00).setStrokeStyle(1, 0xffffaa);
     bullet.add(bulletBody);
     bullet.rotation = angle + Math.PI / 2;
-    bullet.setData('vx', Math.cos(angle) * 450);
-    bullet.setData('vy', Math.sin(angle) * 450);
-    bullet.setData('isPlayer', isPlayer);
+    bullet.setData('vx', Math.cos(angle) * 600);
+    bullet.setData('vy', Math.sin(angle) * 600);
     bullet.setDepth(5);
 
-    if (isPlayer) {
-      this.playerBullets.push(bullet);
-    } else {
-      this.enemyBullets.push(bullet);
-    }
+    this.bullets.push(bullet);
 
     // Muzzle flash
-    const flash = this.add.circle(bx, by, 10, isPlayer ? 0xaaffaa : 0xffaaaa, 0.8);
-    this.tweens.add({ targets: flash, alpha: 0, scaleX: 2, scaleY: 2, duration: 80, onComplete: () => flash.destroy() });
+    const flash = this.add.circle(bx, by, 12, 0xffff88, 0.8);
+    this.tweens.add({ targets: flash, alpha: 0, scaleX: 2, scaleY: 2, duration: 100, onComplete: () => flash.destroy() });
 
-    this.cameras.main.shake(20, 0.002);
+    this.cameras.main.shake(30, 0.003);
   }
 
-  updateAI(dt) {
-    if (!this.enemy || this.gameOver) return;
+  spawnEnemy() {
+    const side = Phaser.Math.Between(0, 3);
+    let x, y;
 
-    // Move AI randomly in top half
-    this.enemyMoveTimer -= dt * 1000;
-    if (this.enemyMoveTimer <= 0) {
-      this.enemyTargetX = Phaser.Math.Between(80, W - 80);
-      this.enemyTargetY = Phaser.Math.Between(80, H / 2 - 60);
-      this.enemyMoveTimer = Phaser.Math.Between(1000, 2500);
-    }
+    if (side === 0) { x = Phaser.Math.Between(50, W - 50); y = -40; }
+    else if (side === 1) { x = W + 40; y = Phaser.Math.Between(50, H - 50); }
+    else if (side === 2) { x = Phaser.Math.Between(50, W - 50); y = H + 40; }
+    else { x = -40; y = Phaser.Math.Between(50, H - 50); }
 
-    // Move toward target
-    const dx = this.enemyTargetX - this.enemy.x;
-    const dy = this.enemyTargetY - this.enemy.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const enemy = this.add.container(x, y);
+    const body = this.add.rectangle(0, 0, 32, 32, 0x441100).setStrokeStyle(2, 0xff4400);
+    const core = this.add.circle(0, 0, 8, 0xff6600);
+    enemy.add([body, core]);
+    enemy.setData('hp', 1);
+    enemy.setDepth(4);
 
-    if (dist > 10) {
-      const speed = 100;
-      this.enemy.x += (dx / dist) * speed * dt;
-      this.enemy.y += (dy / dist) * speed * dt;
-    }
+    // Rotate toward player
+    const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
+    enemy.rotation = angle + Math.PI / 2;
 
-    // Clamp position (top half)
-    this.enemy.x = Phaser.Math.Clamp(this.enemy.x, 50, W - 50);
-    this.enemy.y = Phaser.Math.Clamp(this.enemy.y, 50, H / 2 - 40);
+    const speed = 80 + Math.min(this.score, 200);
+    enemy.setData('vx', Math.cos(angle) * speed);
+    enemy.setData('vy', Math.sin(angle) * speed);
 
-    // Aim turret at player
-    const turret = this.enemy.getData('turret');
-    const aimAngle = Phaser.Math.Angle.Between(this.enemy.x, this.enemy.y, this.player.x, this.player.y);
-    turret.rotation = aimAngle + Math.PI / 2;
-
-    // Fire at player periodically
-    if (Phaser.Math.Between(0, 100) < 3) {
-      this.enemyFire();
-    }
+    this.enemies.push(enemy);
   }
 
   update(time, delta) {
     if (!this.started || this.gameOver) return;
 
     const dt = delta / 1000;
-    const speed = 160;
+    const speed = 200;
 
-    // Player turret aiming with arrow keys
-    if (this.cursors.up.isDown) {
-      this.playerAimAngle = -Math.PI / 2; // 위
-    } else if (this.cursors.down.isDown) {
-      this.playerAimAngle = Math.PI / 2; // 아래
-    } else if (this.cursors.left.isDown) {
-      this.playerAimAngle = Math.PI; // 왼쪽
-    } else if (this.cursors.right.isDown) {
-      this.playerAimAngle = 0; // 오른쪽
-    }
+    // Turret follows mouse
+    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.input.activePointer.x, this.input.activePointer.y);
+    this.turret.rotation = angle + Math.PI / 2;
 
-    // Diagonal aiming
-    if (this.cursors.up.isDown && this.cursors.left.isDown) {
-      this.playerAimAngle = -Math.PI * 3 / 4;
-    } else if (this.cursors.up.isDown && this.cursors.right.isDown) {
-      this.playerAimAngle = -Math.PI / 4;
-    } else if (this.cursors.down.isDown && this.cursors.left.isDown) {
-      this.playerAimAngle = Math.PI * 3 / 4;
-    } else if (this.cursors.down.isDown && this.cursors.right.isDown) {
-      this.playerAimAngle = Math.PI / 4;
-    }
-
-    // Update player turret visual
-    const turret = this.player.getData('turret');
-    turret.rotation = this.playerAimAngle + Math.PI / 2;
-
-    // Player movement with WASD
+    // Player movement
     let vx = 0, vy = 0;
-    if (this.keys.W.isDown) vy = -speed;
-    else if (this.keys.S.isDown) vy = speed;
-    if (this.keys.A.isDown) vx = -speed;
-    else if (this.keys.D.isDown) vx = speed;
+    if (this.keys.W.isDown || this.cursors.up.isDown) vy = -speed;
+    else if (this.keys.S.isDown || this.cursors.down.isDown) vy = speed;
+    if (this.keys.A.isDown || this.cursors.left.isDown) vx = -speed;
+    else if (this.keys.D.isDown || this.cursors.right.isDown) vx = speed;
 
     this.player.x += vx * dt;
     this.player.y += vy * dt;
 
-    // Clamp player position (bottom half)
-    this.player.x = Phaser.Math.Clamp(this.player.x, 50, W - 50);
-    this.player.y = Phaser.Math.Clamp(this.player.y, H / 2 + 40, H - 50);
+    // Clamp player position
+    this.player.x = Phaser.Math.Clamp(this.player.x, 40, W - 40);
+    this.player.y = Phaser.Math.Clamp(this.player.y, 60, H - 40);
 
-    // Update AI
-    this.updateAI(dt);
-
-    // Update player bullets
-    this.updateBullets(this.playerBullets, this.enemy, false, dt);
-
-    // Update enemy bullets
-    this.updateBullets(this.enemyBullets, this.player, true, dt);
-  }
-
-  updateBullets(bullets, target, targetIsPlayer, dt) {
-    for (let i = bullets.length - 1; i >= 0; i--) {
-      const bullet = bullets[i];
+    // Update bullets
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const bullet = this.bullets[i];
       bullet.x += bullet.getData('vx') * dt;
       bullet.y += bullet.getData('vy') * dt;
 
       // Remove if out of bounds
-      if (bullet.x < 10 || bullet.x > W - 10 || bullet.y < 10 || bullet.y > H - 10) {
+      if (bullet.x < -20 || bullet.x > W + 20 || bullet.y < -20 || bullet.y > H + 20) {
         bullet.destroy();
-        bullets.splice(i, 1);
+        this.bullets.splice(i, 1);
         continue;
       }
 
-      // Check collision with target
-      if (!target.getData('invincible')) {
-        const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, target.x, target.y);
-        if (dist < 28) {
+      // Check enemy collision
+      for (let j = this.enemies.length - 1; j >= 0; j--) {
+        const enemy = this.enemies[j];
+        const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, enemy.x, enemy.y);
+        if (dist < 25) {
+          // Hit!
           bullet.destroy();
-          bullets.splice(i, 1);
-          this.hitTank(target, targetIsPlayer);
+          this.bullets.splice(i, 1);
+
+          this.tweens.add({
+            targets: enemy,
+            scaleX: 1.5, scaleY: 1.5, alpha: 0,
+            duration: 100,
+            onComplete: () => enemy.destroy()
+          });
+          this.enemies.splice(j, 1);
+
+          this.score += 10;
+          this.scoreTxt.setText(`SCORE: ${this.score}`);
+          this.cameras.main.shake(50, 0.005);
+
+          // Explosion effect
+          const exp = this.add.circle(enemy.x, enemy.y, 20, 0xff8800, 0.8);
+          this.tweens.add({ targets: exp, scaleX: 2, scaleY: 2, alpha: 0, duration: 200, onComplete: () => exp.destroy() });
+
           break;
         }
       }
     }
-  }
 
-  hitTank(tank, isPlayer) {
-    // Explosion effect
-    const exp = this.add.circle(tank.x, tank.y, 25, 0xff8800, 0.9);
-    this.tweens.add({ targets: exp, scaleX: 2, scaleY: 2, alpha: 0, duration: 300, onComplete: () => exp.destroy() });
+    // Update enemies
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const enemy = this.enemies[i];
 
-    this.cameras.main.shake(150, 0.015);
+      // Re-target player
+      const toPlayer = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+      const speed = 80 + Math.min(this.score, 200);
+      enemy.setData('vx', Math.cos(toPlayer) * speed);
+      enemy.setData('vy', Math.sin(toPlayer) * speed);
+      enemy.rotation = toPlayer + Math.PI / 2;
 
-    // Flash tank
-    tank.setData('invincible', true);
-    this.tweens.add({
-      targets: tank,
-      alpha: 0.3,
-      duration: 100,
-      yoyo: true,
-      repeat: 5,
-      onComplete: () => {
-        tank.setAlpha(1);
-        tank.setData('invincible', false);
+      enemy.x += enemy.getData('vx') * dt;
+      enemy.y += enemy.getData('vy') * dt;
+
+      // Check player collision
+      const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+      if (dist < 35) {
+        this.triggerGameOver();
+        return;
       }
-    });
-
-    if (isPlayer) {
-      this.playerLives--;
-      if (this.playerLives >= 0 && this.playerLivesIcons[this.playerLives]) {
-        this.playerLivesIcons[this.playerLives].setText('🖤');
-      }
-      // Reset player position
-      this.player.x = W / 2;
-      this.player.y = H - 100;
-    } else {
-      this.enemyLives--;
-      if (this.enemyLives >= 0 && this.enemyLivesIcons[this.enemyLives]) {
-        this.enemyLivesIcons[this.enemyLives].setText('🖤');
-      }
-      // Reset enemy position
-      this.enemy.x = W / 2;
-      this.enemy.y = 100;
-      this.enemyTargetX = this.enemy.x;
-      this.enemyTargetY = this.enemy.y;
     }
 
-    // Check game over
-    if (this.playerLives <= 0) {
-      this.triggerGameOver(false);
-    } else if (this.enemyLives <= 0) {
-      this.triggerGameOver(true);
+    // Enemy spawning
+    this.spawnTimer -= delta;
+    if (this.spawnTimer <= 0) {
+      this.spawnEnemy();
+      this.spawnTimer = Math.max(400, 1800 - this.score * 8);
     }
   }
 
-  triggerGameOver(playerWon) {
+  triggerGameOver() {
     this.gameOver = true;
-    this.cameras.main.flash(400, playerWon ? 100 : 255, playerWon ? 255 : 50, playerWon ? 100 : 0);
+    this.cameras.main.flash(300, 255, 50, 0);
+    this.cameras.main.shake(500, 0.02);
 
-    this.time.delayedCall(1000, () => this.endGame(playerWon));
+    // Explosion on player
+    const exp = this.add.circle(this.player.x, this.player.y, 30, 0xff4400, 1);
+    this.tweens.add({ targets: exp, scaleX: 3, scaleY: 3, alpha: 0, duration: 500 });
+
+    this.time.delayedCall(1000, () => this.endGame());
   }
 
-  endGame(playerWon) {
+  endGame() {
     this.children.removeAll();
     this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a1a);
 
-    if (playerWon) {
-      this.add.text(W / 2, H / 2 - 80, '🏆 VICTORY!', { fontSize: '42px', color: '#88ff00', fontFamily: PF }).setOrigin(0.5);
-      this.add.text(W / 2, H / 2 - 20, '적 탱크를 격파했습니다!', { fontSize: '16px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
-      this.add.text(W / 2, H / 2 + 30, '보상: 집중 +10, GP +40', { fontSize: '14px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5);
-    } else {
-      this.add.text(W / 2, H / 2 - 80, '💥 DEFEAT', { fontSize: '42px', color: '#ff4466', fontFamily: PF }).setOrigin(0.5);
-      this.add.text(W / 2, H / 2 - 20, '탱크가 파괴되었습니다...', { fontSize: '16px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
-      this.add.text(W / 2, H / 2 + 30, '보상: 집중 +3, 스트레스 +5', { fontSize: '14px', color: '#ffaa00', fontFamily: PF }).setOrigin(0.5);
-    }
+    this.add.text(W / 2, H / 2 - 80, '💥 GAME OVER', { fontSize: '42px', color: '#ff4400', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, H / 2 - 20, `최종 점수: ${this.score}`, { fontSize: '24px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, H / 2 + 30, '보상: 집중 +10, GP +40', { fontSize: '14px', color: '#88ff00', fontFamily: PF }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 130, H / 2 + 100, '다시하기', 0x332200, 0x88ff00, () => this.scene.restart());
     this.createBtn(W / 2 + 130, H / 2 + 100, '메뉴', 0x222222, 0x666666, () => this.scene.start('MenuScene'));
@@ -381,8 +278,11 @@ export default class TankScene extends Phaser.Scene {
   }
 
   shutdown() {
+    // 입력 이벤트 정리
+    this.input.off('pointerdown');
     this.input.keyboard.off('keydown-SPACE');
 
+    // 키보드 리스너 정리
     if (this.keys) {
       this.input.keyboard.removeKey('W');
       this.input.keyboard.removeKey('A');
@@ -397,7 +297,8 @@ export default class TankScene extends Phaser.Scene {
       this.cursors.right.destroy();
     }
 
-    this.playerBullets = [];
-    this.enemyBullets = [];
+    // 배열 정리
+    this.bullets = [];
+    this.enemies = [];
   }
 }
