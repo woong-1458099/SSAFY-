@@ -106,6 +106,10 @@ export default class CookingScene extends Phaser.Scene {
     this.msgTxt = this.add.text(W / 2, H / 2, '', {
       fontSize: '24px', color: '#ffffff', fontFamily: PF
     }).setOrigin(0.5).setAlpha(0).setDepth(100);
+
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
   }
 
   tick() {

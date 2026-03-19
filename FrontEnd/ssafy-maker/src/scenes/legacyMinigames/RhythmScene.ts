@@ -93,6 +93,15 @@ export default class RhythmScene extends Phaser.Scene {
     
     this.showCountdown();
     this.input.keyboard.on('keydown', this.handleKey, this);
+
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
+  }
+
+  shutdown() {
+    this.input.keyboard.off('keydown', this.handleKey, this);
+    this.noteObjects = [];
   }
 
   showCountdown() {
