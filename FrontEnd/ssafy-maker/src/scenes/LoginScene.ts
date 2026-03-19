@@ -228,6 +228,7 @@ export class LoginScene extends Phaser.Scene {
           return;
         }
 
+        clearPendingAuthRedirect();
         setMessage("로그인 후 게임을 계속할 수 있습니다.", "info");
       } catch (error) {
         clearPendingAuthRedirect();
