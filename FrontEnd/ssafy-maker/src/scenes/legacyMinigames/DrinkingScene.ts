@@ -42,8 +42,14 @@ export default class DrinkingScene extends Phaser.Scene {
   private npcChatTxt!: Phaser.GameObjects.Text;
   private bubbleBg!: Phaser.GameObjects.Graphics;
 
+  private returnSceneKey: string = 'MenuScene';
+
   constructor() {
     super({ key: 'DrinkingScene' });
+  }
+
+  init(data: any) {
+    this.returnSceneKey = data?.returnSceneKey || 'MenuScene';
   }
 
   preload() {
@@ -63,12 +69,12 @@ export default class DrinkingScene extends Phaser.Scene {
     });
 
     const npcList = [
-      { key: "minsu", path: "assets/game/npc/chamdom.png" },
-      { key: "thingham", path: "assets/game/npc/thingham.png" },
-      { key: "jin", path: "assets/game/npc/jin.png" },
-      { key: "hyo", path: "assets/game/npc/hyo.png" },
-      { key: "jyu", path: "assets/game/npc/jyu.png" },
-      { key: "woong", path: "assets/game/npc/woong.png" },
+      { key: "minsu", path: "assets/game/npc/minsu.png" },
+      { key: "thingham", path: "assets/game/npc/myungjin.png" },
+      { key: "jin", path: "assets/game/npc/jongmin.png" },
+      { key: "hyo", path: "assets/game/npc/hyoryeon.png" },
+      { key: "jyu", path: "assets/game/npc/jiwoo.png" },
+      { key: "woong", path: "assets/game/npc/yeonwoong.png" },
     ];
 
     npcList.forEach(npc => {
@@ -78,7 +84,7 @@ export default class DrinkingScene extends Phaser.Scene {
 
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
 
     const W = 800, H = 600;
 
@@ -242,6 +248,10 @@ export default class DrinkingScene extends Phaser.Scene {
     this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.8).setDepth(100);
     this.add.text(W/2, H/2 - 50, 'FINISHED!', { fontSize: '40px', fontFamily: PF, color: '#FFD700' }).setOrigin(0.5).setDepth(101);
     this.add.text(W/2, H/2 + 30, `Score: ${this.score}`, { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101);
-    this.add.text(W/2, H/2 + 120, '[ RETRY ]', { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => this.scene.restart());
+    this.add.text(W/2, H/2 + 110, '[ RETRY ]', { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => this.scene.restart());
+    this.add.text(W/2, H/2 + 160, '[ EXIT ]', { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => {
+      this.sound.stopAll();
+      this.scene.start(this.returnSceneKey);
+    });
   }
 }

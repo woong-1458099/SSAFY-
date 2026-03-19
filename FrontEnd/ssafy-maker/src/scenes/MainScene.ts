@@ -685,6 +685,7 @@ export class MainScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayerAvatarAssets(this);
+    this.load.image("fixed-npc-minsu", "assets/game/npc/minsu.png");
     this.load.image("fixed-npc-myungjin", "assets/game/npc/myungjin.png");
     this.load.image("fixed-npc-jiwoo", "assets/game/npc/jiwoo.png");
     this.load.image("fixed-npc-yeonwoong", "assets/game/npc/yeonwoong.png");
@@ -722,7 +723,7 @@ export class MainScene extends Phaser.Scene {
 
     this.inputManager = new InputManager(this);
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
-    this.interactKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.interactKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.mapKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.plannerKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.upKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
@@ -2906,7 +2907,7 @@ export class MainScene extends Phaser.Scene {
 
     const title = this.add.text(centerX, centerY - 282, "\uD3B8\uC758\uC810", this.getBodyStyle(30, "#e6f3ff", "bold"));
     title.setOrigin(0.5);
-    const hint = this.add.text(centerX, centerY + 274, "E / ESC\uB85C \uB2EB\uAE30", this.getBodyStyle(16, "#a8c9ef"));
+    const hint = this.add.text(centerX, centerY + 274, "Space / ESC\uB85C \uB2EB\uAE30", this.getBodyStyle(16, "#a8c9ef"));
     hint.setOrigin(0.5);
 
     const cards: Phaser.GameObjects.GameObject[] = [];
