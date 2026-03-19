@@ -3,8 +3,7 @@ import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
 import { SaveManager, type SaveSlotData } from "@core/managers/SaveManager";
 import { beginLogout, clearStoredSession, fetchExistingSession, readStoredSession } from "@features/auth/authSession";
-import { DialogBox } from "@features/ui/components/DialogBox";
-import { DUMMY_DIALOGS } from "@features/ui/types/dialog";
+
 
 type ContinueSlotView = {
   slotId: string;
@@ -22,7 +21,7 @@ export class StartScene extends Phaser.Scene {
   private continueSlots: ContinueSlotView[] = [];
   private continueModal?: Phaser.GameObjects.Container;
   private continueModalOpen = false;
-  private uiDialogBox?: DialogBox;
+
 
   constructor() {
     super(SceneKey.Start);
@@ -60,12 +59,7 @@ export class StartScene extends Phaser.Scene {
     this.createImageButton(width / 2, 430, "start-btn-new", () => this.startIntro());
     this.continueButton = this.createImageButton(width / 2, 550, "start-btn-old", () => this.openContinueModal(), this.continueSlots.length > 0);
 
-    // 공통 UI 컴포넌트 뼈대 테스트 버튼 추가 (S14P21E206-369)
-    const uiTestLabel = this.add.text(width / 2, 650, "[ UI 뼈대 대화창 테스트 ]", {
-      fontFamily: "PFStardustBold, Malgun Gothic, sans-serif",
-      fontSize: "20px", color: "#ffd700", backgroundColor: "#333333", padding: { left: 10, right: 10, top: 10, bottom: 10 }
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    uiTestLabel.on("pointerdown", () => this.runUITestDialog());
+
 
     this.enterKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     this.input.on("pointerup", this.handlePointerUp, this);
@@ -369,34 +363,5 @@ export class StartScene extends Phaser.Scene {
     this.bgm = undefined;
   }
 
-  /**
-   * UI 뼈대 테스트 시작 (S14P21E206-369)
-   */
-  private runUITestDialog(): void {
-    if (!this.uiDialogBox) {
-      const { width, height } = this.scale;
-      this.uiDialogBox = new DialogBox(this, width / 2, height - 160, 800, 240);
-      this.uiDialogBox.setDepth(2000);
-    }
-    
-    let index = 0;
-    const playNext = () => {
-      if (index >= DUMMY_DIALOGS.length) {
-        this.uiDialogBox?.hideDialog();
-        return;
-      }
-      
-      const data = { ...DUMMY_DIALOGS[index] };
-      data.action = () => {
-        this.audioManager.play(this, "start-click", "sfx");
-        playNext();
-      };
-      
-      this.uiDialogBox?.showDialog(data);
-      index++;
-    };
-    
-    this.audioManager.play(this, "start-click", "sfx");
-    playNext();
-  }
+
 }
