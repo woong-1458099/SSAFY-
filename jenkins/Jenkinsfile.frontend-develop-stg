@@ -39,6 +39,21 @@ pipeline {
       }
     }
 
+    stage('Validate Target Branch') {
+      steps {
+        script {
+          def targetBranch = env.gitlabTargetBranch ?: ''
+          echo "gitlabTargetBranch=${targetBranch}"
+
+          if (targetBranch && targetBranch != 'develop') {
+            currentBuild.description = "Skip: target branch is ${targetBranch}"
+            currentBuild.result = 'NOT_BUILT'
+            error("Skip pipeline. Expected target branch=develop, actual=${targetBranch}")
+          }
+        }
+      }
+    }
+
     stage('Detect Changes') {
       steps {
         script {
