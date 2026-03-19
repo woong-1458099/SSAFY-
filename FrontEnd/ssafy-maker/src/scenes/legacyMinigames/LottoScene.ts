@@ -117,6 +117,10 @@ export default class LottoScene extends Phaser.Scene {
     });
     this.exitBtn.on('pointerover', () => this.exitBtn.setColor('#ffffff'));
     this.exitBtn.on('pointerout', () => this.exitBtn.setColor('#888888'));
+
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
   }
 
   cleanup() {

@@ -35,6 +35,7 @@ export type FixedEventNpcPresentation = {
 export const FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT = 4;
 
 const FIXED_EVENT_NPC_ASSET_KEYS: Partial<Record<string, string>> = {
+  NPC_CLASSMATE_MINSU: "fixed-npc-minsu",
   NPC_CLASSMATE_MYUNGJIN: "fixed-npc-myungjin",
   NPC_CLASSMATE_JIWOO: "fixed-npc-jiwoo",
   NPC_CLASSMATE_YEONWOONG: "fixed-npc-yeonwoong",

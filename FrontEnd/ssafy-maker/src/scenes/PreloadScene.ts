@@ -21,6 +21,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.json("story_fixed_week2", "assets/game/data/story/fixedevent/fixed_week2.json");
     this.load.json("story_fixed_week3", "assets/game/data/story/fixedevent/fixed_week3.json");
     this.load.json("story_fixed_week4", "assets/game/data/story/fixedevent/fixed_week4.json");
+    this.load.json("story_fixed_week5", "assets/game/data/story/fixedevent/fixed_week5.json");
   }
 
   create(): void {

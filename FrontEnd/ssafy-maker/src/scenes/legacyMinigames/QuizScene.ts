@@ -136,6 +136,10 @@ export default class QuizScene extends Phaser.Scene {
       delay: 1000, callback: this.tick, callbackScope: this, loop: true
     });
 
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
+
     this.showQuestion();
   }
 
