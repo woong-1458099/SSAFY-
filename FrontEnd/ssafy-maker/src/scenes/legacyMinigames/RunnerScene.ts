@@ -52,6 +52,17 @@ export default class RunnerScene extends Phaser.Scene {
     this.showCountdown();
     this.input.keyboard.on('keydown-SPACE', this.jump, this);
     this.input.on('pointerdown', this.jump, this);
+
+    // 씬 종료 시 정리
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
+  }
+
+  shutdown() {
+    this.input.keyboard.off('keydown-SPACE', this.jump, this);
+    this.input.off('pointerdown', this.jump, this);
+    if (this.obstacleEvent) this.obstacleEvent.remove();
+    this.obstacles = [];
   }
 
   showCountdown() {

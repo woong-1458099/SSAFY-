@@ -13,8 +13,12 @@ services:
       - /home/ubuntu/deploy/nginx/whitelist:/etc/nginx/whitelist:ro
     networks:
       - core-net
+      - ops-net
 
 networks:
   core-net:
     external: true
     name: s14p21e206_core_net
+  ops-net:
+    external: true
+    name: docker_ops-net
