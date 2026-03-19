@@ -9,8 +9,8 @@
   "verifyEmail": true,
   "clients": [
     {
-      "clientId": "ssafy-maker-bff",
-      "name": "SSAFY Maker BFF Client",
+      "clientId": "ssafy-maker-prod",
+      "name": "SSAFY Maker Shared App Client",
       "enabled": true,
       "publicClient": false,
       "clientAuthenticatorType": "client-secret",
