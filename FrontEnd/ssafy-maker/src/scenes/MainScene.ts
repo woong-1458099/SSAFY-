@@ -91,6 +91,7 @@ import {
 } from "@features/planning/weeklyPlan";
 import { createWeeklyPlannerModal } from "@features/planning/weeklyPlannerModal";
 import { createWeeklyPlanActivityModal } from "@features/planning/weeklyPlanActivityModal";
+import { findNearestDowntownBuilding } from "@features/place/downtownBuildings";
 import {
   getDowntownBuildingBackgroundTextureKey,
   getDowntownBuildingConfig,
@@ -151,6 +152,16 @@ type AreaNpcView = {
 type ScheduledNpcSlot = FixedEventNpcSlot;
 type ScheduledNpcArea = FixedEventRenderArea;
 type ScheduledNpcPositionMap = Record<ScheduledNpcArea, Record<(typeof TIME_CYCLE)[number], ScheduledNpcSlot[]>>;
+type DowntownBuildingView = {
+  id: DowntownBuildingId;
+  hitBox: Phaser.GameObjects.Rectangle;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  defaultStrokeColor: number;
+  defaultStrokeAlpha: number;
+};
 
 type InventoryItemTemplate = {
   templateId: string;
@@ -550,7 +561,7 @@ const AREA_COLLISION_LAYER_NAMES: Record<AreaId, string[]> = {
 
 const AREA_INTERACTION_LAYER_NAMES: Record<AreaId, string[]> = {
   world: ["build"],
-  downtown: ["tile layer 4", "tile layer 5(4)"],
+  downtown: ["build(total)"],
   campus: ["tile layer 2", "tile layer 4(2)"]
 };
 
@@ -577,6 +588,7 @@ export class MainScene extends Phaser.Scene {
   private areaNpcViews: AreaNpcView[] = [];
   private activeAreaNpcView: AreaNpcView | null = null;
   private scheduledNpcViews: AreaNpcView[] = [];
+  private downtownBuildingViews: DowntownBuildingView[] = [];
   private worldMapRoot?: Phaser.GameObjects.Container;
   private worldForegroundRoot?: Phaser.GameObjects.Container;
   private downtownMapRoot?: Phaser.GameObjects.Container;
@@ -921,12 +933,20 @@ export class MainScene extends Phaser.Scene {
     this.updatePlayerAvatarAnimation(move);
 
     const nearbyNpcView = this.getNearestAreaNpcView(this.currentArea, 74);
+    const nearbyDowntownBuilding = this.currentArea === "downtown" ? this.getNearestDowntownBuilding(96) : null;
     this.refreshAreaNpcHighlight(nearbyNpcView);
-    const prompt = nearbyNpcView ? "E \uB300\uD654\uD558\uAE30  |  Q \uC804\uCCB4 \uC9C0\uB3C4" : "Q \uC804\uCCB4 \uC9C0\uB3C4";
+    this.refreshDowntownBuildingHighlight(nearbyDowntownBuilding);
+    const prompt = nearbyNpcView
+      ? "E \uB300\uD654\uD558\uAE30  |  Q \uC804\uCCB4 \uC9C0\uB3C4"
+      : nearbyDowntownBuilding
+        ? "E \uAC74\uBB3C \uC0C1\uD638\uC791\uC6A9  |  Q \uC804\uCCB4 \uC9C0\uB3C4"
+        : "Q \uC804\uCCB4 \uC9C0\uB3C4";
     this.hud.setInteractionPrompt(this.withPlannerPrompt(prompt));
 
     if (nearbyNpcView && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       this.handleNpcInteraction(nearbyNpcView);
+    } else if (nearbyDowntownBuilding && this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      this.openDowntownBuildingPopup(nearbyDowntownBuilding);
     }
 
     this.enforceAreaCollision();
@@ -1099,9 +1119,15 @@ export class MainScene extends Phaser.Scene {
       if (!downtownUsesTmx) {
         hitBox.setStrokeStyle(3, 0x6d522f, 1);
       }
-      hitBox.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
-        if (this.currentArea !== "downtown" || this.menuOpen || this.shopOpen || this.placePopupOpen) return;
-        this.openDowntownBuildingPopup(building.id);
+      this.downtownBuildingViews.push({
+        id: building.id,
+        hitBox,
+        left: mappedCenter.x - mappedSize.width / 2,
+        right: mappedCenter.x + mappedSize.width / 2,
+        top: mappedCenter.y - mappedSize.height / 2,
+        bottom: mappedCenter.y + mappedSize.height / 2,
+        defaultStrokeColor: downtownUsesTmx ? 0x6d522f : 0x6d522f,
+        defaultStrokeAlpha: downtownUsesTmx ? 0 : 1
       });
 
       buildingObjects.push(hitBox);
@@ -1335,6 +1361,7 @@ export class MainScene extends Phaser.Scene {
       this.highlightWorldPlace(spawnFrom.id);
       this.refreshAreaNpcVisibility(area);
       this.refreshAreaNpcHighlight(null);
+      this.refreshDowntownBuildingHighlight(null);
       this.controlHintText?.setText("WASD / Arrow: \uC774\uB3D9  |  E: \uC7A5\uC18C \uC0C1\uD638\uC791\uC6A9  |  ESC: \uBA54\uB274");
       this.updateHudState({ locationLabel: AREA_LABEL.world });
       this.lastSafePlayerPosition = { x: this.player.x, y: this.player.y };
@@ -1354,6 +1381,7 @@ export class MainScene extends Phaser.Scene {
     this.lastSafePlayerPosition = { x: this.player.x, y: this.player.y };
     this.refreshAreaNpcVisibility(area);
     this.refreshAreaNpcHighlight(null);
+    this.refreshDowntownBuildingHighlight(null);
   }
 
   private buildWorldSpawnPoint(placeId: WorldPlaceId, fallbackX: number, fallbackY: number): { x: number; y: number } {
@@ -1638,6 +1666,32 @@ export class MainScene extends Phaser.Scene {
       }
     });
     this.refreshScheduledNpcViews();
+  }
+
+  private getNearestDowntownBuilding(maxDistance: number): DowntownBuildingId | null {
+    return findNearestDowntownBuilding(
+      this.downtownBuildingViews.map((view) => ({
+        id: view.id,
+        left: view.left,
+        right: view.right,
+        top: view.top,
+        bottom: view.bottom
+      })),
+      this.player.x,
+      this.player.y,
+      maxDistance
+    );
+  }
+
+  private refreshDowntownBuildingHighlight(activeId: DowntownBuildingId | null): void {
+    this.downtownBuildingViews.forEach((view) => {
+      const isActive = activeId === view.id && this.currentArea === "downtown";
+      view.hitBox.setStrokeStyle(
+        isActive ? 4 : 3,
+        isActive ? 0xf2e8b6 : view.defaultStrokeColor,
+        isActive ? 1 : view.defaultStrokeAlpha
+      );
+    });
   }
 
   private getNearestAreaNpcView(area: AreaId, maxDistance: number): AreaNpcView | null {
