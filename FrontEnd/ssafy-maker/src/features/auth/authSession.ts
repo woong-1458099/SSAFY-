@@ -7,6 +7,7 @@ export interface AuthSession {
 }
 
 type AuthAction = "login" | "signup";
+const AUTH_REDIRECT_PENDING_KEY = "ssafy-maker.auth.redirect.pending";
 
 function buildLogoutUrl(): string {
   return `${API_BASE_URL}/api/auth/logout`;
@@ -16,6 +17,26 @@ function cleanupCallbackUrl(): void {
   const url = new URL(window.location.href);
   url.searchParams.delete("auth");
   window.history.replaceState({}, document.title, url.toString());
+}
+
+function readPendingRedirectState(): string | null {
+  try {
+    return window.sessionStorage.getItem(AUTH_REDIRECT_PENDING_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writePendingRedirectState(value: string | null): void {
+  try {
+    if (value == null) {
+      window.sessionStorage.removeItem(AUTH_REDIRECT_PENDING_KEY);
+      return;
+    }
+    window.sessionStorage.setItem(AUTH_REDIRECT_PENDING_KEY, value);
+  } catch {
+    // Ignore storage failures so auth flow still works in restrictive browsers.
+  }
 }
 
 function toAuthSession(session: BackendAuthSession): AuthSession | null {
@@ -35,6 +56,14 @@ export function readStoredSession(): AuthSession | null {
 }
 
 export function clearStoredSession(): void {
+}
+
+export function hasPendingAuthRedirect(): boolean {
+  return readPendingRedirectState() !== null;
+}
+
+export function clearPendingAuthRedirect(): void {
+  writePendingRedirectState(null);
 }
 
 export async function beginLogout(): Promise<void> {
@@ -72,6 +101,10 @@ export async function beginLogout(): Promise<void> {
 
 export async function beginBackendAuth(action: AuthAction, loginHint?: string): Promise<void> {
   void loginHint;
+  writePendingRedirectState(JSON.stringify({
+    action,
+    startedAt: Date.now()
+  }));
   console.log("[auth-session] beginBackendAuth", {
     action,
     redirectTo: `${API_BASE_URL}/api/auth/${action === "signup" ? "signup" : "login"}`
@@ -97,6 +130,8 @@ export async function completeAuthIfPresent(): Promise<AuthSession | null> {
     throw new Error("Authentication failed");
   }
 
+  clearPendingAuthRedirect();
+
   return {
     authenticated: true,
     expiresAt: session.expiresAt,
@@ -106,7 +141,11 @@ export async function completeAuthIfPresent(): Promise<AuthSession | null> {
 
 export async function fetchExistingSession(): Promise<AuthSession | null> {
   try {
-    return toAuthSession(await fetchBackendSession());
+    const session = toAuthSession(await fetchBackendSession());
+    if (session) {
+      clearPendingAuthRedirect();
+    }
+    return session;
   } catch {
     return null;
   }
