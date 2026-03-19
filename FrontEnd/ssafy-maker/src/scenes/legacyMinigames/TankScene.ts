@@ -273,6 +273,25 @@ export default class TankScene extends Phaser.Scene {
   }
 
   shutdown() {
+    // 입력 이벤트 정리
     this.input.off('pointerdown');
+
+    // 키보드 리스너 정리
+    if (this.keys) {
+      this.input.keyboard.removeKey('W');
+      this.input.keyboard.removeKey('A');
+      this.input.keyboard.removeKey('S');
+      this.input.keyboard.removeKey('D');
+    }
+    if (this.cursors) {
+      this.cursors.up.destroy();
+      this.cursors.down.destroy();
+      this.cursors.left.destroy();
+      this.cursors.right.destroy();
+    }
+
+    // 배열 정리
+    this.bullets = [];
+    this.enemies = [];
   }
 }
