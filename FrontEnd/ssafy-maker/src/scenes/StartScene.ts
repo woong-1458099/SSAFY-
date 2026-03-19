@@ -37,6 +37,11 @@ export class StartScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.input.enabled = true;
+    this.startArmed = false;
+    this.continueModalOpen = false;
+    this.continueSlots = [];
+
     const authToken = this.registry.get("authToken");
     const storedSession = readStoredSession();
     if (!authToken && !storedSession) {

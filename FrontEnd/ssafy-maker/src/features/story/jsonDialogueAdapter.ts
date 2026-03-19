@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   DialogueChoice,
   DialogueChoiceActionType,
   DialogueNode,
@@ -86,9 +86,9 @@ type BuildDialogueOptions = {
 };
 
 const SPEAKER_LABEL_BY_ID: Record<string, string> = {
-  SYSTEM: "시스템",
-  PLAYER: "나",
-  NPC_UNKNOWN: "동기",
+  SYSTEM: "\uC2DC\uC2A4\uD15C",
+  PLAYER: "\uD50C\uB808\uC774\uC5B4",
+  NPC_UNKNOWN: "\uB3D9\uAE30",
 };
 
 function normalizeText(value: unknown, fallback: string): string {
@@ -179,27 +179,27 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
   }
 
   if (typeof condition.social === "number") {
-    requirements.push({ stat: "teamwork", min: Math.round(condition.social), label: `협업 ${Math.round(condition.social)} 이상` });
+    requirements.push({ stat: "teamwork", min: Math.round(condition.social), label: `\uD611\uC5C5 ${Math.round(condition.social)} \uC774\uC0C1` });
   }
   if (typeof condition.code === "number") {
     const value = Math.round(condition.code);
-    requirements.push({ stat: "fe", min: value, label: `코딩 ${value} 이상` });
-    requirements.push({ stat: "be", min: value, label: `코딩 ${value} 이상` });
+    requirements.push({ stat: "fe", min: value, label: `\uCF54\uB529 ${value} \uC774\uC0C1` });
+    requirements.push({ stat: "be", min: value, label: `\uCF54\uB529 ${value} \uC774\uC0C1` });
   }
   if (typeof condition.gold === "number") {
-    requirements.push({ stat: "gold", min: Math.round(condition.gold), label: `재화 ${Math.round(condition.gold)}` });
+    requirements.push({ stat: "gold", min: Math.round(condition.gold), label: `\uC7AC\uD654 ${Math.round(condition.gold)}` });
   }
   if (typeof condition.luck === "number") {
-    requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `운 ${Math.round(condition.luck)} 이상` });
+    requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `\uC6B4 ${Math.round(condition.luck)} \uC774\uC0C1` });
   }
   if (typeof condition.hp === "number") {
-    requirements.push({ stat: "hp", min: Math.round(condition.hp), label: `HP ${Math.round(condition.hp)} 이상` });
+    requirements.push({ stat: "hp", min: Math.round(condition.hp), label: `HP ${Math.round(condition.hp)} \uC774\uC0C1` });
   }
   if (typeof condition.stress === "number") {
-    requirements.push({ stat: "stress", max: Math.round(condition.stress), label: `스트레스 ${Math.round(condition.stress)} 이하` });
+    requirements.push({ stat: "stress", max: Math.round(condition.stress), label: `\uC2A4\uD2B8\uB808\uC2A4 ${Math.round(condition.stress)} \uC774\uD558` });
   }
   if (typeof condition.stress_max === "number") {
-    requirements.push({ stat: "stress", max: Math.round(condition.stress_max), label: `스트레스 ${Math.round(condition.stress_max)} 이하` });
+    requirements.push({ stat: "stress", max: Math.round(condition.stress_max), label: `\uC2A4\uD2B8\uB808\uC2A4 ${Math.round(condition.stress_max)} \uC774\uD558` });
   }
 
   return requirements;
@@ -305,7 +305,7 @@ export function buildDialogueScriptFromFixedEventEntry(
   options: BuildDialogueOptions | string
 ): NpcDialogueScript | null {
   const fallbackNpcLabel = typeof options === "string" ? options : options.fallbackNpcLabel;
-  const playerName = typeof options === "string" ? "플레이어" : options.playerName ?? "플레이어";
+  const playerName = typeof options === "string" ? "?뚮젅?댁뼱" : options.playerName ?? "?뚮젅?댁뼱";
   const dialogues = Array.isArray(event.dialogues) ? event.dialogues : [];
   const choices = Array.isArray(event.choices) ? event.choices : [];
   if (dialogues.length === 0) {
@@ -342,7 +342,7 @@ export function buildDialogueScriptFromFixedEventEntry(
       const feedbackStartNodeId = feedbackDialogues.length > 0 ? `json_choice_feedback_${choiceId}_1` : undefined;
       const lockedReason =
         typeof choice.condition?.trait === "string" && choice.condition.trait.trim().length > 0
-          ? `${choice.condition.trait} 조건은 아직 특성 시스템 연결 전입니다`
+          ? `${choice.condition.trait} 議곌굔? ?꾩쭅 ?뱀꽦 ?쒖뒪???곌껐 ?꾩엯?덈떎`
           : undefined;
 
       return {
@@ -395,7 +395,7 @@ export function buildDialogueScriptFromFixedEventJson(
   dialogueId: NpcDialogueId,
   rawData: unknown,
   fallbackNpcLabel: string,
-  playerName = "플레이어"
+  playerName = "?뚮젅?댁뼱"
 ): NpcDialogueScript | null {
   const firstEvent = getFixedEventEntries(rawData)[0];
   if (!firstEvent) {
@@ -409,3 +409,4 @@ export function buildDialogueScriptFromFixedEventJson(
 }
 
 export { normalizeFixedEventLocationToken };
+

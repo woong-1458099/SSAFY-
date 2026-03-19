@@ -8,7 +8,7 @@
       "day": 1,
       "timeOfDay": "오전"
     },
-    "location": "캠퍼스 내부",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {
@@ -29,7 +29,9 @@
         "condition": null,
         "text": "\"너무 어렵습니다... 자격증도 병행하려 했는데 무리네요.\"",
         "result": {
-          "statChanges": { "stress": -10 },
+          "statChanges": {
+            "stress": -10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_PRO_SUNMI",
@@ -47,10 +49,15 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "social": 50, "stress_max": 40 },
+        "condition": {
+          "social": 50,
+          "stress_max": 40
+        },
         "text": "🔒 [사교력 50, 스트레스 40 이하만 가능] \"초반 적응기라 힘든 것 같아요. 차근차근 열심히 하다보면 금방 따라잡겠죠!\"",
         "result": {
-          "statChanges": { "social": 5 },
+          "statChanges": {
+            "social": 5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_PRO_SUNMI",
@@ -68,10 +75,15 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "hp": 50 },
+        "condition": {
+          "hp": 50
+        },
         "text": "🔒 [HP 50] \"걱정 마십시오! 쓰러져도 키보드 위에서 쓰러지겠습니다!\"",
         "result": {
-          "statChanges": { "hp": -10, "stress": 5 },
+          "statChanges": {
+            "hp": -10,
+            "stress": 5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_PRO_SUNMI",
@@ -89,10 +101,15 @@
       {
         "choiceId": 4,
         "actionType": "LOCKED",
-        "condition": { "luck": 50 },
+        "condition": {
+          "luck": 50
+        },
         "text": "🔒 [운 50] 프로님이 조심스럽게 말씀한다. “이건 사실 제가 교육생 시절에 공부하려고 만들었던 건데…”",
         "result": {
-          "statChanges": { "code": 5, "stress": 10 },
+          "statChanges": {
+            "code": 5,
+            "stress": 10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_PRO_SUNMI",
@@ -137,7 +154,10 @@
         "condition": null,
         "text": "식은땀을 흘리며 황급히 지우지만 이미 누군가 봤다. 아래로 조롱용 이모티콘들이 달린다.",
         "result": {
-          "statChanges": { "stress": 20, "hp": -10 },
+          "statChanges": {
+            "stress": 20,
+            "hp": -10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_CLASSMATE_JONGMIN",
@@ -159,10 +179,14 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "code": 60 },
+        "condition": {
+          "code": 60
+        },
         "text": "🔒 [코딩 60] 매터모스트 서버 해킹을 시도해 기록을 삭제한다.",
         "result": {
-          "statChanges": { "code": 15 },
+          "statChanges": {
+            "code": 15
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -182,10 +206,15 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "luck": 40 },
+        "condition": {
+          "luck": 40
+        },
         "text": "🔒 [운 40] 아무도 안 본 1초 찰나에 빛의 속도로 삭제 성공.",
         "result": {
-          "statChanges": { "luck": 15, "stress": -10 },
+          "statChanges": {
+            "luck": 15,
+            "stress": -10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -201,10 +230,15 @@
       {
         "choiceId": 4,
         "actionType": "LOCKED",
-        "condition": { "social": 65 },
+        "condition": {
+          "social": 65
+        },
         "text": "🔒 [사교 65] 재빠르게 그 밑에 \"...라고 할 뻔~\" 이라고 덧붙인다.",
         "result": {
-          "statChanges": { "social": 10, "stress": -5 },
+          "statChanges": {
+            "social": 10,
+            "stress": -5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",

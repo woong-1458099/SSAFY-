@@ -35,7 +35,11 @@
         "condition": null,
         "text": "\"일단 당근마켓에서 기출문제집부터 사야겠다...\" (황급히 중고 거래 앱을 켠다)",
         "result": {
-          "statChanges": { "stress": 10, "gold": -15000, "code": 5 },
+          "statChanges": {
+            "stress": 10,
+            "gold": -125000,
+            "code": 5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_CLASSMATE_UNKNOWN",
@@ -57,20 +61,30 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "hp": 50 },
+        "condition": {
+          "hp": 50
+        },
         "text": "🔒 [체력 50] \"부트캠프생에게 5일이면 120시간이다! 오늘부터 수면은 사치다!!\"",
         "result": {
-          "statChanges": { "hp": -20, "stress": -10 },
+          "statChanges": {
+            "hp": -20,
+            "stress": -10
+          },
           "feedbackText": "(근거 없는 패기로 무장했다. 뇌를 속이는 데 성공하여 스트레스는 줄었지만, 오늘 밤부터 지옥의 벼락치기 확정이다.)"
         }
       },
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "social": 50 },
+        "condition": {
+          "social": 50
+        },
         "text": "🔒 [사교 50] 동기 단톡방에 \"정처기 기출 요약본(PDF) 던져주실 천사님 구합니다 ㅠㅠ 밥 쏠게요!\"라고 간절하게 올린다.",
         "result": {
-          "statChanges": { "social": 5, "gold": -10000 },
+          "statChanges": {
+            "social": 5,
+            "gold": -80000
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_CLASSMATE_MYUNGJIN",
@@ -88,10 +102,15 @@
       {
         "choiceId": 4,
         "actionType": "LOCKED",
-        "condition": { "luck": 60 },
+        "condition": {
+          "luck": 60
+        },
         "text": "🔒 [운 60] \"CBT(컴퓨터 기반 시험)는 어차피 문제은행 뺑뺑이다. 나의 4지선다 찍기 스킬을 믿어보자!\" 핸드폰 배경화면을 '행운의 합격 부적'으로 바꾸고 토요일까지 기를 모으자.",
         "result": {
-          "statChanges": { "luck": 15, "stress": -10 },
+          "statChanges": {
+            "luck": 15,
+            "stress": -10
+          },
           "feedbackText": "(공부를 뒤로 하고 우주의 기운을 모으는 '기도 메타'에 돌입했다.)"
         }
       }
@@ -106,7 +125,7 @@
       "day": 2,
       "timeOfDay": "오전"
     },
-    "location": "캠퍼스 내부",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {
@@ -121,17 +140,26 @@
         "condition": null,
         "text": "조용히 폴더를 통째로 지우고 다시 깐다. ”하… 머리가 나쁘면 몸이 고생이지”",
         "result": {
-          "statChanges": { "stress": 15, "code": 5 },
+          "statChanges": {
+            "stress": 15,
+            "code": 5
+          },
           "feedbackText": "(식은땀이 줄줄 나지만 아무튼 빨간 글씨는 없어졌다.)"
         }
       },
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "social": 30 },
+        "condition": {
+          "social": 30
+        },
         "text": "🔒 [사교 30] 누가봐도 개발자 관상인 옆자리 동기에게 SOS를 친다. ”고맙습니다… 덕분에 살았어요”",
         "result": {
-          "statChanges": { "social": 10, "code": 5, "stress": 10 },
+          "statChanges": {
+            "social": 10,
+            "code": 5,
+            "stress": 10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_CLASSMATE_JIWOO",
@@ -149,10 +177,16 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "gold": 10000 },
+        "condition": {
+          "gold": 80000
+        },
         "text": "🔒 [재화 10000] 이럴 때 사용하려고 미리 GPT 프로를 결제해뒀지. 지피티와의 진대를 통해 어떻게든 해결한다. ”오…이럴 땐 git rebase를 사용하면 되는 거군”",
         "result": {
-          "statChanges": { "code": 10, "stress": -10, "gold": -10000 },
+          "statChanges": {
+            "code": 10,
+            "stress": -10,
+            "gold": -80000
+          },
           "feedbackText": "(스스로 해낸 (것 같은) 쾌감이다.)"
         }
       },
@@ -162,7 +196,10 @@
         "condition": null,
         "text": "🤪 [광기] rm -rf / (전체 삭제)를 치고 조용히 하차를 고민한다.",
         "result": {
-          "statChanges": { "hp": -10, "stress": -10 },
+          "statChanges": {
+            "hp": -10,
+            "stress": -10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_COACH_HYEWON",
@@ -188,7 +225,7 @@
       "day": 3,
       "timeOfDay": "오후"
     },
-    "location": "캠퍼스 내부",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {
@@ -203,7 +240,10 @@
         "condition": null,
         "text": "졸다가 흠칫 깨어났는데, 컨설턴트님과 정확히 눈이 마주친다.",
         "result": {
-          "statChanges": { "hp": 10, "stress": 15 },
+          "statChanges": {
+            "hp": 10,
+            "stress": 15
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_CONSULTANT_HYUNSEOK",
@@ -221,30 +261,46 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "hp": 40 },
+        "condition": {
+          "hp": 40
+        },
         "text": "🔒 [HP 40] 허벅지를 꼬집어가며 억지로 버티고 코드를 친다.",
         "result": {
-          "statChanges": { "hp": -20, "code": 10 },
+          "statChanges": {
+            "hp": -20,
+            "code": 10
+          },
           "feedbackText": "(고통스럽지만 잠은 참아야 한다.)"
         }
       },
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "gold": 3000 },
+        "condition": {
+          "gold": 25000
+        },
         "text": "🔒 [재화 3000] 자판기에서 몬스터 에너지를 뽑아 원샷한다.",
         "result": {
-          "statChanges": { "gold": -3000, "code": 10 },
+          "statChanges": {
+            "gold": -25000,
+            "code": 10
+          },
           "feedbackText": "(자본주의의 맛으로 강제 각성! 심장은 뛰지만 손가락은 돌아간다.)"
         }
       },
       {
         "choiceId": 4,
         "actionType": "LOCKED",
-        "condition": { "social": 40 },
+        "condition": {
+          "social": 40
+        },
         "text": "🔒 [사교 40] 졸려 죽겠는데 조심스럽게 옆 자리에서 졸음껌을 건넨다.",
         "result": {
-          "statChanges": { "social": 5, "code": 10, "hp": -10 },
+          "statChanges": {
+            "social": 5,
+            "code": 10,
+            "hp": -10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "NPC_CLASSMATE_YEONWOONG",

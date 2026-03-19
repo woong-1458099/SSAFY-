@@ -6,9 +6,9 @@
     "triggerTiming": {
       "week": 5,
       "day": 1,
-      "timeOfDay": "오전" 
+      "timeOfDay": "오전"
     },
-    "location": "강의장",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {
@@ -23,7 +23,10 @@
         "condition": null,
         "text": "\"하얗게 불태웠어...\" 어젯밤 벼락치기로 잃어버린 수면을 보충하기 위해 책상에 엎드려 기절한다.",
         "result": {
-          "statChanges": { "hp": 20, "stress": -10 },
+          "statChanges": {
+            "hp": 20,
+            "stress": -10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -39,10 +42,16 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "social": 60 },
+        "condition": {
+          "social": 60
+        },
         "text": "🔒 [사교 60] 삼삼오오 모여있는 동기들 자리로 다가간다.",
         "result": {
-          "statChanges": { "social": 10, "stress": 15, "code": 5 },
+          "statChanges": {
+            "social": 10,
+            "stress": 15,
+            "code": 5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -64,10 +73,15 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "code": 70 },
+        "condition": {
+          "code": 70
+        },
         "text": "🔒 [코딩 70] \"과거에 얽매이지 않는다.\" 방금 끝난 시험은 잊어버리고, 당장 오후에 있을 프레임워크 수업 교재를 미리 예습한다.",
         "result": {
-          "statChanges": { "code": 15, "hp": -10 },
+          "statChanges": {
+            "code": 15,
+            "hp": -10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -83,10 +97,15 @@
       {
         "choiceId": 4,
         "actionType": "LOCKED",
-        "condition": { "luck": 50 },
+        "condition": {
+          "luck": 50
+        },
         "text": "🔒 [운빨 50] 혹시나 하는 마음에 테스트 코드를 다시 머릿속으로 굴려본다. '아... 아까 시간 없어서 대충 찍다시피 낸 엣지 케이스 조건, 설마 정답인가?'",
         "result": {
-          "statChanges": { "luck": 15, "stress": -20 },
+          "statChanges": {
+            "luck": 15,
+            "stress": -20
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -104,8 +123,7 @@
   {
     "eventId": "EVT_ROMANCE_MINSU_W5_D2_RECURSION",
     "eventName": "재귀함수의 굴레",
-    "eventType": "RANDOM",
-    "targetGender": "FEMALE",
+    "eventType": "FIXED",
     "triggerTiming": {
       "week": 5,
       "day": 2,
@@ -135,7 +153,10 @@
         "condition": null,
         "text": "\"어... 일단 강사님이 치는 거 그대로 쳐볼게...\"",
         "result": {
-          "statChanges": { "stress": 15, "code": 5 },
+          "statChanges": {
+            "stress": 15,
+            "code": 5
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -155,10 +176,15 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "code": 50 },
+        "condition": {
+          "code": 50
+        },
         "text": "🔒 [코딩 50] \"이거 종료 조건(Base Case) 안 걸어주면 무한 루프 도는 거 맞지?\"",
         "result": {
-          "statChanges": { "code": 20, "favor_minsu": 10 },
+          "statChanges": {
+            "code": 20,
+            "favor_minsu": 10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -175,10 +201,15 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "nunchi": 50 },
+        "condition": {
+          "nunchi": 50
+        },
         "text": "🔒 [눈치 50] (민수의 모니터를 슬쩍 보니 이미 캐싱(Memoization)까지 적용해 놨다. 조용히 벤치마킹한다.)",
         "result": {
-          "statChanges": { "nunchi": 20, "code": 15 },
+          "statChanges": {
+            "nunchi": 20,
+            "code": 15
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -195,10 +226,14 @@
       {
         "choiceId": 4,
         "actionType": "LOCKED",
-        "condition": { "luck": 60 },
+        "condition": {
+          "luck": 60
+        },
         "text": "🔒 [운 60] \"뭔지 하나도 모르겠는데, 대충 if n <= 1: return 1 찍었더니 초록불(PASS) 떴어! 나 혹시 알고리즘 천재인가?\"",
         "result": {
-          "statChanges": { "luck": 10 },
+          "statChanges": {
+            "luck": 10
+          },
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
@@ -227,7 +262,7 @@
       "day": 4,
       "timeOfDay": "오후"
     },
-    "location": "상담실",
+    "location": "캠퍼스",
     "isRepeatable": false,
     "dialogues": [
       {
@@ -256,7 +291,10 @@
         "condition": null,
         "text": "[기본] (안면 근육에 경련이 일어나는 억지 미소로) \"솔직히... 찬밥 더운밥 가릴 처지가 아닌 것 같습니다. 어디든 붙여주시는 곳으로 가겠습니다 ㅠㅠ\"",
         "result": {
-          "statChanges": { "stress": 20, "hp": -10 },
+          "statChanges": {
+            "stress": 20,
+            "hp": -10
+          },
           "triggerMiniGame": "SMILE_DETECTION_START",
           "feedbackDialogues": [
             {
@@ -274,10 +312,15 @@
       {
         "choiceId": 2,
         "actionType": "LOCKED",
-        "condition": { "social": 60 },
+        "condition": {
+          "social": 60
+        },
         "text": "🔒 [사교 60] (여유로운 비즈니스 미소 장착) \"비전공자라는 약점 대신, 제 이전 전공 지식을 살리겠습니다! 전공 특화 기업 위주로 뾰족하게 파고들겠습니다.\"",
         "result": {
-          "statChanges": { "favor_pro": 15, "stress": -10 },
+          "statChanges": {
+            "favor_pro": 15,
+            "stress": -10
+          },
           "triggerMiniGame": "SMILE_DETECTION_START",
           "feedbackDialogues": [
             {
@@ -295,10 +338,15 @@
       {
         "choiceId": 3,
         "actionType": "LOCKED",
-        "condition": { "code": 70 },
+        "condition": {
+          "code": 70
+        },
         "text": "🔒 [코딩 70] (자신감 넘치는 씨익-) \"어설픈 스펙으로 포장하느니, 압도적인 코딩 실력으로 증명하겠습니다. 오늘부터 잠 줄이고 아키텍처 싹 다 고도화할 겁니다.\"",
         "result": {
-          "statChanges": { "code": 20, "hp": -20 },
+          "statChanges": {
+            "code": 20,
+            "hp": -20
+          },
           "triggerMiniGame": "SMILE_DETECTION_START",
           "feedbackDialogues": [
             {
@@ -319,7 +367,10 @@
         "condition": null,
         "text": "🤪 [광기] \"서류로 안 된다면... 지원 회사의 인사망을 해킹해서 제 이력서를 DB 1번에 INSERT 하겠습니다.\"",
         "result": {
-          "statChanges": { "madness": 25, "favor_pro": -10 },
+          "statChanges": {
+            "madness": 25,
+            "favor_pro": -10
+          },
           "triggerMiniGame": "SMILE_DETECTION_START",
           "feedbackDialogues": [
             {

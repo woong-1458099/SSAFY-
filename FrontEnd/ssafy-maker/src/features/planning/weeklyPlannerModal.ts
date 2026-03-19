@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import { createPanelOuterBorder } from "@features/ui/components/uiPrimitives";
 import {
@@ -65,12 +65,12 @@ export function createWeeklyPlannerModal(params: {
   const panel = scene.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x183657, 0.96);
   panel.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
 
-  const title = scene.add.text(centerX, centerY - 258, "주간 계획표", getBodyStyle(34, "#e6f3ff", "bold"));
+  const title = scene.add.text(centerX, centerY - 258, "\uC8FC\uAC04 \uACC4\uD68D\uD45C", getBodyStyle(34, "#e6f3ff", "bold"));
   title.setOrigin(0.5);
   const subtitle = scene.add.text(
     centerX - 62,
     centerY - 220,
-    `${week}주차 평일 오전/오후 일정을 선택하세요`,
+    `${week}\uC8FC\uCC28 \uD3C9\uC77C \uC624\uC804/\uC624\uD6C4 \uC77C\uC815\uC744 \uC120\uD0DD\uD558\uC138\uC694`,
     getBodyStyle(19, "#b6d6fb", "bold")
   );
   subtitle.setOrigin(0.5);
@@ -86,9 +86,9 @@ export function createWeeklyPlannerModal(params: {
   const slotWidth = 276;
   const slotHeight = 56;
 
-  const amHeader = scene.add.text(amX, headerY, "오전 일정", getBodyStyle(20, "#dfefff", "bold"));
+  const amHeader = scene.add.text(amX, headerY, "\uC624\uC804 \uC77C\uC815", getBodyStyle(20, "#dfefff", "bold"));
   amHeader.setOrigin(0.5);
-  const pmHeader = scene.add.text(pmX, headerY, "오후 일정", getBodyStyle(20, "#dfefff", "bold"));
+  const pmHeader = scene.add.text(pmX, headerY, "\uC624\uD6C4 \uC77C\uC815", getBodyStyle(20, "#dfefff", "bold"));
   pmHeader.setOrigin(0.5);
   slotObjects.push(amHeader, pmHeader);
 
@@ -99,7 +99,7 @@ export function createWeeklyPlannerModal(params: {
     })),
     {
       color: FIXED_EVENT_SLOT_COLOR,
-      label: "이벤트 | 고정 이벤트로 변경 불가",
+      label: "\uC774\uBCA4\uD2B8 | \uACE0\uC815 \uC774\uBCA4\uD2B8\uB85C \uBCC0\uACBD \uBD88\uAC00",
     },
   ];
 
@@ -122,22 +122,22 @@ export function createWeeklyPlannerModal(params: {
     fixedEventName?: string
   ): void => {
     const option = getWeeklyPlanOption(optionId);
-    const baseBadgeText = badgeText.text.replace(" 완료", "").replace(" 이벤트", "");
+    const baseBadgeText = badgeText.text.replace(" \uC644\uB8CC", "").replace(" \uC774\uBCA4\uD2B8", "");
     const isFixedEvent = typeof fixedEventName === "string" && fixedEventName.trim().length > 0;
 
     if (isFixedEvent) {
       bg.setFillStyle(FIXED_EVENT_SLOT_COLOR, 0.96);
       badgeBg.setFillStyle(FIXED_EVENT_BADGE_COLOR, 0.98);
-      badgeText.setText(`${baseBadgeText} 이벤트`);
-      infoText.setText(`${fixedEventName}  |  고정 이벤트`);
+      badgeText.setText(`${baseBadgeText} \uC774\uBCA4\uD2B8`);
+      infoText.setText(`${fixedEventName}  |  \uACE0\uC815 \uC774\uBCA4\uD2B8`);
       bg.disableInteractive();
       return;
     }
 
     bg.setFillStyle(completed ? 0x4c5f76 : option.color, completed ? 0.82 : 0.95);
     badgeBg.setFillStyle(completed ? 0x22384f : 0x133150, 0.96);
-    badgeText.setText(completed ? `${baseBadgeText} 완료` : baseBadgeText);
-    infoText.setText(completed ? `${option.label}  |  완료` : `${option.label}  |  ${option.description}`);
+    badgeText.setText(completed ? `${baseBadgeText} \uC644\uB8CC` : baseBadgeText);
+    infoText.setText(completed ? `${option.label}  |  \uC644\uB8CC` : `${option.label}  |  ${option.description}`);
     bg.disableInteractive();
     if (!completed) {
       bg.setInteractive({ useHandCursor: true });
@@ -184,7 +184,7 @@ export function createWeeklyPlannerModal(params: {
     y: centerY + 258,
     width: 244,
     height: 56,
-    text: "이번 주 계획 확정",
+    text: "\uC774\uBC88 \uC8FC \uACC4\uD68D \uD655\uC815",
     onClick: () => onConfirm([...draftPlan]),
   });
 

@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import type { DialogueChoice, DialogueNode } from "@features/story/npcDialogueScripts";
 
@@ -23,17 +23,48 @@ type TextStyleFactory = (
   fontStyle?: "normal" | "bold"
 ) => Phaser.Types.GameObjects.Text.TextStyle;
 
+const DIALOGUE_PANEL_WIDTH = GAME_CONSTANTS.WIDTH - 84;
+const DIALOGUE_PANEL_HEIGHT = 360;
+const DIALOGUE_PANEL_BOTTOM_MARGIN = 22;
+const DIALOGUE_PANEL_HORIZONTAL_PADDING = 22;
+const DIALOGUE_BODY_TOP_OFFSET = 52;
+
+function getDialoguePanelLayout(px: (value: number) => number): {
+  panelWidth: number;
+  panelHeight: number;
+  centerX: number;
+  panelCenterY: number;
+  panelLeft: number;
+  panelTop: number;
+} {
+  const panelWidth = px(DIALOGUE_PANEL_WIDTH);
+  const panelHeight = px(DIALOGUE_PANEL_HEIGHT);
+  const centerX = px(GAME_CONSTANTS.WIDTH / 2);
+  const panelCenterY = px(GAME_CONSTANTS.HEIGHT - DIALOGUE_PANEL_BOTTOM_MARGIN - DIALOGUE_PANEL_HEIGHT / 2);
+  const panelLeft = px(centerX - panelWidth / 2);
+  const panelTop = px(panelCenterY - panelHeight / 2);
+
+  return {
+    panelWidth,
+    panelHeight,
+    centerX,
+    panelCenterY,
+    panelLeft,
+    panelTop,
+  };
+}
+
 const EMOTION_LABELS = {
-  NORMAL: "평온",
-  ANGRY: "분노",
-  FLUSTERED: "당황",
-  SHY: "수줍",
-  HAPPY: "기쁨",
-  SAD: "슬픔",
-  SURPRISED: "놀람",
-  SMILE: "미소",
-  SPEECHLESS: "멍함",
-  TIRED: "지침",
+  NORMAL: "\\uD3C9\\uC628",
+  ANGRY: "\\uBD84\\uB178",
+  FLUSTERED: "\\uB2F9\\uD669",
+  SHY: "\\uC218\\uC90D",
+  HAPPY: "\\uAE30\\uC068",
+  SAD: "\\uC2AC\\uD514",
+  SURPRISED: "\\uB180\\uB78C",
+  SMILE: "\\uBBF8\\uC18C",
+  SPEECHLESS: "\\uBA4D\\uD568",
+  TIRED: "\\uC9C0\\uCE68",
 } as const;
 
 type DialogueEmotionToken = keyof typeof EMOTION_LABELS;
@@ -64,7 +95,7 @@ function formatSpeakerTitle(node: DialogueNode): string {
   if (!emotionLabel) {
     return node.speaker;
   }
-  return `${node.speaker} · ${emotionLabel}`;
+  return `${node.speaker} 쨌 ${emotionLabel}`;
 }
 
 function getSpeakerColor(node: DialogueNode): string {
@@ -94,23 +125,18 @@ export function createDialogueUi(
   }
 ): DialogueUiRefs {
   const { px, getBodyStyle, createPanelOuterBorder, panelInnerBorderColor, onAction } = options;
-  const panelWidth = px(GAME_CONSTANTS.WIDTH - 84);
-  const panelHeight = 220;
-  const centerX = px(GAME_CONSTANTS.WIDTH / 2);
-  const panelCenterY = px(GAME_CONSTANTS.HEIGHT - 132);
-  const panelLeft = px(centerX - panelWidth / 2);
-  const panelTop = px(panelCenterY - panelHeight / 2);
+  const { panelWidth, panelHeight, centerX, panelCenterY, panelLeft, panelTop } = getDialoguePanelLayout(px);
 
   const panelOuter = createPanelOuterBorder(centerX, panelCenterY, panelWidth, panelHeight);
   const panel = scene.add.rectangle(centerX, panelCenterY, panelWidth, panelHeight, 0x132e4f, 0.94);
   panel.setStrokeStyle(2, panelInnerBorderColor, 1);
 
-  const speaker = scene.add.text(panelLeft + 22, panelTop + 16, "", getBodyStyle(21, "#e8f4ff", "bold"));
+  const speaker = scene.add.text(panelLeft + DIALOGUE_PANEL_HORIZONTAL_PADDING, panelTop + 16, "", getBodyStyle(21, "#e8f4ff", "bold"));
   speaker.setOrigin(0, 0);
 
-  const body = scene.add.text(panelLeft + 22, panelTop + 52, "", getBodyStyle(19, "#cde3ff"));
+  const body = scene.add.text(panelLeft + DIALOGUE_PANEL_HORIZONTAL_PADDING, panelTop + DIALOGUE_BODY_TOP_OFFSET, "", getBodyStyle(19, "#cde3ff"));
   body.setOrigin(0, 0);
-  body.setWordWrapWidth(px(panelWidth - 44), true);
+  body.setWordWrapWidth(px(panelWidth - DIALOGUE_PANEL_HORIZONTAL_PADDING * 2), true);
   body.setLineSpacing(8);
 
   const actionButtonBg = scene.add.rectangle(panelLeft + panelWidth - 90, panelTop + panelHeight - 38, 132, 34, 0x2c5888, 1);
@@ -123,7 +149,7 @@ export function createDialogueUi(
   const actionButtonText = scene.add.text(
     panelLeft + panelWidth - 90,
     panelTop + panelHeight - 39,
-    "Space 다음",
+    "Space ?ㅼ쓬",
     getBodyStyle(16, "#e6f3ff", "bold")
   );
   actionButtonText.setOrigin(0.5);
@@ -167,20 +193,23 @@ export function renderDialogueNode(
   dialogueChoiceIndex: number;
 } {
   const { node, root, px, getBodyStyle, ui, dialogueChoiceIndex, getRequirementText, isChoiceAvailable } = options;
+  const { panelWidth, panelHeight, panelLeft, panelTop } = getDialoguePanelLayout(px);
+  const hasChoices = Boolean(node.choices?.length);
   ui.speakerText.setText(formatSpeakerTitle(node));
   ui.speakerText.setColor(getSpeakerColor(node));
-  ui.bodyText.setText(node.text);
+  ui.bodyText.setText(hasChoices ? "" : node.text);
 
-  if (node.choices?.length) {
-    const choiceStartY = px(GAME_CONSTANTS.HEIGHT - 122);
-    const choiceSpacing = 26;
-    const choiceX = px(74);
-    const wrapWidth = px(GAME_CONSTANTS.WIDTH - 148);
+  if (hasChoices) {
+    const choiceSpacing = 10;
+    const choiceX = panelLeft + DIALOGUE_PANEL_HORIZONTAL_PADDING;
+    const choiceStartY = panelTop + DIALOGUE_BODY_TOP_OFFSET;
+    const wrapWidth = px(panelWidth - DIALOGUE_PANEL_HORIZONTAL_PADDING * 2);
 
     const choiceViews = node.choices.map((choice, index) => {
-      const line = scene.add.text(choiceX, choiceStartY + index * choiceSpacing, "", getBodyStyle(17, "#d2e7ff"));
+      const line = scene.add.text(choiceX, choiceStartY, "", getBodyStyle(15, "#d2e7ff"));
       line.setOrigin(0, 0);
       line.setWordWrapWidth(wrapWidth, true);
+      line.setLineSpacing(4);
       root?.add(line);
       return {
         text: line,
@@ -190,17 +219,22 @@ export function renderDialogueNode(
     });
 
     const normalizedIndex = dialogueChoiceIndex >= node.choices.length ? 0 : dialogueChoiceIndex;
-    ui.hintText.setText("↑↓ 선택 | Space 결정 | ESC 종료");
-    ui.actionButtonText.setText("Space 선택");
+    ui.hintText.setText("?묅넃 ?좏깮 | Space 寃곗젙 | ESC 醫낅즺");
+    ui.actionButtonText.setText("Space ?좏깮");
     refreshDialogueChoiceStyles(choiceViews, normalizedIndex, isChoiceAvailable);
+    let nextChoiceY = choiceStartY;
+    choiceViews.forEach((view) => {
+      view.text.setPosition(choiceX, nextChoiceY);
+      nextChoiceY += view.text.height + choiceSpacing;
+    });
     return {
       choiceViews,
       dialogueChoiceIndex: normalizedIndex,
     };
   }
 
-  ui.actionButtonText.setText(node.nextNodeId || node.action ? "Space 다음" : "Space 종료");
-  ui.hintText.setText(`${node.nextNodeId || node.action ? "Space 다음" : "Space 종료"} | ESC 종료`);
+  ui.actionButtonText.setText(node.nextNodeId || node.action ? "Space ?ㅼ쓬" : "Space 醫낅즺");
+  ui.hintText.setText(`${node.nextNodeId || node.action ? "Space ?ㅼ쓬" : "Space 醫낅즺"} | ESC 醫낅즺`);
   return {
     choiceViews: [],
     dialogueChoiceIndex,
@@ -216,13 +250,13 @@ export function refreshDialogueChoiceStyles(
     const selected = index === dialogueChoiceIndex;
     const available = isChoiceAvailable(view.choice);
     const actionType = view.choice.actionType ?? "NORMAL";
-    const prefix = actionType === "LOCKED" ? "🔒 " : actionType === "MADNESS" ? "⚠ " : selected ? "▶ " : "   ";
+    const prefix = actionType === "LOCKED" ? "?뵏 " : actionType === "MADNESS" ? "??" : selected ? "??" : "   ";
     let text = `${prefix}${view.choice.text}`;
     if (view.requirementText.length > 0) {
       text += ` (${view.requirementText})`;
     }
     if (!available) {
-      text += " [조건 미달]";
+      text += " [議곌굔 誘몃떖]";
     }
     view.text.setText(text);
 
@@ -243,3 +277,4 @@ export function refreshDialogueChoiceStyles(
     view.text.setAlpha(available ? 1 : 0.78);
   });
 }
+

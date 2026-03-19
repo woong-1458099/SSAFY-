@@ -1,4 +1,4 @@
-export type WeeklyPlanStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
+﻿export type WeeklyPlanStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
 export type WeeklyPlanOptionId = "ui_practice" | "rest_api_db" | "team_project";
 
 export type WeeklyPlanOption = {
@@ -9,7 +9,7 @@ export type WeeklyPlanOption = {
   color: number;
 };
 
-export const WEEKLY_PLAN_TIME_LABELS = ["오전", "오후"] as const;
+export const WEEKLY_PLAN_TIME_LABELS = ["\uC624\uC804", "\uC624\uD6C4"] as const;
 export const WEEKLY_PLAN_DAY_INDICES = [0, 1, 2, 3, 4] as const;
 export const WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS: Record<WeeklyPlanOptionId, string> = {
   ui_practice: "weekly-plan-ui-practice",
@@ -20,22 +20,22 @@ export const WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS: Record<WeeklyPlanOptionId, strin
 export const WEEKLY_PLAN_OPTIONS: WeeklyPlanOption[] = [
   {
     id: "ui_practice",
-    label: "UI 구현 실습",
-    description: "FE 능력치 획득",
+    label: "UI \uAD6C\uD604 \uC5F0\uC2B5",
+    description: "FE \uB2A5\uB825\uCE58 \uD68D\uB4DD",
     statDelta: { fe: 4 },
     color: 0x4c8ed9,
   },
   {
     id: "rest_api_db",
-    label: "REST API와 데이터베이스 설계",
-    description: "BE 능력치 획득",
+    label: "REST API\uC640 \uB370\uC774\uD130\uBCA0\uC774\uC2A4 \uC124\uACC4",
+    description: "BE \uB2A5\uB825\uCE58 \uD68D\uB4DD",
     statDelta: { be: 4 },
     color: 0x3d9d7a,
   },
   {
     id: "team_project",
-    label: "팀 프로젝트",
-    description: "협업 능력치 획득",
+    label: "\uD300 \uD504\uB85C\uC81D\uD2B8",
+    description: "\uD611\uC5C5 \uB2A5\uB825\uCE58 \uD68D\uB4DD",
     statDelta: { teamwork: 4 },
     color: 0xb68543,
   },

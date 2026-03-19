@@ -1,0 +1,441 @@
+[
+  {
+    "eventId": "EVT_MAIN_W6_D1_MORNING_SETUP",
+    "eventName": "관통 프로젝트 환경 세팅의 저주",
+    "eventType": "FIXED",
+    "triggerTiming": {
+      "week": 6,
+      "day": 1,
+      "timeOfDay": "오전"
+    },
+    "location": "자취방",
+    "isRepeatable": false,
+    "dialogues": [
+      {
+        "speakerId": "SYSTEM",
+        "text": "프레임워크들의 초기 세팅을 하는데 폴더 구조가 꼬이고 의존성 에러가 뿜어져 나온다. 시작부터 삐걱거린다."
+      }
+    ],
+    "choices": [
+      {
+        "choiceId": 1,
+        "actionType": "NORMAL",
+        "condition": null,
+        "text": "[기본] 패키지를 지웠다 깔았다 무한 반복한다.",
+        "result": {
+          "statChanges": {
+            "hp": -20,
+            "stress": 20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"아니, 아까는 돌아갔는데 왜 또 터져... npm install... 다시...\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(패키지를 지웠다 깔았다 무한 반복하다 눈을 떠보니 하루 일과가 끝났다. 아직 제대로 구현한 것도 없는데... 망했다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 2,
+        "actionType": "LOCKED",
+        "condition": {
+          "code": 100
+        },
+        "text": "🔒 [코딩 100] \"버전 문제다.\" package.json과 requirements.txt를 깔끔하게 일치시킨다.",
+        "result": {
+          "statChanges": {
+            "code": 15,
+            "social": 5
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"침착하자. 이건 100% 라이브러리 버전 충돌 문제다.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(버전을 깔끔하게 맞추고 불필요한 의존성을 제거하자 에러가 씻은 듯이 사라졌다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 3,
+        "actionType": "LOCKED",
+        "condition": {
+          "luck": 120
+        },
+        "text": "🔒 [운빨 120] 스택오버플로우에서 인도 개발자가 올려둔 '초기 세팅 한 방 스크립트'를 발견했다!",
+        "result": {
+          "statChanges": {
+            "luck": 20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"제발 누군가 나랑 똑같은 에러를 겪었기를... 어? 이거다!\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(스택오버플로우에서 이름 모를 인도 개발자가 3년 전에 올려둔 '마법의 스크립트'를 복붙하자 완벽하게 세팅이 끝났다! 테크놀로지아!)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 4,
+        "actionType": "MADNESS",
+        "condition": null,
+        "text": "🤪 [광기] 모니터 앞에 제사상을 차리고 npm run serve를 누르며 합장한다.",
+        "result": {
+          "statChanges": {
+            "stress": -10,
+            "madness": 20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"비나이다 비나이다... 제발 빌드 에러만은 피하게 해주소서...\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(모니터에 합장하자, 거짓말처럼 로컬 서버가 켜졌다. 역시 코딩은 샤머니즘.)"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "eventId": "EVT_MAIN_W6_D4_AFTERNOON_BUG",
+    "eventName": "마지막 버그와의 사투",
+    "eventType": "FIXED",
+    "triggerTiming": {
+      "week": 6,
+      "day": 4,
+      "timeOfDay": "오후"
+    },
+    "location": "실습장",
+    "isRepeatable": false,
+    "dialogues": [
+      {
+        "speakerId": "SYSTEM",
+        "text": "기능은 다 돌아가는데, 회원가입 시 비밀번호 유효성 검사 로직 하나가 자꾸 튕긴다. 수정하면 다른 곳이 터지는 지옥의 핑퐁 상태."
+      }
+    ],
+    "choices": [
+      {
+        "choiceId": 1,
+        "actionType": "NORMAL",
+        "condition": null,
+        "text": "[기본] 머리를 쥐어뜯으며 1시간째 코드만 뗐다 붙였다 한다.",
+        "result": {
+          "statChanges": {
+            "stress": 25,
+            "code": -5
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"아아악! 특수문자를 넣으면 길이가 터지고, 길이를 맞추면 대문자가 터지고!!\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(머리카락만 100가닥 빠지고 코드는 한 줄도 발전하지 못했다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 2,
+        "actionType": "LOCKED",
+        "condition": {
+          "code": 115
+        },
+        "text": "🔒 [코딩 115] \"기본으로 돌아가자.\" 정규표현식(Regex)을 백지부터 다시 짜서 완벽하게 방어한다.",
+        "result": {
+          "statChanges": {
+            "code": 20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"스파게티 코드를 고치느니, 그냥 정규식을 처음부터 새로 짜는 게 빠르겠다.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(모든 예외를 완벽하게 방어해내는 철벽의 정규식이 완성되었다! 버그 제로 달성!)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 3,
+        "actionType": "LOCKED",
+        "condition": {
+          "luck": 140
+        },
+        "text": "🔒 [운빨 140] 홧김에 친 오타가 우연히 예외를 완벽하게 걸러내는 기적의 정규식이 되었다!",
+        "result": {
+          "statChanges": {
+            "luck": 20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"아 몰라! 안 해!! (쾅!)\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(홧김에 키보드를 샷건 쳤는데, 입력된 오타 기호들이 기적의 정규식을 만들어내며 완벽하게 디버깅되었다. 이 코드는 영원히 건드리지 않기로 한다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 4,
+        "actionType": "MADNESS",
+        "condition": null,
+        "text": "🤪 [광기] \"비밀번호는 모두 '1234'로 통일한다. 보안은 유저의 몫이다.\" 얼렁뚱땅 넘어간다.",
+        "result": {
+          "statChanges": {
+            "code": -30,
+            "madness": 20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"보안은 유저의 몫이다. 모든 비밀번호는 '1234'로 통일해서 하드코딩한다!\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_MINSU",
+              "speakerName": "민수",
+              "emotion": "SERIOUS",
+              "text": "\"지금 당장 그 커밋(Commit) 롤백 안 하면 제 손에 죽습니다.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(코드를 본 민수가 뒷목을 잡고 쓰러질 뻔했다.)"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "eventId": "EVT_MAIN_W6_D5_AFTERNOON_REMINISCE",
+    "eventName": "우리들의 SSAFY 생활",
+    "eventType": "FIXED",
+    "triggerTiming": {
+      "week": 6,
+      "day": 5,
+      "timeOfDay": "오후"
+    },
+    "location": "휴게실",
+    "isRepeatable": false,
+    "dialogues": [
+      {
+        "speakerId": "SYSTEM",
+        "text": "6주 차, 마지막 관통 프로젝트 발표 후, 동기 교육생들과 로비에서 커피를 마시며 쉬고 있다."
+      },
+      {
+        "speakerId": "NPC_CLASSMATE_YEONWOONG",
+        "speakerName": "연웅",
+        "emotion": "NORMAL",
+        "text": "\"와, 진짜 시간 빠르다. 우리 처음 스타트캠프 때 레고 로봇 굴리면서 멘붕하던 게 엊그제 같은데.\""
+      },
+      {
+        "speakerId": "NPC_CLASSMATE_JIWOO",
+        "speakerName": "지우",
+        "emotion": "HAPPY",
+        "text": "\"맞아요! 저 첫 알고리즘 시험 때 완전 터져서 울 뻔했잖아요. 근데 벌써 수료라니... 다들 수료하면 뭐 하실 거예요?\""
+      },
+      {
+        "speakerId": "SYSTEM",
+        "text": "(지우의 질문에 잠시 정적이 흐른다. 다들 각자의 미래를 상상하는 듯하다. 나는...?)"
+      }
+    ],
+    "choices": [
+      {
+        "choiceId": 1,
+        "actionType": "NORMAL",
+        "condition": null,
+        "text": "[기본] \"당연히 취뽀지! 자소서 쓰고 면접 준비하고... 진짜 시작은 지금부터 아니겠어?\"",
+        "result": {
+          "statChanges": {
+            "stress": 10,
+            "hp": -5
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"당연히 취뽀지! 자소서 쓰고 면접 준비하고... 진짜 시작은 지금부터 아니겠어?\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_HYORYEON",
+              "speakerName": "효련",
+              "emotion": "NORMAL",
+              "text": "\"맞아. 수료는 끝이 아니라 새로운 시작이지! 우리 꼭 다 같이 원하는 곳 취업하자!\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(취업이라는 단어에 다시금 숨이 턱 막히지만, 묘한 책임감과 함께 전의가 불타오른다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 2,
+        "actionType": "LOCKED",
+        "condition": {
+          "social": 70
+        },
+        "text": "🔒 [사교 70] \"일단 일주일은 코딩이고 뭐고 다 잊고 놀 거야! 우리 다 같이 마치고 소주나 한잔하자!\"",
+        "result": {
+          "statChanges": {
+            "social": 15,
+            "stress": -20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"일단 일주일은 코딩이고 뭐고 다 잊고 놀 거야! 우리 다 같이 마치고 소주나 한잔하자!\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_JONGMIN",
+              "speakerName": "종민",
+              "emotion": "HAPPY",
+              "text": "\"크, 좋은데요? 소오주 한 잔 할까요?\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_YEONWOONG",
+              "speakerName": "연웅",
+              "emotion": "HAPPY",
+              "text": "\"좋은데요? 한 잔 하러 가시죠.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(잠시 걱정은 내려놓고 회식할 생각에 벌써부터 스트레스가 사르르 녹아내린다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 3,
+        "actionType": "LOCKED",
+        "condition": {
+          "code": 70
+        },
+        "text": "🔒 [코딩 70] \"난 이번에 한 관통 프로젝트 좀 더 디벨롭해서 실제 서비스로 런칭해 보려고. 아직 아키텍처가 눈에 아른거려.\"",
+        "result": {
+          "statChanges": {
+            "code": 15,
+            "hp": -10
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"난 이번에 한 관통 프로젝트 좀 더 디벨롭해서 실제 서비스로 런칭해 보려고. 아직 아키텍처가 눈에 아른거려.\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_MYUNGJIN",
+              "speakerName": "명진",
+              "emotion": "SURPRISED",
+              "text": "\"수료하고도 코딩을 따로 더 해보겠다니, 진짜 찐 개발자가 다 되셨네요.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(개발자의 피가 온몸에 흐르는 것이 느껴진다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 4,
+        "actionType": "ROMANCE_EVENT",
+        "condition": {
+          "playerGender": "FEMALE"
+        },
+        "text": "🌸 [연애] \"글쎄..? 난 좀 놀고 싶긴 한데... 혼자서는 좀 그렇구...\"",
+        "result": {
+          "statChanges": {
+            "stress": -10,
+            "social": 10,
+            "favor_minsu": 15
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"글쎄..? 난 좀 놀고 싶긴 한데... 혼자서는 좀 그렇구...\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_MINSU",
+              "speakerName": "민수",
+              "emotion": "SURPRISED",
+              "text": "\"어? ...그럼 나랑 같이 놀래? 나도 오늘 딱히 약속 없었는데.\""
+            },
+            {
+              "speakerId": "PLAYER",
+              "text": "\"진짜? 좋아! 뭐 할까?\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_MINSU",
+              "speakerName": "민수",
+              "emotion": "HAPPY",
+              "text": "\"글쎄, 일단 나가서 생각해보자. 맛있는 거라도 먹으러 갈까.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(민수가 머쓱한 듯 뒷목을 긁적이지만, 입가에는 미소가 번져 있다. 수료 후에도 어쩐지 오래오래 함께일 것만 같은 기분이 든다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 5,
+        "actionType": "ROMANCE_EVENT",
+        "condition": {
+          "playerGender": "MALE"
+        },
+        "text": "🌸 [연애] \"글쎄..? 난 좀 놀고 싶긴 한데... 혼자서는 좀 그렇구...\"",
+        "result": {
+          "statChanges": {
+            "stress": -10,
+            "social": 10,
+            "favor_hyo": 15
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"글쎄..? 난 좀 놀고 싶긴 한데... 혼자서는 좀 그렇구...\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_HYORYEON",
+              "speakerName": "효련",
+              "emotion": "SHY",
+              "text": "\"음... 혼자 놀기 싫으면... 나랑 같이 갈래? 나도 수료식 끝나고 그냥 집에 가긴 좀 아쉬웠거든.\""
+            },
+            {
+              "speakerId": "PLAYER",
+              "text": "\"진짜? 나야 완전 좋지! 어디 가고 싶은 데 있어?\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_HYORYEON",
+              "speakerName": "효련",
+              "emotion": "HAPPY",
+              "text": "\"그건 돌아다니면서 생각해보자! 빨리 짐 챙겨서 나가자.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(효련이의 밝은 미소에 6주간의 피로가 눈 녹듯 사라지는 기분이다. 수료 후에도 어쩐지 오래오래 함꼐일 것만 같은 기분이 든다.)"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]
