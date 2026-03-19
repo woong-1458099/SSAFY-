@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 const CHALLENGES = [
@@ -11,10 +12,17 @@ const CHALLENGES = [
 ];
 
 export default class DragScene extends Phaser.Scene {
+  private returnSceneKey = 'MainScene';
+
   constructor() { super({ key: 'DragScene' }); }
+
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
+
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
     const W = 800, H = 600;
     this.answered = false; this.timeLeft = 60; this.blocks = []; this.challenge = Phaser.Math.RND.pick(CHALLENGES); this.correctOrder = [...this.challenge.lines]; this.shuffled = Phaser.Utils.Array.Shuffle([...this.challenge.lines]);
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);
@@ -111,7 +119,7 @@ export default class DragScene extends Phaser.Scene {
       });
     }
     this.resultTxt.setColor(color).setText(msg); this.statTxt.setText(stat);
-    this.time.delayedCall(400, () => { this.createBtn(270, 572, 'RETRY', 0x440088, 0xcc55ff, () => this.scene.restart()); this.createBtn(530, 572, 'MENU', 0x001888, 0x4499ff, () => this.scene.start('MenuScene')); });
+    this.time.delayedCall(400, () => { this.createBtn(270, 572, 'RETRY', 0x440088, 0xcc55ff, () => this.scene.restart()); this.createBtn(530, 572, 'EXIT', 0x001888, 0x4499ff, () => returnToScene(this, this.returnSceneKey)); });
   }
 
   createBtn(x, y, label, bg, border, cb) {

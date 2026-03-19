@@ -2,6 +2,7 @@
 import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 const W = 800;
@@ -18,11 +19,17 @@ const MAX_REPS = 10;
 const TOTAL_TIME = 40;
 
 export default class GymScene extends Phaser.Scene {
+  private returnSceneKey = 'MainScene';
+
   constructor() { super({ key: 'GymScene' }); }
+
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
 
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
 
     this.exercise = Phaser.Math.RND.pick(EXERCISES);
     this.reps = 0;
@@ -381,7 +388,7 @@ export default class GymScene extends Phaser.Scene {
 
     // 버튼
     this.createBtn(W / 2 - 120, 420, '다시하기', 0x442200, 0xff6600, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 420, '메뉴', 0x222244, 0x4488ff, () => this.scene.start('MenuScene'));
+    this.createBtn(W / 2 + 120, 420, '나가기', 0x222244, 0x4488ff, () => returnToScene(this, this.returnSceneKey));
   }
 
   createBtn(x, y, label, bg, border, cb) {

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
+import { AREA_NPC_CONFIGS, type AreaNpcConfig } from "@features/story/npcPositions";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import { InputManager } from "@core/managers/InputManager";
 import { AudioManager } from "@core/managers/AudioManager";
@@ -132,16 +133,6 @@ import { createSettingsPage as createSettingsPageContent, createStatsPage as cre
 type TabKey = "inventory" | "stats" | "settings" | "save";
 type EquipmentSlotKey = "keyboard" | "mouse";
 type StatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
-
-type AreaNpcConfig = {
-  dialogueId: NpcDialogueId;
-  x: number;
-  y: number;
-  labelOffsetX: number;
-  labelOffsetY: number;
-  flashColor: number;
-  textureKey?: string;
-};
 
 type AreaNpcView = {
   area: AreaId;
@@ -381,32 +372,12 @@ const MINIGAME_SCENE_MAP: Record<string, string> = {
   hof: "DrinkingScene",
   ramenthings: "CookingScene",
   lottery: "LottoScene",
+  karaoke: "RhythmScene",
   playDrinking: "DrinkingScene",
   playInterview: "InterviewScene",
   playGym: "GymScene",
   playRhythm: "RhythmScene",
   playCooking: "CookingScene"
-};
-
-const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
-  downtown: [
-    {
-      dialogueId: "downtown_shopkeeper",
-      x: 930,
-      y: 404,
-      labelOffsetX: -24,
-      labelOffsetY: 24,
-      flashColor: 0xb07a3c
-    }
-  ],
-  campus: [
-    // 문 앞 (좌측)
-    { dialogueId: "campus_sunmi", x: 200, y: 430, labelOffsetX: -36, labelOffsetY: 30, flashColor: 0x3f6e90, textureKey: "fixed-npc-sunmi" },
-    // 중앙 (칠판 앞)
-    { dialogueId: "campus_doyeon", x: 400, y: 430, labelOffsetX: -36, labelOffsetY: 30, flashColor: 0x3f6e90, textureKey: "fixed-npc-doyeon" },
-    // 의자 옆 (우측)
-    { dialogueId: "campus_hyunseok", x: 670, y: 430, labelOffsetX: -40, labelOffsetY: 30, flashColor: 0x3f6e90, textureKey: "fixed-npc-hyunseok" }
-  ]
 };
 
 
@@ -603,6 +574,15 @@ export class MainScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.areaNpcViews = [];
+    this.scheduledNpcViews = [];
+    this.downtownBuildingViews = [];
+    this.saveSlotViews = [];
+    this.inventorySlotViews = [];
+    this.savePinnedObjects = [];
+    this.runtimeDialogueScripts = {};
+    this.completedFixedEventIds = [];
+
     this.cameras.main.setBackgroundColor("#3e7d4a");
     this.cameras.main.roundPixels = true;
     this.physics.world.setBounds(0, 0, GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT);
@@ -644,6 +624,19 @@ export class MainScene extends Phaser.Scene {
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       this.updateCarriedItemPosition(pointer.worldX, pointer.worldY);
+    });
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      // 개발 시 NPC 배치를 위해 화면 클릭만으로 좌표를 복사할 수 있는 편의 기능
+      if (import.meta.env.DEV) {
+        const x = Math.round(pointer.worldX);
+        const y = Math.round(pointer.worldY);
+        const msg = `x: ${x}, y: ${y}`;
+        console.log(`[NPC 좌표 추출] ${msg}`);
+        this.showSystemToast(`좌표 복사: ${msg}`);
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(msg).catch(() => {});
+        }
+      }
     });
     this.input.on("wheel", this.handleMenuWheel, this);
     this.events.on(Phaser.Scenes.Events.POST_UPDATE, this.syncPlayerAvatarVisuals, this);
@@ -1117,13 +1110,14 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private getAreaRoot(area: Exclude<AreaId, "world">): Phaser.GameObjects.Container | undefined {
+  private getAreaRoot(area: AreaId): Phaser.GameObjects.Container | undefined {
+    if (area === "world") return this.worldMapRoot;
     if (area === "downtown") return this.downtownMapRoot;
     return this.campusMapRoot;
   }
 
   private createAreaNpcViews(): void {
-    (Object.entries(AREA_NPC_CONFIGS) as Array<[Exclude<AreaId, "world">, AreaNpcConfig[]]>).forEach(([area, configs]) => {
+    (Object.entries(AREA_NPC_CONFIGS) as Array<[AreaId, AreaNpcConfig[]]>).forEach(([area, configs]) => {
       const root = this.getAreaRoot(area);
       if (!root) return;
 
@@ -1325,7 +1319,7 @@ export class MainScene extends Phaser.Scene {
 
   private refreshAreaNpcVisibility(area: AreaId): void {
     this.areaNpcViews.forEach((view) => {
-      const visible = area !== "world" && view.area === area;
+      const visible = view.area === area;
       view.marker.setVisible(visible);
       view.label.setVisible(visible);
       view.portrait?.setVisible(visible);
@@ -1386,7 +1380,7 @@ export class MainScene extends Phaser.Scene {
   private refreshAreaNpcHighlight(activeView: AreaNpcView | null): void {
     this.activeAreaNpcView = activeView;
     [...this.areaNpcViews, ...this.scheduledNpcViews].forEach((view) => {
-      const isActive = activeView?.config.dialogueId === view.config.dialogueId && activeView.area === view.area;
+      const isActive = activeView?.config.dialogueId === view.config.dialogueId && activeView?.area === view.area;
       if (view.marker instanceof Phaser.GameObjects.Shape) {
         view.marker.setFillStyle(isActive ? view.config.flashColor : 0x6e4f2b, 1);
         view.marker.setStrokeStyle(2, isActive ? 0xf2e8b6 : 0x4b351b, 1);
@@ -1398,7 +1392,9 @@ export class MainScene extends Phaser.Scene {
         }
       }
       view.label.setColor(isActive ? "#fff6d0" : "#f6e6c8");
-      view.portrait?.setScale(isActive ? 1.72 : 1.6);
+      if (view.portrait) {
+        view.portrait.setScale(isActive ? 1.72 : 1.6);
+      }
     });
   }
 
@@ -2779,7 +2775,8 @@ export class MainScene extends Phaser.Scene {
   private startMinigame(key: string): void {
     const sceneKey = MINIGAME_SCENE_MAP[key];
     if (sceneKey) {
-      this.scene.start(sceneKey, { returnSceneKey: SceneKey.Main });
+      this.scene.launch(sceneKey, { returnSceneKey: SceneKey.Main });
+      this.scene.pause(SceneKey.Main);
     }
   }
 

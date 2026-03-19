@@ -237,8 +237,7 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         speaker: "명진",
         text: "안녕! 면접 준비는 잘 돼가? 실제처럼 연습 한번 해볼래?",
         choices: [
-          { id: "play", text: "면접 연습 시작하기", action: "playInterview" },
-          { id: "bye", text: "나중에 올게." }
+          { id: "play", text: "나중에 다시 올게!" }
         ]
       }
     }
@@ -253,8 +252,7 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         speaker: "연웅",
         text: "배고프지 않아? 내가 기가 막힌 라면 레시피를 알고 있는데...",
         choices: [
-          { id: "play", text: "라면 끓이기 도전", action: "playCooking" },
-          { id: "bye", text: "다음에 먹을게." }
+          { id: "play", text: "레시피 좀 다듬어 봐야겠어!" }
         ]
       }
     }
@@ -269,8 +267,7 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         speaker: "효련",
         text: "공부만 하면 머리 아프잖아. 노래 한 곡 하면서 스트레스 풀래?",
         choices: [
-          { id: "play", text: "리듬 게임 시작", action: "playRhythm" },
-          { id: "bye", text: "지금은 바빠." }
+          { id: "play", text: "스트레스 풀리네!" }
         ]
       }
     }
@@ -300,8 +297,7 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         speaker: "종민",
         text: "개발자는 체력이 국력이야! 같이 운동해서 기초 체력 좀 길러둘까?",
         choices: [
-          { id: "play", text: "기초 체력 단련", action: "playGym" },
-          { id: "bye", text: "오늘 좀 피곤하네." }
+          { id: "play", text: "알겠어, 나중에 꼭 할게!" }
         ]
       }
     }
@@ -361,8 +357,7 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         speaker: "민수",
         text: "오늘 정말 고생 많았어! 팀원들이랑 가볍게 맥주 한잔하면서 회포 풀까?",
         choices: [
-          { id: "play", text: "맥주 파티 시작", action: "playDrinking" },
-          { id: "bye", text: "술은 다음에!" }
+          { id: "play", text: "다음에 같이 회포 풀자!" }
         ]
       }
     }

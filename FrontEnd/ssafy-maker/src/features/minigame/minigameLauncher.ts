@@ -23,3 +23,13 @@ export function openLegacyMinigameMenu(
   scene.scene.pause(returnSceneKey);
   return true;
 }
+
+export function returnToScene(scene: Phaser.Scene, returnSceneKey: string): void {
+  const isPaused = scene.scene.isPaused(returnSceneKey);
+  scene.scene.stop();
+  if (isPaused) {
+    scene.scene.resume(returnSceneKey);
+  } else {
+    scene.scene.start(returnSceneKey);
+  }
+}

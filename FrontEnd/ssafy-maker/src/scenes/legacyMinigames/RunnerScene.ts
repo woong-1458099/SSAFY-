@@ -2,15 +2,22 @@
 import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 
 export default class RunnerScene extends Phaser.Scene {
+  private returnSceneKey = 'MainScene';
+
   constructor() { super({ key: 'RunnerScene' }); }
+
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
 
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
     const W = 800, H = 600;
     this.score = 0; this.gameOver = false; this.speed = 300; this.jumpCount = 0; this.obstacles = []; this.grounds = [];
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);
@@ -166,7 +173,7 @@ export default class RunnerScene extends Phaser.Scene {
     this.add.text(W / 2, 340, reward, { fontSize: '10px', color: '#aaddff', fontFamily: PF }).setOrigin(0.5);
     this.add.text(W / 2, 375, 'TIP: DOUBLE JUMP IS AVAILABLE!', { fontSize: '7px', color: '#445566', fontFamily: PF }).setOrigin(0.5);
     this.createBtn(270, 440, 'RETRY', 0x001888, 0x4499ff, () => this.scene.restart());
-    this.createBtn(530, 440, 'MENU', 0x440088, 0xcc55ff, () => this.scene.start('MenuScene'));
+    this.createBtn(530, 440, 'EXIT', 0x440088, 0xcc55ff, () => returnToScene(this, this.returnSceneKey));
   }
 
   createBtn(x, y, label, bg, border, cb) {

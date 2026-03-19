@@ -8,6 +8,7 @@ import {
 } from './faceTracking';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PIXEL_FONT = '"Press Start 2P"';
 const CAMERA_WIDTH = 640;
@@ -43,6 +44,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
   protected resultGroup: Phaser.GameObjects.GameObject[] = [];
   protected gaugeState: GaugeState = { gauge: 0, ratio: 0, isSmiling: false };
   protected completed = false;
+  protected returnSceneKey = 'MainScene';
 
   protected abstract readonly title: string;
   protected abstract readonly subtitle: string;
@@ -56,9 +58,13 @@ abstract class BaseSmileScene extends Phaser.Scene {
     super({ key: sceneKey });
   }
 
+  init(data: { returnSceneKey?: string }): void {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
+
   create(): void {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
     this.completed = false;
     this.gaugeState = { gauge: 0, ratio: 0, isSmiling: false };
 
@@ -312,7 +318,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
       fontFamily: PIXEL_FONT,
     }).setOrigin(0.5).setDepth(32);
     const retryButton = this.createButton(300, 356, '다시하기', () => this.scene.restart());
-    const menuButton = this.createButton(500, 356, '허브로', () => this.scene.start('MenuScene'));
+    const menuButton = this.createButton(500, 356, '나가기', () => returnToScene(this, this.returnSceneKey));
 
     this.resultGroup = [overlay, panel, titleText, subtitle, rewardText, ...retryButton, ...menuButton];
   }

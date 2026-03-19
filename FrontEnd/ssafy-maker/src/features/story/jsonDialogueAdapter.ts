@@ -5,6 +5,7 @@ import type {
   DialogueRequirement,
   NpcDialogueId,
   NpcDialogueScript,
+  DialogueAction,
 } from "./npcDialogueScripts";
 import { matchesFixedEventLocation, normalizeFixedEventLocationToken } from "./fixedEventLocation";
 
@@ -52,6 +53,7 @@ export type FixedEventChoiceEntry = {
   condition?: FixedEventChoiceCondition | null;
   text?: string;
   result?: FixedEventChoiceResult;
+  action?: DialogueAction;
 };
 
 export type FixedEventTriggerTiming = {
@@ -348,6 +350,7 @@ export function buildDialogueScriptFromFixedEventEntry(
         text: normalizeChoiceText(choice.text, `??? ${index + 1}`, playerName, actionType),
         nextNodeId: feedbackStartNodeId,
         actionType,
+        action: choice.action,
 
         requirements,
         lockedReason,

@@ -2,19 +2,26 @@
 import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { returnToScene } from '@features/minigame/minigameLauncher';
 
 const PF = '"Press Start 2P"';
 const W = 800;
 const H = 600;
 
 export default class TankScene extends Phaser.Scene {
+  private returnSceneKey = 'MainScene';
+
   constructor() {
     super({ key: 'TankScene' });
   }
 
+  init(data) {
+    this.returnSceneKey = data?.returnSceneKey || 'MainScene';
+  }
+
   create() {
     applyLegacyViewport(this);
-    installMinigamePause(this);
+    installMinigamePause(this, this.returnSceneKey);
 
     this.gameOver = false;
     this.started = false;
@@ -373,7 +380,7 @@ export default class TankScene extends Phaser.Scene {
     }
 
     this.createBtn(W / 2 - 130, H / 2 + 100, '다시하기', 0x332200, 0x88ff00, () => this.scene.restart());
-    this.createBtn(W / 2 + 130, H / 2 + 100, '메뉴', 0x222222, 0x666666, () => this.scene.start('MenuScene'));
+    this.createBtn(W / 2 + 130, H / 2 + 100, '나가기', 0x222222, 0x666666, () => returnToScene(this, this.returnSceneKey));
   }
 
   createBtn(x, y, label, bg, border, cb) {
