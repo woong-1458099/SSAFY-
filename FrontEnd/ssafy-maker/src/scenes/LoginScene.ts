@@ -2,9 +2,11 @@ import Phaser from "phaser";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import {
   beginBackendAuth,
+  clearPendingAuthRedirect,
   clearStoredSession,
   completeAuthIfPresent,
-  fetchExistingSession
+  fetchExistingSession,
+  hasPendingAuthRedirect
 } from "@features/auth/authSession";
 import { SceneKey } from "@shared/enums/sceneKey";
 
@@ -142,6 +144,17 @@ export class LoginScene extends Phaser.Scene {
       submit.style.cursor = isSubmitting ? "progress" : "pointer";
     };
 
+    const restoreAuthUiAfterNavigation = (): void => {
+      const authResult = new URL(window.location.href).searchParams.get("auth");
+      if (!hasPendingAuthRedirect() || authResult === "success") {
+        return;
+      }
+
+      clearPendingAuthRedirect();
+      setSubmitting(false);
+      setMessage("로그인 화면으로 돌아왔습니다. 다시 시도할 수 있습니다.", "info");
+    };
+
     const renderView = (view: AuthView): void => {
       this.currentView = view;
       title.textContent = viewTitle[view];
@@ -217,6 +230,7 @@ export class LoginScene extends Phaser.Scene {
 
         setMessage("로그인 후 게임을 계속할 수 있습니다.", "info");
       } catch (error) {
+        clearPendingAuthRedirect();
         clearStoredSession();
         setMessage(error instanceof Error ? error.message : "인증 처리에 실패했습니다.", "error");
       } finally {
@@ -273,7 +287,19 @@ export class LoginScene extends Phaser.Scene {
     renderView("login");
     void initializeSession();
 
+    const onPageShow = (): void => {
+      restoreAuthUiAfterNavigation();
+    };
+    const onWindowFocus = (): void => {
+      restoreAuthUiAfterNavigation();
+    };
+
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("focus", onWindowFocus);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("focus", onWindowFocus);
       submit.removeEventListener("click", onSubmitClick);
       bypassBtn.removeEventListener("click", onBypassClick);
       this.root?.destroy();
