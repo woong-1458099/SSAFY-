@@ -30,7 +30,15 @@ import {
   findMatchingFixedEvent,
   getFixedEventEntries
 } from "@features/story/jsonDialogueAdapter";
-import { matchesFixedEventLocation } from "@features/story/fixedEventLocation";
+import {
+  buildFixedEventNpcPresentation,
+  FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT,
+  getDefaultFixedEventNpcSlotsForArea,
+  getFixedEventPresentNpcs,
+  resolveCurrentFixedEventLocation,
+  type FixedEventNpcSlot,
+  type FixedEventRenderArea
+} from "@features/story/fixedEventNpcPresence";
 import {
   clearDialogueChoices,
   createDialogueUi,
@@ -141,8 +149,8 @@ type AreaNpcView = {
   isScheduled?: boolean;
 };
 
-type ScheduledNpcSlot = Pick<AreaNpcConfig, "x" | "y" | "labelOffsetX" | "labelOffsetY" | "flashColor">;
-type ScheduledNpcArea = Extract<AreaId, "world" | "downtown" | "campus">;
+type ScheduledNpcSlot = FixedEventNpcSlot;
+type ScheduledNpcArea = FixedEventRenderArea;
 type ScheduledNpcPositionMap = Record<ScheduledNpcArea, Record<(typeof TIME_CYCLE)[number], ScheduledNpcSlot[]>>;
 
 type InventoryItemTemplate = {
@@ -1456,8 +1464,12 @@ export class MainScene extends Phaser.Scene {
       const root = area === "world" ? this.worldMapRoot : this.getAreaRoot(area);
       if (!root) return;
 
-      for (let index = 0; index < SCHEDULED_NPC_SLOT_COUNT; index += 1) {
-        const position = SCHEDULED_NPC_POSITION_MAP[area][TIME_CYCLE[0]][index];
+      const defaultSlots = getDefaultFixedEventNpcSlotsForArea(area, TIME_CYCLE[0]);
+      for (let index = 0; index < FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT; index += 1) {
+        const position = defaultSlots[index];
+        if (!position) {
+          continue;
+        }
         const marker = this.add.rectangle(position.x, position.y, 34, 42, 0x6e4f2b, 0.15);
         marker.setStrokeStyle(2, 0x4b351b, 1);
         marker.setVisible(false);
@@ -1498,26 +1510,6 @@ export class MainScene extends Phaser.Scene {
       }
     });
     this.refreshScheduledNpcViews();
-  }
-
-  private getScheduledNpcAreaForEvent(event: ReturnType<typeof findMatchingFixedEvent>): ScheduledNpcArea {
-    if (matchesFixedEventLocation(event?.location, "home")) {
-      return "world";
-    }
-    if (matchesFixedEventLocation(event?.location, "downtown")) {
-      return "downtown";
-    }
-    return "campus";
-  }
-
-  private getScheduledNpcSlotsForEvent(event: ReturnType<typeof findMatchingFixedEvent>): ScheduledNpcSlot[] {
-    const area = this.getScheduledNpcAreaForEvent(event);
-    const eventTime = event?.triggerTiming?.timeOfDay;
-    const timeLabel =
-      typeof eventTime === "string" && TIME_CYCLE.includes(eventTime as (typeof TIME_CYCLE)[number])
-        ? (eventTime as (typeof TIME_CYCLE)[number])
-        : this.hudState.timeLabel;
-    return SCHEDULED_NPC_POSITION_MAP[area][timeLabel] ?? SCHEDULED_NPC_POSITION_MAP[area][TIME_CYCLE[0]];
   }
 
   private getDialogueScript(dialogueId: NpcDialogueId): NpcDialogueScript | null {
@@ -1562,77 +1554,40 @@ export class MainScene extends Phaser.Scene {
       return false;
     }
 
-    if (this.getFixedEventParticipantIds(matchingEvent).length > 0) {
+    if (getFixedEventPresentNpcs(matchingEvent).length > 0) {
       return false;
     }
 
     return this.startCurrentFixedEventDialogue(matchingEvent);
   }
 
-  private getCurrentFixedEventLocation(): string {
-    if (this.currentArea === "campus") {
-      return "campus";
-    }
-    if (this.currentArea === "downtown") {
-      return "downtown";
-    }
-    if (this.currentArea === "world" && this.lastSelectedWorldPlace === "home") {
-      return "home";
-    }
-    return "world";
-  }
-
   private getCurrentFixedEventEntry(): ReturnType<typeof findMatchingFixedEvent> {
+    const currentLocation = resolveCurrentFixedEventLocation(this.currentArea, this.lastSelectedWorldPlace);
     return findMatchingFixedEvent(
       this.getFixedEventDataForWeek(this.hudState.week),
       {
         week: this.hudState.week,
         day: this.dayCycleIndex + 1,
         timeOfDay: this.hudState.timeLabel,
-        location: this.getCurrentFixedEventLocation()
+        location: currentLocation
       },
       this.completedFixedEventIds
     );
   }
 
-  private getFixedEventParticipantIds(event: ReturnType<typeof findMatchingFixedEvent>): string[] {
-    if (!event) return [];
-    const participantIds = new Set<string>();
-    const excludedIds = new Set([
-      "SYSTEM",
-      "PLAYER",
-      "NPC_CLASSMATE_EXTRA_A",
-      "NPC_COACH_MINSEOK",
-      "NPC_COACH_HYEWON"
-    ]);
-
-    const addSpeaker = (speakerId: unknown): void => {
-      if (typeof speakerId !== "string") return;
-      const trimmed = speakerId.trim();
-      if (!trimmed || excludedIds.has(trimmed)) return;
-      if (!FIXED_EVENT_NPC_ASSET_KEYS[trimmed]) return;
-      participantIds.add(trimmed);
-    };
-
-    (event.dialogues ?? []).forEach((entry) => addSpeaker(entry.speakerId));
-    (event.choices ?? []).forEach((choice) => {
-      (choice.result?.feedbackDialogues ?? []).forEach((entry) => addSpeaker(entry.speakerId));
-    });
-
-    return [...participantIds];
-  }
-
   private refreshScheduledNpcViews(): void {
     const event = this.getCurrentFixedEventEntry();
-    const participantIds = this.getFixedEventParticipantIds(event);
-    const targetArea = this.getScheduledNpcAreaForEvent(event);
-    const scheduledSlots = this.getScheduledNpcSlotsForEvent(event);
+    const currentLocation = resolveCurrentFixedEventLocation(this.currentArea, this.lastSelectedWorldPlace);
+    const presentation = buildFixedEventNpcPresentation(event, {
+      currentLocation,
+      timeOfDay: this.hudState.timeLabel
+    });
 
     this.scheduledNpcViews.forEach((view, index) => {
-      const speakerId = view.area === targetArea ? participantIds[index] : undefined;
-      const textureKey = speakerId ? FIXED_EVENT_NPC_ASSET_KEYS[speakerId] : undefined;
-      const slot = view.area === targetArea ? scheduledSlots[index] : undefined;
-      const visible = Boolean(speakerId && textureKey && slot);
+      const fallbackSlot = getDefaultFixedEventNpcSlotsForArea(view.area, this.hudState.timeLabel)[index];
+      const participant = presentation?.renderArea === view.area ? presentation.participants[index] : undefined;
+      const slot = participant?.slot ?? fallbackSlot;
+      const visible = Boolean(participant && slot);
 
       if (slot) {
         view.config.x = slot.x;
@@ -1645,16 +1600,16 @@ export class MainScene extends Phaser.Scene {
         view.portrait?.setPosition(slot.x, slot.y - 6);
       }
 
-      view.eventId = visible ? event?.eventId ?? null ?? undefined : undefined;
+      view.eventId = visible ? presentation?.eventId : undefined;
       view.marker.setVisible(visible && this.currentArea === view.area);
       view.label.setVisible(visible && this.currentArea === view.area);
       view.portrait?.setVisible(visible && this.currentArea === view.area);
-      if (!visible || !speakerId || !textureKey) {
+      if (!visible || !participant) {
         return;
       }
 
-      view.label.setText(FIXED_EVENT_NPC_DISPLAY_LABELS[speakerId] ?? FIXED_EVENT_NPC_LABELS[speakerId] ?? speakerId);
-      view.portrait?.setTexture(textureKey);
+      view.label.setText(participant.label);
+      view.portrait?.setTexture(participant.textureKey);
       view.portrait?.setScale(1.6);
     });
   }
