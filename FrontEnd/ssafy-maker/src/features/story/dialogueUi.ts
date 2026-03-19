@@ -123,7 +123,7 @@ export function createDialogueUi(
   const actionButtonText = scene.add.text(
     panelLeft + panelWidth - 90,
     panelTop + panelHeight - 39,
-    "E 다음",
+    "Space 다음",
     getBodyStyle(16, "#e6f3ff", "bold")
   );
   actionButtonText.setOrigin(0.5);
@@ -190,8 +190,8 @@ export function renderDialogueNode(
     });
 
     const normalizedIndex = dialogueChoiceIndex >= node.choices.length ? 0 : dialogueChoiceIndex;
-    ui.hintText.setText("↑↓ 선택 | E 또는 버튼 결정 | ESC 종료");
-    ui.actionButtonText.setText("E 선택");
+    ui.hintText.setText("↑↓ 선택 | Space 결정 | ESC 종료");
+    ui.actionButtonText.setText("Space 선택");
     refreshDialogueChoiceStyles(choiceViews, normalizedIndex, isChoiceAvailable);
     return {
       choiceViews,
@@ -199,8 +199,8 @@ export function renderDialogueNode(
     };
   }
 
-  ui.actionButtonText.setText(node.nextNodeId || node.action ? "E 다음" : "E 종료");
-  ui.hintText.setText(`${node.nextNodeId || node.action ? "E 다음" : "E 종료"} | ESC 종료`);
+  ui.actionButtonText.setText(node.nextNodeId || node.action ? "Space 다음" : "Space 종료");
+  ui.hintText.setText(`${node.nextNodeId || node.action ? "Space 다음" : "Space 종료"} | ESC 종료`);
   return {
     choiceViews: [],
     dialogueChoiceIndex,
