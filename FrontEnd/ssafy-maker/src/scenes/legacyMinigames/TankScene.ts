@@ -53,10 +53,15 @@ export default class TankScene extends Phaser.Scene {
 
     // Controls
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys('W,A,S,D');
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE');
 
     // Mouse fire
     this.input.on('pointerdown', () => {
+      if (this.started && !this.gameOver) this.fireBullet();
+    });
+
+    // Space bar fire
+    this.input.keyboard.on('keydown-SPACE', () => {
       if (this.started && !this.gameOver) this.fireBullet();
     });
 
@@ -275,6 +280,7 @@ export default class TankScene extends Phaser.Scene {
   shutdown() {
     // 입력 이벤트 정리
     this.input.off('pointerdown');
+    this.input.keyboard.off('keydown-SPACE');
 
     // 키보드 리스너 정리
     if (this.keys) {
@@ -282,6 +288,7 @@ export default class TankScene extends Phaser.Scene {
       this.input.keyboard.removeKey('A');
       this.input.keyboard.removeKey('S');
       this.input.keyboard.removeKey('D');
+      this.input.keyboard.removeKey('SPACE');
     }
     if (this.cursors) {
       this.cursors.up.destroy();
