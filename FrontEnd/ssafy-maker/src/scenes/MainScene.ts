@@ -14,7 +14,6 @@ import {
   UI_PANEL_INNER_BORDER_COLOR,
   UI_PANEL_OUTER_BORDER_COLOR
 } from "@features/ui/components/uiPrimitives";
-import { PLACE_BACKGROUND_KEYS } from "@shared/constants/placeBackgroundKeys";
 import {
   NPC_DIALOGUE_SCRIPTS,
   type DialogueAction,
@@ -46,12 +45,8 @@ import {
   type DialogueChoiceView
 } from "@features/story/dialogueUi";
 import {
-  buildAreaCollisionConfigFromTmxText,
-  buildInteractionZonesFromTmxText,
   findNearestWalkablePoint,
   isBlockedByAreaCollision,
-  mapPointToAreaBounds,
-  mapSizeToAreaBounds,
   parseTmxMap,
   type AreaCollisionConfig,
   type AreaRenderBounds
@@ -91,6 +86,27 @@ import {
 } from "@features/planning/weeklyPlan";
 import { createWeeklyPlannerModal } from "@features/planning/weeklyPlannerModal";
 import { createWeeklyPlanActivityModal } from "@features/planning/weeklyPlanActivityModal";
+import {
+  applyMainSceneBackgroundTexture,
+  createMainSceneAudioSettingsBindings,
+  createMainSceneBackgroundImage,
+  destroyMainSceneLoopSound,
+  syncMainSceneAreaBgm
+} from "@features/main-scene/mainSceneMedia";
+import {
+  buildCampusArea,
+  buildDowntownArea,
+  buildWorldArea,
+  type DowntownBuildingView
+} from "@features/main-scene/areas/areaSceneBuilders";
+import {
+  AREA_ENTRY_POINT,
+  AREA_LABEL,
+  WORLD_PLACE_NODES,
+  type AreaId,
+  type WorldPlaceId,
+  type WorldPlaceNode
+} from "@features/main-scene/areas/areaSceneConfig";
 import { findNearestDowntownBuilding } from "@features/place/downtownBuildings";
 import {
   getDowntownBuildingBackgroundTextureKey,
@@ -115,19 +131,7 @@ import { createSettingsPage as createSettingsPageContent, createStatsPage as cre
 
 type TabKey = "inventory" | "stats" | "settings" | "save";
 type EquipmentSlotKey = "keyboard" | "mouse";
-type AreaId = "world" | "downtown" | "campus";
-type WorldPlaceId = "home" | "downtown" | "campus" | "cafe" | "store";
 type StatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
-
-type WorldPlaceNode = {
-  id: WorldPlaceId;
-  label: string;
-  x: number;
-  y: number;
-  zoneWidth: number;
-  zoneHeight: number;
-  movable: boolean;
-};
 
 type AreaNpcConfig = {
   dialogueId: NpcDialogueId;
@@ -152,16 +156,6 @@ type AreaNpcView = {
 type ScheduledNpcSlot = FixedEventNpcSlot;
 type ScheduledNpcArea = FixedEventRenderArea;
 type ScheduledNpcPositionMap = Record<ScheduledNpcArea, Record<(typeof TIME_CYCLE)[number], ScheduledNpcSlot[]>>;
-type DowntownBuildingView = {
-  id: DowntownBuildingId;
-  hitBox: Phaser.GameObjects.Rectangle;
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  defaultStrokeColor: number;
-  defaultStrokeAlpha: number;
-};
 
 type InventoryItemTemplate = {
   templateId: string;
@@ -319,25 +313,6 @@ const STARTER_ITEM_TEMPLATES: InventoryItemTemplate[] = [
   SHOP_ITEM_TEMPLATES[2],
   SHOP_ITEM_TEMPLATES[5]
 ];
-
-const WORLD_PLACE_NODES: WorldPlaceNode[] = [
-  { id: "campus", label: "\uCEA0\uD37C\uC2A4", x: 190, y: 180, zoneWidth: 190, zoneHeight: 150, movable: true },
-  { id: "home", label: "\uC9D1", x: 500, y: 210, zoneWidth: 180, zoneHeight: 150, movable: false },
-  { id: "store", label: "\uD3B8\uC758\uC810", x: 830, y: 250, zoneWidth: 150, zoneHeight: 120, movable: false },
-  { id: "cafe", label: "\uCE74\uD398", x: 420, y: 520, zoneWidth: 150, zoneHeight: 120, movable: false },
-  { id: "downtown", label: "\uBC88\uD654\uAC00", x: 730, y: 180, zoneWidth: 170, zoneHeight: 140, movable: true }
-];
-
-const AREA_LABEL: Record<AreaId, string> = {
-  world: "\uC804\uCCB4 \uC9C0\uB3C4",
-  downtown: "\uBC88\uD654\uAC00",
-  campus: "\uCEA0\uD37C\uC2A4"
-};
-
-const AREA_ENTRY_POINT: Record<Exclude<AreaId, "world">, { x: number; y: number }> = {
-  downtown: { x: 216, y: 520 },
-  campus: { x: 220, y: 520 }
-};
 
 const DOWNTOWN_BUILDINGS: Array<{ id: DowntownBuildingId; label: string; x: number; y: number; w: number; h: number; color: number }> = [
   { id: "gym", label: "\uD5EC\uC2A4\uC7A5", x: 290, y: 278, w: 150, h: 106, color: 0xb79f86 },
@@ -621,6 +596,7 @@ export class MainScene extends Phaser.Scene {
   private selectedSaveSlotId = "slot-1";
   private readonly uiFontFamily = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
   private readonly audioManager = new AudioManager();
+  private areaBgm?: Phaser.Sound.BaseSound;
   private readonly uiPanelInnerBorderColor = UI_PANEL_INNER_BORDER_COLOR;
   private readonly uiPanelOuterBorderColor = UI_PANEL_OUTER_BORDER_COLOR;
   private systemToastRoot?: Phaser.GameObjects.Container;
@@ -782,6 +758,8 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.syncPlayerAvatarVisuals, this);
       this.input.off("wheel", this.handleMenuWheel, this);
+      destroyMainSceneLoopSound(this.areaBgm);
+      this.areaBgm = undefined;
       this.hud.destroy();
       this.pendingInventoryPickup?.timer.destroy();
       this.pendingInventoryPickup = undefined;
@@ -953,240 +931,36 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buildAreaMaps(): void {
-    const worldRoot = this.add.container(0, 0);
-    worldRoot.setDepth(0);
-    const worldForegroundRoot = this.add.container(0, 0);
-    worldForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
-    const worldObjects: Phaser.GameObjects.GameObject[] = [];
-    const worldTmxBounds = this.buildAreaTmxBackground(worldRoot, worldForegroundRoot, "world", AREA_TMX_TEXT_KEYS.world);
-    const worldUsesTmx = Boolean(worldTmxBounds);
-    const worldTmxText = worldTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.world) : "";
-    this.areaCollisionConfigs.world = worldTmxBounds
-      ? buildAreaCollisionConfigFromTmxText(
-          typeof worldTmxText === "string" ? worldTmxText : "",
-          worldTmxBounds,
-          AREA_COLLISION_LAYER_NAMES.world
-        ) ?? undefined
-      : undefined;
+    const buildContext = {
+      scene: this,
+      px: (value: number) => this.px(value),
+      getBodyStyle: (sizePx: number, color?: string, fontStyle?: "normal" | "bold") =>
+        this.getBodyStyle(sizePx, color, fontStyle),
+      buildAreaTmxBackground: (
+        root: Phaser.GameObjects.Container,
+        foregroundRoot: Phaser.GameObjects.Container,
+        areaId: AreaId,
+        textKey: string
+      ) => this.buildAreaTmxBackground(root, foregroundRoot, areaId, textKey)
+    };
 
-    if (!worldUsesTmx) {
-      const worldBg = this.add.rectangle(
-        this.px(GAME_CONSTANTS.WIDTH / 2),
-        this.px(GAME_CONSTANTS.HEIGHT / 2),
-        GAME_CONSTANTS.WIDTH,
-        GAME_CONSTANTS.HEIGHT,
-        0x8aaa73,
-        1
-      );
-      const worldBoard = this.add.rectangle(
-        this.px(GAME_CONSTANTS.WIDTH / 2),
-        this.px(GAME_CONSTANTS.HEIGHT / 2),
-        this.px(GAME_CONSTANTS.WIDTH - 150),
-        this.px(GAME_CONSTANTS.HEIGHT - 120),
-        0xd6c49e,
-        1
-      );
-      worldBoard.setStrokeStyle(4, 0x7d5f36, 1);
-      const horizontalRoad = this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), 820, 56, 0xb6986f, 1);
-      horizontalRoad.setStrokeStyle(2, 0x7d5f36, 1);
-      const verticalRoad = this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), 56, 430, 0xb6986f, 1);
-      verticalRoad.setStrokeStyle(2, 0x7d5f36, 1);
-      worldObjects.push(worldBg, worldBoard, horizontalRoad, verticalRoad);
-    }
+    const worldArea = buildWorldArea(buildContext);
+    this.worldMapRoot = worldArea.root;
+    this.worldForegroundRoot = worldArea.foregroundRoot;
+    this.worldPlaceViews = worldArea.placeViews;
+    this.worldPlaceInteractionZones = worldArea.interactionZones;
+    this.areaCollisionConfigs.world = worldArea.collisionConfig;
 
-    const tmxWorldZones = worldTmxBounds
-      ? buildInteractionZonesFromTmxText(
-          typeof worldTmxText === "string" ? worldTmxText : "",
-          worldTmxBounds,
-          AREA_INTERACTION_LAYER_NAMES.world,
-          WORLD_PLACE_NODES.map((node) => ({ id: node.id, x: node.x, y: node.y })),
-          4,
-          128
-        )
-      : null;
+    const downtownArea = buildDowntownArea(buildContext);
+    this.downtownMapRoot = downtownArea.root;
+    this.downtownForegroundRoot = downtownArea.foregroundRoot;
+    this.downtownBuildingViews = downtownArea.buildingViews;
+    this.areaCollisionConfigs.downtown = downtownArea.collisionConfig;
 
-    const title = this.add.text(
-      this.px(GAME_CONSTANTS.WIDTH / 2),
-      86,
-      "\uC804\uCCB4 \uC9C0\uB3C4",
-      this.getBodyStyle(40, worldUsesTmx ? "#f2ead7" : "#3e2d1a", "bold")
-    );
-    title.setOrigin(0.5);
-    worldObjects.push(title);
-
-    WORLD_PLACE_NODES.forEach((place) => {
-      const mapped = mapPointToAreaBounds(place.x, place.y, worldTmxBounds, (value) => this.px(value));
-      const zone = tmxWorldZones?.[place.id];
-      const mappedZoneSize = zone
-        ? { width: zone.width, height: zone.height }
-        : mapSizeToAreaBounds(place.zoneWidth, place.zoneHeight, worldTmxBounds, (value) => this.px(value));
-      const zoneCenter = zone ? { x: zone.centerX, y: zone.centerY } : mapped;
-      const markerSize = mapSizeToAreaBounds(40, 28, worldTmxBounds, (value) => this.px(value));
-      const marker = this.add.rectangle(zoneCenter.x, zoneCenter.y, markerSize.width, markerSize.height, place.movable ? 0xe7d593 : 0xc9a67f, 1);
-      marker.setStrokeStyle(2, 0x5d4426, 1);
-      marker.setVisible(false);
-
-      const mappedLabel = zone
-        ? { x: zone.centerX, y: zone.centerY + mappedZoneSize.height / 2 + 8 }
-        : mapPointToAreaBounds(place.x, place.y + 28, worldTmxBounds, (value) => this.px(value));
-      const label = this.add.text(mappedLabel.x, mappedLabel.y, place.label, this.getBodyStyle(18, "#3d2d1d", "bold"));
-      label.setOrigin(0.5, 0);
-      label.setVisible(false);
-
-      this.worldPlaceViews[place.id] = { marker, label };
-      this.worldPlaceInteractionZones[place.id] = new Phaser.Geom.Rectangle(
-        this.px(zoneCenter.x - mappedZoneSize.width / 2),
-        this.px(zoneCenter.y - mappedZoneSize.height / 2),
-        this.px(mappedZoneSize.width),
-        this.px(mappedZoneSize.height)
-      );
-      worldObjects.push(marker, label);
-    });
-
-    worldRoot.add(worldObjects);
-    this.worldMapRoot = worldRoot;
-    this.worldForegroundRoot = worldForegroundRoot;
-
-    const downtownRoot = this.add.container(0, 0);
-    downtownRoot.setDepth(0);
-    const downtownForegroundRoot = this.add.container(0, 0);
-    downtownForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
-    const downtownTmxBounds = this.buildAreaTmxBackground(downtownRoot, downtownForegroundRoot, "downtown", AREA_TMX_TEXT_KEYS.downtown);
-    const downtownUsesTmx = Boolean(downtownTmxBounds);
-    const downtownTmxText = downtownTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.downtown) : "";
-    this.areaCollisionConfigs.downtown = downtownTmxBounds
-      ? buildAreaCollisionConfigFromTmxText(
-          typeof downtownTmxText === "string" ? downtownTmxText : "",
-          downtownTmxBounds,
-          AREA_COLLISION_LAYER_NAMES.downtown
-        ) ?? undefined
-      : undefined;
-    const downtownZones = downtownTmxBounds
-      ? buildInteractionZonesFromTmxText(
-          typeof downtownTmxText === "string" ? downtownTmxText : "",
-          downtownTmxBounds,
-          AREA_INTERACTION_LAYER_NAMES.downtown,
-          DOWNTOWN_BUILDINGS.map((building) => ({ id: building.id, x: building.x, y: building.y })),
-          4,
-          96
-        )
-      : null;
-    const areaTitle = this.add.text(
-      this.px(GAME_CONSTANTS.WIDTH / 2),
-      82,
-      "\uBC88\uD654\uAC00",
-      this.getBodyStyle(38, downtownUsesTmx ? "#f2ead7" : "#f4ecd8", "bold")
-    );
-    areaTitle.setOrigin(0.5);
-    const buildingObjects: Phaser.GameObjects.GameObject[] = [];
-    const downtownDecorObjects: Phaser.GameObjects.GameObject[] = [];
-
-    if (!downtownUsesTmx) {
-      const downtownBg = this.add.rectangle(
-        this.px(GAME_CONSTANTS.WIDTH / 2),
-        this.px(GAME_CONSTANTS.HEIGHT / 2),
-        GAME_CONSTANTS.WIDTH,
-        GAME_CONSTANTS.HEIGHT,
-        0x7ea274,
-        1
-      );
-      const downtownRoad = this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT * 0.63), 1120, 170, 0xa78c68, 1);
-      downtownRoad.setStrokeStyle(3, 0x6d522f, 1);
-      const shopFront = this.add.rectangle(this.px(930), this.px(332), 190, 140, 0xd6b98a, 1);
-      shopFront.setStrokeStyle(3, 0x6d522f, 1);
-      const shopSign = this.add.text(930, 332, "\uC0C1\uC810", this.getBodyStyle(27, "#3e2d1a", "bold"));
-      shopSign.setOrigin(0.5);
-      downtownDecorObjects.push(downtownBg, downtownRoad, shopFront, shopSign);
-    }
-
-    DOWNTOWN_BUILDINGS.forEach((building) => {
-      const zone = downtownZones?.[building.id];
-      const mappedCenter = zone
-        ? { x: zone.centerX, y: zone.centerY }
-        : mapPointToAreaBounds(building.x, building.y, downtownTmxBounds, (value) => this.px(value));
-      const mappedSize = zone
-        ? { width: zone.width, height: zone.height }
-        : mapSizeToAreaBounds(building.w, building.h, downtownTmxBounds, (value) => this.px(value));
-
-      const hitBox = this.add.rectangle(
-        mappedCenter.x,
-        mappedCenter.y,
-        mappedSize.width,
-        mappedSize.height,
-        downtownUsesTmx ? 0x000000 : building.color,
-        downtownUsesTmx ? 0.001 : 1
-      );
-      if (!downtownUsesTmx) {
-        hitBox.setStrokeStyle(3, 0x6d522f, 1);
-      }
-      this.downtownBuildingViews.push({
-        id: building.id,
-        hitBox,
-        left: mappedCenter.x - mappedSize.width / 2,
-        right: mappedCenter.x + mappedSize.width / 2,
-        top: mappedCenter.y - mappedSize.height / 2,
-        bottom: mappedCenter.y + mappedSize.height / 2,
-        defaultStrokeColor: downtownUsesTmx ? 0x6d522f : 0x6d522f,
-        defaultStrokeAlpha: downtownUsesTmx ? 0 : 1
-      });
-
-      buildingObjects.push(hitBox);
-
-      if (!downtownUsesTmx) {
-        const sign = this.add.rectangle(this.px(building.x), this.px(building.y - building.h / 2 + 16), this.px(building.w - 18), 24, 0xe8d1a7, 1);
-        sign.setStrokeStyle(2, 0x7d5f36, 1);
-        const signLabel = this.add.text(this.px(building.x), this.px(building.y - building.h / 2 + 16), building.label, this.getBodyStyle(15, "#3d2a16", "bold"));
-        signLabel.setOrigin(0.5);
-        buildingObjects.push(sign, signLabel);
-      }
-    });
-
-    downtownRoot.add([...downtownDecorObjects, ...buildingObjects, areaTitle]);
-    downtownRoot.setVisible(false);
-    this.downtownMapRoot = downtownRoot;
-    this.downtownForegroundRoot = downtownForegroundRoot;
-
-    const campusRoot = this.add.container(0, 0);
-    campusRoot.setDepth(0);
-    const campusForegroundRoot = this.add.container(0, 0);
-    campusForegroundRoot.setDepth(FOREGROUND_TILE_LAYER_DEPTH);
-    const campusTmxBounds = this.buildAreaTmxBackground(campusRoot, campusForegroundRoot, "campus", AREA_TMX_TEXT_KEYS.campus);
-    const campusUsesTmx = Boolean(campusTmxBounds);
-    const campusTmxText = campusTmxBounds ? this.cache.text.get(AREA_TMX_TEXT_KEYS.campus) : "";
-    this.areaCollisionConfigs.campus = campusTmxBounds
-      ? buildAreaCollisionConfigFromTmxText(
-          typeof campusTmxText === "string" ? campusTmxText : "",
-          campusTmxBounds,
-          AREA_COLLISION_LAYER_NAMES.campus
-        ) ?? undefined
-      : undefined;
-    const campusObjects: Phaser.GameObjects.GameObject[] = [];
-    if (!campusUsesTmx) {
-      const campusBg = this.add.rectangle(
-        this.px(GAME_CONSTANTS.WIDTH / 2),
-        this.px(GAME_CONSTANTS.HEIGHT / 2),
-        GAME_CONSTANTS.WIDTH,
-        GAME_CONSTANTS.HEIGHT,
-        0x86ad82,
-        1
-      );
-      const lawn = this.add.rectangle(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT * 0.62), 980, 280, 0x9dc08a, 1);
-      lawn.setStrokeStyle(3, 0x5a7e4f, 1);
-      const building = this.add.rectangle(this.px(920), this.px(300), 280, 180, 0xd7c9a9, 1);
-      building.setStrokeStyle(3, 0x7d5f36, 1);
-      const buildingLabel = this.add.text(920, 300, "\uAC15\uC758\uB3D9", this.getBodyStyle(30, "#3e2d1a", "bold"));
-      buildingLabel.setOrigin(0.5);
-      const tree1 = this.add.rectangle(286, 280, 64, 64, 0x6f955f, 1).setStrokeStyle(2, 0x3f5f32, 1);
-      const tree2 = this.add.rectangle(352, 330, 64, 64, 0x6f955f, 1).setStrokeStyle(2, 0x3f5f32, 1);
-      campusObjects.push(campusBg, lawn, building, buildingLabel, tree1, tree2);
-    }
-    const campusTitle = this.add.text(this.px(GAME_CONSTANTS.WIDTH / 2), 82, "\uCEA0\uD37C\uC2A4", this.getBodyStyle(38, "#f2ead7", "bold"));
-    campusTitle.setOrigin(0.5);
-    campusObjects.push(campusTitle);
-    campusRoot.add(campusObjects);
-    campusRoot.setVisible(false);
-    this.campusMapRoot = campusRoot;
-    this.campusForegroundRoot = campusForegroundRoot;
+    const campusArea = buildCampusArea(buildContext);
+    this.campusMapRoot = campusArea.root;
+    this.campusForegroundRoot = campusArea.foregroundRoot;
+    this.areaCollisionConfigs.campus = campusArea.collisionConfig;
   }
 
 
@@ -1338,6 +1112,12 @@ export class MainScene extends Phaser.Scene {
 
   private enterArea(area: AreaId, worldPlace: WorldPlaceId = this.lastSelectedWorldPlace): void {
     this.currentArea = area;
+    this.areaBgm = syncMainSceneAreaBgm({
+      scene: this,
+      audioManager: this.audioManager,
+      currentBgm: this.areaBgm,
+      area
+    });
     this.closeShop();
     this.closeDialogue();
     this.closePlacePopup();
@@ -1772,7 +1552,7 @@ export class MainScene extends Phaser.Scene {
 
   private openUnavailablePlacePopup(title: string, description: string, backgroundKey: string | null): void {
     this.closePlacePopup();
-    const backgroundImage = this.createPlaceBackgroundImage(backgroundKey);
+    const backgroundImage = createMainSceneBackgroundImage(this, (value) => this.px(value), backgroundKey);
     this.placePopupRoot = createPlaceActionModal({
       scene: this,
       width: 500,
@@ -1810,13 +1590,8 @@ export class MainScene extends Phaser.Scene {
 
     this.closePlacePopup();
 
-    const centerX = this.px(GAME_CONSTANTS.WIDTH / 2);
-    const centerY = this.px(GAME_CONSTANTS.HEIGHT / 2);
     const placeBackgroundKey = getPlaceBackgroundTextureKey(placeId);
-    const placeBackgroundImage =
-      placeBackgroundKey && this.textures.exists(placeBackgroundKey)
-        ? this.add.image(centerX, centerY, placeBackgroundKey).setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT)
-        : null;
+    const placeBackgroundImage = createMainSceneBackgroundImage(this, (value) => this.px(value), placeBackgroundKey);
     const content =
       placeId === "cafe" || placeId === "store"
         ? getPlacePopupContent(placeId)
@@ -1840,18 +1615,6 @@ export class MainScene extends Phaser.Scene {
       this.placePopupRoot.setDepth(920);
     }
     this.placePopupOpen = true;
-  }
-
-  private createPlaceBackgroundImage(textureKey: string | null): Phaser.GameObjects.Image | null {
-    if (!textureKey || !this.textures.exists(textureKey)) return null;
-    return this.add
-      .image(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), textureKey)
-      .setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT);
-  }
-
-  private createTextureImage(textureKey: string | null): Phaser.GameObjects.Image | null {
-    if (!textureKey || !this.textures.exists(textureKey)) return null;
-    return this.add.image(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2), textureKey);
   }
 
   private applyItemIconImage(
@@ -1919,7 +1682,7 @@ export class MainScene extends Phaser.Scene {
 
   private openHomeActionPopup(): void {
     this.closePlacePopup();
-    const homeBackgroundImage = this.createPlaceBackgroundImage(getPlaceBackgroundTextureKey("home"));
+    const homeBackgroundImage = createMainSceneBackgroundImage(this, (value) => this.px(value), getPlaceBackgroundTextureKey("home"));
     this.placePopupRoot = createHomeActionModal({
       scene: this,
       actionPoint: this.actionPoint,
@@ -1989,7 +1752,12 @@ export class MainScene extends Phaser.Scene {
 
     const slotIndex = getWeeklyPlanSlotIndex(this.dayCycleIndex, this.timeCycleIndex);
     const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex] ?? WEEKLY_PLAN_OPTIONS[0].id);
-    const backgroundImage = this.createTextureImage(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS[option.id]);
+    const backgroundImage = createMainSceneBackgroundImage(
+      this,
+      (value) => this.px(value),
+      WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS[option.id],
+      false
+    );
     const title = `${DAY_CYCLE[this.dayCycleIndex]} ${TIME_CYCLE[this.timeCycleIndex]}`;
     this.closeWeeklyPlanActivity();
     this.weeklyPlanActivityRoot = createWeeklyPlanActivityModal(this, {
@@ -2136,7 +1904,11 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.closePlacePopup();
-    const buildingBackgroundImage = this.createPlaceBackgroundImage(getDowntownBuildingBackgroundTextureKey(buildingId));
+    const buildingBackgroundImage = createMainSceneBackgroundImage(
+      this,
+      (value) => this.px(value),
+      getDowntownBuildingBackgroundTextureKey(buildingId)
+    );
     const config = getDowntownBuildingConfig(buildingId);
     this.placePopupRoot = createPlaceActionModal({
       scene: this,
@@ -2496,16 +2268,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   private createSettingsPage(bounds: Phaser.Geom.Rectangle): Phaser.GameObjects.Container {
+    const audioSettings = createMainSceneAudioSettingsBindings(this.audioManager);
     return createSettingsPageContent(this, {
       bounds,
       px: (value) => this.px(value),
       getBodyStyle: (size, color, fontStyle) => this.getBodyStyle(size, color, fontStyle),
-      getVolumes: () => this.audioManager.getVolumes(),
-      setVolume: (key, value) => {
-        if (key === "bgm") this.audioManager.setBgmVolume(value);
-        if (key === "sfx") this.audioManager.setSfxVolume(value);
-        if (key === "ambience") this.audioManager.setAmbienceVolume(value);
-      }
+      getVolumes: audioSettings.getVolumes,
+      setVolume: audioSettings.setVolume
     });
   }
 
@@ -3106,7 +2875,7 @@ export class MainScene extends Phaser.Scene {
     const centerX = this.px(GAME_CONSTANTS.WIDTH / 2);
     const centerY = this.px(GAME_CONSTANTS.HEIGHT / 2);
 
-    const backgroundImage = this.createPlaceBackgroundImage(PLACE_BACKGROUND_KEYS.store);
+    const backgroundImage = createMainSceneBackgroundImage(this, (value) => this.px(value), getPlaceBackgroundTextureKey("store"));
     if (backgroundImage) {
       backgroundImage.setVisible(false);
     }
@@ -3180,19 +2949,8 @@ export class MainScene extends Phaser.Scene {
   private openShop(backgroundTextureKey: string | null = null): void {
     if (!this.shopRoot) return;
 
-    if (this.shopBackgroundImage) {
-      if (backgroundTextureKey && this.textures.exists(backgroundTextureKey)) {
-        this.shopBackgroundImage.setTexture(backgroundTextureKey);
-        this.shopBackgroundImage.setDisplaySize(GAME_CONSTANTS.WIDTH, GAME_CONSTANTS.HEIGHT);
-        this.shopBackgroundImage.setVisible(true);
-        this.shopOverlay?.setFillStyle(0x000000, 0.42);
-      } else {
-        this.shopBackgroundImage.setVisible(false);
-        this.shopOverlay?.setFillStyle(0x000000, 0.35);
-      }
-    } else {
-      this.shopOverlay?.setFillStyle(0x000000, 0.35);
-    }
+    const hasBackground = applyMainSceneBackgroundTexture(this, this.shopBackgroundImage, backgroundTextureKey);
+    this.shopOverlay?.setFillStyle(0x000000, hasBackground ? 0.42 : 0.35);
 
     this.shopOpen = true;
     this.shopRoot.setVisible(true);
