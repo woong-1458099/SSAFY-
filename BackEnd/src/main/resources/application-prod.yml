@@ -31,4 +31,3 @@ app:
       enabled: ${JWT_ENABLED:true}
   keycloak:
     enabled: ${KEYCLOAK_ENABLED:true}
-    client-id: ${KEYCLOAK_CLIENT_ID:ssafy-maker-prod}
