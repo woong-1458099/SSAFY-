@@ -33,26 +33,6 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x007722
   },
   {
-    key: "ConflictResolveScene",
-    title: "충돌 해결",
-    sub: "Git Merge Conflict",
-    desc: "코드 블록을 순서대로 선택",
-    reward: "지능 +10, 골드 +30",
-    bgColor: 0x440088,
-    borderColor: 0xcc55ff,
-    glowColor: 0x6600aa
-  },
-  {
-    key: "BilliardsScene",
-    title: "당구 챌린지",
-    sub: "각도와 힘 조절",
-    desc: "모든 공을 포켓에 넣기",
-    reward: "민첩 +10, 골드 +30",
-    bgColor: 0x004411,
-    borderColor: 0x00ff44,
-    glowColor: 0x006622
-  },
-  {
     key: "TankScene",
     title: "탱크 워",
     sub: "적 탱크 파괴",

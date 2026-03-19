@@ -385,7 +385,6 @@ const MINIGAME_SCENE_MAP: Record<string, string> = {
   playInterview: "InterviewScene",
   playGym: "GymScene",
   playRhythm: "RhythmScene",
-  playConflict: "ConflictResolveScene",
   playCooking: "CookingScene"
 };
 
@@ -1339,7 +1338,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private getFixedEventCacheKey(week: number): string {
-    const clampedWeek = Phaser.Math.Clamp(Math.round(week), 1, 5);
+    const clampedWeek = Phaser.Math.Clamp(Math.round(week), 1, 4);
     return `story_fixed_week${clampedWeek}`;
   }
 
@@ -2672,7 +2671,10 @@ export class MainScene extends Phaser.Scene {
       if (selectedChoice.feedbackText) {
         this.showSystemToast(selectedChoice.feedbackText);
       }
-      this.completeDialogueAndApplyConsequences();
+      if (this.activeDialogueId === "fixed_event_runtime" && this.activeFixedEventId && !this.completedFixedEventIds.includes(this.activeFixedEventId)) {
+        this.completedFixedEventIds.push(this.activeFixedEventId);
+      }
+      this.closeDialogue();
       if (selectedChoice.action) {
         this.runDialogueAction(selectedChoice.action);
       }
@@ -2687,35 +2689,13 @@ export class MainScene extends Phaser.Scene {
     }
 
     const action = node.action;
-    this.completeDialogueAndApplyConsequences();
+    if (this.activeDialogueId === "fixed_event_runtime" && this.activeFixedEventId && !this.completedFixedEventIds.includes(this.activeFixedEventId)) {
+      this.completedFixedEventIds.push(this.activeFixedEventId);
+    }
+    this.closeDialogue();
     if (action) {
       this.runDialogueAction(action);
     }
-  }
-
-  private completeDialogueAndApplyConsequences(): void {
-    const isFixedEventDialogue = this.activeDialogueId === "fixed_event_runtime";
-    const fixedEventId = this.activeFixedEventId;
-
-    if (isFixedEventDialogue && fixedEventId && !this.completedFixedEventIds.includes(fixedEventId)) {
-      this.completedFixedEventIds.push(fixedEventId);
-    }
-
-    this.closeDialogue();
-
-    if (!isFixedEventDialogue) {
-      return;
-    }
-
-    const result = advanceTimeProgress({
-      actionPoint: this.actionPoint,
-      maxActionPoint: this.maxActionPoint,
-      timeCycleIndex: this.timeCycleIndex,
-      dayCycleIndex: this.dayCycleIndex,
-      week: this.hudState.week,
-      endingWeek: 6
-    });
-    this.applyTimeProgressResult(result);
   }
 
   private renderDialogueNode(): void {
