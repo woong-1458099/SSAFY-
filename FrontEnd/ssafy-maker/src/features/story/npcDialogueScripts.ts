@@ -44,6 +44,9 @@ export type NpcDialogueId =
   | "npc_jiwoo"
   | "npc_jongmin"
   | "npc_minsu"
+  | "campus_sunmi"
+  | "campus_doyeon"
+  | "campus_hyunseok"
   | "fixed_event_runtime";
 
 export type NpcDialogueScript = {
@@ -299,6 +302,51 @@ export const NPC_DIALOGUE_SCRIPTS: Record<NpcDialogueId, NpcDialogueScript> = {
         choices: [
           { id: "play", text: "기초 체력 단련", action: "playGym" },
           { id: "bye", text: "오늘 좀 피곤하네." }
+        ]
+      }
+    }
+  },
+  campus_sunmi: {
+    npcId: "campus_sunmi",
+    npcLabel: "조선미 프로",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "조선미 프로",
+        text: "기본에 충실하세요! 질문 있나요?",
+        choices: [
+          { id: "bye", text: "나중에 다시 올게요." }
+        ]
+      }
+    }
+  },
+  campus_doyeon: {
+    npcId: "campus_doyeon",
+    npcLabel: "김도연 프로",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "김도연 프로",
+        text: "요즘 프로젝트 진행은 잘 되고 있나요? 화이팅하세요!",
+        choices: [
+          { id: "bye", text: "감사합니다!" }
+        ]
+      }
+    }
+  },
+  campus_hyunseok: {
+    npcId: "campus_hyunseok",
+    npcLabel: "이현석 컨설턴트",
+    startNodeId: "intro",
+    nodes: {
+      intro: {
+        id: "intro",
+        speaker: "이현석 컨설턴트",
+        text: "스프링 프레임워크는 확실히 이해하고 넘어가야 합니다. 화이팅!",
+        choices: [
+          { id: "bye", text: "열심히 하겠습니다!" }
         ]
       }
     }

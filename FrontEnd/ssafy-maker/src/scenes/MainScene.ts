@@ -400,124 +400,16 @@ const AREA_NPC_CONFIGS: Record<Exclude<AreaId, "world">, AreaNpcConfig[]> = {
     }
   ],
   campus: [
-    { dialogueId: "campus_senior", x: 924, y: 390, labelOffsetX: -36, labelOffsetY: 24, flashColor: 0x3f6e90 }
+    // 문 앞 (좌측)
+    { dialogueId: "campus_sunmi", x: 200, y: 430, labelOffsetX: -36, labelOffsetY: 30, flashColor: 0x3f6e90, textureKey: "fixed-npc-sunmi" },
+    // 중앙 (칠판 앞)
+    { dialogueId: "campus_doyeon", x: 400, y: 430, labelOffsetX: -36, labelOffsetY: 30, flashColor: 0x3f6e90, textureKey: "fixed-npc-doyeon" },
+    // 의자 옆 (우측)
+    { dialogueId: "campus_hyunseok", x: 670, y: 430, labelOffsetX: -40, labelOffsetY: 30, flashColor: 0x3f6e90, textureKey: "fixed-npc-hyunseok" }
   ]
 };
 
-const FIXED_EVENT_NPC_ASSET_KEYS: Partial<Record<string, string>> = {
-  NPC_CLASSMATE_MYUNGJIN: "fixed-npc-myungjin",
-  NPC_CLASSMATE_JIWOO: "fixed-npc-jiwoo",
-  NPC_CLASSMATE_YEONWOONG: "fixed-npc-yeonwoong",
-  NPC_CLASSMATE_HYORYEON: "fixed-npc-hyoryeon",
-  NPC_CLASSMATE_JONGMIN: "fixed-npc-jongmin",
-  NPC_PRO_SUNMI: "fixed-npc-sunmi",
-  NPC_PRO_DOYEON: "fixed-npc-doyeon",
-  NPC_CONSULTANT_HYUNSEOK: "fixed-npc-hyunseok",
-};
 
-const FIXED_EVENT_NPC_LABELS: Partial<Record<string, string>> = {
-  NPC_CLASSMATE_MYUNGJIN: "명진",
-  NPC_CLASSMATE_JIWOO: "지우",
-  NPC_CLASSMATE_YEONWOONG: "연웅",
-  NPC_CLASSMATE_HYORYEON: "효련",
-  NPC_CLASSMATE_JONGMIN: "종민",
-  NPC_PRO_SUNMI: "조선미 프로",
-  NPC_PRO_DOYEON: "김도연 프로",
-  NPC_CONSULTANT_HYUNSEOK: "이현석 컨설턴트",
-};
-
-const FIXED_EVENT_NPC_DISPLAY_LABELS: Partial<Record<string, string>> = {
-  NPC_CLASSMATE_MYUNGJIN: "명진",
-  NPC_CLASSMATE_JIWOO: "지우",
-  NPC_CLASSMATE_YEONWOONG: "연웅",
-  NPC_CLASSMATE_HYORYEON: "효련",
-  NPC_CLASSMATE_JONGMIN: "종민",
-  NPC_PRO_SUNMI: "조선미 프로",
-  NPC_PRO_DOYEON: "김도연 프로",
-  NPC_CONSULTANT_HYUNSEOK: "이현석 컨설턴트",
-};
-
-const SCHEDULED_NPC_SLOT_COUNT = 4;
-const SCHEDULED_NPC_POSITION_MAP: ScheduledNpcPositionMap = {
-  campus: {
-    [TIME_CYCLE[0]]: [
-      { x: 250, y: 214, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 330, y: 238, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 410, y: 214, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 490, y: 238, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 600, y: 292, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 678, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 756, y: 292, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 834, y: 318, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 280, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 360, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 440, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 520, y: 430, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 690, y: 418, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 764, y: 444, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 838, y: 418, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 912, y: 444, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-  },
-  downtown: {
-    [TIME_CYCLE[0]]: [
-      { x: 272, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 350, y: 274, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 428, y: 248, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 506, y: 274, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 520, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 598, y: 358, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 676, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 754, y: 358, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 346, y: 438, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 424, y: 464, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 502, y: 438, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 580, y: 464, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 688, y: 432, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 762, y: 456, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 836, y: 432, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 910, y: 456, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-  },
-  world: {
-    [TIME_CYCLE[0]]: [
-      { x: 448, y: 246, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 510, y: 272, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 572, y: 246, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 634, y: 272, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[1]]: [
-      { x: 452, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 514, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 576, y: 286, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 638, y: 312, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[2]]: [
-      { x: 444, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 506, y: 356, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 568, y: 332, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 630, y: 356, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-    [TIME_CYCLE[3]]: [
-      { x: 438, y: 380, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xb97ad8 },
-      { x: 500, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x6cb5ff },
-      { x: 562, y: 380, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0x8bd676 },
-      { x: 624, y: 404, labelOffsetX: -34, labelOffsetY: 34, flashColor: 0xffb870 },
-    ],
-  },
-};
 
 const AREA_TILESET_IMAGE_KEY = "map_tiles_full_asset";
 const AREA_TILESET_MARGIN = 0;
@@ -685,15 +577,16 @@ export class MainScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayerAvatarAssets(this);
-    this.load.image("fixed-npc-minsu", "assets/game/npc/minsu.png");
-    this.load.image("fixed-npc-myungjin", "assets/game/npc/myungjin.png");
-    this.load.image("fixed-npc-jiwoo", "assets/game/npc/jiwoo.png");
-    this.load.image("fixed-npc-yeonwoong", "assets/game/npc/yeonwoong.png");
-    this.load.image("fixed-npc-hyoryeon", "assets/game/npc/hyoryeon.png");
-    this.load.image("fixed-npc-jongmin", "assets/game/npc/jongmin.png");
-    this.load.image("fixed-npc-sunmi", "assets/game/npc/sunmi-pro.png");
-    this.load.image("fixed-npc-doyeon", "assets/game/npc/doyeon-pro.png");
-    this.load.image("fixed-npc-hyunseok", "assets/game/npc/hyunseok-consultant.png");
+    const npcSpriteConf = { frameWidth: 16, frameHeight: 32 };
+    this.load.spritesheet("fixed-npc-minsu", "assets/game/npc/minsu.png", npcSpriteConf);
+    this.load.spritesheet("fixed-npc-myungjin", "assets/game/npc/myungjin.png", npcSpriteConf);
+    this.load.spritesheet("fixed-npc-jiwoo", "assets/game/npc/jiwoo.png", npcSpriteConf);
+    this.load.spritesheet("fixed-npc-yeonwoong", "assets/game/npc/yeonwoong.png", npcSpriteConf);
+    this.load.spritesheet("fixed-npc-hyoryeon", "assets/game/npc/hyoryeon.png", npcSpriteConf);
+    this.load.spritesheet("fixed-npc-jongmin", "assets/game/npc/jongmin.png", npcSpriteConf);
+    this.load.spritesheet("fixed-npc-sunmi", "assets/game/npc/sunmi-pro.png", npcSpriteConf);
+    this.load.spritesheet("fixed-npc-doyeon", "assets/game/npc/doyeon-pro.png", npcSpriteConf);
+    this.load.spritesheet("fixed-npc-hyunseok", "assets/game/npc/hyunseok-consultant.png", npcSpriteConf);
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.ui_practice, "assets/game/ui/UIpractice.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.rest_api_db, "assets/game/ui/DBconsult.png");
     this.load.image(WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS.team_project, "assets/game/ui/TeamPJT.png");
