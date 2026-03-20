@@ -1,6 +1,7 @@
-// 충돌 그리드와 상호작용 그리드를 반투명 타일 오버레이로 시각화하는 디버그 오버레이
+// blocked / interaction grid를 현재 맵 렌더 좌표계 기준으로 시각화한다.
 import Phaser from "phaser";
-import type { TmxRuntimeGrids, ParsedTmxMap } from "../../game/systems/tmxNavigation";
+import type { ParsedTmxMap, TmxRuntimeGrids } from "../../game/systems/tmxNavigation";
+import type { WorldRenderBounds } from "../../game/managers/WorldManager";
 
 export class WorldGridOverlay {
   private scene: Phaser.Scene;
@@ -13,7 +14,11 @@ export class WorldGridOverlay {
     this.interactionGraphics = scene.add.graphics().setDepth(9001);
   }
 
-  render(runtimeGrids?: TmxRuntimeGrids, parsedMap?: ParsedTmxMap) {
+  render(
+    runtimeGrids?: TmxRuntimeGrids,
+    parsedMap?: ParsedTmxMap,
+    renderBounds?: WorldRenderBounds
+  ) {
     this.blockedGraphics.clear();
     this.interactionGraphics.clear();
 
@@ -21,30 +26,27 @@ export class WorldGridOverlay {
       return;
     }
 
-    const tileWidth = parsedMap.tileWidth;
-    const tileHeight = parsedMap.tileHeight;
+    // render bounds가 있으면 실제 타일맵 렌더와 같은 좌표계를 사용한다.
+    const scale = renderBounds?.scale ?? 1;
+    const offsetX = renderBounds?.offsetX ?? 0;
+    const offsetY = renderBounds?.offsetY ?? 0;
+    const tileWidth = (renderBounds?.tileWidth ?? parsedMap.tileWidth) * scale;
+    const tileHeight = (renderBounds?.tileHeight ?? parsedMap.tileHeight) * scale;
 
     this.blockedGraphics.fillStyle(0xff4d4f, 0.25);
     this.interactionGraphics.fillStyle(0x4da6ff, 0.2);
 
     for (let y = 0; y < parsedMap.height; y += 1) {
       for (let x = 0; x < parsedMap.width; x += 1) {
+        const drawX = offsetX + x * tileWidth;
+        const drawY = offsetY + y * tileHeight;
+
         if (runtimeGrids.blockedGrid[y]?.[x]) {
-          this.blockedGraphics.fillRect(
-            x * tileWidth,
-            y * tileHeight,
-            tileWidth,
-            tileHeight
-          );
+          this.blockedGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
         }
 
         if (runtimeGrids.interactionGrid[y]?.[x]) {
-          this.interactionGraphics.fillRect(
-            x * tileWidth,
-            y * tileHeight,
-            tileWidth,
-            tileHeight
-          );
+          this.interactionGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
         }
       }
     }

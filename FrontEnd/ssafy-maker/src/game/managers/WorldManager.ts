@@ -189,7 +189,7 @@ export class WorldManager {
     const mapPixelHeight = parsedMap.height * parsedMap.tileHeight;
     const fitScaleX = this.scene.scale.width / mapPixelWidth;
     const fitScaleY = this.scene.scale.height / mapPixelHeight;
-    const scale = Math.max(fitScaleX, fitScaleY);
+    const scale = Math.min(fitScaleX, fitScaleY);
     const renderWidth = mapPixelWidth * scale;
     const renderHeight = mapPixelHeight * scale;
     const offsetX = Math.round((this.scene.scale.width - renderWidth) / 2);
