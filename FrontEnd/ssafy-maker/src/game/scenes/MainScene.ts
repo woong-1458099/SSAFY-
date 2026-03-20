@@ -1,16 +1,17 @@
-// 월드 매니저, 플레이어 매니저, NPC 매니저, 대화 매니저, 디렉터를 조립해 샘플 씬을 실행하는 메인 씬
+// 월드 매니저, 플레이어 매니저, NPC 매니저, 상호작용 매니저, 디렉터를 조립해 샘플 씬을 실행하는 메인 씬
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
+import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
+import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
+import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { SceneDirector } from "../directors/SceneDirector";
 import { DialogueManager } from "../managers/DialogueManager";
+import { InteractionManager } from "../managers/InteractionManager";
 import { NpcManager } from "../managers/NpcManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { WorldManager } from "../managers/WorldManager";
 import { SCENE_001 } from "../scripts/scenes/scene_001";
-import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
-import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
-import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
-import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
 import { countTrueCells, findFirstWalkableTile } from "../systems/tmxNavigation";
 
 export class MainScene extends Phaser.Scene {
@@ -21,6 +22,7 @@ export class MainScene extends Phaser.Scene {
   private playerManager?: PlayerManager;
   private npcManager?: NpcManager;
   private dialogueManager?: DialogueManager;
+  private interactionManager?: InteractionManager;
 
   constructor() {
     super(SCENE_KEYS.main);
@@ -32,6 +34,13 @@ export class MainScene extends Phaser.Scene {
     this.playerManager = new PlayerManager(this);
     this.npcManager = new NpcManager(this);
     this.dialogueManager = new DialogueManager(this);
+    this.interactionManager = new InteractionManager(
+      this,
+      this.playerManager,
+      this.npcManager,
+      this.dialogueManager,
+      this.debugLogger
+    );
 
     const director = new SceneDirector(
       this.npcManager,
@@ -40,6 +49,7 @@ export class MainScene extends Phaser.Scene {
     );
 
     this.worldManager.loadArea(SCENE_001.area);
+    this.interactionManager.setArea(SCENE_001.area);
 
     const tmxConfig = this.worldManager.getCurrentTmxConfig();
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
@@ -83,7 +93,7 @@ export class MainScene extends Phaser.Scene {
       !this.worldManager ||
       !this.playerManager ||
       !this.debugLogger ||
-      !this.dialogueManager
+      !this.interactionManager
     ) {
       return;
     }
@@ -91,8 +101,9 @@ export class MainScene extends Phaser.Scene {
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
 
-    this.playerManager.setInputLocked(this.dialogueManager.isDialoguePlaying());
+    this.playerManager.setInputLocked(this.interactionManager.isInputLocked());
     this.playerManager.update(runtimeGrids, parsedMap);
+    this.interactionManager.update();
 
     const player = this.playerManager.getSnapshot();
     if (player) {
