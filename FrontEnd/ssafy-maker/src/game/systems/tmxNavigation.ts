@@ -33,6 +33,22 @@ export type ParsedTsxTileset = {
   imageHeight: number;
 };
 
+export function getTilesetSourceBasename(source?: string) {
+  if (!source) {
+    return undefined;
+  }
+
+  const normalizedSource = source.replace(/\\/g, "/");
+  const sourceSegments = normalizedSource.split("/");
+  const fileName = sourceSegments[sourceSegments.length - 1];
+
+  if (!fileName) {
+    return undefined;
+  }
+
+  return fileName.replace(/\.[^/.]+$/, "");
+}
+
 export type TmxAreaConfig = {
   tmxKey: string;
   collisionLayerNames: string[];

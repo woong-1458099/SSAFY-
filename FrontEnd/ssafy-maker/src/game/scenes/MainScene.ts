@@ -1,4 +1,5 @@
 // 월드 매니저, 플레이어 매니저, NPC 매니저, 상호작용 매니저, 디렉터를 조립해 샘플 씬을 실행하는 메인 씬
+// 씬 조립만 담당하고 render bounds를 각 매니저에 연결한다.
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
@@ -55,6 +56,11 @@ export class MainScene extends Phaser.Scene {
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
     const resolvedLayers = this.worldManager.getCurrentResolvedTmxLayers();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
+    const renderBounds = this.worldManager.getCurrentRenderBounds();
+
+    // 플레이어와 NPC가 같은 렌더 좌표계를 쓰도록 bounds를 연결한다.
+    this.playerManager.setRenderBounds(renderBounds);
+    this.npcManager.setRenderBounds(renderBounds);
 
     const mapSize = parsedMap
       ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`

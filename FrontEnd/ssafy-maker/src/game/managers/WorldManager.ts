@@ -1,4 +1,4 @@
-// 지역 정의와 TMX/TSX 메타를 읽어 현재 월드 상태, TMX 파싱 결과, 런타임 그리드, 맵 렌더를 관리하는 월드 매니저
+// 월드 TMX/TSX를 읽고 실제 타일맵 레이어를 렌더하는 매니저다.
 import Phaser from "phaser";
 import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import type { AreaId } from "../../common/enums/area";
@@ -6,6 +6,7 @@ import { AREA_DEFINITIONS, type AreaDefinition } from "../definitions/areas/area
 import type {
   ParsedTmxLayer,
   ParsedTmxMap,
+  ParsedTmxTilesetRef,
   ParsedTsxTileset,
   ResolvedTmxLayers,
   TmxAreaConfig,
@@ -13,6 +14,7 @@ import type {
 } from "../systems/tmxNavigation";
 import {
   buildRuntimeGrids,
+  getTilesetSourceBasename,
   parseTmxMap,
   parseTsxTileset,
   resolveTmxLayers
@@ -20,6 +22,16 @@ import {
 
 const BASE_MAP_DEPTH = 0;
 const FOREGROUND_MAP_DEPTH = 200;
+
+export type WorldRenderBounds = {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  tileWidth: number;
+  tileHeight: number;
+  mapWidth: number;
+  mapHeight: number;
+};
 
 export class WorldManager {
   private scene: Phaser.Scene;
@@ -30,7 +42,8 @@ export class WorldManager {
   private currentParsedTsxTileset?: ParsedTsxTileset;
   private currentResolvedTmxLayers?: ResolvedTmxLayers;
   private currentRuntimeGrids?: TmxRuntimeGrids;
-  private currentTilemap?: Phaser.Tilemaps.Tilemap;
+  private currentRenderBounds?: WorldRenderBounds;
+  private renderedTilemaps: Phaser.Tilemaps.Tilemap[] = [];
   private renderedLayers: Phaser.Tilemaps.TilemapLayer[] = [];
 
   constructor(scene: Phaser.Scene) {
@@ -52,7 +65,9 @@ export class WorldManager {
       });
     }
 
+    // 타일 렌더가 실패할 때만 기본 배경이 보이게 한다.
     this.background.setFillStyle(this.resolveBackgroundColor(areaId));
+    this.background.setVisible(true);
     this.areaLabel.setText(area.label);
 
     this.currentParsedTmxMap = this.parseCurrentAreaTmx(area);
@@ -102,6 +117,10 @@ export class WorldManager {
     return this.currentRuntimeGrids;
   }
 
+  getCurrentRenderBounds() {
+    return this.currentRenderBounds;
+  }
+
   private parseCurrentAreaTmx(area: AreaDefinition) {
     if (!area.tmxKey) {
       return undefined;
@@ -144,10 +163,11 @@ export class WorldManager {
   }
 
   private renderCurrentAreaMap() {
+    this.renderedTilemaps.forEach((tilemap) => tilemap.destroy());
+    this.renderedTilemaps = [];
     this.renderedLayers.forEach((layer) => layer.destroy());
     this.renderedLayers = [];
-    this.currentTilemap?.destroy();
-    this.currentTilemap = undefined;
+    this.currentRenderBounds = undefined;
 
     const parsedMap = this.currentParsedTmxMap;
     const parsedTsx = this.currentParsedTsxTileset;
@@ -157,85 +177,98 @@ export class WorldManager {
       return;
     }
 
-    const visualLayers = parsedMap.layers.filter((layer) =>
-      this.shouldRenderLayer(layer.name, area)
-    );
+    // 보이는 레이어는 전부 렌더한다.
+    const visualLayers = parsedMap.layers.filter((layer) => layer.visible);
 
     if (visualLayers.length === 0) {
       return;
     }
 
-    this.currentTilemap = this.scene.make.tilemap({
-      width: parsedMap.width,
-      height: parsedMap.height,
+    // 래퍼 구현처럼 맵 전체를 화면에 맞춰 스케일한다.
+    const mapPixelWidth = parsedMap.width * parsedMap.tileWidth;
+    const mapPixelHeight = parsedMap.height * parsedMap.tileHeight;
+    const fitScaleX = this.scene.scale.width / mapPixelWidth;
+    const fitScaleY = this.scene.scale.height / mapPixelHeight;
+    const scale = Math.max(fitScaleX, fitScaleY);
+    const renderWidth = mapPixelWidth * scale;
+    const renderHeight = mapPixelHeight * scale;
+    const offsetX = Math.round((this.scene.scale.width - renderWidth) / 2);
+    const offsetY = Math.round((this.scene.scale.height - renderHeight) / 2);
+
+    // 플레이어와 충돌이 같은 좌표계를 쓰도록 렌더 bounds를 저장한다.
+    this.currentRenderBounds = {
+      offsetX,
+      offsetY,
+      scale,
       tileWidth: parsedMap.tileWidth,
-      tileHeight: parsedMap.tileHeight
-    });
-
-    const tilesets = parsedMap.tilesets
-      .map((tilesetRef) =>
-        this.currentTilemap!.addTilesetImage(
-          tilesetRef.name,
-          ASSET_KEYS.map.tilesetImage,
-          parsedTsx.tileWidth,
-          parsedTsx.tileHeight,
-          parsedTsx.margin,
-          parsedTsx.spacing,
-          tilesetRef.firstgid
-        )
-      )
-      .filter((tileset): tileset is Phaser.Tilemaps.Tileset => Boolean(tileset));
-
-    if (tilesets.length === 0) {
-      return;
-    }
+      tileHeight: parsedMap.tileHeight,
+      mapWidth: parsedMap.width,
+      mapHeight: parsedMap.height
+    };
 
     visualLayers.forEach((layer, index) => {
-      const tilemapLayer = this.currentTilemap!.createBlankLayer(
-        layer.name,
-        tilesets,
-        0,
-        0,
-        parsedMap.width,
-        parsedMap.height,
-        parsedMap.tileWidth,
-        parsedMap.tileHeight
-      );
+      const tilemap = this.scene.make.tilemap({
+        data: layer.data,
+        tileWidth: parsedMap.tileWidth,
+        tileHeight: parsedMap.tileHeight
+      });
 
-      if (!tilemapLayer) {
+      const tilesets = parsedMap.tilesets
+        .map((tilesetRef, tilesetIndex) =>
+          this.addResolvedTileset(tilemap, parsedTsx, tilesetRef, tilesetIndex)
+        )
+        .filter((tileset): tileset is Phaser.Tilemaps.Tileset => Boolean(tileset));
+
+      if (tilesets.length === 0) {
+        tilemap.destroy();
         return;
       }
 
-      tilemapLayer.putTilesAt(layer.data, 0, 0);
+      const tilemapLayer = tilemap.createLayer(0, tilesets, 0, 0);
+      if (!tilemapLayer) {
+        tilemap.destroy();
+        return;
+      }
+
+      // 타일 레이어에 렌더 좌표계를 적용한다.
       tilemapLayer.setVisible(layer.visible);
+      tilemapLayer.setPosition(offsetX, offsetY);
+      tilemapLayer.setScale(scale);
       tilemapLayer.setDepth(this.resolveLayerDepth(layer, area, index));
 
+      this.renderedTilemaps.push(tilemap);
       this.renderedLayers.push(tilemapLayer);
     });
 
-    if (this.background) {
-      this.background.setVisible(false);
+    if (this.renderedLayers.length > 0) {
+      this.background?.setVisible(false);
     }
   }
 
-  private shouldRenderLayer(layerName: string, area: AreaDefinition) {
-    const normalized = layerName.trim().toLowerCase();
+  private addResolvedTileset(
+    tilemap: Phaser.Tilemaps.Tilemap,
+    parsedTsx: ParsedTsxTileset,
+    tilesetRef: ParsedTmxTilesetRef,
+    tilesetIndex: number
+  ) {
+    // TMX 외부 tileset source와 TSX 메타를 함께 써서 연결 이름을 안정화한다.
+    const sourceBaseName = getTilesetSourceBasename(tilesetRef.source);
+    const imageBaseName = getTilesetSourceBasename(parsedTsx.imageSource);
+    const tilesetName =
+      sourceBaseName ??
+      parsedTsx.name ??
+      imageBaseName ??
+      tilesetRef.name;
 
-    const isCollisionLayer = area.collisionLayerNames.some(
-      (name) => name.trim().toLowerCase() === normalized
+    return tilemap.addTilesetImage(
+      `${tilesetName}_${tilesetIndex}`,
+      ASSET_KEYS.map.tilesetImage,
+      parsedTsx.tileWidth,
+      parsedTsx.tileHeight,
+      parsedTsx.margin,
+      parsedTsx.spacing,
+      tilesetRef.firstgid
     );
-    if (isCollisionLayer) {
-      return false;
-    }
-
-    const isInteractionLayer = area.interactionLayerNames.some(
-      (name) => name.trim().toLowerCase() === normalized
-    );
-    if (isInteractionLayer) {
-      return false;
-    }
-
-    return true;
   }
 
   private resolveLayerDepth(

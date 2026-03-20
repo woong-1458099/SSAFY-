@@ -1,7 +1,8 @@
-// 임시 플레이어 엔티티를 생성하고 방향키 입력에 따라 타일 단위 이동을 처리하는 플레이어 매니저
+// 플레이어 타일 상태와 이동을 관리하고 렌더 bounds 기준으로 좌표를 변환한다.
 import Phaser from "phaser";
 import type { PlayerSnapshot } from "../../common/types/player";
 import type { ParsedTmxMap, TmxRuntimeGrids } from "../systems/tmxNavigation";
+import type { WorldRenderBounds } from "./WorldManager";
 
 export class PlayerManager {
   private scene: Phaser.Scene;
@@ -14,9 +15,22 @@ export class PlayerManager {
   private currentTileY = 0;
   private moveRepeatDelay = 140;
   private lastMoveAt = 0;
+  private renderBounds?: WorldRenderBounds;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+  }
+
+  setRenderBounds(renderBounds?: WorldRenderBounds) {
+    this.renderBounds = renderBounds;
+
+    // 이미 생성된 플레이어가 있으면 현재 타일 기준 위치를 다시 맞춘다.
+    if (!this.player) {
+      return;
+    }
+
+    const { x, y } = this.getWorldPositionFromTile(this.currentTileX, this.currentTileY);
+    this.player.setPosition(x, y);
   }
 
   create(startTileX: number, startTileY: number, tileSize = 32) {
@@ -131,9 +145,20 @@ export class PlayerManager {
   }
 
   private getWorldPositionFromTile(tileX: number, tileY: number) {
+    // 렌더 bounds가 없으면 기존 원본 타일 좌표계를 fallback으로 쓴다.
+    if (!this.renderBounds) {
+      return {
+        x: tileX * this.tileSize + this.tileSize / 2,
+        y: tileY * this.tileSize + this.tileSize
+      };
+    }
+
+    const scaledTileWidth = this.renderBounds.tileWidth * this.renderBounds.scale;
+    const scaledTileHeight = this.renderBounds.tileHeight * this.renderBounds.scale;
+
     return {
-      x: tileX * this.tileSize + this.tileSize / 2,
-      y: tileY * this.tileSize + this.tileSize
+      x: this.renderBounds.offsetX + tileX * scaledTileWidth + scaledTileWidth / 2,
+      y: this.renderBounds.offsetY + tileY * scaledTileHeight + scaledTileHeight
     };
   }
 }
