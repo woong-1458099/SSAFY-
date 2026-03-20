@@ -11,6 +11,7 @@ export type ParsedTmxMap = {
   tileWidth: number;
   tileHeight: number;
   layers: ParsedTmxLayer[];
+  tilesets: Array<{ firstgid: number; name: string }>;
 };
 
 export type TmxAreaConfig = {
@@ -142,6 +143,26 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
     return null;
   }
 
+  const tilesets = Array.from(mapNode.getElementsByTagName("tileset"))
+    .map((tilesetNode, index) => {
+      const firstgid = Number.parseInt(
+        tilesetNode.getAttribute("firstgid") ?? `${index + 1}`,
+        10
+      );
+      const name =
+        tilesetNode.getAttribute("name") ??
+        tilesetNode.getAttribute("source") ??
+        `tileset_${index + 1}`;
+
+      if (!Number.isFinite(firstgid)) {
+        return null;
+      }
+
+      return { firstgid, name };
+    })
+    .filter((tileset): tileset is { firstgid: number; name: string } => Boolean(tileset))
+    .sort((a, b) => a.firstgid - b.firstgid);
+
   const layers: ParsedTmxLayer[] = [];
 
   Array.from(mapNode.getElementsByTagName("layer")).forEach((layerNode, index) => {
@@ -161,7 +182,11 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
       .filter((value) => value.length > 0)
       .map((value) => {
         const parsed = Number.parseInt(value, 10);
-        return Number.isFinite(parsed) ? parsed : 0;
+        if (!Number.isFinite(parsed)) {
+          return 0;
+        }
+
+        return (parsed >>> 0) & 0x1fffffff;
       });
 
     const requiredCellCount = width * height;
@@ -187,6 +212,7 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
     height,
     tileWidth,
     tileHeight,
-    layers
+    layers,
+    tilesets
   };
 }

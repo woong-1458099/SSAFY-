@@ -19,6 +19,8 @@ export class InteractionManager {
   private isInteractionLocked = false;
   private hintText?: Phaser.GameObjects.Text;
   private currentTargetNpcId?: NpcId;
+  private requiresInteractKeyRelease = false;
+  private wasDialoguePlaying = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -40,6 +42,17 @@ export class InteractionManager {
   }
 
   update() {
+    const isDialoguePlaying = this.dialogueManager.isDialoguePlaying();
+
+    if (this.wasDialoguePlaying && !isDialoguePlaying) {
+      this.requiresInteractKeyRelease = true;
+    }
+    this.wasDialoguePlaying = isDialoguePlaying;
+
+    if (this.requiresInteractKeyRelease && this.interactKey && this.interactKey.isUp) {
+      this.requiresInteractKeyRelease = false;
+    }
+
     this.currentTargetNpcId = this.findCurrentTargetNpc();
     this.debugLogger?.setTargetNpc(this.currentTargetNpcId);
     this.renderHint();
@@ -47,8 +60,9 @@ export class InteractionManager {
     if (
       !this.currentAreaId ||
       !this.interactKey ||
-      this.dialogueManager.isDialoguePlaying() ||
+      isDialoguePlaying ||
       this.isInteractionLocked ||
+      this.requiresInteractKeyRelease ||
       !Phaser.Input.Keyboard.JustDown(this.interactKey)
     ) {
       return;
@@ -68,6 +82,7 @@ export class InteractionManager {
 
     this.dialogueManager.play(placement.dialogueId).finally(() => {
       this.isInteractionLocked = false;
+      this.requiresInteractKeyRelease = true;
     });
   }
 
@@ -124,7 +139,11 @@ export class InteractionManager {
         .setDepth(9500);
     }
 
-    if (this.currentTargetNpcId && !this.dialogueManager.isDialoguePlaying()) {
+    if (
+      this.currentTargetNpcId &&
+      !this.dialogueManager.isDialoguePlaying() &&
+      !this.requiresInteractKeyRelease
+    ) {
       this.hintText.setText(`[SPACE] ${this.currentTargetNpcId}와 대화`);
       this.hintText.setVisible(true);
       return;

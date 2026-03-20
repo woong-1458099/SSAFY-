@@ -1,8 +1,10 @@
-// 지역 정의와 TMX 설정을 읽어 현재 월드 상태, TMX 파싱 결과, 레이어 조회 결과, 런타임 그리드를 관리하는 월드 매니저
+// 지역 정의와 TMX 설정을 읽어 현재 월드 상태, TMX 파싱 결과, 레이어 조회 결과, 런타임 그리드, 맵 렌더를 관리하는 월드 매니저
 import Phaser from "phaser";
+import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import type { AreaId } from "../../common/enums/area";
 import { AREA_DEFINITIONS, type AreaDefinition } from "../definitions/areas/areaDefinitions";
 import type {
+  ParsedTmxLayer,
   ParsedTmxMap,
   ResolvedTmxLayers,
   TmxAreaConfig,
@@ -14,6 +16,9 @@ import {
   resolveTmxLayers
 } from "../systems/tmxNavigation";
 
+const BASE_MAP_DEPTH = 0;
+const FOREGROUND_MAP_DEPTH = 200;
+
 export class WorldManager {
   private scene: Phaser.Scene;
   private currentAreaId?: AreaId;
@@ -22,6 +27,8 @@ export class WorldManager {
   private currentParsedTmxMap?: ParsedTmxMap;
   private currentResolvedTmxLayers?: ResolvedTmxLayers;
   private currentRuntimeGrids?: TmxRuntimeGrids;
+  private currentTilemap?: Phaser.Tilemaps.Tilemap;
+  private renderedLayers: Phaser.Tilemaps.TilemapLayer[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -48,6 +55,7 @@ export class WorldManager {
     this.currentParsedTmxMap = this.parseCurrentAreaTmx(area);
     this.currentResolvedTmxLayers = this.resolveCurrentAreaLayers();
     this.currentRuntimeGrids = this.buildCurrentRuntimeGrids();
+    this.renderCurrentAreaMap();
 
     return area;
   }
@@ -123,6 +131,113 @@ export class WorldManager {
       this.currentParsedTmxMap,
       this.currentResolvedTmxLayers
     );
+  }
+
+  private renderCurrentAreaMap() {
+    this.renderedLayers.forEach((layer) => layer.destroy());
+    this.renderedLayers = [];
+    this.currentTilemap?.destroy();
+    this.currentTilemap = undefined;
+
+    const parsedMap = this.currentParsedTmxMap;
+    const area = this.getCurrentAreaDefinition();
+
+    if (!parsedMap || !area) {
+      return;
+    }
+
+    const visualLayers = parsedMap.layers.filter((layer) =>
+      this.shouldRenderLayer(layer.name, area)
+    );
+
+    if (visualLayers.length === 0) {
+      return;
+    }
+
+    this.currentTilemap = this.scene.make.tilemap({
+      width: parsedMap.width,
+      height: parsedMap.height,
+      tileWidth: parsedMap.tileWidth,
+      tileHeight: parsedMap.tileHeight
+    });
+
+    const tileset = this.currentTilemap.addTilesetImage(
+      ASSET_KEYS.map.tileset,
+      ASSET_KEYS.map.tileset,
+      parsedMap.tileWidth,
+      parsedMap.tileHeight,
+      0,
+      0
+    );
+
+    if (!tileset) {
+      return;
+    }
+
+    visualLayers.forEach((layer, index) => {
+      const tilemapLayer = this.currentTilemap!.createBlankLayer(
+        layer.name,
+        tileset,
+        0,
+        0,
+        parsedMap.width,
+        parsedMap.height,
+        parsedMap.tileWidth,
+        parsedMap.tileHeight
+      );
+
+      if (!tilemapLayer) {
+        return;
+      }
+
+      tilemapLayer.putTilesAt(layer.data, 0, 0);
+      tilemapLayer.setVisible(layer.visible);
+      tilemapLayer.setDepth(this.resolveLayerDepth(layer, area, index));
+
+      this.renderedLayers.push(tilemapLayer);
+    });
+
+    if (this.background) {
+      this.background.setVisible(false);
+    }
+  }
+
+  private shouldRenderLayer(layerName: string, area: AreaDefinition) {
+    const normalized = layerName.trim().toLowerCase();
+
+    const isCollisionLayer = area.collisionLayerNames.some(
+      (name) => name.trim().toLowerCase() === normalized
+    );
+    if (isCollisionLayer) {
+      return false;
+    }
+
+    const isInteractionLayer = area.interactionLayerNames.some(
+      (name) => name.trim().toLowerCase() === normalized
+    );
+    if (isInteractionLayer) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private resolveLayerDepth(
+    layer: ParsedTmxLayer,
+    area: AreaDefinition,
+    index: number
+  ) {
+    const normalized = layer.name.trim().toLowerCase();
+
+    const isForegroundLayer = area.foregroundLayerNames.some(
+      (name) => name.trim().toLowerCase() === normalized
+    );
+
+    if (isForegroundLayer) {
+      return FOREGROUND_MAP_DEPTH + index;
+    }
+
+    return BASE_MAP_DEPTH + index;
   }
 
   private requireArea(areaId: AreaId): AreaDefinition {
