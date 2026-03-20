@@ -10,5 +10,7 @@ export type DebugState = {
   foregroundLayerCount?: number;
   blockedCellCount?: number;
   interactionCellCount?: number;
+  playerPosition?: string;
+  playerTile?: string;
   events: string[];
 };
