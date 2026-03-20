@@ -15,6 +15,7 @@ export class DebugEventLogger {
   private interactionCellCount = 0;
   private playerPosition = "";
   private playerTile = "";
+  private targetNpcId = "";
 
   log(message: string) {
     this.events.unshift(message);
@@ -52,6 +53,10 @@ export class DebugEventLogger {
     this.playerTile = tile;
   }
 
+  setTargetNpc(npcId?: string) {
+    this.targetNpcId = npcId ?? "";
+  }
+
   getState(): DebugState {
     return {
       currentSceneId: this.currentSceneId,
@@ -66,6 +71,7 @@ export class DebugEventLogger {
       interactionCellCount: this.interactionCellCount,
       playerPosition: this.playerPosition || undefined,
       playerTile: this.playerTile || undefined,
+      targetNpcId: this.targetNpcId || undefined,
       events: this.events
     };
   }

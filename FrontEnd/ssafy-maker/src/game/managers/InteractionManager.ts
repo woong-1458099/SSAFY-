@@ -1,4 +1,4 @@
-// 플레이어와 NPC 사이의 근접 상호작용과 대화 시작을 담당하는 상호작용 매니저
+// 플레이어와 NPC 사이의 근접 상호작용과 대화 시작, 상호작용 힌트 표시를 담당하는 상호작용 매니저
 import Phaser from "phaser";
 import type { AreaId } from "../../common/enums/area";
 import type { NpcId } from "../../common/enums/npc";
@@ -17,6 +17,8 @@ export class InteractionManager {
   private interactKey?: Phaser.Input.Keyboard.Key;
   private currentAreaId?: AreaId;
   private isInteractionLocked = false;
+  private hintText?: Phaser.GameObjects.Text;
+  private currentTargetNpcId?: NpcId;
 
   constructor(
     scene: Phaser.Scene,
@@ -38,6 +40,10 @@ export class InteractionManager {
   }
 
   update() {
+    this.currentTargetNpcId = this.findCurrentTargetNpc();
+    this.debugLogger?.setTargetNpc(this.currentTargetNpcId);
+    this.renderHint();
+
     if (
       !this.currentAreaId ||
       !this.interactKey ||
@@ -48,22 +54,16 @@ export class InteractionManager {
       return;
     }
 
-    const player = this.playerManager.getSnapshot();
-    if (!player) {
+    if (!this.currentTargetNpcId) {
       return;
     }
 
-    const nearbyNpcId = this.findNearbyNpcId(player.x, player.y, this.currentAreaId);
-    if (!nearbyNpcId) {
-      return;
-    }
-
-    const placement = getNpcPlacement(this.currentAreaId, nearbyNpcId);
+    const placement = getNpcPlacement(this.currentAreaId, this.currentTargetNpcId);
     if (!placement) {
       return;
     }
 
-    this.debugLogger?.log(`interact:${nearbyNpcId}`);
+    this.debugLogger?.log(`interact:${this.currentTargetNpcId}`);
     this.isInteractionLocked = true;
 
     this.dialogueManager.play(placement.dialogueId).finally(() => {
@@ -73,6 +73,19 @@ export class InteractionManager {
 
   isInputLocked() {
     return this.isInteractionLocked || this.dialogueManager.isDialoguePlaying();
+  }
+
+  private findCurrentTargetNpc() {
+    if (!this.currentAreaId) {
+      return undefined;
+    }
+
+    const player = this.playerManager.getSnapshot();
+    if (!player) {
+      return undefined;
+    }
+
+    return this.findNearbyNpcId(player.x, player.y, this.currentAreaId);
   }
 
   private findNearbyNpcId(playerX: number, playerY: number, areaId: AreaId): NpcId | undefined {
@@ -97,5 +110,26 @@ export class InteractionManager {
     }
 
     return undefined;
+  }
+
+  private renderHint() {
+    if (!this.hintText) {
+      this.hintText = this.scene.add.text(640, 40, "", {
+        fontSize: "20px",
+        color: "#ffffff",
+        backgroundColor: "#000000"
+      })
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0)
+        .setDepth(9500);
+    }
+
+    if (this.currentTargetNpcId && !this.dialogueManager.isDialoguePlaying()) {
+      this.hintText.setText(`[SPACE] ${this.currentTargetNpcId}와 대화`);
+      this.hintText.setVisible(true);
+      return;
+    }
+
+    this.hintText.setVisible(false);
   }
 }

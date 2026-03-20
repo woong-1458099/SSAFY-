@@ -1,4 +1,4 @@
-// 현재 씬, 지역, TMX 키, 맵 크기, 레이어 개수, 그리드 셀 개수, 플레이어 상태, NPC 상태를 화면에 표시하는 디버그 오버레이
+// 현재 씬, 지역, TMX 키, 맵 크기, 레이어 개수, 그리드 셀 개수, 플레이어 상태, 상호작용 대상 NPC를 화면에 표시하는 디버그 오버레이
 import Phaser from "phaser";
 import type { DebugEventLogger } from "../services/DebugEventLogger";
 import type { NpcManager } from "../../game/managers/NpcManager";
@@ -33,6 +33,7 @@ export class DebugOverlay {
       `grid: blocked=${state.blockedCellCount ?? 0}, interaction=${state.interactionCellCount ?? 0}`,
       `player: ${state.playerPosition ?? "-"}`,
       `tile: ${state.playerTile ?? "-"}`,
+      `targetNpc: ${state.targetNpcId ?? "-"}`,
       `sceneScript: ${state.currentSceneId}`,
       `action: ${state.currentAction}`,
       `npcs:`,

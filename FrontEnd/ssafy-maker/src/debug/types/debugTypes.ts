@@ -12,5 +12,6 @@ export type DebugState = {
   interactionCellCount?: number;
   playerPosition?: string;
   playerTile?: string;
+  targetNpcId?: string;
   events: string[];
 };
