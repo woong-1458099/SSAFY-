@@ -11,6 +11,7 @@ export class DialogueManager {
   private scene: Phaser.Scene;
   private box?: Phaser.GameObjects.Rectangle;
   private text?: Phaser.GameObjects.Text;
+  private isPlaying = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -19,6 +20,7 @@ export class DialogueManager {
   async play(dialogueId: string) {
     const script = this.requireDialogue(dialogueId);
     this.ensureUi();
+    this.isPlaying = true;
 
     let currentNode: DialogueNode | undefined = script.nodes[script.startNodeId];
 
@@ -40,6 +42,11 @@ export class DialogueManager {
     }
 
     this.text!.setText("");
+    this.isPlaying = false;
+  }
+
+  isDialoguePlaying() {
+    return this.isPlaying;
   }
 
   private requireDialogue(dialogueId: string): DialogueScript {

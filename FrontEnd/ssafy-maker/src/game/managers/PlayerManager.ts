@@ -8,6 +8,7 @@ export class PlayerManager {
   private player?: Phaser.GameObjects.Rectangle;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private isMoving = false;
+  private isInputLocked = false;
   private tileSize = 32;
   private currentTileX = 0;
   private currentTileY = 0;
@@ -29,8 +30,19 @@ export class PlayerManager {
     this.cursors = this.scene.input.keyboard?.createCursorKeys();
   }
 
+  setInputLocked(locked: boolean) {
+    this.isInputLocked = locked;
+  }
+
   update(runtimeGrids?: TmxRuntimeGrids, parsedMap?: ParsedTmxMap) {
-    if (!this.player || !this.cursors || this.isMoving || !runtimeGrids || !parsedMap) {
+    if (
+      !this.player ||
+      !this.cursors ||
+      this.isMoving ||
+      this.isInputLocked ||
+      !runtimeGrids ||
+      !parsedMap
+    ) {
       return;
     }
 

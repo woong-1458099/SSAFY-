@@ -11,7 +11,7 @@ import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
 import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
 import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
-import { countTrueCells } from "../systems/tmxNavigation";
+import { countTrueCells, findFirstWalkableTile } from "../systems/tmxNavigation";
 
 export class MainScene extends Phaser.Scene {
   private debugLogger?: DebugEventLogger;
@@ -20,6 +20,7 @@ export class MainScene extends Phaser.Scene {
   private worldManager?: WorldManager;
   private playerManager?: PlayerManager;
   private npcManager?: NpcManager;
+  private dialogueManager?: DialogueManager;
 
   constructor() {
     super(SCENE_KEYS.main);
@@ -30,9 +31,13 @@ export class MainScene extends Phaser.Scene {
     this.worldManager = new WorldManager(this);
     this.playerManager = new PlayerManager(this);
     this.npcManager = new NpcManager(this);
+    this.dialogueManager = new DialogueManager(this);
 
-    const dialogueManager = new DialogueManager(this);
-    const director = new SceneDirector(this.npcManager, dialogueManager, this.debugLogger);
+    const director = new SceneDirector(
+      this.npcManager,
+      this.dialogueManager,
+      this.debugLogger
+    );
 
     this.worldManager.loadArea(SCENE_001.area);
 
@@ -56,8 +61,9 @@ export class MainScene extends Phaser.Scene {
       runtimeGrids ? countTrueCells(runtimeGrids.interactionGrid) : 0
     );
 
-    if (parsedMap && this.playerManager) {
-      this.playerManager.create(1, 1, parsedMap.tileWidth);
+    if (parsedMap && runtimeGrids && this.playerManager) {
+      const startTile = findFirstWalkableTile(runtimeGrids.blockedGrid);
+      this.playerManager.create(startTile.tileX, startTile.tileY, parsedMap.tileWidth);
     }
 
     if (DEBUG_FLAGS.overlayEnabled && this.debugLogger && this.npcManager) {
@@ -73,13 +79,19 @@ export class MainScene extends Phaser.Scene {
   }
 
   update() {
-    if (!this.worldManager || !this.playerManager || !this.debugLogger) {
+    if (
+      !this.worldManager ||
+      !this.playerManager ||
+      !this.debugLogger ||
+      !this.dialogueManager
+    ) {
       return;
     }
 
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
 
+    this.playerManager.setInputLocked(this.dialogueManager.isDialoguePlaying());
     this.playerManager.update(runtimeGrids, parsedMap);
 
     const player = this.playerManager.getSnapshot();

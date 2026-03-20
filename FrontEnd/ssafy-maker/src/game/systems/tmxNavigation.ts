@@ -108,6 +108,18 @@ export function countTrueCells(grid: boolean[][]) {
   return count;
 }
 
+export function findFirstWalkableTile(blockedGrid: boolean[][]) {
+  for (let y = 0; y < blockedGrid.length; y += 1) {
+    for (let x = 0; x < (blockedGrid[y]?.length ?? 0); x += 1) {
+      if (!blockedGrid[y][x]) {
+        return { tileX: x, tileY: y };
+      }
+    }
+  }
+
+  return { tileX: 0, tileY: 0 };
+}
+
 export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
   const parser = new DOMParser();
   const doc = parser.parseFromString(rawTmx, "application/xml");
