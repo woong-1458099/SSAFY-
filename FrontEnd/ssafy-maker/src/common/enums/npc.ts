@@ -1,0 +1,7 @@
+export const NPC_IDS = {
+  minsu: "minsu",
+  yuna: "yuna",
+  guide: "guide"
+} as const;
+
+export type NpcId = (typeof NPC_IDS)[keyof typeof NPC_IDS];

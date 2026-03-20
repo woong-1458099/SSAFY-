@@ -1,4 +1,3 @@
-import { createGame } from "@app/game";
+import { createGame } from "./game";
 
-createGame("app");
-
+createGame();
