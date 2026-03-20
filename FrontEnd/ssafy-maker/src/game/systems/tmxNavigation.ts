@@ -1,8 +1,14 @@
-// TMX 맵 파싱과 레이어 조회, 충돌/상호작용 그리드 생성에 사용할 타입과 유틸 함수를 제공
+// TMX와 TSX 메타를 파싱하고 레이어/그리드/타일셋 메타를 해석하는 유틸 함수를 제공
 export type ParsedTmxLayer = {
   name: string;
   visible: boolean;
   data: number[][];
+};
+
+export type ParsedTmxTilesetRef = {
+  firstgid: number;
+  name: string;
+  source?: string;
 };
 
 export type ParsedTmxMap = {
@@ -11,7 +17,20 @@ export type ParsedTmxMap = {
   tileWidth: number;
   tileHeight: number;
   layers: ParsedTmxLayer[];
-  tilesets: Array<{ firstgid: number; name: string }>;
+  tilesets: ParsedTmxTilesetRef[];
+};
+
+export type ParsedTsxTileset = {
+  name: string;
+  tileWidth: number;
+  tileHeight: number;
+  spacing: number;
+  margin: number;
+  tileCount: number;
+  columns: number;
+  imageSource: string;
+  imageWidth: number;
+  imageHeight: number;
 };
 
 export type TmxAreaConfig = {
@@ -31,6 +50,12 @@ export type TmxRuntimeGrids = {
   blockedGrid: boolean[][];
   interactionGrid: boolean[][];
 };
+
+function isParsedTmxTilesetRef(
+  value: ParsedTmxTilesetRef | null
+): value is ParsedTmxTilesetRef {
+  return value !== null;
+}
 
 export function getLayerByName(parsedMap: ParsedTmxMap, layerName: string) {
   return parsedMap.layers.find(
@@ -144,7 +169,7 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
   }
 
   const tilesets = Array.from(mapNode.getElementsByTagName("tileset"))
-    .map((tilesetNode, index) => {
+    .map((tilesetNode, index): ParsedTmxTilesetRef | null => {
       const firstgid = Number.parseInt(
         tilesetNode.getAttribute("firstgid") ?? `${index + 1}`,
         10
@@ -153,14 +178,24 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
         tilesetNode.getAttribute("name") ??
         tilesetNode.getAttribute("source") ??
         `tileset_${index + 1}`;
+      const sourceAttr = tilesetNode.getAttribute("source");
 
       if (!Number.isFinite(firstgid)) {
         return null;
       }
 
-      return { firstgid, name };
+      const tilesetRef: ParsedTmxTilesetRef = {
+        firstgid,
+        name
+      };
+
+      if (sourceAttr) {
+        tilesetRef.source = sourceAttr;
+      }
+
+      return tilesetRef;
     })
-    .filter((tileset): tileset is { firstgid: number; name: string } => Boolean(tileset))
+    .filter(isParsedTmxTilesetRef)
     .sort((a, b) => a.firstgid - b.firstgid);
 
   const layers: ParsedTmxLayer[] = [];
@@ -214,5 +249,41 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
     tileHeight,
     layers,
     tilesets
+  };
+}
+
+export function parseTsxTileset(rawTsx: string): ParsedTsxTileset | null {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(rawTsx, "application/xml");
+
+  if (doc.getElementsByTagName("parsererror").length > 0) {
+    return null;
+  }
+
+  const tilesetNode = doc.getElementsByTagName("tileset")[0];
+  const imageNode = doc.getElementsByTagName("image")[0];
+
+  if (!tilesetNode || !imageNode) {
+    return null;
+  }
+
+  const tileWidth = Number.parseInt(tilesetNode.getAttribute("tilewidth") ?? "0", 10);
+  const tileHeight = Number.parseInt(tilesetNode.getAttribute("tileheight") ?? "0", 10);
+
+  if (tileWidth <= 0 || tileHeight <= 0) {
+    return null;
+  }
+
+  return {
+    name: tilesetNode.getAttribute("name") ?? "tileset",
+    tileWidth,
+    tileHeight,
+    spacing: Number.parseInt(tilesetNode.getAttribute("spacing") ?? "0", 10),
+    margin: Number.parseInt(tilesetNode.getAttribute("margin") ?? "0", 10),
+    tileCount: Number.parseInt(tilesetNode.getAttribute("tilecount") ?? "0", 10),
+    columns: Number.parseInt(tilesetNode.getAttribute("columns") ?? "0", 10),
+    imageSource: imageNode.getAttribute("source") ?? "",
+    imageWidth: Number.parseInt(imageNode.getAttribute("width") ?? "0", 10),
+    imageHeight: Number.parseInt(imageNode.getAttribute("height") ?? "0", 10)
   };
 }

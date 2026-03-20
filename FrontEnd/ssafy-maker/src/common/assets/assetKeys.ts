@@ -11,7 +11,8 @@ export const ASSET_KEYS = {
     guide: "npc-guide"
   },
   map: {
-    tileset: "map_tiles_full_asset",
+    tilesetImage: "map_tiles_full_asset",
+    tilesetTsx: "map_tileset_full_tsx",
     worldTmx: "map_tmx_world",
     downtownTmx: "map_tmx_downtown",
     campusTmx: "map_tmx_campus"

@@ -842,8 +842,8 @@
 
 ---
 
-### 📄 `public/assets/game/map/Full Asset.tsx`
-1. **파일 설명**: TMX 맵 렌더링에 투입되는 베이스 타일셋 메타데이터 및 단일 통짜 이미지: Full Asset.tsx
+### 📄 `public/assets/game/map/FullAsset.tsx`
+1. **파일 설명**: TMX 맵 렌더링에 투입되는 베이스 타일셋 메타데이터 및 단일 통짜 이미지: FullAsset.tsx
 2. **어디에 사용되는지**: TMX 맵 데이터를 실체화하기 위해 무늬를 퍼즐 자르듯 공급함
 3. **어떻게 분류해야하는지**: 🚚 public/assets/game/map/ 에 현상 유지 (TMX 파일과 같은 망 내에 존재해야 오류를 방지함)
 
