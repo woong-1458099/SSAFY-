@@ -9,12 +9,14 @@ import { WorldManager } from "../managers/WorldManager";
 import { SCENE_001 } from "../scripts/scenes/scene_001";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
+import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
 import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
 import { countTrueCells } from "../systems/tmxNavigation";
 
 export class MainScene extends Phaser.Scene {
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
+  private worldGridOverlay?: WorldGridOverlay;
   private worldManager?: WorldManager;
   private playerManager?: PlayerManager;
   private npcManager?: NpcManager;
@@ -55,13 +57,16 @@ export class MainScene extends Phaser.Scene {
     );
 
     if (parsedMap && this.playerManager) {
-      const startX = 1 * parsedMap.tileWidth + parsedMap.tileWidth / 2;
-      const startY = 1 * parsedMap.tileHeight + parsedMap.tileHeight;
-      this.playerManager.create(startX, startY, parsedMap.tileWidth);
+      this.playerManager.create(1, 1, parsedMap.tileWidth);
     }
 
     if (DEBUG_FLAGS.overlayEnabled && this.debugLogger && this.npcManager) {
       this.debugOverlay = new DebugOverlay(this, this.debugLogger, this.npcManager);
+    }
+
+    if (DEBUG_FLAGS.worldGridEnabled) {
+      this.worldGridOverlay = new WorldGridOverlay(this);
+      this.worldGridOverlay.render(runtimeGrids, parsedMap);
     }
 
     await director.run(SCENE_001);
