@@ -1,13 +1,16 @@
-// 지역 정의를 읽어 현재 월드 상태와 기본 배경 표시를 관리하는 월드 매니저
+// 지역 정의와 TMX 설정을 읽어 현재 월드 상태, 기본 배경 표시, TMX 파싱 결과를 관리하는 월드 매니저
 import Phaser from "phaser";
 import type { AreaId } from "../../common/enums/area";
 import { AREA_DEFINITIONS, type AreaDefinition } from "../definitions/areas/areaDefinitions";
+import type { ParsedTmxMap, TmxAreaConfig } from "../systems/tmxNavigation";
+import { parseTmxMap } from "../systems/tmxNavigation";
 
 export class WorldManager {
   private scene: Phaser.Scene;
   private currentAreaId?: AreaId;
   private background?: Phaser.GameObjects.Rectangle;
   private areaLabel?: Phaser.GameObjects.Text;
+  private currentParsedTmxMap?: ParsedTmxMap;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -30,6 +33,7 @@ export class WorldManager {
 
     this.background.setFillStyle(this.resolveBackgroundColor(areaId));
     this.areaLabel.setText(area.label);
+    this.currentParsedTmxMap = this.parseCurrentAreaTmx(area);
 
     return area;
   }
@@ -44,6 +48,37 @@ export class WorldManager {
     }
 
     return AREA_DEFINITIONS[this.currentAreaId];
+  }
+
+  getCurrentTmxConfig(): TmxAreaConfig | undefined {
+    const area = this.getCurrentAreaDefinition();
+    if (!area?.tmxKey) {
+      return undefined;
+    }
+
+    return {
+      tmxKey: area.tmxKey,
+      collisionLayerNames: area.collisionLayerNames,
+      interactionLayerNames: area.interactionLayerNames,
+      foregroundLayerNames: area.foregroundLayerNames
+    };
+  }
+
+  getCurrentParsedTmxMap() {
+    return this.currentParsedTmxMap;
+  }
+
+  private parseCurrentAreaTmx(area: AreaDefinition) {
+    if (!area.tmxKey) {
+      return undefined;
+    }
+
+    const rawTmx = this.scene.cache.text.get(area.tmxKey) as string | undefined;
+    if (!rawTmx) {
+      return undefined;
+    }
+
+    return parseTmxMap(rawTmx) ?? undefined;
   }
 
   private requireArea(areaId: AreaId): AreaDefinition {

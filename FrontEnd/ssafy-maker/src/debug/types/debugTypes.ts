@@ -3,5 +3,7 @@ export type DebugState = {
   currentSceneId: string;
   currentAction: string;
   currentAreaId?: string;
+  currentTmxKey?: string;
+  mapSize?: string;
   events: string[];
 };

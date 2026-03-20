@@ -9,23 +9,27 @@ export type AreaDefinition = {
   backgroundKey: string;
   entryPoint?: Vector2;
   tmxKey?: string;
-  collisionLayerNames?: string[];
-  interactionLayerNames?: string[];
-  foregroundLayerNames?: string[];
+  collisionLayerNames: string[];
+  interactionLayerNames: string[];
+  foregroundLayerNames: string[];
 };
 
 export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
   world: {
     id: "world",
     label: "전체 지도",
-    backgroundKey: ASSET_KEYS.background.campus
+    backgroundKey: ASSET_KEYS.background.world,
+    tmxKey: ASSET_KEYS.map.worldTmx,
+    collisionLayerNames: ["root", "build"],
+    interactionLayerNames: ["build"],
+    foregroundLayerNames: ["tree"]
   },
   downtown: {
     id: "downtown",
     label: "번화가",
-    backgroundKey: ASSET_KEYS.background.campus,
+    backgroundKey: ASSET_KEYS.background.downtown,
     entryPoint: { x: 216, y: 520 },
-    tmxKey: "map_tmx_downtown",
+    tmxKey: ASSET_KEYS.map.downtownTmx,
     collisionLayerNames: ["tile layer 5(4)", "tile layer 3", "build(foul)"],
     interactionLayerNames: ["build(total)"],
     foregroundLayerNames: ["build(hide)"]
@@ -35,8 +39,9 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     label: "캠퍼스",
     backgroundKey: ASSET_KEYS.background.campus,
     entryPoint: { x: 220, y: 520 },
-    tmxKey: "map_tmx_campus",
+    tmxKey: ASSET_KEYS.map.campusTmx,
     collisionLayerNames: ["tile layer 4(2)", "tile layer 3"],
-    interactionLayerNames: ["tile layer 2", "tile layer 4(2)"]
+    interactionLayerNames: ["tile layer 2", "tile layer 4(2)"],
+    foregroundLayerNames: []
   }
 };

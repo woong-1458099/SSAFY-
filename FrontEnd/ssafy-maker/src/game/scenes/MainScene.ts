@@ -1,9 +1,10 @@
+// 월드 매니저, NPC 매니저, 대화 매니저, 디렉터를 조립해 샘플 씬을 실행하는 메인 씬
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
-import { AREA_DEFINITIONS } from "../definitions/areas/areaDefinitions";
 import { SceneDirector } from "../directors/SceneDirector";
 import { DialogueManager } from "../managers/DialogueManager";
 import { NpcManager } from "../managers/NpcManager";
+import { WorldManager } from "../managers/WorldManager";
 import { SCENE_001 } from "../scripts/scenes/scene_001";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
@@ -15,14 +16,21 @@ export class MainScene extends Phaser.Scene {
   }
 
   async create() {
-    const area = AREA_DEFINITIONS[SCENE_001.area];
-    this.add.rectangle(640, 360, 1280, 720, 0x31473a);
-    this.add.text(24, 24, area.label, { fontSize: "28px", color: "#ffffff" });
-
+    const debugLogger = new DebugEventLogger();
+    const worldManager = new WorldManager(this);
     const npcManager = new NpcManager(this);
     const dialogueManager = new DialogueManager(this);
-    const debugLogger = new DebugEventLogger();
     const director = new SceneDirector(npcManager, dialogueManager, debugLogger);
+
+    worldManager.loadArea(SCENE_001.area);
+
+    const tmxConfig = worldManager.getCurrentTmxConfig();
+    const parsedMap = worldManager.getCurrentParsedTmxMap();
+    const mapSize = parsedMap
+      ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`
+      : undefined;
+
+    debugLogger.setArea(SCENE_001.area, tmxConfig?.tmxKey, mapSize);
 
     let overlay: DebugOverlay | undefined;
     if (DEBUG_FLAGS.overlayEnabled) {
