@@ -1,9 +1,13 @@
-// 지역 정의와 TMX 설정을 읽어 현재 월드 상태, 기본 배경 표시, TMX 파싱 결과를 관리하는 월드 매니저
+// 지역 정의와 TMX 설정을 읽어 현재 월드 상태, 기본 배경 표시, TMX 파싱 결과와 레이어 조회 결과를 관리하는 월드 매니저
 import Phaser from "phaser";
 import type { AreaId } from "../../common/enums/area";
 import { AREA_DEFINITIONS, type AreaDefinition } from "../definitions/areas/areaDefinitions";
-import type { ParsedTmxMap, TmxAreaConfig } from "../systems/tmxNavigation";
-import { parseTmxMap } from "../systems/tmxNavigation";
+import type {
+  ParsedTmxMap,
+  ResolvedTmxLayers,
+  TmxAreaConfig
+} from "../systems/tmxNavigation";
+import { parseTmxMap, resolveTmxLayers } from "../systems/tmxNavigation";
 
 export class WorldManager {
   private scene: Phaser.Scene;
@@ -11,6 +15,7 @@ export class WorldManager {
   private background?: Phaser.GameObjects.Rectangle;
   private areaLabel?: Phaser.GameObjects.Text;
   private currentParsedTmxMap?: ParsedTmxMap;
+  private currentResolvedTmxLayers?: ResolvedTmxLayers;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -33,7 +38,9 @@ export class WorldManager {
 
     this.background.setFillStyle(this.resolveBackgroundColor(areaId));
     this.areaLabel.setText(area.label);
+
     this.currentParsedTmxMap = this.parseCurrentAreaTmx(area);
+    this.currentResolvedTmxLayers = this.resolveCurrentAreaLayers();
 
     return area;
   }
@@ -68,6 +75,10 @@ export class WorldManager {
     return this.currentParsedTmxMap;
   }
 
+  getCurrentResolvedTmxLayers() {
+    return this.currentResolvedTmxLayers;
+  }
+
   private parseCurrentAreaTmx(area: AreaDefinition) {
     if (!area.tmxKey) {
       return undefined;
@@ -79,6 +90,17 @@ export class WorldManager {
     }
 
     return parseTmxMap(rawTmx) ?? undefined;
+  }
+
+  private resolveCurrentAreaLayers() {
+    const parsedMap = this.currentParsedTmxMap;
+    const tmxConfig = this.getCurrentTmxConfig();
+
+    if (!parsedMap || !tmxConfig) {
+      return undefined;
+    }
+
+    return resolveTmxLayers(parsedMap, tmxConfig);
   }
 
   private requireArea(areaId: AreaId): AreaDefinition {

@@ -5,5 +5,8 @@ export type DebugState = {
   currentAreaId?: string;
   currentTmxKey?: string;
   mapSize?: string;
+  collisionLayerCount?: number;
+  interactionLayerCount?: number;
+  foregroundLayerCount?: number;
   events: string[];
 };

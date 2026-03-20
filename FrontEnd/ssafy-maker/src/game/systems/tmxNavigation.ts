@@ -20,6 +20,12 @@ export type TmxAreaConfig = {
   foregroundLayerNames: string[];
 };
 
+export type ResolvedTmxLayers = {
+  collisionLayers: ParsedTmxLayer[];
+  interactionLayers: ParsedTmxLayer[];
+  foregroundLayers: ParsedTmxLayer[];
+};
+
 export function getLayerByName(parsedMap: ParsedTmxMap, layerName: string) {
   return parsedMap.layers.find(
     (layer) => layer.name.trim().toLowerCase() === layerName.trim().toLowerCase()
@@ -30,6 +36,17 @@ export function getLayersByNames(parsedMap: ParsedTmxMap, layerNames: string[]) 
   return layerNames
     .map((layerName) => getLayerByName(parsedMap, layerName))
     .filter((layer): layer is ParsedTmxLayer => Boolean(layer));
+}
+
+export function resolveTmxLayers(
+  parsedMap: ParsedTmxMap,
+  areaConfig: TmxAreaConfig
+): ResolvedTmxLayers {
+  return {
+    collisionLayers: getLayersByNames(parsedMap, areaConfig.collisionLayerNames),
+    interactionLayers: getLayersByNames(parsedMap, areaConfig.interactionLayerNames),
+    foregroundLayers: getLayersByNames(parsedMap, areaConfig.foregroundLayerNames)
+  };
 }
 
 export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {

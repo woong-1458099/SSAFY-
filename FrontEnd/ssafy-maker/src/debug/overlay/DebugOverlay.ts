@@ -1,4 +1,4 @@
-// 현재 씬, 지역, TMX 키, 맵 크기, 액션, NPC 상태를 화면에 표시하는 디버그 오버레이
+// 현재 씬, 지역, TMX 키, 맵 크기, 레이어 개수, 액션, NPC 상태를 화면에 표시하는 디버그 오버레이
 import Phaser from "phaser";
 import type { DebugEventLogger } from "../services/DebugEventLogger";
 import type { NpcManager } from "../../game/managers/NpcManager";
@@ -29,6 +29,7 @@ export class DebugOverlay {
       `area: ${state.currentAreaId ?? "-"}`,
       `tmx: ${state.currentTmxKey ?? "-"}`,
       `map: ${state.mapSize ?? "-"}`,
+      `layers: c=${state.collisionLayerCount ?? 0}, i=${state.interactionLayerCount ?? 0}, f=${state.foregroundLayerCount ?? 0}`,
       `sceneScript: ${state.currentSceneId}`,
       `action: ${state.currentAction}`,
       `npcs:`,

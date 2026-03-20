@@ -26,11 +26,20 @@ export class MainScene extends Phaser.Scene {
 
     const tmxConfig = worldManager.getCurrentTmxConfig();
     const parsedMap = worldManager.getCurrentParsedTmxMap();
+    const resolvedLayers = worldManager.getCurrentResolvedTmxLayers();
+
     const mapSize = parsedMap
       ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`
       : undefined;
 
-    debugLogger.setArea(SCENE_001.area, tmxConfig?.tmxKey, mapSize);
+    debugLogger.setArea(
+      SCENE_001.area,
+      tmxConfig?.tmxKey,
+      mapSize,
+      resolvedLayers?.collisionLayers.length,
+      resolvedLayers?.interactionLayers.length,
+      resolvedLayers?.foregroundLayers.length
+    );
 
     let overlay: DebugOverlay | undefined;
     if (DEBUG_FLAGS.overlayEnabled) {
