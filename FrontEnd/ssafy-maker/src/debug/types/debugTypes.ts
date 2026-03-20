@@ -8,5 +8,7 @@ export type DebugState = {
   collisionLayerCount?: number;
   interactionLayerCount?: number;
   foregroundLayerCount?: number;
+  blockedCellCount?: number;
+  interactionCellCount?: number;
   events: string[];
 };

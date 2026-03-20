@@ -1,13 +1,18 @@
-// 지역 정의와 TMX 설정을 읽어 현재 월드 상태, 기본 배경 표시, TMX 파싱 결과와 레이어 조회 결과를 관리하는 월드 매니저
+// 지역 정의와 TMX 설정을 읽어 현재 월드 상태, TMX 파싱 결과, 레이어 조회 결과, 런타임 그리드를 관리하는 월드 매니저
 import Phaser from "phaser";
 import type { AreaId } from "../../common/enums/area";
 import { AREA_DEFINITIONS, type AreaDefinition } from "../definitions/areas/areaDefinitions";
 import type {
   ParsedTmxMap,
   ResolvedTmxLayers,
-  TmxAreaConfig
+  TmxAreaConfig,
+  TmxRuntimeGrids
 } from "../systems/tmxNavigation";
-import { parseTmxMap, resolveTmxLayers } from "../systems/tmxNavigation";
+import {
+  buildRuntimeGrids,
+  parseTmxMap,
+  resolveTmxLayers
+} from "../systems/tmxNavigation";
 
 export class WorldManager {
   private scene: Phaser.Scene;
@@ -16,6 +21,7 @@ export class WorldManager {
   private areaLabel?: Phaser.GameObjects.Text;
   private currentParsedTmxMap?: ParsedTmxMap;
   private currentResolvedTmxLayers?: ResolvedTmxLayers;
+  private currentRuntimeGrids?: TmxRuntimeGrids;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -41,6 +47,7 @@ export class WorldManager {
 
     this.currentParsedTmxMap = this.parseCurrentAreaTmx(area);
     this.currentResolvedTmxLayers = this.resolveCurrentAreaLayers();
+    this.currentRuntimeGrids = this.buildCurrentRuntimeGrids();
 
     return area;
   }
@@ -79,6 +86,10 @@ export class WorldManager {
     return this.currentResolvedTmxLayers;
   }
 
+  getCurrentRuntimeGrids() {
+    return this.currentRuntimeGrids;
+  }
+
   private parseCurrentAreaTmx(area: AreaDefinition) {
     if (!area.tmxKey) {
       return undefined;
@@ -101,6 +112,17 @@ export class WorldManager {
     }
 
     return resolveTmxLayers(parsedMap, tmxConfig);
+  }
+
+  private buildCurrentRuntimeGrids() {
+    if (!this.currentParsedTmxMap || !this.currentResolvedTmxLayers) {
+      return undefined;
+    }
+
+    return buildRuntimeGrids(
+      this.currentParsedTmxMap,
+      this.currentResolvedTmxLayers
+    );
   }
 
   private requireArea(areaId: AreaId): AreaDefinition {

@@ -9,6 +9,7 @@ import { SCENE_001 } from "../scripts/scenes/scene_001";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
 import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
+import { countTrueCells } from "../systems/tmxNavigation";
 
 export class MainScene extends Phaser.Scene {
   constructor() {
@@ -27,6 +28,7 @@ export class MainScene extends Phaser.Scene {
     const tmxConfig = worldManager.getCurrentTmxConfig();
     const parsedMap = worldManager.getCurrentParsedTmxMap();
     const resolvedLayers = worldManager.getCurrentResolvedTmxLayers();
+    const runtimeGrids = worldManager.getCurrentRuntimeGrids();
 
     const mapSize = parsedMap
       ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`
@@ -38,7 +40,9 @@ export class MainScene extends Phaser.Scene {
       mapSize,
       resolvedLayers?.collisionLayers.length,
       resolvedLayers?.interactionLayers.length,
-      resolvedLayers?.foregroundLayers.length
+      resolvedLayers?.foregroundLayers.length,
+      runtimeGrids ? countTrueCells(runtimeGrids.blockedGrid) : 0,
+      runtimeGrids ? countTrueCells(runtimeGrids.interactionGrid) : 0
     );
 
     let overlay: DebugOverlay | undefined;

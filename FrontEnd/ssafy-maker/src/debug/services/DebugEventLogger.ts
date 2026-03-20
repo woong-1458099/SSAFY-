@@ -1,4 +1,4 @@
-// 씬 액션과 현재 지역 및 TMX 레이어 상태를 기록해 디버그 오버레이에 전달하는 이벤트 로거
+// 씬 액션과 현재 지역 및 TMX 레이어/그리드 상태를 기록해 디버그 오버레이에 전달하는 이벤트 로거
 import type { DebugState } from "../types/debugTypes";
 
 export class DebugEventLogger {
@@ -11,6 +11,8 @@ export class DebugEventLogger {
   private collisionLayerCount = 0;
   private interactionLayerCount = 0;
   private foregroundLayerCount = 0;
+  private blockedCellCount = 0;
+  private interactionCellCount = 0;
 
   log(message: string) {
     this.events.unshift(message);
@@ -29,7 +31,9 @@ export class DebugEventLogger {
     mapSize?: string,
     collisionLayerCount?: number,
     interactionLayerCount?: number,
-    foregroundLayerCount?: number
+    foregroundLayerCount?: number,
+    blockedCellCount?: number,
+    interactionCellCount?: number
   ) {
     this.currentAreaId = areaId;
     this.currentTmxKey = tmxKey ?? "";
@@ -37,6 +41,8 @@ export class DebugEventLogger {
     this.collisionLayerCount = collisionLayerCount ?? 0;
     this.interactionLayerCount = interactionLayerCount ?? 0;
     this.foregroundLayerCount = foregroundLayerCount ?? 0;
+    this.blockedCellCount = blockedCellCount ?? 0;
+    this.interactionCellCount = interactionCellCount ?? 0;
 
     this.log(`area:${areaId}`);
 
@@ -51,6 +57,9 @@ export class DebugEventLogger {
     this.log(
       `layers:c=${this.collisionLayerCount},i=${this.interactionLayerCount},f=${this.foregroundLayerCount}`
     );
+    this.log(
+      `grid:blocked=${this.blockedCellCount},interaction=${this.interactionCellCount}`
+    );
   }
 
   getState(): DebugState {
@@ -63,6 +72,8 @@ export class DebugEventLogger {
       collisionLayerCount: this.collisionLayerCount,
       interactionLayerCount: this.interactionLayerCount,
       foregroundLayerCount: this.foregroundLayerCount,
+      blockedCellCount: this.blockedCellCount,
+      interactionCellCount: this.interactionCellCount,
       events: this.events
     };
   }

@@ -1,4 +1,4 @@
-// TMX 맵 파싱과 레이어 조회에 사용할 기본 타입과 유틸 함수를 제공
+// TMX 맵 파싱과 레이어 조회, 충돌/상호작용 그리드 생성에 사용할 타입과 유틸 함수를 제공
 export type ParsedTmxLayer = {
   name: string;
   visible: boolean;
@@ -26,6 +26,11 @@ export type ResolvedTmxLayers = {
   foregroundLayers: ParsedTmxLayer[];
 };
 
+export type TmxRuntimeGrids = {
+  blockedGrid: boolean[][];
+  interactionGrid: boolean[][];
+};
+
 export function getLayerByName(parsedMap: ParsedTmxMap, layerName: string) {
   return parsedMap.layers.find(
     (layer) => layer.name.trim().toLowerCase() === layerName.trim().toLowerCase()
@@ -47,6 +52,60 @@ export function resolveTmxLayers(
     interactionLayers: getLayersByNames(parsedMap, areaConfig.interactionLayerNames),
     foregroundLayers: getLayersByNames(parsedMap, areaConfig.foregroundLayerNames)
   };
+}
+
+export function buildBooleanGridFromLayers(
+  width: number,
+  height: number,
+  layers: ParsedTmxLayer[]
+) {
+  const grid = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => false)
+  );
+
+  for (const layer of layers) {
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if ((layer.data[y]?.[x] ?? 0) !== 0) {
+          grid[y][x] = true;
+        }
+      }
+    }
+  }
+
+  return grid;
+}
+
+export function buildRuntimeGrids(
+  parsedMap: ParsedTmxMap,
+  resolvedLayers: ResolvedTmxLayers
+): TmxRuntimeGrids {
+  return {
+    blockedGrid: buildBooleanGridFromLayers(
+      parsedMap.width,
+      parsedMap.height,
+      resolvedLayers.collisionLayers
+    ),
+    interactionGrid: buildBooleanGridFromLayers(
+      parsedMap.width,
+      parsedMap.height,
+      resolvedLayers.interactionLayers
+    )
+  };
+}
+
+export function countTrueCells(grid: boolean[][]) {
+  let count = 0;
+
+  for (const row of grid) {
+    for (const cell of row) {
+      if (cell) {
+        count += 1;
+      }
+    }
+  }
+
+  return count;
 }
 
 export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
