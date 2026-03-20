@@ -7,6 +7,8 @@ export const GAME_CONFIG: Phaser.Types.Core.GameConfig = {
   height: 720,
   parent: "app",
   backgroundColor: "#1f2430",
+  pixelArt: true,
+  antialias: false,
   scene: SCENE_REGISTRY,
   scale: {
     mode: Phaser.Scale.FIT,

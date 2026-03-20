@@ -3,6 +3,7 @@ import Phaser from "phaser";
 import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import type { AreaId } from "../../common/enums/area";
 import { AREA_DEFINITIONS, type AreaDefinition } from "../definitions/areas/areaDefinitions";
+import { RENDER_DEPTH } from "../systems/renderDepth";
 import type {
   ParsedTmxLayer,
   ParsedTmxMap,
@@ -19,9 +20,6 @@ import {
   parseTsxTileset,
   resolveTmxLayers
 } from "../systems/tmxNavigation";
-
-const BASE_MAP_DEPTH = 0;
-const FOREGROUND_MAP_DEPTH = 200;
 
 export type WorldRenderBounds = {
   offsetX: number;
@@ -189,7 +187,7 @@ export class WorldManager {
     const mapPixelHeight = parsedMap.height * parsedMap.tileHeight;
     const fitScaleX = this.scene.scale.width / mapPixelWidth;
     const fitScaleY = this.scene.scale.height / mapPixelHeight;
-    const scale = Math.min(fitScaleX, fitScaleY);
+    const scale = this.resolvePixelPerfectScale(fitScaleX, fitScaleY);
     const renderWidth = mapPixelWidth * scale;
     const renderHeight = mapPixelHeight * scale;
     const offsetX = Math.round((this.scene.scale.width - renderWidth) / 2);
@@ -283,10 +281,10 @@ export class WorldManager {
     );
 
     if (isForegroundLayer) {
-      return FOREGROUND_MAP_DEPTH + index;
+      return RENDER_DEPTH.foregroundMap + index;
     }
 
-    return BASE_MAP_DEPTH + index;
+    return RENDER_DEPTH.baseMap + index;
   }
 
   private requireArea(areaId: AreaId): AreaDefinition {
@@ -308,5 +306,10 @@ export class WorldManager {
       default:
         return 0x222222;
     }
+  }
+
+  private resolvePixelPerfectScale(fitScaleX: number, fitScaleY: number) {
+    // 한 줄 한글 설명: 픽셀 아트 타일이 찌그러지지 않도록 정수 배율만 사용합니다.
+    return Math.max(1, Math.floor(Math.min(fitScaleX, fitScaleY)));
   }
 }

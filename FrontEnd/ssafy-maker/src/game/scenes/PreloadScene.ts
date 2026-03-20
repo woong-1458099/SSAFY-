@@ -1,7 +1,9 @@
-// 게임 시작 전에 공통 에셋과 TMX/TSX 텍스트를 미리 로드하는 씬이다.
+// 게임 시작 전에 공통 에셋과 TMX/TSX, NPC sprite 리소스를 미리 로드하는 씬이다.
 import Phaser from "phaser";
 import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { NPC_ASSET_LIST } from "../definitions/assets/npcAssetCatalog";
+import { preloadNpcVisualAsset, registerNpcAnimations } from "../systems/npcAnimation";
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -18,9 +20,17 @@ export class PreloadScene extends Phaser.Scene {
     this.load.text(ASSET_KEYS.map.worldTmx, "assets/game/map/mainMap.tmx");
     this.load.text(ASSET_KEYS.map.downtownTmx, "assets/game/map/city.tmx");
     this.load.text(ASSET_KEYS.map.campusTmx, "assets/game/map/inSSAFY.tmx");
+
+    // NPC 비주얼 에셋 로드는 전용 시스템으로 위임한다.
+    for (const npcAsset of NPC_ASSET_LIST) {
+      preloadNpcVisualAsset(this, npcAsset);
+    }
   }
 
   create() {
+    // NPC 애니메이션 등록은 전용 시스템으로 위임한다.
+    registerNpcAnimations(this, NPC_ASSET_LIST);
+
     this.scene.start(SCENE_KEYS.main);
   }
 }

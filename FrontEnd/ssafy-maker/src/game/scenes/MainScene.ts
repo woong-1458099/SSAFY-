@@ -6,12 +6,14 @@ import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
 import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { SceneDirector } from "../directors/SceneDirector";
+import { getSceneState } from "../definitions/sceneStates/sceneStateRegistry";
 import { DialogueManager } from "../managers/DialogueManager";
 import { InteractionManager } from "../managers/InteractionManager";
 import { NpcManager } from "../managers/NpcManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { WorldManager } from "../managers/WorldManager";
 import { SCENE_001 } from "../scripts/scenes/scene_001";
+import { buildRuntimeSceneScript } from "../systems/sceneStateRuntime";
 import { countTrueCells, findFirstWalkableTile } from "../systems/tmxNavigation";
 
 export class MainScene extends Phaser.Scene {
@@ -47,9 +49,13 @@ export class MainScene extends Phaser.Scene {
       this.dialogueManager,
       this.debugLogger
     );
+    const initialSceneState = getSceneState(SCENE_001.initialStateId);
+    const runtimeSceneScript = buildRuntimeSceneScript(SCENE_001, initialSceneState);
 
-    this.worldManager.loadArea(SCENE_001.area);
-    this.interactionManager.setArea(SCENE_001.area);
+    this.worldManager.loadArea(runtimeSceneScript.area);
+    this.npcManager.setArea(runtimeSceneScript.area);
+    this.interactionManager.setArea(runtimeSceneScript.area);
+    this.interactionManager.setSceneState(initialSceneState);
 
     const tmxConfig = this.worldManager.getCurrentTmxConfig();
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
@@ -65,6 +71,7 @@ export class MainScene extends Phaser.Scene {
 
     this.debugLogger.setArea(
       SCENE_001.area,
+      runtimeSceneScript.area,
       tmxConfig?.tmxKey,
       mapSize,
       resolvedLayers?.collisionLayers.length,
@@ -88,7 +95,7 @@ export class MainScene extends Phaser.Scene {
       this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
     }
 
-    await director.run(SCENE_001);
+      await director.run(runtimeSceneScript);
   }
 
   update() {

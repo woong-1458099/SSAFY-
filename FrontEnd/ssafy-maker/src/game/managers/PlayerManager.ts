@@ -1,6 +1,7 @@
 // 플레이어 타일 상태와 이동을 관리하고 렌더 bounds 기준으로 좌표를 변환한다.
 import Phaser from "phaser";
 import type { PlayerSnapshot } from "../../common/types/player";
+import { getActorDepth } from "../systems/renderDepth";
 import type { ParsedTmxMap, TmxRuntimeGrids } from "../systems/tmxNavigation";
 import type { WorldRenderBounds } from "./WorldManager";
 
@@ -41,6 +42,7 @@ export class PlayerManager {
     const { x, y } = this.getWorldPositionFromTile(startTileX, startTileY);
 
     this.player = this.scene.add.rectangle(x, y, 28, 40, 0xffd166).setOrigin(0.5, 1);
+    this.player.setDepth(getActorDepth(y));
     this.cursors = this.scene.input.keyboard?.createCursorKeys();
   }
 
@@ -138,7 +140,15 @@ export class PlayerManager {
       x,
       y,
       duration: 120,
+      onUpdate: () => {
+        if (!this.player) {
+          return;
+        }
+
+        this.player.setDepth(getActorDepth(this.player.y));
+      },
       onComplete: () => {
+        this.player?.setDepth(getActorDepth(y));
         this.isMoving = false;
       }
     });

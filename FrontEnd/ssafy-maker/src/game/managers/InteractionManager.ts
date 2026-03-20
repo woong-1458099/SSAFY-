@@ -2,7 +2,7 @@
 import Phaser from "phaser";
 import type { AreaId } from "../../common/enums/area";
 import type { NpcId } from "../../common/enums/npc";
-import { getNpcPlacement, NPC_PLACEMENTS_BY_AREA } from "../definitions/npcs/npcPlacements";
+import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import type { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import type { DialogueManager } from "./DialogueManager";
 import type { NpcManager } from "./NpcManager";
@@ -21,6 +21,7 @@ export class InteractionManager {
   private currentTargetNpcId?: NpcId;
   private requiresInteractKeyRelease = false;
   private wasDialoguePlaying = false;
+  private currentSceneState?: SceneState;
 
   constructor(
     scene: Phaser.Scene,
@@ -39,6 +40,10 @@ export class InteractionManager {
 
   setArea(areaId: AreaId) {
     this.currentAreaId = areaId;
+  }
+
+  setSceneState(sceneState?: SceneState) {
+    this.currentSceneState = sceneState;
   }
 
   update() {
@@ -72,15 +77,15 @@ export class InteractionManager {
       return;
     }
 
-    const placement = getNpcPlacement(this.currentAreaId, this.currentTargetNpcId);
-    if (!placement) {
+    const npcState = this.getCurrentSceneStateNpc(this.currentTargetNpcId);
+    if (!npcState) {
       return;
     }
 
     this.debugLogger?.log(`interact:${this.currentTargetNpcId}`);
     this.isInteractionLocked = true;
 
-    this.dialogueManager.play(placement.dialogueId).finally(() => {
+    this.dialogueManager.play(npcState.dialogueId).finally(() => {
       this.isInteractionLocked = false;
       this.requiresInteractKeyRelease = true;
     });
@@ -104,7 +109,7 @@ export class InteractionManager {
   }
 
   private findNearbyNpcId(playerX: number, playerY: number, areaId: AreaId): NpcId | undefined {
-    const placements = NPC_PLACEMENTS_BY_AREA[areaId];
+    const placements = this.getCurrentSceneStateNpcs(areaId);
 
     for (const placement of placements) {
       const npcPosition = this.npcManager.getNpcWorldPosition(placement.npcId);
@@ -125,6 +130,18 @@ export class InteractionManager {
     }
 
     return undefined;
+  }
+
+  private getCurrentSceneStateNpcs(areaId: AreaId): SceneStateNpc[] {
+    if (!this.currentSceneState || this.currentSceneState.area !== areaId) {
+      return [];
+    }
+
+    return this.currentSceneState.npcs;
+  }
+
+  private getCurrentSceneStateNpc(npcId: NpcId) {
+    return this.currentSceneState?.npcs.find((npc) => npc.npcId === npcId);
   }
 
   private renderHint() {

@@ -9,10 +9,19 @@ export type AreaDefinition = {
   backgroundKey: string;
   entryPoint?: Vector2;
   tmxKey?: string;
+  npcScale?: number;
   collisionLayerNames: string[];
   interactionLayerNames: string[];
   foregroundLayerNames: string[];
 };
+
+// 한 줄 한글 설명: 지역 설정이 없을 때 사용할 NPC 기본 표시 배율입니다.
+export const DEFAULT_AREA_NPC_SCALE = 2.4;
+
+// 한 줄 한글 설명: 지역에 값이 없으면 공통 NPC 배율을 사용합니다.
+export function getAreaNpcScale(areaId: AreaId) {
+  return AREA_DEFINITIONS[areaId]?.npcScale ?? DEFAULT_AREA_NPC_SCALE;
+}
 
 export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
   world: {
@@ -20,6 +29,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     label: "전체 지도",
     backgroundKey: ASSET_KEYS.background.world,
     tmxKey: ASSET_KEYS.map.worldTmx,
+    npcScale: DEFAULT_AREA_NPC_SCALE,
     collisionLayerNames: ["root", "build"],
     interactionLayerNames: ["build"],
     foregroundLayerNames: ["tree"]
@@ -30,6 +40,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     backgroundKey: ASSET_KEYS.background.downtown,
     entryPoint: { x: 216, y: 520 },
     tmxKey: ASSET_KEYS.map.downtownTmx,
+    npcScale: DEFAULT_AREA_NPC_SCALE,
     collisionLayerNames: ["tile layer 5(4)", "tile layer 3", "build(foul)"],
     interactionLayerNames: ["build(total)"],
     foregroundLayerNames: ["build(hide)"]
@@ -40,6 +51,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     backgroundKey: ASSET_KEYS.background.campus,
     entryPoint: { x: 220, y: 520 },
     tmxKey: ASSET_KEYS.map.campusTmx,
+    npcScale: DEFAULT_AREA_NPC_SCALE,
     collisionLayerNames: ["tile layer 4(2)", "tile layer 3"],
     interactionLayerNames: ["tile layer 2", "tile layer 4(2)"],
     foregroundLayerNames: []

@@ -4,5 +4,6 @@ import type { SceneAction } from "./sceneAction";
 export type SceneScript = {
   id: string;
   area: AreaId;
+  initialStateId?: string;
   actions: SceneAction[];
 };

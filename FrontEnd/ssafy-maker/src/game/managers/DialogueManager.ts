@@ -12,6 +12,7 @@ export class DialogueManager {
   private box?: Phaser.GameObjects.Rectangle;
   private text?: Phaser.GameObjects.Text;
   private isPlaying = false;
+  private readonly uiDepth = 10000;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -21,6 +22,8 @@ export class DialogueManager {
     const script = this.requireDialogue(dialogueId);
     this.ensureUi();
     this.isPlaying = true;
+    this.box!.setVisible(true);
+    this.text!.setVisible(true);
 
     let currentNode: DialogueNode | undefined = script.nodes[script.startNodeId];
 
@@ -42,6 +45,8 @@ export class DialogueManager {
     }
 
     this.text!.setText("");
+    this.text!.setVisible(false);
+    this.box!.setVisible(false);
     this.isPlaying = false;
   }
 
@@ -73,12 +78,18 @@ export class DialogueManager {
 
     this.box = this.scene.add
       .rectangle(640, 610, 1100, 160, 0x000000, 0.75)
-      .setStrokeStyle(2, 0xffffff);
+      .setStrokeStyle(2, 0xffffff)
+      .setDepth(this.uiDepth)
+      .setScrollFactor(0)
+      .setVisible(false);
 
     this.text = this.scene.add.text(120, 560, "", {
       color: "#ffffff",
       fontSize: "22px",
       wordWrap: { width: 1000 }
-    });
+    })
+      .setDepth(this.uiDepth + 1)
+      .setScrollFactor(0)
+      .setVisible(false);
   }
 }
