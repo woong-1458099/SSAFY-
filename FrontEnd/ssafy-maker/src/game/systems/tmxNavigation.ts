@@ -67,6 +67,65 @@ export type TmxRuntimeGrids = {
   interactionGrid: boolean[][];
 };
 
+function cloneBooleanGrid(grid: boolean[][]) {
+  return grid.map((row) => [...row]);
+}
+
+function isTileInsideRect(tileX: number, tileY: number, rect: { x: number; y: number; width: number; height: number }) {
+  return (
+    tileX >= rect.x &&
+    tileX < rect.x + rect.width &&
+    tileY >= rect.y &&
+    tileY < rect.y + rect.height
+  );
+}
+
+export function applyWalkableTileZones(
+  blockedGrid: boolean[][],
+  walkableTileZones?: { x: number; y: number; width: number; height: number }[]
+) {
+  if (!walkableTileZones || walkableTileZones.length === 0) {
+    return blockedGrid;
+  }
+
+  const nextBlockedGrid = cloneBooleanGrid(blockedGrid);
+
+  for (let y = 0; y < nextBlockedGrid.length; y += 1) {
+    for (let x = 0; x < (nextBlockedGrid[y]?.length ?? 0); x += 1) {
+      const isAllowedTile = walkableTileZones.some((zone) => isTileInsideRect(x, y, zone));
+
+      if (!isAllowedTile) {
+        nextBlockedGrid[y][x] = true;
+      }
+    }
+  }
+
+  return nextBlockedGrid;
+}
+
+export function applyBlockedTileZones(
+  blockedGrid: boolean[][],
+  blockedTileZones?: { x: number; y: number; width: number; height: number }[]
+) {
+  if (!blockedTileZones || blockedTileZones.length === 0) {
+    return blockedGrid;
+  }
+
+  const nextBlockedGrid = cloneBooleanGrid(blockedGrid);
+
+  for (let y = 0; y < nextBlockedGrid.length; y += 1) {
+    for (let x = 0; x < (nextBlockedGrid[y]?.length ?? 0); x += 1) {
+      const isBlockedTile = blockedTileZones.some((zone) => isTileInsideRect(x, y, zone));
+
+      if (isBlockedTile) {
+        nextBlockedGrid[y][x] = true;
+      }
+    }
+  }
+
+  return nextBlockedGrid;
+}
+
 function isParsedTmxTilesetRef(
   value: ParsedTmxTilesetRef | null
 ): value is ParsedTmxTilesetRef {
@@ -120,14 +179,19 @@ export function buildBooleanGridFromLayers(
 
 export function buildRuntimeGrids(
   parsedMap: ParsedTmxMap,
-  resolvedLayers: ResolvedTmxLayers
+  resolvedLayers: ResolvedTmxLayers,
+  walkableTileZones?: { x: number; y: number; width: number; height: number }[],
+  blockedTileZones?: { x: number; y: number; width: number; height: number }[]
 ): TmxRuntimeGrids {
+  const baseBlockedGrid = buildBooleanGridFromLayers(
+    parsedMap.width,
+    parsedMap.height,
+    resolvedLayers.collisionLayers
+  );
+  const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
+
   return {
-    blockedGrid: buildBooleanGridFromLayers(
-      parsedMap.width,
-      parsedMap.height,
-      resolvedLayers.collisionLayers
-    ),
+    blockedGrid: applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones),
     interactionGrid: buildBooleanGridFromLayers(
       parsedMap.width,
       parsedMap.height,

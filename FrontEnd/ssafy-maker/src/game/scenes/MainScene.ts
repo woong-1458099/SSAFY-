@@ -11,7 +11,11 @@ import type { AreaId, PlaceId } from "../../common/enums/area";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
-import { getAreaTransitionDefinitions, type AreaTransitionId } from "../definitions/places/areaTransitionDefinitions";
+import {
+  getAreaTransitionDefinitions,
+  type AreaTransitionDefinition,
+  type AreaTransitionId
+} from "../definitions/places/areaTransitionDefinitions";
 import { resolvePlayerAppearanceDefinition } from "../definitions/player/playerAppearanceResolver";
 import { getSceneState } from "../definitions/sceneStates/sceneStateRegistry";
 import { DialogueManager } from "../managers/DialogueManager";
@@ -33,6 +37,7 @@ import {
 } from "../view/AreaTransitionOverlay";
 
 export class MainScene extends Phaser.Scene {
+  private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
   private worldGridOverlay?: WorldGridOverlay;
@@ -251,6 +256,17 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    const returnTransition = getAreaTransitionDefinitions(transition.toArea).find(
+      (item) => item.toArea === transition.fromArea
+    );
+
+    if (returnTransition) {
+      this.registry.set(
+        MainScene.PENDING_START_TILE_KEY,
+        this.resolveTransitionSpawnSeed(returnTransition)
+      );
+    }
+
     this.restartWithScene(getDefaultSceneIdForArea(transition.toArea));
   }
 
@@ -259,6 +275,18 @@ export class MainScene extends Phaser.Scene {
     parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>,
     runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>
   ) {
+    const pendingStartTile = this.registry.get(MainScene.PENDING_START_TILE_KEY) as
+      | { tileX: number; tileY: number }
+      | undefined;
+
+    if (pendingStartTile) {
+      this.registry.remove(MainScene.PENDING_START_TILE_KEY);
+
+      if (!runtimeGrids.blockedGrid[pendingStartTile.tileY]?.[pendingStartTile.tileX]) {
+        return pendingStartTile;
+      }
+    }
+
     const entryPoint = getAreaEntryPoint(areaId);
 
     if (!entryPoint) {
@@ -281,6 +309,13 @@ export class MainScene extends Phaser.Scene {
     }
 
     return findFirstWalkableTile(runtimeGrids.blockedGrid);
+  }
+
+  private resolveTransitionSpawnSeed(transition: AreaTransitionDefinition) {
+    return {
+      tileX: transition.tileX,
+      tileY: transition.tileY
+    };
   }
 
   private resolveAreaTransitionTargets(

@@ -48,6 +48,7 @@ export class WorldManager {
   private currentRenderBounds?: WorldRenderBounds;
   private renderedTilemaps: Phaser.Tilemaps.Tilemap[] = [];
   private renderedLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+  private blockedOverlayGraphics: Phaser.GameObjects.Graphics[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -152,11 +153,18 @@ export class WorldManager {
   }
 
   private buildCurrentRuntimeGrids() {
-    if (!this.currentParsedTmxMap || !this.currentResolvedTmxLayers) {
+    const area = this.getCurrentAreaDefinition();
+
+    if (!this.currentParsedTmxMap || !this.currentResolvedTmxLayers || !area) {
       return undefined;
     }
 
-    return buildRuntimeGrids(this.currentParsedTmxMap, this.currentResolvedTmxLayers);
+    return buildRuntimeGrids(
+      this.currentParsedTmxMap,
+      this.currentResolvedTmxLayers,
+      area.map.walkableTileZones,
+      area.map.blockedTileZones
+    );
   }
 
   private renderCurrentAreaMap() {
@@ -164,6 +172,8 @@ export class WorldManager {
     this.renderedTilemaps = [];
     this.renderedLayers.forEach((layer) => layer.destroy());
     this.renderedLayers = [];
+    this.blockedOverlayGraphics.forEach((overlay) => overlay.destroy());
+    this.blockedOverlayGraphics = [];
     this.currentRenderBounds = undefined;
 
     const parsedMap = this.currentParsedTmxMap;
@@ -240,6 +250,8 @@ export class WorldManager {
     if (this.renderedLayers.length > 0) {
       this.background?.setVisible(false);
     }
+
+    this.renderBlockedOverlays(area);
   }
 
   private addResolvedTileset(
@@ -284,6 +296,27 @@ export class WorldManager {
     }
 
     return RENDER_DEPTH.baseMap + index;
+  }
+
+  private renderBlockedOverlays(area: AreaDefinition) {
+    const renderBounds = this.currentRenderBounds;
+    const blockedOverlays = area.presentation.blockedOverlays;
+
+    if (!renderBounds || !blockedOverlays || blockedOverlays.length === 0) {
+      return;
+    }
+
+    blockedOverlays.forEach((overlay) => {
+      const graphics = this.scene.add.graphics().setDepth(RENDER_DEPTH.baseMap - 1);
+      const zoneX = renderBounds.offsetX + overlay.tileRect.x * renderBounds.tileWidth * renderBounds.scale;
+      const zoneY = renderBounds.offsetY + overlay.tileRect.y * renderBounds.tileHeight * renderBounds.scale;
+      const zoneWidth = overlay.tileRect.width * renderBounds.tileWidth * renderBounds.scale;
+      const zoneHeight = overlay.tileRect.height * renderBounds.tileHeight * renderBounds.scale;
+
+      graphics.fillStyle(overlay.color, overlay.alpha);
+      graphics.fillRect(zoneX, zoneY, zoneWidth, zoneHeight);
+      this.blockedOverlayGraphics.push(graphics);
+    });
   }
 
   private requireArea(areaId: AreaId): AreaDefinition {
