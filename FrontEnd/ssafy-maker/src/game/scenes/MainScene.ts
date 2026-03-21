@@ -112,6 +112,9 @@ export class MainScene extends Phaser.Scene {
 
     this.bindDebugControls();
     this.debugInputController.bind();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.debugInputController?.destroy();
+    });
 
     await director.run(runtimeSceneScript);
   }
@@ -164,6 +167,11 @@ export class MainScene extends Phaser.Scene {
           break;
         case "teleportPlayerToWorld":
           this.handleDebugTeleport(command.worldX, command.worldY);
+          break;
+        case "switchStartScene":
+          this.registry.set("startSceneId", command.sceneId);
+          this.debugLogger?.log(`debug:switch-scene:${command.sceneId}`);
+          this.scene.restart();
           break;
       }
     });
