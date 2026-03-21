@@ -95,7 +95,7 @@ export function createSettingsPage(scene: Phaser.Scene, bounds: Phaser.Geom.Rect
     color: "#edf7ff",
     resolution: 2
   });
-  const body = scene.add.text(bounds.x + 24, bounds.y + 68, "ESC: 메뉴 열기/닫기\nSPACE: 상호작용\nstats/HUD 메뉴 구조를 먼저 이식 중입니다.", {
+  const body = scene.add.text(bounds.x + 24, bounds.y + 68, "ESC: 메뉴 열기/닫기\nP: 주간 계획표 열기/닫기\nSPACE: 상호작용\nHUD에 행동력과 시간 진행 상태를 표시합니다.", {
     fontFamily: FONT_FAMILY,
     fontSize: "18px",
     color: "#cfe6ff",

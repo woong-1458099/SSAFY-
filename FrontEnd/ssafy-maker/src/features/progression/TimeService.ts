@@ -34,7 +34,9 @@ export function buildHudPatchFromTimeState(timeState: TimeState): Partial<HudSta
   return {
     timeLabel: TIME_CYCLE[timeState.timeCycleIndex],
     dayLabel: DAY_CYCLE[timeState.dayCycleIndex],
-    week: timeState.week
+    week: timeState.week,
+    actionPoint: timeState.actionPoint,
+    maxActionPoint: timeState.maxActionPoint
   };
 }
 

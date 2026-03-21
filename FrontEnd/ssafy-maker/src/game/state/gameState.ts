@@ -7,6 +7,8 @@ export type HudState = {
   locationLabel: string;
   week: number;
   dayLabel: string;
+  actionPoint: number;
+  maxActionPoint: number;
   hp: number;
   hpMax: number;
   money: number;
@@ -25,6 +27,8 @@ export const DEFAULT_HUD_STATE: HudState = {
   locationLabel: "전체 지도",
   week: 1,
   dayLabel: "월요일",
+  actionPoint: 4,
+  maxActionPoint: 4,
   hp: 82,
   hpMax: 100,
   money: 50000,
@@ -55,9 +59,12 @@ export function cloneGameState(state: RuntimeGameState): RuntimeGameState {
 
 export function clampHudState(hud: HudState): HudState {
   const hpMax = Math.max(1, Math.round(hud.hpMax));
+  const maxActionPoint = Math.max(0, Math.round(hud.maxActionPoint));
   return {
     ...hud,
     week: Math.max(1, Math.round(hud.week)),
+    maxActionPoint,
+    actionPoint: Phaser.Math.Clamp(Math.round(hud.actionPoint), 0, maxActionPoint),
     hpMax,
     hp: Phaser.Math.Clamp(Math.round(hud.hp), 0, hpMax),
     money: Math.max(0, Math.round(hud.money)),

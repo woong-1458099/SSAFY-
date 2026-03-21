@@ -29,6 +29,7 @@ export class GameHud {
   private readonly timeText: Phaser.GameObjects.Text;
   private readonly locationText: Phaser.GameObjects.Text;
   private readonly dayText: Phaser.GameObjects.Text;
+  private readonly actionPointText: Phaser.GameObjects.Text;
   private readonly hpText: Phaser.GameObjects.Text;
   private readonly moneyText: Phaser.GameObjects.Text;
   private readonly stressText: Phaser.GameObjects.Text;
@@ -52,6 +53,8 @@ export class GameHud {
     locationLabel: "전체 지도",
     week: 1,
     dayLabel: "월요일",
+    actionPoint: 4,
+    maxActionPoint: 4,
     hp: 82,
     hpMax: 100,
     money: 50000,
@@ -68,12 +71,13 @@ export class GameHud {
     this.hintGroup = scene.add.container(0, 0).setScrollFactor(0);
     this.root.add([this.leftGroup, this.rightGroup, this.topCenterGroup, this.hintGroup]);
 
-    const leftBg = scene.add.rectangle(0, 0, 176, 84, HUD_COLORS.panelBg, 0.9);
+    const leftBg = scene.add.rectangle(0, 0, 176, 110, HUD_COLORS.panelBg, 0.9);
     leftBg.setOrigin(0, 0);
     leftBg.setStrokeStyle(2, HUD_COLORS.panelBorder, 1);
     this.timeText = scene.add.text(12, 9, "", this.getTextStyle(25, HUD_COLORS.textMain, "bold"));
     this.locationText = scene.add.text(12, 45, "", this.getTextStyle(21, HUD_COLORS.textSoft));
-    this.leftGroup.add([leftBg, this.timeText, this.locationText]);
+    this.actionPointText = scene.add.text(12, 79, "", this.getTextStyle(16, HUD_COLORS.textSoft, "bold"));
+    this.leftGroup.add([leftBg, this.timeText, this.locationText, this.actionPointText]);
 
     const dayBg = scene.add.rectangle(0, 0, 156, 34, HUD_COLORS.panelBg, 0.9);
     dayBg.setOrigin(0.5, 0);
@@ -148,6 +152,7 @@ export class GameHud {
     this.timeText.setText(this.state.timeLabel);
     this.locationText.setText(this.state.locationLabel);
     this.dayText.setText(`${this.state.week}주차 ${this.state.dayLabel}`);
+    this.actionPointText.setText(`행동력 ${this.state.actionPoint}/${this.state.maxActionPoint}`);
 
     const hpRatio = hp / hpMax;
     this.hpBarFill.width = Math.round((this.hpBarMaxWidth - 4) * hpRatio);
