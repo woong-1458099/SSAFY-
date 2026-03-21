@@ -1,5 +1,5 @@
 // 월드 맵에서 보이는 장소 노드 정의와 이동 가능 여부를 관리
-import type { PlaceId } from "../../../common/enums/area";
+import type { AreaId, PlaceId } from "../../../common/enums/area";
 import type { Rect } from "../../../common/types/geometry";
 
 export type PlaceDefinition = {
@@ -7,6 +7,7 @@ export type PlaceDefinition = {
   label: string;
   zone: Rect;
   movable: boolean;
+  destinationArea?: AreaId;
 };
 
 export const PLACE_DEFINITIONS: Record<PlaceId, PlaceDefinition> = {
@@ -14,7 +15,8 @@ export const PLACE_DEFINITIONS: Record<PlaceId, PlaceDefinition> = {
     id: "campus",
     label: "캠퍼스",
     zone: { x: 190, y: 180, width: 190, height: 150 },
-    movable: true
+    movable: true,
+    destinationArea: "campus"
   },
   home: {
     id: "home",
@@ -38,6 +40,15 @@ export const PLACE_DEFINITIONS: Record<PlaceId, PlaceDefinition> = {
     id: "downtown",
     label: "번화가",
     zone: { x: 730, y: 180, width: 170, height: 140 },
-    movable: true
+    movable: true,
+    destinationArea: "downtown"
   }
 };
+
+export function getPlaceDefinition(placeId: PlaceId) {
+  return PLACE_DEFINITIONS[placeId];
+}
+
+export function getMovablePlaceDefinitions() {
+  return Object.values(PLACE_DEFINITIONS).filter((place) => place.movable && place.destinationArea);
+}

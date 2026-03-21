@@ -1,9 +1,13 @@
 // 플레이어와 NPC 사이의 근접 상호작용과 대화 시작, 상호작용 힌트 표시를 담당하는 상호작용 매니저
 import Phaser from "phaser";
-import type { AreaId } from "../../common/enums/area";
+import type { AreaId, PlaceId } from "../../common/enums/area";
 import type { NpcId } from "../../common/enums/npc";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import type { DebugEventLogger } from "../../debug/services/DebugEventLogger";
+import {
+  getMovablePlaceDefinitions,
+  getPlaceDefinition
+} from "../definitions/places/placeDefinitions";
 import type { DialogueManager } from "./DialogueManager";
 import type { NpcManager } from "./NpcManager";
 import type { PlayerManager } from "./PlayerManager";
@@ -19,9 +23,11 @@ export class InteractionManager {
   private isInteractionLocked = false;
   private hintText?: Phaser.GameObjects.Text;
   private currentTargetNpcId?: NpcId;
+  private currentTargetPlaceId?: PlaceId;
   private requiresInteractKeyRelease = false;
   private wasDialoguePlaying = false;
   private currentSceneState?: SceneState;
+  private onPlaceInteract?: (placeId: PlaceId) => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -46,6 +52,10 @@ export class InteractionManager {
     this.currentSceneState = sceneState;
   }
 
+  setPlaceInteractHandler(handler?: (placeId: PlaceId) => void) {
+    this.onPlaceInteract = handler;
+  }
+
   update() {
     const isDialoguePlaying = this.dialogueManager.isDialoguePlaying();
 
@@ -59,6 +69,7 @@ export class InteractionManager {
     }
 
     this.currentTargetNpcId = this.findCurrentTargetNpc();
+    this.currentTargetPlaceId = this.findCurrentTargetPlace();
     this.debugLogger?.setTargetNpc(this.currentTargetNpcId);
     this.renderHint();
 
@@ -73,22 +84,29 @@ export class InteractionManager {
       return;
     }
 
-    if (!this.currentTargetNpcId) {
+    if (this.currentTargetNpcId) {
+      const npcState = this.getCurrentSceneStateNpc(this.currentTargetNpcId);
+      if (!npcState) {
+        return;
+      }
+
+      this.debugLogger?.log(`interact:${this.currentTargetNpcId}`);
+      this.isInteractionLocked = true;
+
+      this.dialogueManager.play(npcState.dialogueId).finally(() => {
+        this.isInteractionLocked = false;
+        this.requiresInteractKeyRelease = true;
+      });
       return;
     }
 
-    const npcState = this.getCurrentSceneStateNpc(this.currentTargetNpcId);
-    if (!npcState) {
+    if (!this.currentTargetPlaceId || !this.onPlaceInteract) {
       return;
     }
 
-    this.debugLogger?.log(`interact:${this.currentTargetNpcId}`);
-    this.isInteractionLocked = true;
-
-    this.dialogueManager.play(npcState.dialogueId).finally(() => {
-      this.isInteractionLocked = false;
-      this.requiresInteractKeyRelease = true;
-    });
+    this.debugLogger?.log(`interact:place:${this.currentTargetPlaceId}`);
+    this.requiresInteractKeyRelease = true;
+    this.onPlaceInteract(this.currentTargetPlaceId);
   }
 
   isInputLocked() {
@@ -106,6 +124,29 @@ export class InteractionManager {
     }
 
     return this.findNearbyNpcId(player.x, player.y, this.currentAreaId);
+  }
+
+  private findCurrentTargetPlace() {
+    if (this.currentAreaId !== "world") {
+      return undefined;
+    }
+
+    const player = this.playerManager.getSnapshot();
+    if (!player) {
+      return undefined;
+    }
+
+    for (const place of getMovablePlaceDefinitions()) {
+      const centerX = place.zone.x + place.zone.width / 2;
+      const centerY = place.zone.y + place.zone.height / 2;
+      const distance = Phaser.Math.Distance.Between(player.x, player.y, centerX, centerY);
+
+      if (distance <= 110) {
+        return place.id;
+      }
+    }
+
+    return undefined;
   }
 
   private findNearbyNpcId(playerX: number, playerY: number, areaId: AreaId): NpcId | undefined {
@@ -162,6 +203,17 @@ export class InteractionManager {
       !this.requiresInteractKeyRelease
     ) {
       this.hintText.setText(`[SPACE] ${this.currentTargetNpcId}와 대화`);
+      this.hintText.setVisible(true);
+      return;
+    }
+
+    if (
+      this.currentTargetPlaceId &&
+      !this.dialogueManager.isDialoguePlaying() &&
+      !this.requiresInteractKeyRelease
+    ) {
+      const place = getPlaceDefinition(this.currentTargetPlaceId);
+      this.hintText.setText(`[SPACE] ${place.label}로 이동`);
       this.hintText.setVisible(true);
       return;
     }

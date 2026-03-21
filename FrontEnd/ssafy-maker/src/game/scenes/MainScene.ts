@@ -7,6 +7,7 @@ import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
 import { DebugCommandBus } from "../../debug/services/DebugCommandBus";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugInputController } from "../../debug/services/DebugInputController";
+import type { AreaId, PlaceId } from "../../common/enums/area";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
@@ -18,7 +19,11 @@ import { NpcManager } from "../managers/NpcManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { WorldManager } from "../managers/WorldManager";
 import type { SceneId } from "../scripts/scenes/sceneIds";
-import { DEFAULT_START_SCENE_ID, getSceneScript } from "../scripts/scenes/sceneRegistry";
+import {
+  DEFAULT_START_SCENE_ID,
+  getDefaultSceneIdForArea,
+  getSceneScript
+} from "../scripts/scenes/sceneRegistry";
 import { buildRuntimeSceneScript, normalizeSceneState } from "../systems/sceneStateRuntime";
 import { countTrueCells, findFirstWalkableTile } from "../systems/tmxNavigation";
 
@@ -59,6 +64,9 @@ export class MainScene extends Phaser.Scene {
       this.dialogueManager,
       this.debugLogger
     );
+    this.interactionManager.setPlaceInteractHandler((placeId) => {
+      this.handlePlaceAreaTransition(placeId);
+    });
     const startScene = this.resolveStartScene();
     const initialSceneState = normalizeSceneState(getSceneState(startScene.initialStateId));
     const runtimeSceneScript = buildRuntimeSceneScript(startScene, initialSceneState);
@@ -212,8 +220,26 @@ export class MainScene extends Phaser.Scene {
     return getSceneScript(sceneId) ?? getSceneScript(DEFAULT_START_SCENE_ID);
   }
 
+  private restartWithScene(sceneId: SceneId) {
+    this.registry.set("startSceneId", sceneId);
+    this.scene.restart();
+  }
+
+  private handlePlaceAreaTransition(placeId: PlaceId) {
+    switch (placeId) {
+      case "downtown":
+        this.restartWithScene(getDefaultSceneIdForArea("downtown"));
+        return;
+      case "campus":
+        this.restartWithScene(getDefaultSceneIdForArea("campus"));
+        return;
+      default:
+        this.debugLogger?.log(`debug:unhandled-place:${placeId}`);
+    }
+  }
+
   private resolvePlayerStartTile(
-    areaId: Parameters<typeof getAreaEntryPoint>[0],
+    areaId: AreaId,
     parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>,
     runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>
   ) {
