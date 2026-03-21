@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
+import { DebugMinigameHud } from "../../debug/overlay/DebugMinigameHud";
 import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
 import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
 import { DebugCommandBus } from "../../debug/services/DebugCommandBus";
@@ -31,6 +32,7 @@ export class MainScene extends Phaser.Scene {
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
   private worldGridOverlay?: WorldGridOverlay;
+  private debugMinigameHud?: DebugMinigameHud;
   private worldManager?: WorldManager;
   private playerManager?: PlayerManager;
   private npcManager?: NpcManager;
@@ -111,6 +113,7 @@ export class MainScene extends Phaser.Scene {
 
     if (DEBUG_FLAGS.overlayEnabled && this.debugLogger && this.npcManager) {
       this.debugOverlay = new DebugOverlay(this, this.debugLogger, this.npcManager);
+      this.debugMinigameHud = new DebugMinigameHud(this);
     }
 
     if (DEBUG_FLAGS.worldGridEnabled) {
@@ -121,6 +124,7 @@ export class MainScene extends Phaser.Scene {
     this.bindDebugControls();
     this.debugInputController.bind();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.debugMinigameHud?.destroy();
       this.debugInputController?.destroy();
     });
 
@@ -141,7 +145,9 @@ export class MainScene extends Phaser.Scene {
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
     const renderBounds = this.worldManager.getCurrentRenderBounds();
 
-    this.playerManager.setInputLocked(this.interactionManager.isInputLocked());
+    this.playerManager.setInputLocked(
+      this.interactionManager.isInputLocked() || this.debugMinigameHud?.isVisible() === true
+    );
     this.playerManager.update(runtimeGrids, parsedMap);
     this.interactionManager.update();
 
@@ -165,12 +171,21 @@ export class MainScene extends Phaser.Scene {
       switch (command.type) {
         case "toggleDebugOverlay":
           if (this.debugOverlay) {
-            this.debugOverlay.setVisible(!this.debugOverlay.isVisible());
+            const nextVisible = !this.debugOverlay.isVisible();
+            this.debugOverlay.setVisible(nextVisible);
+            if (!nextVisible) {
+              this.debugMinigameHud?.hide();
+            }
           }
           break;
         case "toggleWorldGrid":
           if (this.worldGridOverlay) {
             this.worldGridOverlay.setVisible(!this.worldGridOverlay.isVisible());
+          }
+          break;
+        case "toggleMinigameHud":
+          if (this.debugOverlay?.isVisible()) {
+            this.debugMinigameHud?.toggle();
           }
           break;
         case "teleportPlayerToWorld":

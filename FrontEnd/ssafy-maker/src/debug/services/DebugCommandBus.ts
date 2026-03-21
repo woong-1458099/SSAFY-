@@ -5,7 +5,8 @@ export type DebugCommand =
   | { type: "toggleDebugOverlay" }
   | { type: "toggleWorldGrid" }
   | { type: "teleportPlayerToWorld"; worldX: number; worldY: number }
-  | { type: "switchStartScene"; sceneId: SceneId };
+  | { type: "switchStartScene"; sceneId: SceneId }
+  | { type: "toggleMinigameHud" };
 
 type DebugCommandListener = (command: DebugCommand) => void;
 
