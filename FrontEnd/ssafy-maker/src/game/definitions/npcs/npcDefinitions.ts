@@ -15,7 +15,7 @@ export const NPC_DEFINITIONS: Record<NpcId, NpcDefinition> = {
     id: "minsu",
     label: "민수",
     visualAssetId: "minsu",
-    defaultFacing: "right",
+    defaultFacing: "down",
     moveSpeed: 140
   },
   hyewon: {
@@ -23,7 +23,7 @@ export const NPC_DEFINITIONS: Record<NpcId, NpcDefinition> = {
     label: "혜원",
     // 논리 NPC도 실제 에셋 roster 기준 이름으로 맞춘다.
     visualAssetId: "hyewon",
-    defaultFacing: "left",
+    defaultFacing: "down",
     moveSpeed: 140
   },
   hyunseok: {

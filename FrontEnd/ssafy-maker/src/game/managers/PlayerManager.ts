@@ -1,25 +1,40 @@
 // 플레이어 타일 상태와 이동을 관리하고 렌더 bounds 기준으로 좌표를 변환한다.
 import Phaser from "phaser";
-import type { PlayerSnapshot } from "../../common/types/player";
+import type { PlayerAppearanceDefinition, PlayerSnapshot } from "../../common/types/player";
+import type { Facing } from "../../common/enums/facing";
 import { getActorDepth } from "../systems/renderDepth";
 import type { ParsedTmxMap, TmxRuntimeGrids } from "../systems/tmxNavigation";
+import {
+  createPlayerVisual,
+  type PlayerVisual,
+  updatePlayerVisualFrame
+} from "../systems/playerVisual";
+import { getDefaultPlayerAppearanceDefinition } from "../definitions/player/playerAppearanceDefinitions";
 import type { WorldRenderBounds } from "./WorldManager";
 
 export class PlayerManager {
   private scene: Phaser.Scene;
-  private player?: Phaser.GameObjects.Rectangle;
+  private player?: PlayerVisual;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private isMoving = false;
   private isInputLocked = false;
   private tileSize = 32;
   private currentTileX = 0;
   private currentTileY = 0;
-  private moveRepeatDelay = 140;
+  private moveRepeatDelay = 110;
   private lastMoveAt = 0;
   private renderBounds?: WorldRenderBounds;
+  private currentFacing: Facing = "down";
+  private appearance: PlayerAppearanceDefinition = getDefaultPlayerAppearanceDefinition();
+  private runtimeGrids?: TmxRuntimeGrids;
+  private parsedMap?: ParsedTmxMap;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+  }
+
+  setAppearance(appearance: PlayerAppearanceDefinition) {
+    this.appearance = appearance;
   }
 
   setRenderBounds(renderBounds?: WorldRenderBounds) {
@@ -31,7 +46,8 @@ export class PlayerManager {
     }
 
     const { x, y } = this.getWorldPositionFromTile(this.currentTileX, this.currentTileY);
-    this.player.setPosition(x, y);
+    this.player.root.setPosition(x, y);
+    this.player.root.setDepth(getActorDepth(y));
   }
 
   create(startTileX: number, startTileY: number, tileSize = 32) {
@@ -41,8 +57,9 @@ export class PlayerManager {
 
     const { x, y } = this.getWorldPositionFromTile(startTileX, startTileY);
 
-    this.player = this.scene.add.rectangle(x, y, 28, 40, 0xffd166).setOrigin(0.5, 1);
-    this.player.setDepth(getActorDepth(y));
+    this.player = createPlayerVisual(this.scene, x, y, this.appearance);
+    this.player.root.setDepth(getActorDepth(y));
+    updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
     this.cursors = this.scene.input.keyboard?.createCursorKeys();
   }
 
@@ -51,6 +68,9 @@ export class PlayerManager {
   }
 
   update(runtimeGrids?: TmxRuntimeGrids, parsedMap?: ParsedTmxMap) {
+    this.runtimeGrids = runtimeGrids;
+    this.parsedMap = parsedMap;
+
     if (
       !this.player ||
       !this.cursors ||
@@ -67,37 +87,7 @@ export class PlayerManager {
       return;
     }
 
-    let nextTileX = this.currentTileX;
-    let nextTileY = this.currentTileY;
-    let hasInput = false;
-
-    if (this.cursors.left?.isDown) {
-      nextTileX -= 1;
-      hasInput = true;
-    } else if (this.cursors.right?.isDown) {
-      nextTileX += 1;
-      hasInput = true;
-    } else if (this.cursors.up?.isDown) {
-      nextTileY -= 1;
-      hasInput = true;
-    } else if (this.cursors.down?.isDown) {
-      nextTileY += 1;
-      hasInput = true;
-    }
-
-    if (!hasInput) {
-      return;
-    }
-
-    this.lastMoveAt = now;
-
-    if (!this.canMoveTo(nextTileX, nextTileY, runtimeGrids, parsedMap)) {
-      return;
-    }
-
-    this.currentTileX = nextTileX;
-    this.currentTileY = nextTileY;
-    this.moveToTile(nextTileX, nextTileY);
+    this.tryStartMoveFromInput(now);
   }
 
   getSnapshot(): PlayerSnapshot | undefined {
@@ -106,11 +96,26 @@ export class PlayerManager {
     }
 
     return {
-      x: this.player.x,
-      y: this.player.y,
+      x: this.player.root.x,
+      y: this.player.root.y,
       tileX: this.currentTileX,
       tileY: this.currentTileY
     };
+  }
+
+  debugTeleportToTile(tileX: number, tileY: number) {
+    if (!this.player) {
+      return false;
+    }
+
+    const { x, y } = this.getWorldPositionFromTile(tileX, tileY);
+    this.currentTileX = tileX;
+    this.currentTileY = tileY;
+    this.isMoving = false;
+    this.player.root.setPosition(x, y);
+    this.player.root.setDepth(getActorDepth(y));
+    updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
+    return true;
   }
 
   private canMoveTo(
@@ -135,8 +140,11 @@ export class PlayerManager {
 
     const { x, y } = this.getWorldPositionFromTile(tileX, tileY);
 
+    // 한 줄 한글 설명: tween 첫 프레임 전에 이전 idle 방향이 비치지 않도록 즉시 이동 프레임으로 전환한다.
+    updatePlayerVisualFrame(this.player, this.currentFacing, true, this.scene.time.now);
+
     this.scene.tweens.add({
-      targets: this.player,
+      targets: this.player.root,
       x,
       y,
       duration: 120,
@@ -145,13 +153,109 @@ export class PlayerManager {
           return;
         }
 
-        this.player.setDepth(getActorDepth(this.player.y));
+        updatePlayerVisualFrame(this.player, this.currentFacing, true, this.scene.time.now);
+        this.player.root.setDepth(getActorDepth(this.player.root.y));
       },
       onComplete: () => {
-        this.player?.setDepth(getActorDepth(y));
+        if (this.player) {
+          this.player.root.setDepth(getActorDepth(y));
+        }
         this.isMoving = false;
+
+        // 한 줄 한글 설명: 입력이 유지되면 idle로 떨어지지 않고 다음 타일 이동을 바로 이어서 시작한다.
+        if (this.tryStartMoveFromInput(this.scene.time.now, true)) {
+          return;
+        }
+
+        if (this.player) {
+          updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
+        }
       }
     });
+  }
+
+  private tryStartMoveFromInput(now: number, isChainedMove = false) {
+    if (!this.player || !this.cursors || !this.runtimeGrids || !this.parsedMap) {
+      return false;
+    }
+
+    const nextMove = this.getRequestedMove();
+    if (!nextMove) {
+      return false;
+    }
+
+    if (!isChainedMove && now - this.lastMoveAt < this.moveRepeatDelay) {
+      return false;
+    }
+
+    if (!this.canMoveTo(nextMove.tileX, nextMove.tileY, this.runtimeGrids, this.parsedMap)) {
+      updatePlayerVisualFrame(this.player, nextMove.facing, false, now);
+      this.currentFacing = nextMove.facing;
+      return false;
+    }
+
+    this.lastMoveAt = now;
+    this.currentFacing = nextMove.facing;
+    this.currentTileX = nextMove.tileX;
+    this.currentTileY = nextMove.tileY;
+    this.moveToTile(nextMove.tileX, nextMove.tileY);
+    return true;
+  }
+
+  private getRequestedMove() {
+    if (!this.cursors) {
+      return undefined;
+    }
+
+    if (this.cursors.left?.isDown) {
+      return {
+        tileX: this.currentTileX - 1,
+        tileY: this.currentTileY,
+        facing: "left" as const
+      };
+    }
+
+    if (this.cursors.right?.isDown) {
+      return {
+        tileX: this.currentTileX + 1,
+        tileY: this.currentTileY,
+        facing: "right" as const
+      };
+    }
+
+    if (this.cursors.up?.isDown) {
+      return {
+        tileX: this.currentTileX,
+        tileY: this.currentTileY - 1,
+        facing: "up" as const
+      };
+    }
+
+    if (this.cursors.down?.isDown) {
+      return {
+        tileX: this.currentTileX,
+        tileY: this.currentTileY + 1,
+        facing: "down" as const
+      };
+    }
+
+    return undefined;
+  }
+
+  private resolveFacing(nextTileX: number, nextTileY: number): Facing {
+    if (nextTileX < this.currentTileX) {
+      return "left";
+    }
+
+    if (nextTileX > this.currentTileX) {
+      return "right";
+    }
+
+    if (nextTileY < this.currentTileY) {
+      return "up";
+    }
+
+    return "down";
   }
 
   private getWorldPositionFromTile(tileX: number, tileY: number) {

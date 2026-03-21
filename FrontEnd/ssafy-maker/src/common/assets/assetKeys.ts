@@ -3,6 +3,8 @@ const NPC_IDLE_TEXTURE_PREFIX = "npc-idle";
 const NPC_WALK_TEXTURE_PREFIX = "npc-walk";
 const NPC_IDLE_ANIMATION_PREFIX = "npc-idle-anim";
 const NPC_WALK_ANIMATION_PREFIX = "npc-walk-anim";
+const PLAYER_IDLE_TEXTURE_PREFIX = "player-idle";
+const PLAYER_WALK_TEXTURE_PREFIX = "player-walk";
 
 export const ASSET_KEYS = {
   background: {
@@ -37,4 +39,14 @@ export function getNpcWalkAnimationKey(npcVisualId: string) {
 // NPC idle 애니메이션 키를 규칙 기반으로 생성한다.
 export function getNpcIdleAnimationKey(npcVisualId: string) {
   return `${NPC_IDLE_ANIMATION_PREFIX}-${npcVisualId}`;
+}
+
+// 플레이어 idle 텍스처 키를 규칙 기반으로 생성한다.
+export function getPlayerIdleTextureKey(playerAppearanceId: string, layer: string) {
+  return `${PLAYER_IDLE_TEXTURE_PREFIX}-${playerAppearanceId}-${layer}`;
+}
+
+// 플레이어 walking 텍스처 키를 규칙 기반으로 생성한다.
+export function getPlayerWalkTextureKey(playerAppearanceId: string, layer: string) {
+  return `${PLAYER_WALK_TEXTURE_PREFIX}-${playerAppearanceId}-${layer}`;
 }

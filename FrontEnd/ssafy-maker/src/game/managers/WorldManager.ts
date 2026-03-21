@@ -2,7 +2,12 @@
 import Phaser from "phaser";
 import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import type { AreaId } from "../../common/enums/area";
-import { AREA_DEFINITIONS, type AreaDefinition } from "../definitions/areas/areaDefinitions";
+import {
+  getAreaDefinition,
+  getAreaMapDefinition,
+  getAreaTmxConfig,
+  type AreaDefinition
+} from "../definitions/areas/areaDefinitions";
 import { RENDER_DEPTH } from "../systems/renderDepth";
 import type {
   ParsedTmxLayer,
@@ -86,21 +91,15 @@ export class WorldManager {
       return undefined;
     }
 
-    return AREA_DEFINITIONS[this.currentAreaId];
+    return getAreaDefinition(this.currentAreaId);
   }
 
   getCurrentTmxConfig(): TmxAreaConfig | undefined {
-    const area = this.getCurrentAreaDefinition();
-    if (!area?.tmxKey) {
+    if (!this.currentAreaId) {
       return undefined;
     }
 
-    return {
-      tmxKey: area.tmxKey,
-      collisionLayerNames: area.collisionLayerNames,
-      interactionLayerNames: area.interactionLayerNames,
-      foregroundLayerNames: area.foregroundLayerNames
-    };
+    return getAreaTmxConfig(this.currentAreaId);
   }
 
   getCurrentParsedTmxMap() {
@@ -120,11 +119,11 @@ export class WorldManager {
   }
 
   private parseCurrentAreaTmx(area: AreaDefinition) {
-    if (!area.tmxKey) {
+    if (!area.map.tmxKey) {
       return undefined;
     }
 
-    const rawTmx = this.scene.cache.text.get(area.tmxKey) as string | undefined;
+    const rawTmx = this.scene.cache.text.get(area.map.tmxKey) as string | undefined;
     if (!rawTmx) {
       return undefined;
     }
@@ -276,7 +275,7 @@ export class WorldManager {
   ) {
     const normalized = layer.name.trim().toLowerCase();
 
-    const isForegroundLayer = area.foregroundLayerNames.some(
+    const isForegroundLayer = area.map.foregroundLayerNames.some(
       (name) => name.trim().toLowerCase() === normalized
     );
 
@@ -288,11 +287,7 @@ export class WorldManager {
   }
 
   private requireArea(areaId: AreaId): AreaDefinition {
-    const area = AREA_DEFINITIONS[areaId];
-    if (!area) {
-      throw new Error(`Area not found: ${areaId}`);
-    }
-    return area;
+    return getAreaDefinition(areaId);
   }
 
   private resolveBackgroundColor(areaId: AreaId) {

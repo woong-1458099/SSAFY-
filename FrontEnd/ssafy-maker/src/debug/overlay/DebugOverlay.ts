@@ -5,6 +5,7 @@ import type { NpcManager } from "../../game/managers/NpcManager";
 
 export class DebugOverlay {
   private text: Phaser.GameObjects.Text;
+  private visible = true;
 
   constructor(
     private scene: Phaser.Scene,
@@ -19,6 +20,12 @@ export class DebugOverlay {
   }
 
   render() {
+    if (!this.visible) {
+      this.text.setVisible(false);
+      return;
+    }
+
+    this.text.setVisible(true);
     const state = this.logger.getState();
     const npcs = this.npcManager.getSnapshot()
       .map((npc) => `${npc.id} (${Math.round(npc.x)}, ${Math.round(npc.y)}) ${npc.facing}`)
@@ -41,5 +48,14 @@ export class DebugOverlay {
       `events:`,
       ...state.events.slice(0, 5)
     ]);
+  }
+
+  setVisible(visible: boolean) {
+    this.visible = visible;
+    this.text.setVisible(visible);
+  }
+
+  isVisible() {
+    return this.visible;
   }
 }

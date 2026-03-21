@@ -4,6 +4,7 @@ import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { NPC_ASSET_LIST } from "../definitions/assets/npcAssetCatalog";
 import { preloadNpcVisualAsset, registerNpcAnimations } from "../systems/npcAnimation";
+import { preloadPlayerVisualAssets } from "../systems/playerVisual";
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -25,6 +26,9 @@ export class PreloadScene extends Phaser.Scene {
     for (const npcAsset of NPC_ASSET_LIST) {
       preloadNpcVisualAsset(this, npcAsset);
     }
+
+    // 플레이어 기본 비주얼 에셋은 전용 시스템에서 로드한다.
+    preloadPlayerVisualAssets(this);
   }
 
   create() {

@@ -7,6 +7,7 @@ export class WorldGridOverlay {
   private scene: Phaser.Scene;
   private blockedGraphics: Phaser.GameObjects.Graphics;
   private interactionGraphics: Phaser.GameObjects.Graphics;
+  private visible = true;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -22,7 +23,7 @@ export class WorldGridOverlay {
     this.blockedGraphics.clear();
     this.interactionGraphics.clear();
 
-    if (!runtimeGrids || !parsedMap) {
+    if (!this.visible || !runtimeGrids || !parsedMap) {
       return;
     }
 
@@ -50,5 +51,18 @@ export class WorldGridOverlay {
         }
       }
     }
+  }
+
+  setVisible(visible: boolean) {
+    this.visible = visible;
+
+    if (!visible) {
+      this.blockedGraphics.clear();
+      this.interactionGraphics.clear();
+    }
+  }
+
+  isVisible() {
+    return this.visible;
   }
 }
