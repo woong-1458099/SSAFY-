@@ -12,6 +12,7 @@ import type { AreaId, PlaceId } from "../../common/enums/area";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
+import { getStaticPlaceDefinitions } from "../definitions/places/placeDefinitions";
 import {
   getAreaTransitionDefinitions,
   type AreaTransitionDefinition,
@@ -20,7 +21,10 @@ import {
 import { resolvePlayerAppearanceDefinition } from "../definitions/player/playerAppearanceResolver";
 import { getSceneState } from "../definitions/sceneStates/sceneStateRegistry";
 import { DialogueManager } from "../managers/DialogueManager";
-import { InteractionManager } from "../managers/InteractionManager";
+import {
+  InteractionManager,
+  type RuntimeStaticPlaceTarget
+} from "../managers/InteractionManager";
 import { NpcManager } from "../managers/NpcManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { WorldManager } from "../managers/WorldManager";
@@ -101,7 +105,9 @@ export class MainScene extends Phaser.Scene {
 
     this.playerManager.setRenderBounds(renderBounds);
     const transitionTargets = this.resolveAreaTransitionTargets(runtimeSceneScript.area, renderBounds);
+    const staticPlaceTargets = this.resolveStaticPlaceTargets(runtimeSceneScript.area, renderBounds);
     this.interactionManager.setTransitionTargets(transitionTargets);
+    this.interactionManager.setStaticPlaceTargets(staticPlaceTargets);
 
     const mapSize = parsedMap
       ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`
@@ -368,6 +374,23 @@ export class MainScene extends Phaser.Scene {
       tileY: transition.tileY,
       tileWidth: transition.tileWidth ?? 1,
       tileHeight: transition.tileHeight ?? 1
+    }));
+  }
+
+  private resolveStaticPlaceTargets(
+    areaId: AreaId,
+    renderBounds?: ReturnType<WorldManager["getCurrentRenderBounds"]>
+  ): RuntimeStaticPlaceTarget[] {
+    if (!renderBounds) {
+      return [];
+    }
+
+    return getStaticPlaceDefinitions(areaId).map((place) => ({
+      id: place.id,
+      label: place.label,
+      dialogueId: place.dialogueId!,
+      x: renderBounds.offsetX + (place.zone.x + place.zone.width / 2) * renderBounds.scale,
+      y: renderBounds.offsetY + (place.zone.y + place.zone.height / 2) * renderBounds.scale
     }));
   }
 }

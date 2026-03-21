@@ -12,7 +12,12 @@ export const PLACE_IDS = {
   downtown: "downtown",
   campus: "campus",
   cafe: "cafe",
-  store: "store"
+  store: "store",
+  gym: "gym",
+  ramen: "ramen",
+  lotto: "lotto",
+  karaoke: "karaoke",
+  beer: "beer"
 } as const;
 
 export type PlaceId = (typeof PLACE_IDS)[keyof typeof PLACE_IDS];
