@@ -2,6 +2,12 @@
 
 이 문서는 스토리 추가, NPC 배치, 간단한 컷신 연출을 수정할 AI에게 바로 먹이는 작업용 문서다.
 
+범위:
+
+- 이 문서는 전체 프로젝트 구조 설명서가 아니다.
+- 목적은 스토리, NPC, 대화, 컷신, 지역 이동 관련 작업을 빠르게 처리하게 하는 것이다.
+- 저장, 인증, 인벤토리, 진행, 미니게임 전체 구조는 `docs/Front/AI_FRONT_STRUCTURE_GUIDE.md`를 먼저 확인한 뒤 들어가라.
+
 ## 먼저 알아야 할 것
 
 - 이 프로젝트의 메인 런타임 씬은 `src/game/scenes/MainScene.ts`다.
@@ -12,6 +18,10 @@
   - 컷신 액션: `src/game/scripts/scenes/*`
   - 대화 내용: `src/game/scripts/dialogues/*`
   - 실제 대화 등록: `src/game/scripts/dialogues/dialogueRegistry.ts`
+- 상호작용 진입점은 `InteractionManager`다.
+  - NPC 대화
+  - area transition
+  - static place 대화
 
 ## 디버그 툴 사용법
 
