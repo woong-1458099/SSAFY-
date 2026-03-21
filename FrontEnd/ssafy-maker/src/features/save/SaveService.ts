@@ -1,11 +1,18 @@
 import type { RuntimeGameState } from "../../game/state/gameState";
 import type { InventorySnapshot } from "../inventory/InventoryService";
+import type { TimeState } from "../progression/TimeService";
+import type { WeeklyPlanOptionId } from "../planning/weeklyPlan";
 
 export type SaveSlotId = "auto" | "slot-1" | "slot-2" | "slot-3" | "slot-4" | "slot-5";
 
 export type SavePayload = {
   gameState: RuntimeGameState;
   inventory: InventorySnapshot;
+  progression?: {
+    timeState: TimeState;
+    weeklyPlan: WeeklyPlanOptionId[];
+    weeklyPlanWeek: number;
+  };
 };
 
 export type SaveSlotData = {

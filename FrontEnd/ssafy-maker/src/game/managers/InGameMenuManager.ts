@@ -160,6 +160,10 @@ export class InGameMenuManager {
     this.frame?.root.setVisible(false);
   }
 
+  showNotice(message: string): void {
+    this.setNotice(message);
+  }
+
   refreshStatsUi(): void {
     if (this.statViews) {
       refreshStatsPage(this.statViews, this.getStatsState());

@@ -13,7 +13,6 @@ import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { GameHud } from "../../features/ui/components/GameHud";
-import { buildHudPatchFromTimeState, createDefaultTimeState } from "../../features/progression/TimeService";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
 import { getStaticPlaceDefinitions } from "../definitions/places/placeDefinitions";
@@ -31,6 +30,7 @@ import {
   type RuntimeStaticPlaceTarget
 } from "../managers/InteractionManager";
 import { NpcManager } from "../managers/NpcManager";
+import { ProgressionManager } from "../managers/ProgressionManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { StatSystemManager } from "../managers/StatSystemManager";
 import { WorldManager } from "../managers/WorldManager";
@@ -62,11 +62,13 @@ export class MainScene extends Phaser.Scene {
   private saveService?: SaveService;
   private hud?: GameHud;
   private menuManager?: InGameMenuManager;
+  private progressionManager?: ProgressionManager;
   private interactionManager?: InteractionManager;
   private areaTransitionOverlay?: AreaTransitionOverlay;
   private debugCommandBus?: DebugCommandBus;
   private debugInputController?: DebugInputController;
   private escapeKey?: Phaser.Input.Keyboard.Key;
+  private plannerKey?: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super(SCENE_KEYS.main);
@@ -96,7 +98,13 @@ export class MainScene extends Phaser.Scene {
       restoreSavePayload: (payload) => this.restoreSavePayload(payload)
     });
     this.statSystemManager.attachHud(this.hud);
-    this.statSystemManager.patchHudState(buildHudPatchFromTimeState(createDefaultTimeState()));
+    this.progressionManager = new ProgressionManager({
+      scene: this,
+      patchHudState: (next) => this.statSystemManager!.patchHudState(next),
+      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      onNotice: (message) => this.menuManager?.showNotice(message)
+    });
+    this.progressionManager.initialize();
     this.interactionManager = new InteractionManager(
       this,
       this.playerManager,
@@ -106,6 +114,7 @@ export class MainScene extends Phaser.Scene {
     );
     this.interactionManager.setHud(this.hud);
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.plannerKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.statSystemManager.setStatsChangedListener(() => {
       this.menuManager?.refreshStatsUi();
     });
@@ -187,6 +196,7 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.debugMinigameHud?.destroy();
       this.debugInputController?.destroy();
+      this.progressionManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
     });
@@ -209,18 +219,30 @@ export class MainScene extends Phaser.Scene {
     const renderBounds = this.worldManager.getCurrentRenderBounds();
     const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
     const menuOpen = this.menuManager?.isOpen() === true;
+    const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
 
-    this.interactionManager.setOverlayBlocked(menuOpen || debugHudVisible);
+    this.interactionManager.setOverlayBlocked(menuOpen || plannerOpen || debugHudVisible);
     this.playerManager.setInputLocked(
-      this.interactionManager.isInputLocked() || debugHudVisible || menuOpen
+      this.interactionManager.isInputLocked() || debugHudVisible || menuOpen || plannerOpen
     );
 
     if (
       this.escapeKey &&
       Phaser.Input.Keyboard.JustDown(this.escapeKey) &&
-      !this.dialogueManager?.isDialoguePlaying()
+      !this.dialogueManager?.isDialoguePlaying() &&
+      !plannerOpen
     ) {
       this.menuManager?.toggle();
+    }
+
+    if (
+      this.plannerKey &&
+      Phaser.Input.Keyboard.JustDown(this.plannerKey) &&
+      !this.dialogueManager?.isDialoguePlaying() &&
+      !menuOpen &&
+      !debugHudVisible
+    ) {
+      this.progressionManager?.togglePlanner();
     }
 
     this.playerManager.update(runtimeGrids, parsedMap);
@@ -462,17 +484,19 @@ export class MainScene extends Phaser.Scene {
   private buildSavePayload(): SavePayload {
     return {
       gameState: this.statSystemManager!.getState(),
-      inventory: this.inventoryService!.serialize()
+      inventory: this.inventoryService!.serialize(),
+      progression: this.progressionManager?.getSnapshot()
     };
   }
 
   private restoreSavePayload(payload: SavePayload): boolean {
-    if (!this.statSystemManager || !this.inventoryService) {
+    if (!this.statSystemManager || !this.inventoryService || !this.progressionManager) {
       return false;
     }
 
     this.statSystemManager.restore(payload.gameState);
     this.inventoryService.restore(payload.inventory);
+    this.progressionManager.restore(payload.progression);
     this.menuManager?.refreshStatsUi();
     this.menuManager?.refreshInventoryUi();
     return true;
