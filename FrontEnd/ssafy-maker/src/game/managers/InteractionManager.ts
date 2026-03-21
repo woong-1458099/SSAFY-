@@ -1,9 +1,10 @@
 // 플레이어와 NPC 사이의 근접 상호작용과 대화 시작, 상호작용 힌트 표시를 담당하는 상호작용 매니저
 import Phaser from "phaser";
-import type { AreaId } from "../../common/enums/area";
+import type { AreaId, PlaceId } from "../../common/enums/area";
 import type { NpcId } from "../../common/enums/npc";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import type { DebugEventLogger } from "../../debug/services/DebugEventLogger";
+import { getStaticPlaceDefinitions } from "../definitions/places/placeDefinitions";
 import type { RuntimeAreaTransitionTarget } from "../view/AreaTransitionOverlay";
 import type { AreaTransitionId } from "../definitions/places/areaTransitionDefinitions";
 import type { DialogueManager } from "./DialogueManager";
@@ -22,6 +23,7 @@ export class InteractionManager {
   private hintText?: Phaser.GameObjects.Text;
   private currentTargetNpcId?: NpcId;
   private currentTargetTransitionId?: AreaTransitionId;
+  private currentTargetPlaceId?: PlaceId;
   private requiresInteractKeyRelease = false;
   private wasDialoguePlaying = false;
   private currentSceneState?: SceneState;
@@ -73,6 +75,7 @@ export class InteractionManager {
 
     this.currentTargetNpcId = this.findCurrentTargetNpc();
     this.currentTargetTransitionId = this.findCurrentTargetTransition();
+    this.currentTargetPlaceId = this.findCurrentTargetPlace();
     this.debugLogger?.setTargetNpc(this.currentTargetNpcId);
     this.renderHint();
 
@@ -104,6 +107,21 @@ export class InteractionManager {
     }
 
     if (!this.currentTargetTransitionId || !this.onTransitionInteract) {
+      if (!this.currentTargetPlaceId) {
+        return;
+      }
+
+      const place = getStaticPlaceDefinitions().find((item) => item.id === this.currentTargetPlaceId);
+      if (!place?.dialogueId) {
+        return;
+      }
+
+      this.debugLogger?.log(`interact:place:${this.currentTargetPlaceId}`);
+      this.isInteractionLocked = true;
+      this.dialogueManager.play(place.dialogueId).finally(() => {
+        this.isInteractionLocked = false;
+        this.requiresInteractKeyRelease = true;
+      });
       return;
     }
 
@@ -154,6 +172,29 @@ export class InteractionManager {
 
   getCurrentTargetTransitionId() {
     return this.currentTargetTransitionId;
+  }
+
+  private findCurrentTargetPlace() {
+    if (this.currentAreaId !== "world") {
+      return undefined;
+    }
+
+    const player = this.playerManager.getSnapshot();
+    if (!player) {
+      return undefined;
+    }
+
+    for (const place of getStaticPlaceDefinitions()) {
+      const centerX = place.zone.x + place.zone.width / 2;
+      const centerY = place.zone.y + place.zone.height / 2;
+      const distance = Phaser.Math.Distance.Between(player.x, player.y, centerX, centerY);
+
+      if (distance <= 110) {
+        return place.id;
+      }
+    }
+
+    return undefined;
   }
 
   private findNearbyNpcId(playerX: number, playerY: number, areaId: AreaId): NpcId | undefined {
@@ -223,6 +264,17 @@ export class InteractionManager {
         (target) => target.id === this.currentTargetTransitionId
       );
       this.hintText.setText(`[SPACE] ${transition?.label ?? "이동"}`);
+      this.hintText.setVisible(true);
+      return;
+    }
+
+    if (
+      this.currentTargetPlaceId &&
+      !this.dialogueManager.isDialoguePlaying() &&
+      !this.requiresInteractKeyRelease
+    ) {
+      const place = getStaticPlaceDefinitions().find((item) => item.id === this.currentTargetPlaceId);
+      this.hintText.setText(`[SPACE] ${place?.label ?? "장소"} 확인`);
       this.hintText.setVisible(true);
       return;
     }
