@@ -8,7 +8,7 @@ import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
 import { DebugCommandBus } from "../../debug/services/DebugCommandBus";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugInputController } from "../../debug/services/DebugInputController";
-import type { AreaId, PlaceId } from "../../common/enums/area";
+import type { AreaId } from "../../common/enums/area";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
@@ -114,7 +114,6 @@ export class MainScene extends Phaser.Scene {
       : undefined;
 
     this.debugLogger.setArea(
-      runtimeSceneScript.area,
       runtimeSceneScript.area,
       tmxConfig?.tmxKey,
       mapSize,
