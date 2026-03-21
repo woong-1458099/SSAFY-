@@ -45,6 +45,22 @@ export class StatSystemManager {
     this.emitChanges(true);
   }
 
+  restore(nextState: RuntimeGameState): void {
+    this.state = {
+      hud: clampHudState({ ...nextState.hud }),
+      stats: clampStatsState({ ...nextState.stats })
+    };
+
+    if (this.state.hud.stress !== this.state.stats.stress) {
+      this.state.hud = clampHudState({
+        ...this.state.hud,
+        stress: this.state.stats.stress
+      });
+    }
+
+    this.emitChanges(true);
+  }
+
   patchHudState(next: Partial<HudState>): void {
     this.state.hud = clampHudState({ ...this.state.hud, ...next });
     let statsChanged = false;

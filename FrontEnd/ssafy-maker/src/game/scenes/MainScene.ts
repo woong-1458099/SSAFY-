@@ -10,6 +10,8 @@ import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugInputController } from "../../debug/services/DebugInputController";
 import type { AreaId } from "../../common/enums/area";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
+import { InventoryService } from "../../features/inventory/InventoryService";
+import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { GameHud } from "../../features/ui/components/GameHud";
 import { buildHudPatchFromTimeState, createDefaultTimeState } from "../../features/progression/TimeService";
 import { SceneDirector } from "../directors/SceneDirector";
@@ -56,6 +58,8 @@ export class MainScene extends Phaser.Scene {
   private npcManager?: NpcManager;
   private dialogueManager?: DialogueManager;
   private statSystemManager?: StatSystemManager;
+  private inventoryService?: InventoryService;
+  private saveService?: SaveService;
   private hud?: GameHud;
   private menuManager?: InGameMenuManager;
   private interactionManager?: InteractionManager;
@@ -77,10 +81,19 @@ export class MainScene extends Phaser.Scene {
     this.npcManager = new NpcManager(this);
     this.dialogueManager = new DialogueManager(this);
     this.statSystemManager = new StatSystemManager();
+    this.inventoryService = new InventoryService();
+    this.saveService = new SaveService();
     this.hud = new GameHud(this);
     this.menuManager = new InGameMenuManager({
       scene: this,
-      getStatsState: () => this.statSystemManager!.getStatsState()
+      getStatsState: () => this.statSystemManager!.getStatsState(),
+      getHudState: () => this.statSystemManager!.getHudState(),
+      patchHudState: (next) => this.statSystemManager!.patchHudState(next),
+      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      inventoryService: this.inventoryService,
+      saveService: this.saveService,
+      buildSavePayload: () => this.buildSavePayload(),
+      restoreSavePayload: (payload) => this.restoreSavePayload(payload)
     });
     this.statSystemManager.attachHud(this.hud);
     this.statSystemManager.patchHudState(buildHudPatchFromTimeState(createDefaultTimeState()));
@@ -95,6 +108,9 @@ export class MainScene extends Phaser.Scene {
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.statSystemManager.setStatsChangedListener(() => {
       this.menuManager?.refreshStatsUi();
+    });
+    this.inventoryService.setChangeListener(() => {
+      this.menuManager?.refreshInventoryUi();
     });
 
     const director = new SceneDirector(
@@ -441,5 +457,24 @@ export class MainScene extends Phaser.Scene {
       default:
         return "전체 지도";
     }
+  }
+
+  private buildSavePayload(): SavePayload {
+    return {
+      gameState: this.statSystemManager!.getState(),
+      inventory: this.inventoryService!.serialize()
+    };
+  }
+
+  private restoreSavePayload(payload: SavePayload): boolean {
+    if (!this.statSystemManager || !this.inventoryService) {
+      return false;
+    }
+
+    this.statSystemManager.restore(payload.gameState);
+    this.inventoryService.restore(payload.inventory);
+    this.menuManager?.refreshStatsUi();
+    this.menuManager?.refreshInventoryUi();
+    return true;
   }
 }
