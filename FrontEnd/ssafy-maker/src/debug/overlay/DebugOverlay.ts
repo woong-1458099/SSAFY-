@@ -5,6 +5,7 @@ import type { NpcManager } from "../../game/managers/NpcManager";
 
 export class DebugOverlay {
   private text: Phaser.GameObjects.Text;
+  private helpText: Phaser.GameObjects.Text;
   private visible = true;
 
   constructor(
@@ -17,15 +18,24 @@ export class DebugOverlay {
       color: "#00ff9c",
       backgroundColor: "#000000"
     }).setDepth(9999).setScrollFactor(0);
+
+    this.helpText = scene.add.text(0, 16, "", {
+      fontSize: "14px",
+      color: "#ffe082",
+      backgroundColor: "#000000",
+      align: "right"
+    }).setDepth(9999).setScrollFactor(0).setOrigin(1, 0);
   }
 
   render() {
     if (!this.visible) {
       this.text.setVisible(false);
+      this.helpText.setVisible(false);
       return;
     }
 
     this.text.setVisible(true);
+    this.helpText.setVisible(true);
     const state = this.logger.getState();
     const npcs = this.npcManager.getSnapshot()
       .map((npc) => `${npc.id} (${Math.round(npc.x)}, ${Math.round(npc.y)}) ${npc.facing}`)
@@ -48,11 +58,24 @@ export class DebugOverlay {
       `events:`,
       ...state.events.slice(0, 5)
     ]);
+
+    this.helpText.setPosition(this.scene.scale.width - 16, 16);
+    this.helpText.setText([
+      `[DEBUG KEYS]`,
+      `F1 디버그 모드 ON/OFF`,
+      `F2 히트박스 ON/OFF`,
+      `T 마우스 위치로 순간이동`,
+      `M 미니게임 HUD`,
+      `1 전체지도 이동`,
+      `2 번화가 이동`,
+      `3 강의장 이동`
+    ]);
   }
 
   setVisible(visible: boolean) {
     this.visible = visible;
     this.text.setVisible(visible);
+    this.helpText.setVisible(visible);
   }
 
   isVisible() {

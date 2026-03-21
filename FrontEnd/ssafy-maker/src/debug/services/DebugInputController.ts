@@ -13,6 +13,7 @@ export class DebugInputController {
     this.scene.input.keyboard?.on("keydown-F1", this.handleToggleOverlay, this);
     this.scene.input.keyboard?.on("keydown-F2", this.handleToggleWorldGrid, this);
     this.scene.input.keyboard?.on("keydown-T", this.handleTeleportPlayer, this);
+    this.scene.input.keyboard?.on("keydown-M", this.handleToggleMinigameHud, this);
     this.scene.input.keyboard?.on("keydown-ONE", this.handleSwitchWorld, this);
     this.scene.input.keyboard?.on("keydown-TWO", this.handleSwitchDowntown, this);
     this.scene.input.keyboard?.on("keydown-THREE", this.handleSwitchCampus, this);
@@ -22,6 +23,7 @@ export class DebugInputController {
     this.scene.input.keyboard?.off("keydown-F1", this.handleToggleOverlay, this);
     this.scene.input.keyboard?.off("keydown-F2", this.handleToggleWorldGrid, this);
     this.scene.input.keyboard?.off("keydown-T", this.handleTeleportPlayer, this);
+    this.scene.input.keyboard?.off("keydown-M", this.handleToggleMinigameHud, this);
     this.scene.input.keyboard?.off("keydown-ONE", this.handleSwitchWorld, this);
     this.scene.input.keyboard?.off("keydown-TWO", this.handleSwitchDowntown, this);
     this.scene.input.keyboard?.off("keydown-THREE", this.handleSwitchCampus, this);
@@ -42,6 +44,10 @@ export class DebugInputController {
       worldX: pointer.worldX,
       worldY: pointer.worldY
     });
+  }
+
+  private handleToggleMinigameHud() {
+    this.commandBus.emit({ type: "toggleMinigameHud" });
   }
 
   private handleSwitchWorld() {

@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "../../features/minigame/minigameSceneKeys";
 import { AREA_TRANSITION_MARKER_SPRITE } from "../definitions/assets/areaTransitionAssetCatalog";
 import { NPC_ASSET_LIST } from "../definitions/assets/npcAssetCatalog";
 import { preloadNpcVisualAsset, registerNpcAnimations } from "../systems/npcAnimation";
@@ -39,6 +40,12 @@ export class PreloadScene extends Phaser.Scene {
   create() {
     // NPC 애니메이션 등록은 전용 시스템으로 위임한다.
     registerNpcAnimations(this, NPC_ASSET_LIST);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("minigame") === "true") {
+      this.scene.start(LEGACY_MINIGAME_MENU_SCENE_KEY, { returnSceneKey: SCENE_KEYS.main });
+      return;
+    }
 
     this.scene.start(SCENE_KEYS.main);
   }
