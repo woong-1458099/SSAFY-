@@ -5,12 +5,14 @@ import type { WorldRenderBounds } from "../../game/managers/WorldManager";
 
 export class WorldGridOverlay {
   private scene: Phaser.Scene;
+  private walkableGraphics: Phaser.GameObjects.Graphics;
   private blockedGraphics: Phaser.GameObjects.Graphics;
   private interactionGraphics: Phaser.GameObjects.Graphics;
   private visible = true;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.walkableGraphics = scene.add.graphics().setDepth(8999);
     this.blockedGraphics = scene.add.graphics().setDepth(9000);
     this.interactionGraphics = scene.add.graphics().setDepth(9001);
   }
@@ -20,6 +22,7 @@ export class WorldGridOverlay {
     parsedMap?: ParsedTmxMap,
     renderBounds?: WorldRenderBounds
   ) {
+    this.walkableGraphics.clear();
     this.blockedGraphics.clear();
     this.interactionGraphics.clear();
 
@@ -34,6 +37,7 @@ export class WorldGridOverlay {
     const tileWidth = (renderBounds?.tileWidth ?? parsedMap.tileWidth) * scale;
     const tileHeight = (renderBounds?.tileHeight ?? parsedMap.tileHeight) * scale;
 
+    this.walkableGraphics.fillStyle(0x8c8c8c, 0.16);
     this.blockedGraphics.fillStyle(0xff4d4f, 0.25);
     this.interactionGraphics.fillStyle(0x4da6ff, 0.2);
 
@@ -44,6 +48,8 @@ export class WorldGridOverlay {
 
         if (runtimeGrids.blockedGrid[y]?.[x]) {
           this.blockedGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
+        } else {
+          this.walkableGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
         }
 
         if (runtimeGrids.interactionGrid[y]?.[x]) {
@@ -57,6 +63,7 @@ export class WorldGridOverlay {
     this.visible = visible;
 
     if (!visible) {
+      this.walkableGraphics.clear();
       this.blockedGraphics.clear();
       this.interactionGraphics.clear();
     }

@@ -12,6 +12,9 @@ export const ASSET_KEYS = {
     downtown: "bg-downtown",
     campus: "bg-campus"
   },
+  ui: {
+    buttons: "ui-buttons"
+  },
   map: {
     tilesetImage: "map_tiles_full_asset",
     tilesetTsx: "map_tileset_full_tsx",
