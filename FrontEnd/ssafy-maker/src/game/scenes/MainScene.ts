@@ -11,6 +11,7 @@ import type { AreaId, PlaceId } from "../../common/enums/area";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
+import { getAreaTransitionDefinitions, type AreaTransitionId } from "../definitions/places/areaTransitionDefinitions";
 import { resolvePlayerAppearanceDefinition } from "../definitions/player/playerAppearanceResolver";
 import { getSceneState } from "../definitions/sceneStates/sceneStateRegistry";
 import { DialogueManager } from "../managers/DialogueManager";
@@ -26,6 +27,10 @@ import {
 } from "../scripts/scenes/sceneRegistry";
 import { buildRuntimeSceneScript, normalizeSceneState } from "../systems/sceneStateRuntime";
 import { countTrueCells, findFirstWalkableTile } from "../systems/tmxNavigation";
+import {
+  AreaTransitionOverlay,
+  type RuntimeAreaTransitionTarget
+} from "../view/AreaTransitionOverlay";
 
 export class MainScene extends Phaser.Scene {
   private debugLogger?: DebugEventLogger;
@@ -36,6 +41,7 @@ export class MainScene extends Phaser.Scene {
   private npcManager?: NpcManager;
   private dialogueManager?: DialogueManager;
   private interactionManager?: InteractionManager;
+  private areaTransitionOverlay?: AreaTransitionOverlay;
   private debugCommandBus?: DebugCommandBus;
   private debugInputController?: DebugInputController;
 
@@ -64,8 +70,8 @@ export class MainScene extends Phaser.Scene {
       this.dialogueManager,
       this.debugLogger
     );
-    this.interactionManager.setPlaceInteractHandler((placeId) => {
-      this.handlePlaceAreaTransition(placeId);
+    this.interactionManager.setTransitionInteractHandler((transitionId) => {
+      this.handleAreaTransition(transitionId);
     });
     const startScene = this.resolveStartScene();
     const initialSceneState = normalizeSceneState(getSceneState(startScene.initialStateId));
@@ -87,6 +93,8 @@ export class MainScene extends Phaser.Scene {
     const renderBounds = this.worldManager.getCurrentRenderBounds();
 
     this.playerManager.setRenderBounds(renderBounds);
+    const transitionTargets = this.resolveAreaTransitionTargets(runtimeSceneScript.area, renderBounds);
+    this.interactionManager.setTransitionTargets(transitionTargets);
 
     const mapSize = parsedMap
       ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`
@@ -118,6 +126,9 @@ export class MainScene extends Phaser.Scene {
       this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
     }
 
+    this.areaTransitionOverlay = new AreaTransitionOverlay(this);
+    this.areaTransitionOverlay.render(transitionTargets);
+
     this.bindDebugControls();
     this.debugInputController.bind();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -148,6 +159,11 @@ export class MainScene extends Phaser.Scene {
     if (this.worldGridOverlay) {
       this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
     }
+
+    this.areaTransitionOverlay?.render(
+      this.resolveAreaTransitionTargets(this.worldManager.getCurrentAreaId() ?? "world", renderBounds),
+      this.interactionManager.getCurrentTargetTransitionId()
+    );
 
     const player = this.playerManager.getSnapshot();
     if (player) {
@@ -225,17 +241,17 @@ export class MainScene extends Phaser.Scene {
     this.scene.restart();
   }
 
-  private handlePlaceAreaTransition(placeId: PlaceId) {
-    switch (placeId) {
-      case "downtown":
-        this.restartWithScene(getDefaultSceneIdForArea("downtown"));
-        return;
-      case "campus":
-        this.restartWithScene(getDefaultSceneIdForArea("campus"));
-        return;
-      default:
-        this.debugLogger?.log(`debug:unhandled-place:${placeId}`);
+  private handleAreaTransition(transitionId: AreaTransitionId) {
+    const transition = getAreaTransitionDefinitions(this.worldManager?.getCurrentAreaId() ?? "world").find(
+      (item) => item.id === transitionId
+    );
+
+    if (!transition) {
+      this.debugLogger?.log(`debug:unhandled-transition:${transitionId}`);
+      return;
     }
+
+    this.restartWithScene(getDefaultSceneIdForArea(transition.toArea));
   }
 
   private resolvePlayerStartTile(
@@ -265,5 +281,43 @@ export class MainScene extends Phaser.Scene {
     }
 
     return findFirstWalkableTile(runtimeGrids.blockedGrid);
+  }
+
+  private resolveAreaTransitionTargets(
+    areaId: AreaId,
+    renderBounds?: ReturnType<WorldManager["getCurrentRenderBounds"]>
+  ): RuntimeAreaTransitionTarget[] {
+    if (!renderBounds) {
+      return [];
+    }
+
+    return getAreaTransitionDefinitions(areaId).map((transition) => ({
+      id: transition.id,
+      label: transition.label,
+      centerX:
+        renderBounds.offsetX +
+        (transition.tileX + (transition.tileWidth ?? 1) / 2) *
+          renderBounds.tileWidth *
+          renderBounds.scale,
+      centerY:
+        renderBounds.offsetY +
+        (transition.tileY + (transition.tileHeight ?? 1) / 2) *
+          renderBounds.tileHeight *
+          renderBounds.scale,
+      zoneX:
+        renderBounds.offsetX +
+        transition.tileX * renderBounds.tileWidth * renderBounds.scale,
+      zoneY:
+        renderBounds.offsetY +
+        transition.tileY * renderBounds.tileHeight * renderBounds.scale,
+      zoneWidth:
+        (transition.tileWidth ?? 1) * renderBounds.tileWidth * renderBounds.scale,
+      zoneHeight:
+        (transition.tileHeight ?? 1) * renderBounds.tileHeight * renderBounds.scale,
+      tileX: transition.tileX,
+      tileY: transition.tileY,
+      tileWidth: transition.tileWidth ?? 1,
+      tileHeight: transition.tileHeight ?? 1
+    }));
   }
 }

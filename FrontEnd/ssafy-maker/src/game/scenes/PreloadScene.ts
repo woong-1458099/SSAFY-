@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { AREA_TRANSITION_MARKER_SPRITE } from "../definitions/assets/areaTransitionAssetCatalog";
 import { NPC_ASSET_LIST } from "../definitions/assets/npcAssetCatalog";
 import { preloadNpcVisualAsset, registerNpcAnimations } from "../systems/npcAnimation";
 import { preloadPlayerVisualAssets } from "../systems/playerVisual";
@@ -16,6 +17,10 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image(ASSET_KEYS.map.tilesetImage, "assets/game/map/FullAsset.png");
     // 캠퍼스 TMX가 참조하는 external TSX를 텍스트로 로드한다.
     this.load.text(ASSET_KEYS.map.tilesetTsx, "assets/game/map/FullTileSet.tsx");
+    this.load.spritesheet(ASSET_KEYS.ui.buttons, "assets/game/ui/buttons.png", {
+      frameWidth: AREA_TRANSITION_MARKER_SPRITE.frameWidth,
+      frameHeight: AREA_TRANSITION_MARKER_SPRITE.frameHeight
+    });
 
     // 각 영역 TMX를 텍스트로 로드한다.
     this.load.text(ASSET_KEYS.map.worldTmx, "assets/game/map/mainMap.tmx");
