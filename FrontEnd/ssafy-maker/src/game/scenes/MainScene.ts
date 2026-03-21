@@ -10,6 +10,8 @@ import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugInputController } from "../../debug/services/DebugInputController";
 import type { AreaId } from "../../common/enums/area";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
+import { GameHud } from "../../features/ui/components/GameHud";
+import { buildHudPatchFromTimeState, createDefaultTimeState } from "../../features/progression/TimeService";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
 import { getStaticPlaceDefinitions } from "../definitions/places/placeDefinitions";
@@ -21,12 +23,14 @@ import {
 import { resolvePlayerAppearanceDefinition } from "../definitions/player/playerAppearanceResolver";
 import { getSceneState } from "../definitions/sceneStates/sceneStateRegistry";
 import { DialogueManager } from "../managers/DialogueManager";
+import { InGameMenuManager } from "../managers/InGameMenuManager";
 import {
   InteractionManager,
   type RuntimeStaticPlaceTarget
 } from "../managers/InteractionManager";
 import { NpcManager } from "../managers/NpcManager";
 import { PlayerManager } from "../managers/PlayerManager";
+import { StatSystemManager } from "../managers/StatSystemManager";
 import { WorldManager } from "../managers/WorldManager";
 import type { SceneId } from "../scripts/scenes/sceneIds";
 import {
@@ -51,10 +55,14 @@ export class MainScene extends Phaser.Scene {
   private playerManager?: PlayerManager;
   private npcManager?: NpcManager;
   private dialogueManager?: DialogueManager;
+  private statSystemManager?: StatSystemManager;
+  private hud?: GameHud;
+  private menuManager?: InGameMenuManager;
   private interactionManager?: InteractionManager;
   private areaTransitionOverlay?: AreaTransitionOverlay;
   private debugCommandBus?: DebugCommandBus;
   private debugInputController?: DebugInputController;
+  private escapeKey?: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super(SCENE_KEYS.main);
@@ -68,6 +76,14 @@ export class MainScene extends Phaser.Scene {
     this.playerManager = new PlayerManager(this);
     this.npcManager = new NpcManager(this);
     this.dialogueManager = new DialogueManager(this);
+    this.statSystemManager = new StatSystemManager();
+    this.hud = new GameHud(this);
+    this.menuManager = new InGameMenuManager({
+      scene: this,
+      getStatsState: () => this.statSystemManager!.getStatsState()
+    });
+    this.statSystemManager.attachHud(this.hud);
+    this.statSystemManager.patchHudState(buildHudPatchFromTimeState(createDefaultTimeState()));
     this.interactionManager = new InteractionManager(
       this,
       this.playerManager,
@@ -75,6 +91,11 @@ export class MainScene extends Phaser.Scene {
       this.dialogueManager,
       this.debugLogger
     );
+    this.interactionManager.setHud(this.hud);
+    this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.statSystemManager.setStatsChangedListener(() => {
+      this.menuManager?.refreshStatsUi();
+    });
 
     const director = new SceneDirector(
       this.npcManager,
@@ -96,6 +117,9 @@ export class MainScene extends Phaser.Scene {
     this.npcManager.setArea(runtimeSceneScript.area);
     this.interactionManager.setArea(runtimeSceneScript.area);
     this.interactionManager.setSceneState(initialSceneState);
+    this.statSystemManager.patchHudState({
+      locationLabel: this.getAreaLabel(runtimeSceneScript.area)
+    });
 
     const tmxConfig = this.worldManager.getCurrentTmxConfig();
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
@@ -147,6 +171,8 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.debugMinigameHud?.destroy();
       this.debugInputController?.destroy();
+      this.menuManager?.destroy();
+      this.hud?.destroy();
     });
 
     await director.run(runtimeSceneScript);
@@ -165,10 +191,22 @@ export class MainScene extends Phaser.Scene {
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
     const renderBounds = this.worldManager.getCurrentRenderBounds();
+    const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
+    const menuOpen = this.menuManager?.isOpen() === true;
 
+    this.interactionManager.setOverlayBlocked(menuOpen || debugHudVisible);
     this.playerManager.setInputLocked(
-      this.interactionManager.isInputLocked() || this.debugMinigameHud?.isVisible() === true
+      this.interactionManager.isInputLocked() || debugHudVisible || menuOpen
     );
+
+    if (
+      this.escapeKey &&
+      Phaser.Input.Keyboard.JustDown(this.escapeKey) &&
+      !this.dialogueManager?.isDialoguePlaying()
+    ) {
+      this.menuManager?.toggle();
+    }
+
     this.playerManager.update(runtimeGrids, parsedMap);
     this.interactionManager.update();
 
@@ -391,5 +429,17 @@ export class MainScene extends Phaser.Scene {
       x: renderBounds.offsetX + (place.zone.x + place.zone.width / 2) * renderBounds.scale,
       y: renderBounds.offsetY + (place.zone.y + place.zone.height / 2) * renderBounds.scale
     }));
+  }
+
+  private getAreaLabel(areaId: AreaId): string {
+    switch (areaId) {
+      case "campus":
+        return "캠퍼스";
+      case "downtown":
+        return "번화가";
+      case "world":
+      default:
+        return "전체 지도";
+    }
   }
 }

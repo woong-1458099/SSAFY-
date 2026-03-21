@@ -4,6 +4,7 @@ import type { DialogueId } from "../../common/enums/dialogue";
 import type { NpcId } from "../../common/enums/npc";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import type { DebugEventLogger } from "../../debug/services/DebugEventLogger";
+import type { GameHud } from "../../features/ui/components/GameHud";
 import type { AreaTransitionId } from "../definitions/places/areaTransitionDefinitions";
 import type { RuntimeAreaTransitionTarget } from "../view/AreaTransitionOverlay";
 import type { DialogueManager } from "./DialogueManager";
@@ -27,7 +28,7 @@ export class InteractionManager {
   private interactKey?: Phaser.Input.Keyboard.Key;
   private currentAreaId?: AreaId;
   private isInteractionLocked = false;
-  private hintText?: Phaser.GameObjects.Text;
+  private hud?: GameHud;
   private currentTargetNpcId?: NpcId;
   private currentTargetTransitionId?: AreaTransitionId;
   private currentTargetPlaceId?: PlaceId;
@@ -37,6 +38,7 @@ export class InteractionManager {
   private onTransitionInteract?: (transitionId: AreaTransitionId) => void;
   private currentTransitionTargets: RuntimeAreaTransitionTarget[] = [];
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
+  private overlayBlocked = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -73,6 +75,17 @@ export class InteractionManager {
     this.onTransitionInteract = handler;
   }
 
+  setHud(hud?: GameHud) {
+    this.hud = hud;
+  }
+
+  setOverlayBlocked(blocked: boolean) {
+    this.overlayBlocked = blocked;
+    if (blocked) {
+      this.hud?.setInteractionPrompt(null);
+    }
+  }
+
   update() {
     const isDialoguePlaying = this.dialogueManager.isDialoguePlaying();
 
@@ -96,6 +109,7 @@ export class InteractionManager {
       !this.interactKey ||
       isDialoguePlaying ||
       this.isInteractionLocked ||
+      this.overlayBlocked ||
       this.requiresInteractKeyRelease ||
       !Phaser.Input.Keyboard.JustDown(this.interactKey)
     ) {
@@ -239,28 +253,22 @@ export class InteractionManager {
   }
 
   private renderHint() {
-    if (!this.hintText) {
-      this.hintText = this.scene.add.text(640, 40, "", {
-        fontSize: "20px",
-        color: "#ffffff",
-        backgroundColor: "#000000"
-      })
-        .setOrigin(0.5, 0)
-        .setScrollFactor(0)
-        .setDepth(9500);
-    }
-
-    if (
-      this.currentTargetNpcId &&
-      !this.dialogueManager.isDialoguePlaying() &&
-      !this.requiresInteractKeyRelease
-    ) {
-      this.hintText.setText(`[SPACE] ${this.currentTargetNpcId}와 대화`);
-      this.hintText.setVisible(true);
+    if (!this.hud) {
       return;
     }
 
     if (
+      !this.overlayBlocked &&
+      this.currentTargetNpcId &&
+      !this.dialogueManager.isDialoguePlaying() &&
+      !this.requiresInteractKeyRelease
+    ) {
+      this.hud.setInteractionPrompt(`[SPACE] ${this.currentTargetNpcId}와 대화`);
+      return;
+    }
+
+    if (
+      !this.overlayBlocked &&
       this.currentTargetTransitionId &&
       !this.dialogueManager.isDialoguePlaying() &&
       !this.requiresInteractKeyRelease
@@ -268,22 +276,21 @@ export class InteractionManager {
       const transition = this.currentTransitionTargets.find(
         (target) => target.id === this.currentTargetTransitionId
       );
-      this.hintText.setText(`[SPACE] ${transition?.label ?? "이동"}`);
-      this.hintText.setVisible(true);
+      this.hud.setInteractionPrompt(`[SPACE] ${transition?.label ?? "이동"}`);
       return;
     }
 
     if (
+      !this.overlayBlocked &&
       this.currentTargetPlaceId &&
       !this.dialogueManager.isDialoguePlaying() &&
       !this.requiresInteractKeyRelease
     ) {
       const place = this.currentStaticPlaceTargets.find((item) => item.id === this.currentTargetPlaceId);
-      this.hintText.setText(`[SPACE] ${place?.label ?? "장소"} 확인`);
-      this.hintText.setVisible(true);
+      this.hud.setInteractionPrompt(`[SPACE] ${place?.label ?? "장소"} 확인`);
       return;
     }
 
-    this.hintText.setVisible(false);
+    this.hud.setInteractionPrompt(null);
   }
 }
