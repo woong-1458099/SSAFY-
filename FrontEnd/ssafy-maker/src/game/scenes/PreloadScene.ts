@@ -1,6 +1,6 @@
 // 게임 시작 전에 공통 에셋과 TMX/TSX, NPC sprite 리소스를 미리 로드하는 씬이다.
 import Phaser from "phaser";
-import { ASSET_KEYS } from "../../common/assets/assetKeys";
+import { ASSET_KEYS, ASSET_PATHS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { preloadInventoryUiAssets } from "../../features/inventory/inventoryAssets";
 import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "../../features/minigame/minigameSceneKeys";
@@ -29,6 +29,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.text(ASSET_KEYS.map.worldTmx, "assets/game/map/mainMap.tmx");
     this.load.text(ASSET_KEYS.map.downtownTmx, "assets/game/map/city.tmx");
     this.load.text(ASSET_KEYS.map.campusTmx, "assets/game/map/inSSAFY.tmx");
+    this.load.json(ASSET_KEYS.story.authoredDialogues, ASSET_PATHS.story.authoredDialogues);
+    this.load.json(ASSET_KEYS.story.authoredSceneStates, ASSET_PATHS.story.authoredSceneStates);
 
     // NPC 비주얼 에셋 로드는 전용 시스템으로 위임한다.
     for (const npcAsset of NPC_ASSET_LIST) {

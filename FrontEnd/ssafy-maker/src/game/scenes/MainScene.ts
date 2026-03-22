@@ -102,7 +102,7 @@ export class MainScene extends Phaser.Scene {
 
   async create() {
     this.initialized = false;
-    await ensureAuthoredStoryLoaded();
+    await ensureAuthoredStoryLoaded(this);
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
     this.debugInputController = new DebugInputController(this, this.debugCommandBus, (command) => {
@@ -348,7 +348,13 @@ export class MainScene extends Phaser.Scene {
 
     this.bindDebugControls();
     this.debugInputController.bind();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    let cleanedUp = false;
+    const cleanupSceneResources = () => {
+      if (cleanedUp) {
+        return;
+      }
+
+      cleanedUp = true;
       this.unsubscribeDebugCommandBus?.();
       this.unsubscribeDebugCommandBus = undefined;
       this.debugCommandBus?.destroy();
@@ -364,7 +370,9 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
-    });
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupSceneResources);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanupSceneResources);
 
     this.initialized = true;
 
