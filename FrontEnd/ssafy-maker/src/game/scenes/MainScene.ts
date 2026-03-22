@@ -31,6 +31,7 @@ import {
   type RuntimeStaticPlaceTarget
 } from "../managers/InteractionManager";
 import { NpcManager } from "../managers/NpcManager";
+import { MinigameRewardManager } from "../managers/MinigameRewardManager";
 import { PlaceActionManager } from "../managers/PlaceActionManager";
 import { ProgressionManager } from "../managers/ProgressionManager";
 import { PlayerManager } from "../managers/PlayerManager";
@@ -65,6 +66,7 @@ export class MainScene extends Phaser.Scene {
   private dialogueBox?: DialogueBox;
   private hud?: GameHud;
   private menuManager?: InGameMenuManager;
+  private minigameRewardManager?: MinigameRewardManager;
   private placeActionManager?: PlaceActionManager;
   private progressionManager?: ProgressionManager;
   private interactionManager?: InteractionManager;
@@ -111,6 +113,12 @@ export class MainScene extends Phaser.Scene {
       onNotice: (message) => this.menuManager?.showNotice(message)
     });
     this.progressionManager.initialize();
+    this.minigameRewardManager = new MinigameRewardManager({
+      scene: this,
+      getHudState: () => this.statSystemManager!.getHudState(),
+      patchHudState: (next) => this.statSystemManager!.patchHudState(next),
+      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier)
+    });
     this.placeActionManager = new PlaceActionManager({
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
@@ -216,6 +224,7 @@ export class MainScene extends Phaser.Scene {
       this.debugInputController?.destroy();
       this.dialogueManager?.destroy();
       this.dialogueBox?.destroy();
+      this.minigameRewardManager?.destroy();
       this.placeActionManager?.destroy();
       this.progressionManager?.destroy();
       this.menuManager?.destroy();

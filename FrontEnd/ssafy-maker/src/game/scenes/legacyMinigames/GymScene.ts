@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_GYM_EXERCISES,
   LEGACY_GYM_MAX_REPS,
@@ -16,6 +17,8 @@ const H = 600;
 
 export default class GymScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() { super({ key: 'GymScene' }); }
 
@@ -46,6 +49,8 @@ export default class GymScene extends Phaser.Scene {
     this.perfectCount = 0;
     this.goodCount = 0;
     this.missCount = 0;
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
 
     // 입력 디바운스
     this.lastPressTime = 0;
@@ -353,10 +358,14 @@ export default class GymScene extends Phaser.Scene {
     this.add.text(W / 2, 340, `보상: ${result.reward}`, {
       fontSize: '12px', color: '#ffd700', fontFamily: PF
     }).setOrigin(0.5);
+    this.completedRewardText = result.reward;
 
     // 버튼
     this.createBtn(W / 2 - 120, 420, '다시하기', 0x442200, 0xff6600, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 420, '나가기', 0x222244, 0x4488ff, () => returnToScene(this, this.returnSceneKey));
+    this.createBtn(W / 2 + 120, 420, '나가기', 0x222244, 0x4488ff, () => {
+      this.emitRewardIfNeeded();
+      returnToScene(this, this.returnSceneKey);
+    });
   }
 
   createBtn(x, y, label, bg, border, cb) {
@@ -374,5 +383,11 @@ export default class GymScene extends Phaser.Scene {
   shutdown() {
     this.input.keyboard.off('keydown-SPACE', this.handlePress, this);
     if (this.timerEvent) this.timerEvent.remove();
+  }
+
+  emitRewardIfNeeded() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'GymScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }
