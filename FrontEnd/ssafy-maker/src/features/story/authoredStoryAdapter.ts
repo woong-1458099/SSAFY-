@@ -150,41 +150,65 @@ function createMissingDialogueFallback(): DialogueScript {
   };
 }
 
-function normalizeSceneStateNpc(entry: SceneStateNpcJson): SceneStateNpc | null {
-  if (
-    typeof entry.npcId !== "string" ||
-    !isNpcId(entry.npcId) ||
-    typeof entry.x !== "number" ||
-    typeof entry.y !== "number" ||
-    typeof entry.dialogueId !== "string" ||
-    entry.dialogueId.trim().length === 0
-  ) {
+function normalizeSceneStateNpc(
+  entry: SceneStateNpcJson,
+  sceneStateId: string,
+  npcIndex: number,
+  issues: string[]
+): SceneStateNpc | null {
+  const rawNpcId = typeof entry.npcId === "string" ? entry.npcId.trim() : "";
+  if (!rawNpcId || !isNpcId(rawNpcId)) {
+    issues.push(
+      `[${sceneStateId}] npcs[${npcIndex}] npcId=${JSON.stringify(entry.npcId)} 가 유효한 NpcId가 아니라서 제외합니다.`
+    );
+    return null;
+  }
+
+  if (typeof entry.x !== "number" || typeof entry.y !== "number") {
+    issues.push(`[${sceneStateId}] npcs[${npcIndex}] npcId=${rawNpcId} 좌표(x,y)가 유효하지 않아 제외합니다.`);
+    return null;
+  }
+
+  const dialogueId = typeof entry.dialogueId === "string" ? entry.dialogueId.trim() : "";
+  if (!dialogueId) {
+    issues.push(`[${sceneStateId}] npcs[${npcIndex}] npcId=${rawNpcId} dialogueId가 비어 있어 제외합니다.`);
     return null;
   }
 
   return {
-    npcId: entry.npcId as NpcId,
+    npcId: rawNpcId as NpcId,
     x: Math.round(entry.x),
     y: Math.round(entry.y),
     facing: isFacing(entry.facing) ? entry.facing : undefined,
-    dialogueId: entry.dialogueId.trim() as SceneStateNpc["dialogueId"]
+    dialogueId: dialogueId as SceneStateNpc["dialogueId"]
   };
 }
 
-export function buildSceneStateRegistryFromJson(raw: unknown): Record<SceneStateId, SceneState> {
+export function buildSceneStateRegistryFromJson(raw: unknown, issues: string[] = []): Record<SceneStateId, SceneState> {
   const asset = (raw ?? {}) as SceneStateJson;
   const entries = Array.isArray(asset.sceneStates) ? asset.sceneStates : [];
   const registry: Partial<Record<SceneStateId, SceneState>> = {};
 
-  entries.forEach((entry) => {
-    if (!isSceneStateId(typeof entry.id === "string" ? entry.id : "") || !isAreaId(entry.area)) {
+  entries.forEach((entry, entryIndex) => {
+    const sceneStateId = typeof entry.id === "string" ? entry.id : "";
+    if (!isSceneStateId(sceneStateId)) {
+      issues.push(`[sceneStates.${entryIndex}] id=${JSON.stringify(entry.id)} 가 유효한 SceneStateId가 아니라서 제외합니다.`);
       return;
     }
 
-    registry[entry.id] = {
-      id: entry.id,
+    if (!isAreaId(entry.area)) {
+      issues.push(`[${sceneStateId}] area=${JSON.stringify(entry.area)} 가 유효한 AreaId가 아니라서 제외합니다.`);
+      return;
+    }
+
+    registry[sceneStateId] = {
+      id: sceneStateId,
       area: entry.area,
-      npcs: Array.isArray(entry.npcs) ? entry.npcs.map(normalizeSceneStateNpc).filter((npc): npc is SceneStateNpc => npc !== null) : []
+      npcs: Array.isArray(entry.npcs)
+        ? entry.npcs
+            .map((npc, npcIndex) => normalizeSceneStateNpc(npc, sceneStateId, npcIndex, issues))
+            .filter((npc): npc is SceneStateNpc => npc !== null)
+        : []
     };
   });
 
@@ -203,8 +227,8 @@ export function buildAuthoredStoryAssetsFromJson(
   dialogues[AUTHORED_DIALOGUE_FALLBACK_ID] ??= createMissingDialogueFallback();
 
   const dialogueIds = new Set(Object.keys(dialogues));
-  const rawSceneStates = buildSceneStateRegistryFromJson(sceneStatesRaw);
   const issues: string[] = [];
+  const rawSceneStates = buildSceneStateRegistryFromJson(sceneStatesRaw, issues);
 
   const sceneStates = Object.fromEntries(
     Object.entries(rawSceneStates).map(([sceneStateId, sceneState]) => [

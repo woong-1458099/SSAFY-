@@ -24,7 +24,12 @@ export async function ensureAuthoredStoryLoaded(): Promise<void> {
     .then(([dialoguesRaw, sceneStatesRaw]) => {
       const authoredStory = buildAuthoredStoryAssetsFromJson(dialoguesRaw, sceneStatesRaw);
       if (authoredStory.issues.length > 0) {
-        console.error("[AuthoredStory] scene state dialogue 참조 불일치가 감지되었습니다.\n" + authoredStory.issues.join("\n"));
+        const issueMessage =
+          "[AuthoredStory] authored story 데이터 불일치가 감지되었습니다.\n" + authoredStory.issues.join("\n");
+        console.error(issueMessage);
+        if (import.meta.env.DEV) {
+          throw new Error(issueMessage);
+        }
       }
 
       setDialogueRegistry(authoredStory.dialogues);
