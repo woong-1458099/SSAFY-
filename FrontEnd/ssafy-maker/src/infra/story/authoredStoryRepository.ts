@@ -1,4 +1,4 @@
-import { buildDialogueRegistryFromJson, buildSceneStateRegistryFromJson } from "../../features/story/authoredStoryAdapter";
+import { buildAuthoredStoryAssetsFromJson } from "../../features/story/authoredStoryAdapter";
 import { setSceneStateRegistry } from "../../game/definitions/sceneStates/sceneStateRegistry";
 import { setDialogueRegistry } from "../../game/scripts/dialogues/dialogueRegistry";
 
@@ -22,8 +22,13 @@ export async function ensureAuthoredStoryLoaded(): Promise<void> {
 
   loadPromise = Promise.all([loadJson(AUTHORED_DIALOGUES_URL), loadJson(SCENE_STATES_URL)])
     .then(([dialoguesRaw, sceneStatesRaw]) => {
-      setDialogueRegistry(buildDialogueRegistryFromJson(dialoguesRaw));
-      setSceneStateRegistry(buildSceneStateRegistryFromJson(sceneStatesRaw));
+      const authoredStory = buildAuthoredStoryAssetsFromJson(dialoguesRaw, sceneStatesRaw);
+      if (authoredStory.issues.length > 0) {
+        console.error("[AuthoredStory] scene state dialogue 참조 불일치가 감지되었습니다.\n" + authoredStory.issues.join("\n"));
+      }
+
+      setDialogueRegistry(authoredStory.dialogues);
+      setSceneStateRegistry(authoredStory.sceneStates);
     })
     .catch((error) => {
       loadPromise = null;

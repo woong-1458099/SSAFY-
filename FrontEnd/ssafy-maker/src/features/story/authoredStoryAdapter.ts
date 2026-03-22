@@ -66,6 +66,7 @@ type SceneStateNpcJson = {
 };
 
 const AREA_ID_SET = new Set<AreaId>(["world", "downtown", "campus"]);
+export const AUTHORED_DIALOGUE_FALLBACK_ID = "authored_dialogue_missing";
 
 function isAreaId(value: unknown): value is AreaId {
   return typeof value === "string" && AREA_ID_SET.has(value as AreaId);
@@ -134,6 +135,21 @@ export function buildDialogueRegistryFromJson(raw: unknown): Record<string, Dial
   return registry;
 }
 
+function createMissingDialogueFallback(): DialogueScript {
+  return {
+    id: AUTHORED_DIALOGUE_FALLBACK_ID,
+    label: "누락된 대화 안내",
+    startNodeId: "start",
+    nodes: {
+      start: {
+        id: "start",
+        speaker: "안내",
+        text: "연결된 authored 대화 데이터가 없습니다. dialogues.json과 scene_states.json 참조를 확인하세요."
+      }
+    }
+  };
+}
+
 function normalizeSceneStateNpc(entry: SceneStateNpcJson): SceneStateNpc | null {
   if (
     typeof entry.npcId !== "string" ||
@@ -173,4 +189,49 @@ export function buildSceneStateRegistryFromJson(raw: unknown): Record<SceneState
   });
 
   return registry as Record<SceneStateId, SceneState>;
+}
+
+export function buildAuthoredStoryAssetsFromJson(
+  dialoguesRaw: unknown,
+  sceneStatesRaw: unknown
+): {
+  dialogues: Record<string, DialogueScript>;
+  sceneStates: Record<SceneStateId, SceneState>;
+  issues: string[];
+} {
+  const dialogues = buildDialogueRegistryFromJson(dialoguesRaw);
+  dialogues[AUTHORED_DIALOGUE_FALLBACK_ID] ??= createMissingDialogueFallback();
+
+  const dialogueIds = new Set(Object.keys(dialogues));
+  const rawSceneStates = buildSceneStateRegistryFromJson(sceneStatesRaw);
+  const issues: string[] = [];
+
+  const sceneStates = Object.fromEntries(
+    Object.entries(rawSceneStates).map(([sceneStateId, sceneState]) => [
+      sceneStateId,
+      {
+        ...sceneState,
+        npcs: sceneState.npcs.map((npc) => {
+          if (dialogueIds.has(npc.dialogueId)) {
+            return npc;
+          }
+
+          issues.push(
+            `[${sceneState.id}] npcId=${npc.npcId} dialogueId=${npc.dialogueId} 참조가 dialogues.json에 없습니다. fallback 대화로 치환합니다.`
+          );
+
+          return {
+            ...npc,
+            dialogueId: AUTHORED_DIALOGUE_FALLBACK_ID
+          };
+        })
+      } satisfies SceneState
+    ])
+  ) as Record<SceneStateId, SceneState>;
+
+  return {
+    dialogues,
+    sceneStates,
+    issues
+  };
 }
