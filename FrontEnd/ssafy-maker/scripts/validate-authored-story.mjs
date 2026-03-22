@@ -10,6 +10,7 @@ const projectRoot = path.resolve(__dirname, "..");
 
 const dialoguesPath = path.join(projectRoot, "public/assets/game/data/story/authored/dialogues.json");
 const sceneStatesPath = path.join(projectRoot, "public/assets/game/data/story/authored/scene_states.json");
+const areaEnumPath = path.join(projectRoot, "src/common/enums/area.ts");
 const npcEnumPath = path.join(projectRoot, "src/common/enums/npc.ts");
 const dialogueEnumPath = path.join(projectRoot, "src/common/enums/dialogue.ts");
 const dialogueTypesPath = path.join(projectRoot, "src/common/types/dialogue.ts");
@@ -160,6 +161,93 @@ function formatSchemaErrors(schemaName, errors) {
   });
 }
 
+function findReachableNodes(startNodeId, successorsByNode) {
+  const reachable = new Set();
+  const stack = [startNodeId];
+
+  while (stack.length > 0) {
+    const nodeId = stack.pop();
+    if (!nodeId || reachable.has(nodeId)) {
+      continue;
+    }
+
+    reachable.add(nodeId);
+    for (const nextNodeId of successorsByNode.get(nodeId) ?? []) {
+      if (!reachable.has(nextNodeId)) {
+        stack.push(nextNodeId);
+      }
+    }
+  }
+
+  return reachable;
+}
+
+function findProductiveNodes(terminalNodes, predecessorsByNode) {
+  const productive = new Set();
+  const stack = [...terminalNodes];
+
+  while (stack.length > 0) {
+    const nodeId = stack.pop();
+    if (!nodeId || productive.has(nodeId)) {
+      continue;
+    }
+
+    productive.add(nodeId);
+    for (const prevNodeId of predecessorsByNode.get(nodeId) ?? []) {
+      if (!productive.has(prevNodeId)) {
+        stack.push(prevNodeId);
+      }
+    }
+  }
+
+  return productive;
+}
+
+function validateDialogueGraph(dialoguePrefix, startNodeId, nodeKeys, runtimeEdges, terminalNodes, issues) {
+  const successorsByNode = new Map();
+  const predecessorsByNode = new Map();
+
+  for (const nodeKey of nodeKeys) {
+    successorsByNode.set(nodeKey, new Set());
+    predecessorsByNode.set(nodeKey, new Set());
+  }
+
+  runtimeEdges.forEach((nextNodeIds, nodeKey) => {
+    const successors = successorsByNode.get(nodeKey);
+    if (!successors) {
+      return;
+    }
+
+    nextNodeIds.forEach((nextNodeId) => {
+      successors.add(nextNodeId);
+      predecessorsByNode.get(nextNodeId)?.add(nodeKey);
+    });
+  });
+
+  const reachable = findReachableNodes(startNodeId, successorsByNode);
+  const unreachableNodeIds = [...nodeKeys].filter((nodeKey) => !reachable.has(nodeKey)).sort();
+  if (unreachableNodeIds.length > 0) {
+    issues.push(`${dialoguePrefix} startNodeId=${startNodeId} 에서 도달할 수 없는 nodes가 있습니다: ${unreachableNodeIds.join(", ")}`);
+  }
+
+  const productive = findProductiveNodes(
+    [...terminalNodes].filter((nodeId) => reachable.has(nodeId)),
+    predecessorsByNode
+  );
+
+  if (!productive.has(startNodeId)) {
+    issues.push(`${dialoguePrefix} startNodeId=${startNodeId} 에서 종료 가능한 경로가 없습니다.`);
+    return;
+  }
+
+  const nonProductiveReachableNodeIds = [...reachable].filter((nodeId) => !productive.has(nodeId)).sort();
+  if (nonProductiveReachableNodeIds.length > 0) {
+    issues.push(
+      `${dialoguePrefix} 종료 불가 순환 또는 막힌 분기 nodes가 있습니다: ${nonProductiveReachableNodeIds.join(", ")}`
+    );
+  }
+}
+
 function validateDialogueScript(dialogue, dialogueIndex, allowedActions, issues) {
   const dialogueId = normalizeString(dialogue?.id) || "(empty)";
   const dialoguePrefix = `[dialogues.${dialogueIndex}] id=${dialogueId}`;
@@ -184,6 +272,8 @@ function validateDialogueScript(dialogue, dialogueIndex, allowedActions, issues)
   }
 
   const normalizedNodeIds = new Set();
+  const runtimeEdges = new Map();
+  const terminalNodes = new Set();
 
   nodeEntries.forEach(([nodeKey, node]) => {
     if (!isRecord(node)) {
@@ -212,6 +302,7 @@ function validateDialogueScript(dialogue, dialogueIndex, allowedActions, issues)
       issues.push(`${dialoguePrefix} nodes.${nodeKey}.action=${action} 는 지원하지 않는 DialogueAction 입니다.`);
     }
 
+    const runtimeNextNodeIds = new Set();
     const nextNodeId = normalizeString(node.nextNodeId);
     if (nextNodeId && !nodeKeys.has(nextNodeId)) {
       issues.push(`${dialoguePrefix} nodes.${nodeKey}.nextNodeId=${nextNodeId} 가 nodes에 없습니다.`);
@@ -223,8 +314,9 @@ function validateDialogueScript(dialogue, dialogueIndex, allowedActions, issues)
     }
 
     const explicitChoiceIds = new Set();
+    const choices = ensureArray(node.choices);
 
-    ensureArray(node.choices).forEach((choice, choiceIndex) => {
+    choices.forEach((choice, choiceIndex) => {
       if (!isRecord(choice)) {
         issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices[${choiceIndex}] 가 객체가 아닙니다.`);
         return;
@@ -246,6 +338,8 @@ function validateDialogueScript(dialogue, dialogueIndex, allowedActions, issues)
       const choiceNextNodeId = normalizeString(choice.nextNodeId);
       if (choiceNextNodeId && !nodeKeys.has(choiceNextNodeId)) {
         issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices[${choiceIndex}].nextNodeId=${choiceNextNodeId} 가 nodes에 없습니다.`);
+      } else if (choiceNextNodeId) {
+        runtimeNextNodeIds.add(choiceNextNodeId);
       }
 
       const choiceAction = normalizeString(choice.action);
@@ -253,7 +347,23 @@ function validateDialogueScript(dialogue, dialogueIndex, allowedActions, issues)
         issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices[${choiceIndex}].action=${choiceAction} 는 지원하지 않는 DialogueAction 입니다.`);
       }
     });
+
+    if (choices.length > 0) {
+      if (choices.some((choice) => !normalizeString(choice?.nextNodeId))) {
+        terminalNodes.add(nodeKey);
+      }
+    } else if (!nextNodeId) {
+      terminalNodes.add(nodeKey);
+    } else if (nodeKeys.has(nextNodeId)) {
+      runtimeNextNodeIds.add(nextNodeId);
+    }
+
+    runtimeEdges.set(nodeKey, runtimeNextNodeIds);
   });
+
+  if (startNodeId && nodeKeys.has(startNodeId)) {
+    validateDialogueGraph(dialoguePrefix, startNodeId, nodeKeys, runtimeEdges, terminalNodes, issues);
+  }
 }
 
 function collectDialogueIds(dialoguesJson, requiredDialogueIds, allowedActions, issues) {
@@ -284,8 +394,9 @@ function collectDialogueIds(dialoguesJson, requiredDialogueIds, allowedActions, 
   return dialogueIds;
 }
 
-function validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, issues) {
+function validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, requiredAreaIds, issues) {
   const seenSceneStateIds = new Set();
+  const missingDialogueIds = new Set();
 
   for (const [sceneStateIndex, sceneState] of ensureArray(sceneStatesJson?.sceneStates).entries()) {
     const sceneStateId = normalizeString(sceneState?.id) || "(unknown_scene_state)";
@@ -298,6 +409,11 @@ function validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredScene
       }
     } else {
       issues.push(`[sceneStates.${sceneStateIndex}] id가 비어 있습니다.`);
+    }
+
+    const areaId = normalizeString(sceneState?.area);
+    if (!requiredAreaIds.has(areaId)) {
+      issues.push(`[${sceneStateId}] area=${JSON.stringify(sceneState?.area)} 가 AREA_IDS 정의에 없습니다.`);
     }
 
     for (const [index, npc] of ensureArray(sceneState?.npcs).entries()) {
@@ -322,8 +438,13 @@ function validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredScene
 
       if (!dialogueIds.has(dialogueId)) {
         issues.push(`[${sceneStateId}] npcs[${index}] npcId=${npcId || "(empty)"} dialogueId=${dialogueId} 가 dialogues.json에 없습니다.`);
+        missingDialogueIds.add(dialogueId);
       }
     }
+  }
+
+  if (missingDialogueIds.size > 0) {
+    issues.push(`[sceneStates] dialogues.json에 없는 dialogueId 목록: ${[...missingDialogueIds].sort().join(", ")}`);
   }
 
   for (const requiredSceneStateId of requiredSceneStateIds) {
@@ -337,6 +458,7 @@ async function main() {
   const [
     dialoguesRaw,
     sceneStatesRaw,
+    areaEnumSource,
     npcEnumSource,
     dialogueEnumSource,
     dialogueTypesSource,
@@ -346,6 +468,7 @@ async function main() {
   ] = await Promise.all([
     readFile(dialoguesPath, "utf8"),
     readFile(sceneStatesPath, "utf8"),
+    readFile(areaEnumPath, "utf8"),
     readFile(npcEnumPath, "utf8"),
     readFile(dialogueEnumPath, "utf8"),
     readFile(dialogueTypesPath, "utf8"),
@@ -359,6 +482,7 @@ async function main() {
   const dialoguesSchema = JSON.parse(dialoguesSchemaRaw);
   const sceneStatesSchema = JSON.parse(sceneStatesSchemaRaw);
 
+  const requiredAreaIds = new Set(parseExportedStringMap(areaEnumSource, areaEnumPath, "AREA_IDS").values());
   const npcIds = new Set(parseExportedStringMap(npcEnumSource, npcEnumPath, "NPC_IDS").values());
   const requiredDialogueIds = new Set(parseExportedStringMap(dialogueEnumSource, dialogueEnumPath, "DIALOGUE_IDS").values());
   const allowedActions = new Set(parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_ACTIONS"));
@@ -381,7 +505,7 @@ async function main() {
   }
 
   const dialogueIds = collectDialogueIds(dialoguesJson, requiredDialogueIds, allowedActions, issues);
-  validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, issues);
+  validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, requiredAreaIds, issues);
 
   if (issues.length > 0) {
     console.error("[validate:authored-story] 검증 실패");
