@@ -1,6 +1,7 @@
 // 씬 조립만 담당하고 디버그 오버레이에도 render bounds를 연결한다.
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { DIALOGUE_IDS, type DialogueId } from "../../common/enums/dialogue";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
 import { DebugMinigameHud } from "../../debug/overlay/DebugMinigameHud";
 import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
@@ -9,6 +10,7 @@ import { DebugCommandBus } from "../../debug/services/DebugCommandBus";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugInputController } from "../../debug/services/DebugInputController";
 import type { AreaId } from "../../common/enums/area";
+import type { SceneState } from "../../common/types/sceneState";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
@@ -76,6 +78,8 @@ export class MainScene extends Phaser.Scene {
   private debugInputController?: DebugInputController;
   private escapeKey?: Phaser.Input.Keyboard.Key;
   private plannerKey?: Phaser.Input.Keyboard.Key;
+  private currentSceneId?: SceneId;
+  private currentSceneState?: SceneState;
 
   constructor() {
     super(SCENE_KEYS.main);
@@ -157,8 +161,13 @@ export class MainScene extends Phaser.Scene {
     this.interactionManager.setTransitionInteractHandler((transitionId) => {
       this.handleAreaTransition(transitionId);
     });
+    const pendingRestorePayload = this.getPendingRestorePayload();
     const startScene = this.resolveStartScene();
-    const initialSceneState = normalizeSceneState(getSceneState(startScene.initialStateId));
+    this.currentSceneId = startScene.id;
+    const initialSceneState = normalizeSceneState(
+      pendingRestorePayload?.world?.sceneState ?? getSceneState(startScene.initialStateId)
+    );
+    this.currentSceneState = initialSceneState;
     const runtimeSceneScript = buildRuntimeSceneScript(startScene, initialSceneState);
     const playerAppearance = resolvePlayerAppearanceDefinition(
       this.registry.get("playerData") as Partial<PlayerAppearanceSelection> | undefined
@@ -528,6 +537,8 @@ export class MainScene extends Phaser.Scene {
       progression: this.progressionManager?.getSnapshot(),
       world: {
         areaId: this.worldManager?.getCurrentAreaId() ?? "world",
+        sceneId: this.currentSceneId,
+        sceneState: this.buildCurrentSceneStateSnapshot(),
         playerTile: playerSnapshot
           ? {
               tileX: playerSnapshot.tileX,
@@ -548,8 +559,11 @@ export class MainScene extends Phaser.Scene {
     }
     this.registry.set(MainScene.PENDING_RESTORE_PAYLOAD_KEY, payload);
 
-    if (payload.world?.areaId) {
-      this.registry.set("startSceneId", getDefaultSceneIdForArea(payload.world.areaId));
+    if (payload.world?.sceneId || payload.world?.areaId) {
+      this.registry.set(
+        "startSceneId",
+        payload.world.sceneId ?? getDefaultSceneIdForArea(payload.world.areaId)
+      );
       this.scene.restart();
       return true;
     }
@@ -562,8 +576,37 @@ export class MainScene extends Phaser.Scene {
     return true;
   }
 
+  private buildCurrentSceneStateSnapshot(): SceneState | undefined {
+    const baseSceneState = this.currentSceneState;
+    const npcSnapshots = this.npcManager?.getSnapshot();
+
+    if (!baseSceneState || !npcSnapshots?.length) {
+      return baseSceneState;
+    }
+
+    const dialogueIdByNpcId = new Map(
+      baseSceneState.npcs.map((npc) => [npc.npcId, npc.dialogueId] as const)
+    );
+    const fallbackDialogueId = baseSceneState.npcs[0]?.dialogueId ?? DIALOGUE_IDS.minsuIntro;
+
+    return normalizeSceneState({
+      ...baseSceneState,
+      npcs: npcSnapshots.map((npc) => ({
+        npcId: npc.id,
+        x: npc.x,
+        y: npc.y,
+        facing: npc.facing,
+        dialogueId: (dialogueIdByNpcId.get(npc.id) ?? fallbackDialogueId) as DialogueId
+      }))
+    });
+  }
+
+  private getPendingRestorePayload(): SavePayload | undefined {
+    return this.registry.get(MainScene.PENDING_RESTORE_PAYLOAD_KEY) as SavePayload | undefined;
+  }
+
   private applyPendingRestorePayload(): void {
-    const payload = this.registry.get(MainScene.PENDING_RESTORE_PAYLOAD_KEY) as SavePayload | undefined;
+    const payload = this.getPendingRestorePayload();
     if (!payload || !this.statSystemManager || !this.inventoryService || !this.progressionManager) {
       return;
     }

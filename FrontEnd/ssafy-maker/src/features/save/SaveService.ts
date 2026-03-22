@@ -1,8 +1,10 @@
 import type { AreaId } from "../../common/enums/area";
 import type { RuntimeGameState } from "../../game/state/gameState";
+import type { SceneId } from "../../game/scripts/scenes/sceneIds";
 import type { InventorySnapshot } from "../inventory/InventoryService";
 import type { TimeState } from "../progression/TimeService";
 import type { WeeklyPlanOptionId } from "../planning/weeklyPlan";
+import type { SceneState } from "../../common/types/sceneState";
 
 export type SaveSlotId = "auto" | "slot-1" | "slot-2" | "slot-3" | "slot-4" | "slot-5";
 
@@ -16,6 +18,8 @@ export type SavePayload = {
   };
   world?: {
     areaId: AreaId;
+    sceneId?: SceneId;
+    sceneState?: SceneState;
     playerTile?: {
       tileX: number;
       tileY: number;
