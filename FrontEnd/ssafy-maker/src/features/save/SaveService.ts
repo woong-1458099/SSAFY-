@@ -25,6 +25,9 @@ export type SavePayload = {
       tileY: number;
     };
   };
+  story?: {
+    completedFixedEventIds: string[];
+  };
 };
 
 export type SaveSlotData = {

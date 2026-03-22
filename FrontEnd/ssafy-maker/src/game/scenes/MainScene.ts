@@ -40,6 +40,7 @@ import { PlaceActionManager } from "../managers/PlaceActionManager";
 import { ProgressionManager } from "../managers/ProgressionManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { StatSystemManager } from "../managers/StatSystemManager";
+import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
 import type { SceneId } from "../scripts/scenes/sceneIds";
 import {
@@ -75,6 +76,7 @@ export class MainScene extends Phaser.Scene {
   private placeActionManager?: PlaceActionManager;
   private progressionManager?: ProgressionManager;
   private interactionManager?: InteractionManager;
+  private storyEventManager?: StoryEventManager;
   private areaTransitionOverlay?: AreaTransitionOverlay;
   private debugCommandBus?: DebugCommandBus;
   private debugInputController?: DebugInputController;
@@ -164,6 +166,26 @@ export class MainScene extends Phaser.Scene {
       onNotice: (message) => this.menuManager?.showNotice(message)
     });
     this.progressionManager.initialize();
+    this.storyEventManager = new StoryEventManager({
+      scene: this,
+      getHudState: () => this.statSystemManager!.getHudState(),
+      getCurrentLocation: () => this.statSystemManager!.getHudState().locationLabel,
+      getPlayerName: () => {
+        const raw = this.registry.get("playerData") as { name?: string } | undefined;
+        const name = typeof raw?.name === "string" ? raw.name.trim() : "";
+        return name.length > 0 ? name : "플레이어";
+      },
+      setRuntimeDialogueScript: (script) => this.setRuntimeDialogueScript(script),
+      removeRuntimeDialogueScript: (dialogueId) => this.removeRuntimeDialogueScript(dialogueId),
+      playDialogue: (dialogueId) => this.dialogueManager!.play(dialogueId),
+      advanceTimeAfterFixedEvent: () => {
+        if (this.progressionManager?.consumeActionPoint()) {
+          this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
+        }
+      },
+      onNotice: (message) => this.menuManager?.showNotice(message)
+    });
+    await this.storyEventManager.initialize(this.statSystemManager.getHudState().week);
     this.minigameRewardManager = new MinigameRewardManager({
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
@@ -285,6 +307,7 @@ export class MainScene extends Phaser.Scene {
       this.minigameRewardManager?.destroy();
       this.placeActionManager?.destroy();
       this.progressionManager?.destroy();
+      this.storyEventManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
     });
@@ -337,6 +360,17 @@ export class MainScene extends Phaser.Scene {
       !debugHudVisible
     ) {
       this.progressionManager?.togglePlanner();
+    }
+
+    if (
+      !menuOpen &&
+      !placePopupOpen &&
+      !plannerOpen &&
+      !debugHudVisible &&
+      !this.dialogueManager?.isDialoguePlaying()
+    ) {
+      this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
+      this.storyEventManager?.tryStartCurrentFixedEvent();
     }
 
     this.playerManager.update(runtimeGrids, parsedMap);
@@ -591,12 +625,13 @@ export class MainScene extends Phaser.Scene {
               tileY: playerSnapshot.tileY
             }
           : undefined
-      }
+      },
+      story: this.storyEventManager?.getSnapshot()
     };
   }
 
   private restoreSavePayload(payload: SavePayload): boolean {
-    if (!this.statSystemManager || !this.inventoryService || !this.progressionManager) {
+    if (!this.statSystemManager || !this.inventoryService || !this.progressionManager || !this.storyEventManager) {
       return false;
     }
 
@@ -617,6 +652,8 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager.restore(payload.gameState);
     this.inventoryService.restore(payload.inventory);
     this.progressionManager.restore(payload.progression);
+    this.storyEventManager.restore(payload.story);
+    this.storyEventManager.syncWeek(payload.gameState.hud.week);
     this.menuManager?.refreshStatsUi();
     this.menuManager?.refreshInventoryUi();
     return true;
@@ -668,7 +705,7 @@ export class MainScene extends Phaser.Scene {
 
   private applyPendingRestorePayload(): void {
     const payload = this.getPendingRestorePayload();
-    if (!payload || !this.statSystemManager || !this.inventoryService || !this.progressionManager) {
+    if (!payload || !this.statSystemManager || !this.inventoryService || !this.progressionManager || !this.storyEventManager) {
       return;
     }
 
@@ -676,6 +713,8 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager.restore(payload.gameState);
     this.inventoryService.restore(payload.inventory);
     this.progressionManager.restore(payload.progression);
+    this.storyEventManager.restore(payload.story);
+    this.storyEventManager.syncWeek(payload.gameState.hud.week);
     if (payload.world?.playerTile) {
       this.playerManager?.debugTeleportToTile(payload.world.playerTile.tileX, payload.world.playerTile.tileY);
     }
