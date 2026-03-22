@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 
-const dialoguesPath = path.join(projectRoot, "public/assets/game/data/story/authored/dialogues.json");
-const sceneStatesPath = path.join(projectRoot, "public/assets/game/data/story/authored/scene_states.json");
+const defaultDialoguesPath = path.join(projectRoot, "public/assets/game/data/story/authored/dialogues.json");
+const defaultSceneStatesPath = path.join(projectRoot, "public/assets/game/data/story/authored/scene_states.json");
 const areaEnumPath = path.join(projectRoot, "src/common/enums/area.ts");
 const npcEnumPath = path.join(projectRoot, "src/common/enums/npc.ts");
 const dialogueEnumPath = path.join(projectRoot, "src/common/enums/dialogue.ts");
@@ -29,6 +29,38 @@ function isRecord(value) {
 
 function normalizeString(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function resolveInputPath(candidatePath, fallbackPath) {
+  if (!candidatePath) {
+    return fallbackPath;
+  }
+
+  return path.isAbsolute(candidatePath) ? candidatePath : path.resolve(projectRoot, candidatePath);
+}
+
+function parseCliOptions(argv) {
+  const options = {};
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const current = argv[index];
+
+    if (current === "--dialogues") {
+      options.dialoguesPath = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
+    if (current === "--scene-states") {
+      options.sceneStatesPath = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
+    throw new Error(`지원하지 않는 옵션입니다: ${current}`);
+  }
+
+  return options;
 }
 
 function unwrapExpression(expression) {
@@ -454,7 +486,9 @@ function validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredScene
   }
 }
 
-async function main() {
+export async function validateAuthoredStory(options = {}) {
+  const dialoguesPath = resolveInputPath(options.dialoguesPath, defaultDialoguesPath);
+  const sceneStatesPath = resolveInputPath(options.sceneStatesPath, defaultSceneStatesPath);
   const [
     dialoguesRaw,
     sceneStatesRaw,
@@ -507,17 +541,34 @@ async function main() {
   const dialogueIds = collectDialogueIds(dialoguesJson, requiredDialogueIds, allowedActions, issues);
   validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, requiredAreaIds, issues);
 
-  if (issues.length > 0) {
+  return {
+    issues,
+    dialogueIds,
+    npcIds,
+    sceneStateCount: ensureArray(sceneStatesJson?.sceneStates).length,
+    dialoguesPath,
+    sceneStatesPath
+  };
+}
+
+async function main() {
+  const result = await validateAuthoredStory(parseCliOptions(process.argv.slice(2)));
+
+  if (result.issues.length > 0) {
     console.error("[validate:authored-story] 검증 실패");
-    issues.forEach((issue) => console.error(`- ${issue}`));
+    console.error(`- dialoguesPath: ${result.dialoguesPath}`);
+    console.error(`- sceneStatesPath: ${result.sceneStatesPath}`);
+    result.issues.forEach((issue) => console.error(`- ${issue}`));
     process.exitCode = 1;
     return;
   }
 
   console.log("[validate:authored-story] OK");
-  console.log(`- dialogues: ${dialogueIds.size}`);
-  console.log(`- npc ids: ${npcIds.size}`);
-  console.log(`- scene states: ${ensureArray(sceneStatesJson?.sceneStates).length}`);
+  console.log(`- dialoguesPath: ${result.dialoguesPath}`);
+  console.log(`- sceneStatesPath: ${result.sceneStatesPath}`);
+  console.log(`- dialogues: ${result.dialogueIds.size}`);
+  console.log(`- npc ids: ${result.npcIds.size}`);
+  console.log(`- scene states: ${result.sceneStateCount}`);
 }
 
 main().catch((error) => {
