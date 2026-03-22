@@ -134,10 +134,54 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     hpDelta: 7,
     stressDelta: 5,
     statDelta: { fe: 1 }
+  },
+  {
+    templateId: "item-snack",
+    name: "과자",
+    shortLabel: "SN",
+    kind: "consumable",
+    price: 7500,
+    sellPrice: 3750,
+    effect: "HP +4, 스트레스 -2, 운 +1",
+    stackable: true,
+    color: 0xf0b75d,
+    iconKey: "shop-item-snack",
+    hpDelta: 4,
+    stressDelta: -2,
+    statDelta: { luck: 1 }
+  },
+  {
+    templateId: "item-cigarette",
+    name: "담배",
+    shortLabel: "CG",
+    kind: "consumable",
+    price: 11000,
+    sellPrice: 5500,
+    effect: "HP -8, 스트레스 -7",
+    stackable: true,
+    color: 0xb7bcc9,
+    iconKey: "shop-item-cigarette",
+    hpDelta: -8,
+    stressDelta: -7
+  },
+  {
+    templateId: "item-soju",
+    name: "소주",
+    shortLabel: "SJ",
+    kind: "consumable",
+    price: 14000,
+    sellPrice: 7000,
+    effect: "HP -5, 스트레스 -8, 협업 +1",
+    stackable: true,
+    color: 0x85d5b8,
+    iconKey: "shop-item-soju",
+    hpDelta: -5,
+    stressDelta: -8,
+    statDelta: { teamwork: 1 }
   }
 ];
 
-const STARTER_ITEM_TEMPLATE_IDS = ["item-chocolate", "item-energy-drink", "kbd-gaming"];
+const STARTER_ITEM_TEMPLATE_IDS = ["item-chocolate", "item-energy-drink"];
 
 function createEmptyInventorySlots(): Array<InventoryItemStack | null> {
   return Array.from({ length: INVENTORY_CAPACITY }, () => null);

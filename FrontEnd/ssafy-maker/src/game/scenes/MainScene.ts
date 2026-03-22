@@ -13,6 +13,7 @@ import type { AreaId } from "../../common/enums/area";
 import type { SceneState } from "../../common/types/sceneState";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
+import { launchMinigame, openMinigameMenu } from "../../features/minigame/MinigameGateway";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
 import { GameHud } from "../../features/ui/components/GameHud";
@@ -99,6 +100,48 @@ export class MainScene extends Phaser.Scene {
     this.dialogueBox = new DialogueBox(this);
     this.hud = new GameHud(this);
     this.dialogueManager.setDialogueBox(this.dialogueBox);
+    this.dialogueManager.setRuntimeHooks({
+      getMetricValue: (stat) => {
+        const hudState = this.statSystemManager!.getHudState();
+        const statsState = this.statSystemManager!.getStatsState();
+        switch (stat) {
+          case "hp":
+            return hudState.hp;
+          case "gold":
+            return hudState.money;
+          default:
+            return statsState[stat];
+        }
+      },
+      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      patchHudState: (next) => this.statSystemManager!.patchHudState(next),
+      onNotice: (message) => this.menuManager?.showNotice(message),
+      runAction: (action) => {
+        switch (action) {
+          case "openShop":
+            this.placeActionManager?.openShop();
+            return;
+          case "openMiniGame":
+            openMinigameMenu(this, SCENE_KEYS.main);
+            return;
+          case "playDrinking":
+            launchMinigame(this, "DrinkingScene", SCENE_KEYS.main);
+            return;
+          case "playInterview":
+            launchMinigame(this, "InterviewScene", SCENE_KEYS.main);
+            return;
+          case "playGym":
+            launchMinigame(this, "GymScene", SCENE_KEYS.main);
+            return;
+          case "playRhythm":
+            launchMinigame(this, "RhythmScene", SCENE_KEYS.main);
+            return;
+          case "playCooking":
+            launchMinigame(this, "CookingScene", SCENE_KEYS.main);
+            return;
+        }
+      }
+    });
     this.menuManager = new InGameMenuManager({
       scene: this,
       getStatsState: () => this.statSystemManager!.getStatsState(),

@@ -68,6 +68,10 @@ export class PlaceActionManager {
     this.popupRoot = undefined;
   }
 
+  openShop(): void {
+    this.openShopModal();
+  }
+
   open(placeId: PlaceId): boolean {
     if (placeId === "campus" || placeId === "downtown") {
       return false;

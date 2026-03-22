@@ -1,11 +1,24 @@
 // 등록된 대화 스크립트를 화면에 출력하고 노드 단위로 진행시키는 대화 실행 매니저
 import Phaser from "phaser";
 import type {
+  DialogueAction,
+  DialogueChoice,
   DialogueNode,
-  DialogueScript
+  DialogueRequirement,
+  DialogueScript,
+  DialogueStatKey
 } from "../../common/types/dialogue";
 import type { DialogueBox } from "../../features/ui/components/DialogueBox";
+import type { HudState, PlayerStatKey } from "../state/gameState";
 import { DIALOGUE_REGISTRY } from "../scripts/dialogues/dialogueRegistry";
+
+type DialogueRuntimeHooks = {
+  getMetricValue?: (stat: DialogueStatKey) => number;
+  applyStatDelta?: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  patchHudState?: (next: Partial<HudState>) => void;
+  onNotice?: (message: string) => void;
+  runAction?: (action: DialogueAction) => void;
+};
 
 export class DialogueManager {
   private scene: Phaser.Scene;
@@ -20,6 +33,11 @@ export class DialogueManager {
   private sKey?: Phaser.Input.Keyboard.Key;
   private digitKeys: Phaser.Input.Keyboard.Key[] = [];
   private pendingWaitCancel?: () => void;
+  private getMetricValue?: DialogueRuntimeHooks["getMetricValue"];
+  private applyStatDelta?: DialogueRuntimeHooks["applyStatDelta"];
+  private patchHudState?: DialogueRuntimeHooks["patchHudState"];
+  private onNotice?: DialogueRuntimeHooks["onNotice"];
+  private runAction?: DialogueRuntimeHooks["runAction"];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -43,6 +61,14 @@ export class DialogueManager {
     this.dialogueBox = dialogueBox;
   }
 
+  setRuntimeHooks(hooks: DialogueRuntimeHooks): void {
+    this.getMetricValue = hooks.getMetricValue;
+    this.applyStatDelta = hooks.applyStatDelta;
+    this.patchHudState = hooks.patchHudState;
+    this.onNotice = hooks.onNotice;
+    this.runAction = hooks.runAction;
+  }
+
   async play(dialogueId: string) {
     const script = this.requireDialogue(dialogueId);
     this.destroyed = false;
@@ -58,9 +84,28 @@ export class DialogueManager {
             break;
           }
           const selectedChoice = currentNode.choices[selectedIndex] ?? currentNode.choices[0];
-          currentNode = selectedChoice?.nextNodeId
-            ? script.nodes[selectedChoice.nextNodeId]
-            : undefined;
+          if (selectedChoice && !this.isChoiceAvailable(selectedChoice)) {
+            const requirementText = this.getRequirementText(selectedChoice);
+            this.onNotice?.(
+              selectedChoice.lockedReason ??
+                (requirementText || "선택 조건을 만족하지 못했습니다")
+            );
+            continue;
+          }
+          if (selectedChoice) {
+            this.applyChoiceStatChanges(selectedChoice);
+          }
+          if (selectedChoice?.nextNodeId) {
+            currentNode = script.nodes[selectedChoice.nextNodeId];
+            continue;
+          }
+          if (selectedChoice?.feedbackText) {
+            this.onNotice?.(selectedChoice.feedbackText);
+          }
+          if (selectedChoice?.action) {
+            this.runAction?.(selectedChoice.action);
+          }
+          currentNode = undefined;
           continue;
         }
 
@@ -70,9 +115,14 @@ export class DialogueManager {
           break;
         }
 
-        currentNode = currentNode.nextNodeId
-          ? script.nodes[currentNode.nextNodeId]
-          : undefined;
+        if (currentNode.nextNodeId) {
+          currentNode = script.nodes[currentNode.nextNodeId];
+        } else {
+          if (currentNode.action) {
+            this.runAction?.(currentNode.action);
+          }
+          currentNode = undefined;
+        }
       }
     } finally {
       this.pendingWaitCancel?.();
@@ -188,5 +238,96 @@ export class DialogueManager {
       this.pendingWaitCancel = cancel;
       this.scene.events.on(Phaser.Scenes.Events.UPDATE, onUpdate);
     });
+  }
+
+  private isChoiceAvailable(choice: DialogueChoice): boolean {
+    const requirements = choice.requirements ?? [];
+    return requirements.every((req) => {
+      const value = this.getMetricValue?.(req.stat) ?? 0;
+      if (typeof req.min === "number" && value < req.min) {
+        return false;
+      }
+      if (typeof req.max === "number" && value > req.max) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private getRequirementText(choice: DialogueChoice): string {
+    const requirements = choice.requirements ?? [];
+    if (requirements.length === 0) {
+      return "";
+    }
+
+    return requirements.map((req) => this.describeRequirement(req)).join(", ");
+  }
+
+  private describeRequirement(req: DialogueRequirement): string {
+    if (req.label) {
+      return req.label;
+    }
+
+    const label =
+      req.stat === "hp"
+        ? "HP"
+        : req.stat === "gold"
+          ? "재화"
+          : req.stat === "fe"
+            ? "FE"
+            : req.stat === "be"
+              ? "BE"
+              : req.stat === "teamwork"
+                ? "협업"
+                : req.stat === "luck"
+                  ? "운"
+                  : "스트레스";
+
+    if (typeof req.min === "number" && typeof req.max === "number") {
+      return `${label} ${req.min}~${req.max}`;
+    }
+    if (typeof req.min === "number") {
+      return `${label} ${req.min} 이상`;
+    }
+    if (typeof req.max === "number") {
+      return `${label} ${req.max} 이하`;
+    }
+    return label;
+  }
+
+  private applyChoiceStatChanges(choice: DialogueChoice): void {
+    if (!choice.statChanges) {
+      return;
+    }
+
+    const hudPatch: Partial<HudState> = {};
+    const statDelta: Partial<Record<PlayerStatKey, number>> = {};
+
+    (Object.entries(choice.statChanges) as Array<[DialogueStatKey, number]>).forEach(([key, value]) => {
+      if (!value) {
+        return;
+      }
+
+      if (key === "hp") {
+        const currentHp = this.getMetricValue?.("hp") ?? 0;
+        hudPatch.hp = currentHp + value;
+        return;
+      }
+
+      if (key === "gold") {
+        const currentMoney = this.getMetricValue?.("gold") ?? 0;
+        hudPatch.money = Math.max(0, currentMoney + value);
+        return;
+      }
+
+      statDelta[key] = value;
+    });
+
+    if (Object.keys(statDelta).length > 0) {
+      this.applyStatDelta?.(statDelta, 1);
+    }
+    if (Object.keys(hudPatch).length > 0) {
+      this.patchHudState?.(hudPatch);
+    }
   }
 }
