@@ -38,7 +38,7 @@
     "dialogueNode": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["speaker", "text"],
+      "required": ["id", "speaker", "text"],
       "properties": {
         "id": {
           "type": "string",
