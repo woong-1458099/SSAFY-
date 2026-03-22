@@ -376,6 +376,7 @@ export class MainScene extends Phaser.Scene {
 
     this.playerManager.update(runtimeGrids, parsedMap);
     this.interactionManager.update();
+    this.debugInputController?.update();
 
     if (this.worldGridOverlay) {
       this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
