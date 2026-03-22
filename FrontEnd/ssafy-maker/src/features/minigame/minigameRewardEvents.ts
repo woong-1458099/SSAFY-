@@ -70,6 +70,11 @@ export function parseMinigameRewardText(rewardText: string): ParsedMinigameRewar
       continue;
     }
 
+    if (upperLabel === "MENTAL" || rawLabel === "멘탈") {
+      hudDelta.stress = (hudDelta.stress ?? 0) - delta;
+      continue;
+    }
+
     const mappedKey = STAT_LABEL_TO_KEY[rawLabel] ?? STAT_LABEL_TO_KEY[upperLabel];
     if (!mappedKey) {
       continue;
