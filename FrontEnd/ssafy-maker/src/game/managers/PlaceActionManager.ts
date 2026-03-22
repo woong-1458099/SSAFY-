@@ -9,11 +9,16 @@ import {
 } from "../../features/inventory/InventoryService";
 import { LOTTO_COMPLETED_EVENT, type LottoOutcome } from "../../features/minigame/lottoOutcome";
 import { launchMinigame } from "../../features/minigame/MinigameGateway";
-import { createPlaceBackgroundImage, PLACE_BACKGROUND_KEYS } from "../../features/place/placeBackgrounds";
+import {
+  createPlaceBackgroundImage,
+  ensurePlaceBackgroundTexture,
+  getPlaceBackgroundTextureKey
+} from "../../features/place/placeBackgrounds";
 import { createPlaceActionModal } from "../../features/place/placeModal";
 import { getPlacePopupContent, resolvePlaceEffect } from "../../features/place/placeActions";
 import { createShopModal } from "../../features/shop/ShopModal";
 import type { HudState, PlayerStatKey } from "../state/gameState";
+import { UI_DEPTH } from "../systems/uiDepth";
 
 type PlaceActionManagerOptions = {
   scene: Phaser.Scene;
@@ -41,6 +46,7 @@ export class PlaceActionManager {
   private readonly getMaxActionPoint: () => number;
   private readonly consumeActionPoint: () => boolean;
   private popupRoot?: Phaser.GameObjects.Container;
+  private popupRequestId = 0;
 
   constructor(options: PlaceActionManagerOptions) {
     this.scene = options.scene;
@@ -65,6 +71,7 @@ export class PlaceActionManager {
   }
 
   close(): void {
+    this.popupRequestId += 1;
     this.popupRoot?.destroy(true);
     this.popupRoot = undefined;
   }
@@ -95,15 +102,16 @@ export class PlaceActionManager {
 
     const unavailable = this.getUnavailableMessage(placeId);
     if (unavailable) {
-      this.openInfoModal(unavailable.title, unavailable.description);
+      this.openInfoModal(unavailable.title, unavailable.description, placeId);
       return true;
     }
 
-    this.mount(
+    this.mountWithPlaceBackground(placeId, (backgroundImage) =>
       createPlaceActionModal(this.scene, {
         title: content.title,
         description: content.description,
         actionText: content.actionText,
+        backgroundImage,
         createButton: (params) => this.createActionButton(params),
         onAction: () => this.usePlace(placeId),
         onClose: () => this.close()
@@ -113,13 +121,12 @@ export class PlaceActionManager {
   }
 
   private mount(root: Phaser.GameObjects.Container): void {
-    this.close();
-    this.popupRoot = root.setDepth(980);
+    this.popupRoot?.destroy(true);
+    this.popupRoot = root.setDepth(UI_DEPTH.placeModal);
   }
 
   private openHomeModal(): void {
-    const backgroundImage = createPlaceBackgroundImage(this.scene, PLACE_BACKGROUND_KEYS.home);
-    this.mount(
+    this.mountWithPlaceBackground("home", (backgroundImage) =>
       createHomeActionModal(this.scene, {
         actionPoint: this.getActionPoint(),
         maxActionPoint: this.getMaxActionPoint(),
@@ -132,11 +139,12 @@ export class PlaceActionManager {
   }
 
   private openStoreEntryModal(): void {
-    this.mount(
+    this.mountWithPlaceBackground("store", (backgroundImage) =>
       createPlaceActionModal(this.scene, {
         title: "편의점",
         description: "간단한 회복 아이템과 장비를 구매할 수 있습니다.",
         actionText: "상점 열기",
+        backgroundImage,
         createButton: (params) => this.createActionButton(params),
         onAction: () => this.openShopModal(),
         onClose: () => this.close()
@@ -145,10 +153,11 @@ export class PlaceActionManager {
   }
 
   private openShopModal(): void {
-    this.mount(
+    this.mountWithPlaceBackground("store", (backgroundImage) =>
       createShopModal(this.scene, {
         items: this.inventoryService.getShopCatalog(),
         money: this.getHudState().money,
+        backgroundImage,
         createButton: (params) => this.createActionButton(params),
         onBuy: (templateId) => this.buyShopItem(templateId),
         onClose: () => this.close()
@@ -163,7 +172,7 @@ export class PlaceActionManager {
     }
 
     if (!result.hudPatch) {
-      this.openInfoModal("구매 실패", result.toastMessage);
+      this.openInfoModal("구매 실패", result.toastMessage, "store");
       return;
     }
 
@@ -172,7 +181,7 @@ export class PlaceActionManager {
 
   private useHomeAction(action: HomeActionId): void {
     if (!this.consumeActionPoint()) {
-      this.openInfoModal("행동력 부족", "행동력이 부족해서 집 행동을 수행할 수 없습니다.");
+      this.openInfoModal("행동력 부족", "행동력이 부족해서 집 행동을 수행할 수 없습니다.", "home");
       return;
     }
 
@@ -189,19 +198,19 @@ export class PlaceActionManager {
   private usePlace(placeId: Exclude<PlaceId, "campus" | "downtown" | "home" | "store">): void {
     const unavailable = this.getUnavailableMessage(placeId);
     if (unavailable) {
-      this.openInfoModal(unavailable.title, unavailable.description);
+      this.openInfoModal(unavailable.title, unavailable.description, placeId);
       return;
     }
 
     const hudState = this.getHudState();
     const result = resolvePlaceEffect(placeId);
     if (hudState.money < result.cost) {
-      this.openInfoModal("돈 부족", "돈이 부족해서 이용할 수 없습니다.");
+      this.openInfoModal("돈 부족", "돈이 부족해서 이용할 수 없습니다.", placeId);
       return;
     }
 
     if (!this.consumeActionPoint()) {
-      this.openInfoModal("행동력 부족", "행동력이 부족해서 이용할 수 없습니다.");
+      this.openInfoModal("행동력 부족", "행동력이 부족해서 이용할 수 없습니다.", placeId);
       return;
     }
 
@@ -223,13 +232,29 @@ export class PlaceActionManager {
     }
   }
 
-  private openInfoModal(title: string, description: string): void {
-    this.mount(
+  private openInfoModal(title: string, description: string, backgroundPlaceId?: PlaceId): void {
+    if (!backgroundPlaceId) {
+      this.mount(
+        createPlaceActionModal(this.scene, {
+          title,
+          description,
+          actionText: "확인",
+          showCloseButton: false,
+          createButton: (params) => this.createActionButton(params),
+          onAction: () => this.close(),
+          onClose: () => this.close()
+        })
+      );
+      return;
+    }
+
+    this.mountWithPlaceBackground(backgroundPlaceId, (backgroundImage) =>
       createPlaceActionModal(this.scene, {
         title,
         description,
         actionText: "확인",
         showCloseButton: false,
+        backgroundImage,
         createButton: (params) => this.createActionButton(params),
         onAction: () => this.close(),
         onClose: () => this.close()
@@ -273,6 +298,29 @@ export class PlaceActionManager {
 
     const hudState = this.getHudState();
     this.patchHudState({ money: hudState.money + outcome.rewardMoney });
+  }
+
+  private createBackgroundForPlace(placeId: PlaceId): Phaser.GameObjects.Image | null {
+    return createPlaceBackgroundImage(this.scene, getPlaceBackgroundTextureKey(placeId));
+  }
+
+  private mountWithPlaceBackground(
+    placeId: PlaceId,
+    buildRoot: (backgroundImage: Phaser.GameObjects.Image | null) => Phaser.GameObjects.Container
+  ): void {
+    this.popupRequestId += 1;
+    const requestId = this.popupRequestId;
+    ensurePlaceBackgroundTexture(this.scene, placeId, () => {
+      if (requestId !== this.popupRequestId || !this.scene.scene.isActive()) {
+        return;
+      }
+      const backgroundImage = this.createBackgroundForPlace(placeId);
+      if (requestId !== this.popupRequestId) {
+        backgroundImage?.destroy();
+        return;
+      }
+      this.mount(buildRoot(backgroundImage));
+    });
   }
 
   private createActionButton(params: {

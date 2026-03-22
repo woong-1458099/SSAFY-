@@ -142,7 +142,6 @@ export class ProgressionManager {
   debugPatchTimeState(next: Partial<TimeState>): void {
     this.closeSalaryModal();
     this.closePlanner();
-    const previousWeek = this.timeState.week;
 
     const maxActionPoint = Math.max(0, Math.round(next.maxActionPoint ?? this.timeState.maxActionPoint));
     const actionPoint = Phaser.Math.Clamp(
@@ -169,9 +168,6 @@ export class ProgressionManager {
       week: Math.max(1, Math.round(next.week ?? this.timeState.week))
     };
 
-    if (typeof next.week === "number" && this.timeState.week < previousWeek) {
-      this.lastPaidWeeklySalaryWeek = Math.min(this.lastPaidWeeklySalaryWeek, this.timeState.week);
-    }
     this.pendingWeeklySalaryWeek = null;
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
   }

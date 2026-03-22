@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { preloadInventoryUiAssets } from "../../features/inventory/inventoryAssets";
 import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "../../features/minigame/minigameSceneKeys";
 import { preloadPlaceBackgroundAssets } from "../../features/place/placeBackgrounds";
 import { AREA_TRANSITION_MARKER_SPRITE } from "../definitions/assets/areaTransitionAssetCatalog";
@@ -39,6 +40,7 @@ export class PreloadScene extends Phaser.Scene {
 
     // 장소 팝업에서 사용하는 배경 에셋은 feature 계층 메타로 로드한다.
     preloadPlaceBackgroundAssets(this);
+    preloadInventoryUiAssets(this);
   }
 
   create() {

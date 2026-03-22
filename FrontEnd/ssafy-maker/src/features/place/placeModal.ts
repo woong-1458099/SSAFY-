@@ -17,14 +17,22 @@ export function createPlaceActionModal(scene: Phaser.Scene, options: {
   description: string;
   actionText: string;
   showCloseButton?: boolean;
+  backgroundImage?: Phaser.GameObjects.Image | null;
   createButton: ButtonFactory;
   onAction: () => void;
   onClose: () => void;
 }): Phaser.GameObjects.Container {
   const centerX = Math.round(scene.scale.width / 2);
   const centerY = Math.round(scene.scale.height / 2);
-  const overlay = scene.add.rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x04101d, 0.58);
-  const panel = scene.add.rectangle(centerX, centerY, 560, 300, 0x14314f, 0.98);
+  const overlay = scene.add.rectangle(
+    centerX,
+    centerY,
+    scene.scale.width,
+    scene.scale.height,
+    0x04101d,
+    options.backgroundImage ? 0.24 : 0.58
+  );
+  const panel = scene.add.rectangle(centerX, centerY, 560, 300, 0x14314f, options.backgroundImage ? 0.88 : 0.98);
   panel.setStrokeStyle(3, 0x8ed2ff, 1);
   const title = scene.add.text(centerX, centerY - 88, options.title, {
     fontFamily: FONT_FAMILY,
@@ -65,6 +73,11 @@ export function createPlaceActionModal(scene: Phaser.Scene, options: {
         onClick: options.onClose
       })
     );
+  }
+
+  if (options.backgroundImage) {
+    options.backgroundImage.setAlpha(0.98);
+    objects.unshift(options.backgroundImage);
   }
 
   return scene.add.container(0, 0, objects);

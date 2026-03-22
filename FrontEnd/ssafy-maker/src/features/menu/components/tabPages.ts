@@ -30,14 +30,14 @@ export function createStatsPage(
 
   const title = scene.add.text(bounds.x + 24, bounds.y + 18, "현재 스탯", {
     fontFamily: FONT_FAMILY,
-    fontSize: "28px",
+    fontSize: "24px",
     fontStyle: "bold",
     color: "#edf7ff",
     resolution: 2
   });
   const subtitle = scene.add.text(bounds.x + 24, bounds.y + 54, "shard 기준 기본 스탯 구조를 이식한 화면입니다.", {
     fontFamily: FONT_FAMILY,
-    fontSize: "16px",
+    fontSize: "14px",
     color: "#9ac6f3",
     resolution: 2
   });
@@ -45,16 +45,16 @@ export function createStatsPage(
 
   const barWidth = 360;
   rowDefs.forEach((row, index) => {
-    const y = bounds.y + 126 + index * 62;
+    const y = bounds.y + 116 + index * 56;
     const label = scene.add.text(bounds.x + 24, y - 14, row.label, {
       fontFamily: FONT_FAMILY,
-      fontSize: "22px",
+      fontSize: "19px",
       color: "#d7ecff",
       resolution: 2
     });
     const valueText = scene.add.text(bounds.x + 600, y - 14, `${statsState[row.key]}`, {
       fontFamily: FONT_FAMILY,
-      fontSize: "22px",
+      fontSize: "19px",
       fontStyle: "bold",
       color: "#f4fbff",
       resolution: 2
@@ -90,17 +90,17 @@ export function createSettingsPage(scene: Phaser.Scene, bounds: Phaser.Geom.Rect
   const container = scene.add.container(0, 0).setScrollFactor(0);
   const title = scene.add.text(bounds.x + 24, bounds.y + 18, "설정", {
     fontFamily: FONT_FAMILY,
-    fontSize: "28px",
+    fontSize: "24px",
     fontStyle: "bold",
     color: "#edf7ff",
     resolution: 2
   });
-  const body = scene.add.text(bounds.x + 24, bounds.y + 68, "ESC: 메뉴 열기/닫기\nP: 주간 계획표 열기/닫기\nSPACE: 상호작용\nHUD에 행동력과 시간 진행 상태를 표시합니다.", {
+  const body = scene.add.text(bounds.x + 24, bounds.y + 64, "ESC: 메뉴 열기/닫기\nP: 주간 계획표 열기/닫기\nSPACE: 상호작용\nHUD에 행동력과 시간 진행 상태를 표시합니다.", {
     fontFamily: FONT_FAMILY,
-    fontSize: "18px",
+    fontSize: "16px",
     color: "#cfe6ff",
     resolution: 2,
-    lineSpacing: 10
+    lineSpacing: 8
   });
   container.add([title, body]);
   return container;
@@ -115,14 +115,14 @@ export function createPlaceholderPage(
   const container = scene.add.container(0, 0).setScrollFactor(0);
   const title = scene.add.text(bounds.x + 24, bounds.y + 18, titleText, {
     fontFamily: FONT_FAMILY,
-    fontSize: "28px",
+    fontSize: "24px",
     fontStyle: "bold",
     color: "#edf7ff",
     resolution: 2
   });
-  const body = scene.add.text(bounds.x + 24, bounds.y + 82, description, {
+  const body = scene.add.text(bounds.x + 24, bounds.y + 76, description, {
     fontFamily: FONT_FAMILY,
-    fontSize: "18px",
+    fontSize: "16px",
     color: "#a9d0f4",
     resolution: 2,
     wordWrap: { width: bounds.width - 48 }

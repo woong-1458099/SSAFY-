@@ -461,9 +461,7 @@ export class MainScene extends Phaser.Scene {
           this.handleDebugTeleport(command.worldX, command.worldY);
           break;
         case "switchStartScene":
-          this.registry.set("startSceneId", command.sceneId);
-          this.debugLogger?.log(`debug:switch-scene:${command.sceneId}`);
-          this.scene.restart();
+          this.restartWithDebugScene(command.sceneId);
           break;
         case "adjustHudValue": {
           const hudState = this.statSystemManager?.getHudState();
@@ -578,6 +576,29 @@ export class MainScene extends Phaser.Scene {
 
   private restartWithScene(sceneId: SceneId) {
     this.registry.set("startSceneId", sceneId);
+    this.scene.restart();
+  }
+
+  private restartWithDebugScene(sceneId: SceneId) {
+    const nextSceneScript = getSceneScript(sceneId);
+    if (!nextSceneScript) {
+      return;
+    }
+
+    const payload = this.buildSavePayload();
+    this.registry.remove(MainScene.PENDING_START_TILE_KEY);
+    this.registry.set(MainScene.PENDING_RESTORE_PAYLOAD_KEY, {
+      ...payload,
+      world: {
+        ...payload.world,
+        areaId: nextSceneScript.area,
+        sceneId,
+        sceneState: undefined,
+        playerTile: undefined
+      }
+    });
+    this.registry.set("startSceneId", sceneId);
+    this.debugLogger?.log(`debug:switch-scene:${sceneId}`);
     this.scene.restart();
   }
 

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { HudState } from "../../../game/state/gameState";
+import { UI_DEPTH } from "../../../game/systems/uiDepth";
 
 const HUD_COLORS = {
   panelBg: 0x1f3b63,
@@ -64,52 +65,52 @@ export class GameHud {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
 
-    this.root = scene.add.container(0, 0).setDepth(950).setScrollFactor(0);
+    this.root = scene.add.container(0, 0).setDepth(UI_DEPTH.hud).setScrollFactor(0);
     this.leftGroup = scene.add.container(0, 0).setScrollFactor(0);
     this.rightGroup = scene.add.container(0, 0).setScrollFactor(0);
     this.topCenterGroup = scene.add.container(0, 0).setScrollFactor(0);
     this.hintGroup = scene.add.container(0, 0).setScrollFactor(0);
     this.root.add([this.leftGroup, this.rightGroup, this.topCenterGroup, this.hintGroup]);
 
-    const leftBg = scene.add.rectangle(0, 0, 176, 110, HUD_COLORS.panelBg, 0.9);
+    const leftBg = scene.add.rectangle(0, 0, 170, 102, HUD_COLORS.panelBg, 0.9);
     leftBg.setOrigin(0, 0);
     leftBg.setStrokeStyle(2, HUD_COLORS.panelBorder, 1);
-    this.timeText = scene.add.text(12, 9, "", this.getTextStyle(25, HUD_COLORS.textMain, "bold"));
-    this.locationText = scene.add.text(12, 45, "", this.getTextStyle(21, HUD_COLORS.textSoft));
-    this.actionPointText = scene.add.text(12, 79, "", this.getTextStyle(16, HUD_COLORS.textSoft, "bold"));
+    this.timeText = scene.add.text(12, 8, "", this.getTextStyle(22, HUD_COLORS.textMain, "bold"));
+    this.locationText = scene.add.text(12, 40, "", this.getTextStyle(18, HUD_COLORS.textSoft));
+    this.actionPointText = scene.add.text(12, 72, "", this.getTextStyle(14, HUD_COLORS.textSoft, "bold"));
     this.leftGroup.add([leftBg, this.timeText, this.locationText, this.actionPointText]);
 
-    const dayBg = scene.add.rectangle(0, 0, 156, 34, HUD_COLORS.panelBg, 0.9);
+    const dayBg = scene.add.rectangle(0, 0, 148, 30, HUD_COLORS.panelBg, 0.9);
     dayBg.setOrigin(0.5, 0);
     dayBg.setStrokeStyle(2, HUD_COLORS.panelBorder, 1);
-    this.dayText = scene.add.text(0, 6, "", this.getTextStyle(18, HUD_COLORS.textMain, "bold"));
+    this.dayText = scene.add.text(0, 5, "", this.getTextStyle(16, HUD_COLORS.textMain, "bold"));
     this.dayText.setOrigin(0.5, 0);
     this.topCenterGroup.add([dayBg, this.dayText]);
 
-    const rightBg = scene.add.rectangle(0, 0, 262, 114, HUD_COLORS.panelBg, 0.88);
+    const rightBg = scene.add.rectangle(0, 0, 250, 108, HUD_COLORS.panelBg, 0.88);
     rightBg.setOrigin(0, 0);
     rightBg.setStrokeStyle(2, HUD_COLORS.panelBorder, 1);
 
-    const hpLabel = scene.add.text(12, 10, "HP", this.getTextStyle(17, HUD_COLORS.textMain, "bold"));
+    const hpLabel = scene.add.text(12, 10, "HP", this.getTextStyle(15, HUD_COLORS.textMain, "bold"));
     const hpBarBg = scene.add.rectangle(74, 21, this.hpBarMaxWidth, 14, HUD_COLORS.hpBg, 1);
     hpBarBg.setOrigin(0, 0.5);
     hpBarBg.setStrokeStyle(1, HUD_COLORS.panelBorder, 1);
     this.hpBarFill = scene.add.rectangle(76, 21, this.hpBarMaxWidth - 4, 10, HUD_COLORS.hpFill, 1);
     this.hpBarFill.setOrigin(0, 0.5);
-    this.hpText = scene.add.text(12, 30, "", this.getTextStyle(15, HUD_COLORS.textSoft));
+    this.hpText = scene.add.text(12, 28, "", this.getTextStyle(13, HUD_COLORS.textSoft));
 
     const coin = scene.add.circle(24, 66, 9, HUD_COLORS.coin, 1);
     coin.setStrokeStyle(2, HUD_COLORS.coinEdge, 1);
-    this.moneyText = scene.add.text(40, 56, "", this.getTextStyle(20, HUD_COLORS.textMain, "bold"));
+    this.moneyText = scene.add.text(40, 54, "", this.getTextStyle(18, HUD_COLORS.textMain, "bold"));
 
-    const stressLabel = scene.add.text(12, 85, "스트레스", this.getTextStyle(14, HUD_COLORS.textSoft));
-    const stressBarBg = scene.add.rectangle(84, 93, this.stressBarMaxWidth, 10, HUD_COLORS.stressBg, 1);
+    const stressLabel = scene.add.text(12, 80, "스트레스", this.getTextStyle(13, HUD_COLORS.textSoft));
+    const stressBarBg = scene.add.rectangle(84, 89, this.stressBarMaxWidth, 10, HUD_COLORS.stressBg, 1);
     stressBarBg.setOrigin(0, 0.5);
     stressBarBg.setStrokeStyle(1, HUD_COLORS.panelBorder, 1);
-    this.stressBarFill = scene.add.rectangle(86, 93, this.stressBarMaxWidth - 4, 6, HUD_COLORS.stressFill, 1);
+    this.stressBarFill = scene.add.rectangle(86, 89, this.stressBarMaxWidth - 4, 6, HUD_COLORS.stressFill, 1);
     this.stressBarFill.setOrigin(0, 0.5);
-    this.stressText = scene.add.text(198, 84, "", this.getTextStyle(14, HUD_COLORS.textSoft));
-    this.conditionText = scene.add.text(12, 97, "", this.getTextStyle(13, HUD_COLORS.textSoft));
+    this.stressText = scene.add.text(190, 80, "", this.getTextStyle(13, HUD_COLORS.textSoft));
+    this.conditionText = scene.add.text(12, 92, "", this.getTextStyle(12, HUD_COLORS.textSoft));
 
     this.rightGroup.add([
       rightBg,
@@ -130,7 +131,7 @@ export class GameHud {
     this.hintBg.setOrigin(0.5);
     this.hintBg.setStrokeStyle(2, HUD_COLORS.panelBorder, 1);
     this.hintText = scene.add.text(0, 0, "", {
-      ...this.getTextStyle(17, HUD_COLORS.hintText, "bold"),
+      ...this.getTextStyle(15, HUD_COLORS.hintText, "bold"),
       align: "center"
     });
     this.hintText.setOrigin(0.5);
@@ -205,7 +206,7 @@ export class GameHud {
     const safe = Math.max(12, Math.round(Math.min(width, height) * 0.02));
 
     this.leftGroup.setPosition(safe, safe);
-    this.rightGroup.setPosition(Math.round(width - safe - 262), safe);
+    this.rightGroup.setPosition(Math.round(width - safe - 250), safe);
     this.topCenterGroup.setPosition(Math.round(width * 0.5), safe);
     this.hintGroup.setPosition(Math.round(width * 0.5), Math.round(height - safe - 24));
     this.updateHintGeometry();

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { UI_DEPTH } from "../../../game/systems/uiDepth";
 
 export type MenuTabKey = "inventory" | "stats" | "settings" | "save";
 
@@ -32,13 +33,13 @@ export function createMenuFrame(
   onTabSelect: (tab: MenuTabKey) => void
 ): MenuFrameView {
   const width = 920;
-  const height = 560;
+  const height = 548;
   const centerX = Math.round(scene.scale.width / 2);
   const centerY = Math.round(scene.scale.height / 2);
   const left = Math.round(centerX - width / 2);
   const top = Math.round(centerY - height / 2);
 
-  const root = scene.add.container(0, 0).setDepth(1800).setVisible(false).setScrollFactor(0);
+  const root = scene.add.container(0, 0).setDepth(UI_DEPTH.menu).setVisible(false).setScrollFactor(0);
   const dim = scene.add
     .rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x040816, 0.58)
     .setScrollFactor(0);
@@ -48,7 +49,7 @@ export function createMenuFrame(
   header.setStrokeStyle(2, 0x7dc9ff, 1);
   const title = scene.add.text(centerX, top + 20, "인게임 메뉴", {
     fontFamily: FONT_FAMILY,
-    fontSize: "28px",
+    fontSize: "24px",
     fontStyle: "bold",
     color: "#eef7ff",
     resolution: 2
@@ -56,7 +57,7 @@ export function createMenuFrame(
   title.setOrigin(0.5, 0);
 
   const tabWidth = 170;
-  const tabHeight = 42;
+  const tabHeight = 40;
   const tabGap = 10;
   const totalTabsWidth = MENU_TAB_ORDER.length * tabWidth + (MENU_TAB_ORDER.length - 1) * tabGap;
   const tabStartX = Math.round(centerX - totalTabsWidth / 2 + tabWidth / 2);
@@ -70,7 +71,7 @@ export function createMenuFrame(
     bg.setInteractive({ useHandCursor: true });
     const label = scene.add.text(x, tabY - 1, MENU_TAB_LABELS[tab], {
       fontFamily: FONT_FAMILY,
-      fontSize: "22px",
+      fontSize: "19px",
       fontStyle: "bold",
       color: "#cde5ff",
       resolution: 2
@@ -80,7 +81,7 @@ export function createMenuFrame(
     tabs[tab] = { key: tab, bg, label };
   });
 
-  const contentBounds = new Phaser.Geom.Rectangle(left + 28, top + 126, width - 56, height - 156);
+  const contentBounds = new Phaser.Geom.Rectangle(left + 28, top + 122, width - 56, height - 168);
   const contentBg = scene.add
     .rectangle(
       contentBounds.centerX,

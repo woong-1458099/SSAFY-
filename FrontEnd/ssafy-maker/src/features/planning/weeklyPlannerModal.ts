@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { UI_DEPTH } from "../../game/systems/uiDepth";
 import {
   getWeeklyPlanOption,
   getWeeklyPlanSlotIndex,
@@ -31,7 +32,7 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   const centerY = Math.round(scene.scale.height / 2);
   const panelWidth = 1100;
   const panelHeight = 640;
-  const root = scene.add.container(0, 0).setDepth(9700).setScrollFactor(0);
+  const root = scene.add.container(0, 0).setDepth(UI_DEPTH.planner).setScrollFactor(0);
   const overlay = scene.add.rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x04101d, 0.62).setScrollFactor(0);
   const panelOuter = scene.add.rectangle(centerX, centerY, panelWidth + 8, panelHeight + 8, 0x000000, 0).setScrollFactor(0);
   panelOuter.setStrokeStyle(2, 0x3b6a92, 1);

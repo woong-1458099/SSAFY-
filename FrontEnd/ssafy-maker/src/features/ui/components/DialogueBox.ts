@@ -4,6 +4,7 @@ import type {
   DialogueChoiceActionType,
   DialogueNode
 } from "../../../common/types/dialogue";
+import { UI_DEPTH } from "../../../game/systems/uiDepth";
 
 const FONT_FAMILY =
   "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
@@ -46,7 +47,7 @@ export class DialogueBox {
   private readonly bodyText: Phaser.GameObjects.Text;
   private readonly hintText: Phaser.GameObjects.Text;
   private readonly choiceRoot: Phaser.GameObjects.Container;
-  private readonly depth = 10000;
+  private readonly depth = UI_DEPTH.dialogue;
   private choiceViews: ChoiceView[] = [];
 
   constructor(scene: Phaser.Scene) {

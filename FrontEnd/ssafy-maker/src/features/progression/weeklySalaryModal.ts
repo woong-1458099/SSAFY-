@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { UI_DEPTH } from "../../game/systems/uiDepth";
 
 const FONT_FAMILY =
   "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
@@ -14,7 +15,7 @@ export function createWeeklySalaryModal(
   const { week, amount, onConfirm } = options;
   const centerX = Math.round(scene.scale.width / 2);
   const centerY = Math.round(scene.scale.height / 2);
-  const root = scene.add.container(0, 0).setDepth(9750).setScrollFactor(0);
+  const root = scene.add.container(0, 0).setDepth(UI_DEPTH.salary).setScrollFactor(0);
 
   const overlay = scene.add
     .rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x04101d, 0.62)

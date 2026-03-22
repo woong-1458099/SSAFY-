@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { DebugPanelState } from "../types/debugTypes";
 import type { DebugCommandBus } from "../services/DebugCommandBus";
+import { UI_DEPTH } from "../../game/systems/uiDepth";
 
 type ButtonConfig = {
   label: string;
@@ -106,7 +107,7 @@ export class DebugPanel {
       ...this.buttons,
       footer
     ]);
-    this.root.setDepth(9900);
+    this.root.setDepth(UI_DEPTH.debugPanel);
     this.root.setScrollFactor(0);
     this.root.setVisible(false);
   }

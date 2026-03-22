@@ -54,7 +54,7 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
 
   const container = scene.add.container(0, 0).setScrollFactor(0);
   const panelY = px(bounds.y + 28);
-  const panelH = 300;
+  const panelH = 270;
 
   const equipPanelX = px(bounds.x + 24);
   const equipPanelW = 300;
@@ -71,9 +71,9 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
   const inventoryPanel = scene.add.rectangle(inventoryPanelCenterX, panelY + panelH / 2, inventoryPanelW, panelH, 0x17355a, 0.86);
   inventoryPanel.setStrokeStyle(2, panelInnerBorderColor, 1);
 
-  const equipLabel = scene.add.text(equipPanelCenterX, px(panelY + 12), "장비 칸", getBodyStyle(20, "#b9d8fb"));
+  const equipLabel = scene.add.text(equipPanelCenterX, px(panelY + 10), "장비 칸", getBodyStyle(18, "#b9d8fb"));
   equipLabel.setOrigin(0.5, 0);
-  const inventoryLabel = scene.add.text(inventoryPanelCenterX, px(panelY + 12), "인벤토리", getBodyStyle(20, "#b9d8fb"));
+  const inventoryLabel = scene.add.text(inventoryPanelCenterX, px(panelY + 10), "인벤토리", getBodyStyle(18, "#b9d8fb"));
   inventoryLabel.setOrigin(0.5, 0);
 
   const createSlotView = (x: number, y: number, size: number): SlotView => {
@@ -98,8 +98,8 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
     return { bg, icon, iconImage, iconText, stackText };
   };
 
-  const equipSlotSize = 102;
-  const equipSlotY = px(panelY + 156);
+  const equipSlotSize = 96;
+  const equipSlotY = px(panelY + 154);
   const equipSlotGap = 156;
   const equipCenters = [px(equipPanelCenterX - equipSlotGap / 2), px(equipPanelCenterX + equipSlotGap / 2)];
 
@@ -109,7 +109,7 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
   equipmentDefs.forEach((def, index) => {
     const slotX = equipCenters[index] ?? equipPanelCenterX;
     const view = createSlotView(slotX, equipSlotY, equipSlotSize);
-    const label = scene.add.text(slotX, px(equipSlotY + equipSlotSize / 2 + 16), def.label, getBodyStyle(19, "#b9d8fb"));
+    const label = scene.add.text(slotX, px(equipSlotY + equipSlotSize / 2 + 14), def.label, getBodyStyle(17, "#b9d8fb"));
     label.setOrigin(0.5, 0.5);
 
     view.bg.setInteractive({ useHandCursor: true });
@@ -121,7 +121,7 @@ export function createInventoryPage<EquipmentSlotKey extends string>(scene: Phas
     equipmentObjects.push(view.bg, view.icon, view.iconImage, view.iconText, view.stackText, label);
   });
 
-  const inventorySlotSize = 54;
+  const inventorySlotSize = 52;
   const inventorySlotGap = 10;
   const gridTotalW = inventorySlotSize * 4 + inventorySlotGap * 3;
   const gridTotalH = inventorySlotSize * 4 + inventorySlotGap * 3;

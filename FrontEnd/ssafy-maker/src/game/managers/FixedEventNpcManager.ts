@@ -5,6 +5,7 @@ import {
   FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT,
   type FixedEventNpcPresentation
 } from "../../features/story/fixedEventNpcPresence";
+import { UI_DEPTH } from "../systems/uiDepth";
 
 type ScheduledNpcView = {
   sprite: Phaser.GameObjects.Sprite;
@@ -18,7 +19,12 @@ export class FixedEventNpcManager {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.views = Array.from({ length: FIXED_EVENT_SCHEDULED_NPC_SLOT_COUNT }, () => {
-      const sprite = this.scene.add.sprite(0, 0, "").setOrigin(0.5, 1).setScrollFactor(0).setDepth(260).setVisible(false);
+      const sprite = this.scene.add
+        .sprite(0, 0, "")
+        .setOrigin(0.5, 1)
+        .setScrollFactor(0)
+        .setDepth(UI_DEPTH.fixedEventNpcSprite)
+        .setVisible(false);
       const label = this.scene.add
         .text(0, 0, "", {
           color: FIXED_EVENT_NPC_LABEL_COLOR,
@@ -26,7 +32,7 @@ export class FixedEventNpcManager {
         })
         .setOrigin(0.5, 0)
         .setScrollFactor(0)
-        .setDepth(261)
+        .setDepth(UI_DEPTH.fixedEventNpcLabel)
         .setVisible(false);
 
       label.setStyle({
