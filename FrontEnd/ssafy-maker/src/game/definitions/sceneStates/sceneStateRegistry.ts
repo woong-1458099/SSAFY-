@@ -23,7 +23,9 @@ export const SCENE_STATE_REGISTRY: Record<SceneStateId, SceneState> = {
 
 export function setSceneStateRegistry(sceneStates: Record<SceneStateId, SceneState>): void {
   (Object.keys(SCENE_STATE_REGISTRY) as SceneStateId[]).forEach((sceneStateId) => {
-    SCENE_STATE_REGISTRY[sceneStateId] = sceneStates[sceneStateId];
+    if (sceneStates[sceneStateId]) {
+      SCENE_STATE_REGISTRY[sceneStateId] = sceneStates[sceneStateId];
+    }
   });
 }
 

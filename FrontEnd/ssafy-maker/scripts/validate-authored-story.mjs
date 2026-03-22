@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import Ajv2020 from "ajv/dist/2020.js";
+import ts from "typescript";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +11,10 @@ const projectRoot = path.resolve(__dirname, "..");
 const dialoguesPath = path.join(projectRoot, "public/assets/game/data/story/authored/dialogues.json");
 const sceneStatesPath = path.join(projectRoot, "public/assets/game/data/story/authored/scene_states.json");
 const npcEnumPath = path.join(projectRoot, "src/common/enums/npc.ts");
+const dialogueEnumPath = path.join(projectRoot, "src/common/enums/dialogue.ts");
+const sceneStateIdsPath = path.join(projectRoot, "src/game/definitions/sceneStates/sceneStateIds.ts");
+const dialoguesSchemaPath = path.join(projectRoot, "scripts/schemas/authored-dialogues.schema.json");
+const sceneStatesSchemaPath = path.join(projectRoot, "scripts/schemas/authored-scene-states.schema.json");
 const SCENE_STATE_NPC_DIALOGUE_ID_PATTERN = /^npc_[a-z0-9_]+$/;
 
 function ensureArray(value) {
@@ -23,252 +29,96 @@ function normalizeString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function extractExportedObjectLiteral(source, exportName) {
-  const exportIndex = source.indexOf(`export const ${exportName}`);
-  if (exportIndex < 0) {
-    throw new Error(`${exportName} 상수를 찾지 못했습니다.`);
+function unwrapExpression(expression) {
+  let current = expression;
+
+  while (
+    ts.isAsExpression(current) ||
+    ts.isParenthesizedExpression(current) ||
+    ts.isSatisfiesExpression(current)
+  ) {
+    current = current.expression;
   }
 
-  const braceStart = source.indexOf("{", exportIndex);
-  if (braceStart < 0) {
-    throw new Error(`${exportName} 상수의 시작 중괄호를 찾지 못했습니다.`);
-  }
-
-  let depth = 0;
-  let inString = false;
-  let stringQuote = "";
-
-  for (let index = braceStart; index < source.length; index += 1) {
-    const char = source[index];
-    const prevChar = source[index - 1];
-
-    if (inString) {
-      if (char === stringQuote && prevChar !== "\\") {
-        inString = false;
-        stringQuote = "";
-      }
-      continue;
-    }
-
-    if (char === "'" || char === "\"" || char === "`") {
-      inString = true;
-      stringQuote = char;
-      continue;
-    }
-
-    if (char === "{") {
-      depth += 1;
-      continue;
-    }
-
-    if (char === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        return source.slice(braceStart, index + 1);
-      }
-    }
-  }
-
-  throw new Error(`${exportName} 상수의 종료 중괄호를 찾지 못했습니다.`);
+  return current;
 }
 
-function isWhitespace(char) {
-  return char === " " || char === "\n" || char === "\r" || char === "\t";
+function getPropertyNameText(name, sourceFile) {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+
+  throw new Error(`지원하지 않는 객체 키 형식입니다: ${name.getText(sourceFile)}`);
 }
 
-function skipTrivia(source, startIndex) {
-  let index = startIndex;
+function parseExportedStringMap(sourceText, filePath, exportName) {
+  const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 
-  while (index < source.length) {
-    const char = source[index];
-    const nextChar = source[index + 1];
-
-    if (isWhitespace(char)) {
-      index += 1;
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) {
       continue;
     }
 
-    if (char === "/" && nextChar === "/") {
-      index += 2;
-      while (index < source.length && source[index] !== "\n") {
-        index += 1;
-      }
+    const isExported = statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) === true;
+    if (!isExported) {
       continue;
     }
 
-    if (char === "/" && nextChar === "*") {
-      index += 2;
-      while (index < source.length && !(source[index] === "*" && source[index + 1] === "/")) {
-        index += 1;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportName) {
+        continue;
       }
 
-      if (index >= source.length) {
-        throw new Error("주석이 닫히지 않았습니다.");
+      if (!declaration.initializer) {
+        throw new Error(`${exportName} 상수 초기값이 없습니다.`);
       }
 
-      index += 2;
-      continue;
-    }
-
-    break;
-  }
-
-  return index;
-}
-
-function parseIdentifier(source, startIndex) {
-  const firstChar = source[startIndex];
-  if (!/[A-Za-z_$]/.test(firstChar ?? "")) {
-    throw new Error(`예상한 식별자가 없습니다. near=${JSON.stringify(source.slice(startIndex, startIndex + 16))}`);
-  }
-
-  let index = startIndex + 1;
-  while (index < source.length && /[\w$]/.test(source[index])) {
-    index += 1;
-  }
-
-  return {
-    value: source.slice(startIndex, index),
-    nextIndex: index
-  };
-}
-
-function parseStringLiteral(source, startIndex) {
-  const quote = source[startIndex];
-  if (quote !== "'" && quote !== "\"") {
-    throw new Error(`예상한 문자열 리터럴이 없습니다. near=${JSON.stringify(source.slice(startIndex, startIndex + 16))}`);
-  }
-
-  let index = startIndex + 1;
-  let value = "";
-
-  while (index < source.length) {
-    const char = source[index];
-
-    if (char === "\\") {
-      const escapeChar = source[index + 1];
-      if (escapeChar === undefined) {
-        throw new Error("문자열 리터럴의 escape가 비정상적으로 종료되었습니다.");
+      const initializer = unwrapExpression(declaration.initializer);
+      if (!ts.isObjectLiteralExpression(initializer)) {
+        throw new Error(`${exportName} 상수가 객체 리터럴이 아닙니다.`);
       }
 
-      switch (escapeChar) {
-        case "\\":
-        case "\"":
-        case "'":
-          value += escapeChar;
-          break;
-        case "n":
-          value += "\n";
-          break;
-        case "r":
-          value += "\r";
-          break;
-        case "t":
-          value += "\t";
-          break;
-        case "b":
-          value += "\b";
-          break;
-        case "f":
-          value += "\f";
-          break;
-        case "v":
-          value += "\v";
-          break;
-        case "0":
-          value += "\0";
-          break;
-        default:
-          value += escapeChar;
-          break;
+      const values = new Map();
+
+      for (const property of initializer.properties) {
+        if (!ts.isPropertyAssignment(property)) {
+          throw new Error(`${exportName} 상수에 지원하지 않는 속성 형식이 있습니다.`);
+        }
+
+        const propertyName = getPropertyNameText(property.name, sourceFile);
+        const propertyValue = unwrapExpression(property.initializer);
+        if (!ts.isStringLiteralLike(propertyValue)) {
+          throw new Error(`${exportName}.${propertyName} 값이 문자열 리터럴이 아닙니다.`);
+        }
+
+        values.set(propertyName, propertyValue.text);
       }
 
-      index += 2;
-      continue;
-    }
+      if (values.size === 0) {
+        throw new Error(`${exportName} 상수에 문자열 값이 없습니다.`);
+      }
 
-    if (char === quote) {
-      return {
-        value,
-        nextIndex: index + 1
-      };
+      return values;
     }
-
-    value += char;
-    index += 1;
   }
 
-  throw new Error("문자열 리터럴이 닫히지 않았습니다.");
+  throw new Error(`${exportName} 상수를 찾지 못했습니다.`);
 }
 
-function parseObjectStringMap(source) {
-  const entries = new Map();
-  let index = skipTrivia(source, 0);
-
-  if (source[index] !== "{") {
-    throw new Error("객체 리터럴 시작 중괄호를 찾지 못했습니다.");
-  }
-
-  index += 1;
-
-  while (index < source.length) {
-    index = skipTrivia(source, index);
-
-    if (source[index] === "}") {
-      return entries;
-    }
-
-    let keyResult;
-    if (source[index] === "'" || source[index] === "\"") {
-      keyResult = parseStringLiteral(source, index);
-    } else {
-      keyResult = parseIdentifier(source, index);
-    }
-
-    index = skipTrivia(source, keyResult.nextIndex);
-    if (source[index] !== ":") {
-      throw new Error(`객체 리터럴에서 ':'를 찾지 못했습니다. key=${keyResult.value}`);
-    }
-
-    index = skipTrivia(source, index + 1);
-    const valueResult = parseStringLiteral(source, index);
-    entries.set(keyResult.value, valueResult.value);
-    index = skipTrivia(source, valueResult.nextIndex);
-
-    if (source[index] === ",") {
-      index += 1;
-      continue;
-    }
-
-    if (source[index] === "}") {
-      return entries;
-    }
-
-    throw new Error(
-      `객체 리터럴 항목 종료 문자가 올바르지 않습니다. near=${JSON.stringify(source.slice(index, index + 16))}`
-    );
-  }
-
-  throw new Error("객체 리터럴이 닫히지 않았습니다.");
-}
-
-function parseNpcIds(source) {
-  const objectLiteral = extractExportedObjectLiteral(source, "NPC_IDS");
-  const parsed = parseObjectStringMap(objectLiteral);
-
-  if (parsed.size === 0) {
-    throw new Error("NPC_IDS 상수를 npc.ts에서 찾지 못했습니다.");
-  }
-
-  return new Set([...parsed.values()].filter((value) => typeof value === "string" && value.length > 0));
+function formatSchemaErrors(schemaName, errors) {
+  return ensureArray(errors).map((error) => {
+    const instancePath = error.instancePath || "/";
+    return `[schema:${schemaName}] ${instancePath} ${error.message ?? "유효하지 않습니다."}`.trim();
+  });
 }
 
 function validateDialogueScript(dialogue, dialogueIndex, issues) {
-  const dialoguePrefix = `[dialogues.${dialogueIndex}]`;
+  const dialogueId = normalizeString(dialogue?.id) || "(empty)";
+  const dialoguePrefix = `[dialogues.${dialogueIndex}] id=${dialogueId}`;
   const startNodeId = normalizeString(dialogue?.startNodeId);
 
   if (!isRecord(dialogue?.nodes)) {
-    issues.push(`${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} nodes가 객체가 아닙니다.`);
+    issues.push(`${dialoguePrefix} nodes가 객체가 아닙니다.`);
     return;
   }
 
@@ -276,41 +126,50 @@ function validateDialogueScript(dialogue, dialogueIndex, issues) {
   const nodeKeys = new Set(nodeEntries.map(([nodeKey]) => nodeKey));
 
   if (nodeEntries.length === 0) {
-    issues.push(`${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} nodes가 비어 있습니다.`);
+    issues.push(`${dialoguePrefix} nodes가 비어 있습니다.`);
   }
 
   if (!startNodeId) {
-    issues.push(`${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} startNodeId가 비어 있습니다.`);
+    issues.push(`${dialoguePrefix} startNodeId가 비어 있습니다.`);
   } else if (!nodeKeys.has(startNodeId)) {
-    issues.push(`${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} startNodeId=${startNodeId} 가 nodes에 없습니다.`);
+    issues.push(`${dialoguePrefix} startNodeId=${startNodeId} 가 nodes에 없습니다.`);
   }
 
   const normalizedNodeIds = new Set();
 
   nodeEntries.forEach(([nodeKey, node]) => {
     if (!isRecord(node)) {
-      issues.push(`${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} nodes.${nodeKey} 가 객체가 아닙니다.`);
+      issues.push(`${dialoguePrefix} nodes.${nodeKey} 가 객체가 아닙니다.`);
       return;
     }
 
-    const normalizedNodeId = normalizeString(node.id) || nodeKey;
+    const nodeId = normalizeString(node.id);
+    if (nodeId && nodeId !== nodeKey) {
+      issues.push(`${dialoguePrefix} nodes.${nodeKey}.id=${nodeId} 는 nodes 키와 일치해야 합니다.`);
+    }
+
+    const normalizedNodeId = nodeId || nodeKey;
     if (normalizedNodeIds.has(normalizedNodeId)) {
-      issues.push(
-        `${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} node id=${normalizedNodeId} 가 중복됩니다.`
-      );
+      issues.push(`${dialoguePrefix} node id=${normalizedNodeId} 가 중복됩니다.`);
     } else {
       normalizedNodeIds.add(normalizedNodeId);
     }
 
+    if (!normalizeString(node.speaker)) {
+      issues.push(`${dialoguePrefix} nodes.${nodeKey}.speaker 가 비어 있거나 문자열이 아닙니다.`);
+    }
+
+    if (!normalizeString(node.text)) {
+      issues.push(`${dialoguePrefix} nodes.${nodeKey}.text 가 비어 있거나 문자열이 아닙니다.`);
+    }
+
     const nextNodeId = normalizeString(node.nextNodeId);
     if (nextNodeId && !nodeKeys.has(nextNodeId)) {
-      issues.push(
-        `${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} nodes.${nodeKey}.nextNodeId=${nextNodeId} 가 nodes에 없습니다.`
-      );
+      issues.push(`${dialoguePrefix} nodes.${nodeKey}.nextNodeId=${nextNodeId} 가 nodes에 없습니다.`);
     }
 
     if (node.choices !== undefined && !Array.isArray(node.choices)) {
-      issues.push(`${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} nodes.${nodeKey}.choices 가 배열이 아닙니다.`);
+      issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices 가 배열이 아닙니다.`);
       return;
     }
 
@@ -318,18 +177,18 @@ function validateDialogueScript(dialogue, dialogueIndex, issues) {
 
     ensureArray(node.choices).forEach((choice, choiceIndex) => {
       if (!isRecord(choice)) {
-        issues.push(
-          `${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} nodes.${nodeKey}.choices[${choiceIndex}] 가 객체가 아닙니다.`
-        );
+        issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices[${choiceIndex}] 가 객체가 아닙니다.`);
         return;
+      }
+
+      if (!normalizeString(choice.text)) {
+        issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices[${choiceIndex}].text 가 비어 있거나 문자열이 아닙니다.`);
       }
 
       const choiceId = normalizeString(choice.id);
       if (choiceId) {
         if (explicitChoiceIds.has(choiceId)) {
-          issues.push(
-            `${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} nodes.${nodeKey} choice id=${choiceId} 가 중복됩니다.`
-          );
+          issues.push(`${dialoguePrefix} nodes.${nodeKey} choice id=${choiceId} 가 중복됩니다.`);
         } else {
           explicitChoiceIds.add(choiceId);
         }
@@ -337,15 +196,13 @@ function validateDialogueScript(dialogue, dialogueIndex, issues) {
 
       const choiceNextNodeId = normalizeString(choice.nextNodeId);
       if (choiceNextNodeId && !nodeKeys.has(choiceNextNodeId)) {
-        issues.push(
-          `${dialoguePrefix} id=${normalizeString(dialogue?.id) || "(empty)"} nodes.${nodeKey}.choices[${choiceIndex}].nextNodeId=${choiceNextNodeId} 가 nodes에 없습니다.`
-        );
+        issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices[${choiceIndex}].nextNodeId=${choiceNextNodeId} 가 nodes에 없습니다.`);
       }
     });
   });
 }
 
-function collectDialogueIds(dialoguesJson, issues) {
+function collectDialogueIds(dialoguesJson, requiredDialogueIds, issues) {
   const dialogueIds = new Set();
 
   ensureArray(dialoguesJson?.dialogues).forEach((dialogue, dialogueIndex) => {
@@ -364,12 +221,30 @@ function collectDialogueIds(dialoguesJson, issues) {
     validateDialogueScript(dialogue, dialogueIndex, issues);
   });
 
+  for (const requiredDialogueId of requiredDialogueIds) {
+    if (!dialogueIds.has(requiredDialogueId)) {
+      issues.push(`[dialogues] dialogue enum id=${requiredDialogueId} 가 dialogues.json에 없습니다.`);
+    }
+  }
+
   return dialogueIds;
 }
 
-function validateSceneStates(sceneStatesJson, npcIds, dialogueIds, issues) {
-  for (const sceneState of ensureArray(sceneStatesJson?.sceneStates)) {
+function validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, issues) {
+  const seenSceneStateIds = new Set();
+
+  for (const [sceneStateIndex, sceneState] of ensureArray(sceneStatesJson?.sceneStates).entries()) {
     const sceneStateId = normalizeString(sceneState?.id) || "(unknown_scene_state)";
+
+    if (normalizeString(sceneState?.id)) {
+      if (seenSceneStateIds.has(sceneState.id)) {
+        issues.push(`[sceneStates] 중복 sceneState id=${sceneState.id} 가 있습니다.`);
+      } else {
+        seenSceneStateIds.add(sceneState.id);
+      }
+    } else {
+      issues.push(`[sceneStates.${sceneStateIndex}] id가 비어 있습니다.`);
+    }
 
     for (const [index, npc] of ensureArray(sceneState?.npcs).entries()) {
       const npcId = normalizeString(npc?.npcId);
@@ -396,22 +271,60 @@ function validateSceneStates(sceneStatesJson, npcIds, dialogueIds, issues) {
       }
     }
   }
+
+  for (const requiredSceneStateId of requiredSceneStateIds) {
+    if (!seenSceneStateIds.has(requiredSceneStateId)) {
+      issues.push(`[sceneStates] 필수 sceneState id=${requiredSceneStateId} 가 scene_states.json에 없습니다.`);
+    }
+  }
 }
 
 async function main() {
-  const [dialoguesRaw, sceneStatesRaw, npcEnumSource] = await Promise.all([
+  const [
+    dialoguesRaw,
+    sceneStatesRaw,
+    npcEnumSource,
+    dialogueEnumSource,
+    sceneStateIdsSource,
+    dialoguesSchemaRaw,
+    sceneStatesSchemaRaw
+  ] = await Promise.all([
     readFile(dialoguesPath, "utf8"),
     readFile(sceneStatesPath, "utf8"),
-    readFile(npcEnumPath, "utf8")
+    readFile(npcEnumPath, "utf8"),
+    readFile(dialogueEnumPath, "utf8"),
+    readFile(sceneStateIdsPath, "utf8"),
+    readFile(dialoguesSchemaPath, "utf8"),
+    readFile(sceneStatesSchemaPath, "utf8")
   ]);
 
   const dialoguesJson = JSON.parse(dialoguesRaw);
   const sceneStatesJson = JSON.parse(sceneStatesRaw);
-  const npcIds = parseNpcIds(npcEnumSource);
-  const issues = [];
-  const dialogueIds = collectDialogueIds(dialoguesJson, issues);
+  const dialoguesSchema = JSON.parse(dialoguesSchemaRaw);
+  const sceneStatesSchema = JSON.parse(sceneStatesSchemaRaw);
 
-  validateSceneStates(sceneStatesJson, npcIds, dialogueIds, issues);
+  const npcIds = new Set(parseExportedStringMap(npcEnumSource, npcEnumPath, "NPC_IDS").values());
+  const requiredDialogueIds = new Set(parseExportedStringMap(dialogueEnumSource, dialogueEnumPath, "DIALOGUE_IDS").values());
+  const requiredSceneStateIds = new Set(parseExportedStringMap(sceneStateIdsSource, sceneStateIdsPath, "SCENE_STATE_IDS").values());
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: false
+  });
+
+  const dialogueSchemaValidator = ajv.compile(dialoguesSchema);
+  const sceneStatesSchemaValidator = ajv.compile(sceneStatesSchema);
+  const issues = [];
+
+  if (!dialogueSchemaValidator(dialoguesJson)) {
+    issues.push(...formatSchemaErrors("dialogues", dialogueSchemaValidator.errors));
+  }
+
+  if (!sceneStatesSchemaValidator(sceneStatesJson)) {
+    issues.push(...formatSchemaErrors("sceneStates", sceneStatesSchemaValidator.errors));
+  }
+
+  const dialogueIds = collectDialogueIds(dialoguesJson, requiredDialogueIds, issues);
+  validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, issues);
 
   if (issues.length > 0) {
     console.error("[validate:authored-story] 검증 실패");

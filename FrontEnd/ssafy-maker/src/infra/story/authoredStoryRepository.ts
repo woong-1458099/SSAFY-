@@ -23,13 +23,15 @@ export async function ensureAuthoredStoryLoaded(): Promise<void> {
   loadPromise = Promise.all([loadJson(AUTHORED_DIALOGUES_URL), loadJson(SCENE_STATES_URL)])
     .then(([dialoguesRaw, sceneStatesRaw]) => {
       const authoredStory = buildAuthoredStoryAssetsFromJson(dialoguesRaw, sceneStatesRaw);
-      if (authoredStory.issues.length > 0) {
+      if (authoredStory.warnings.length > 0) {
+        console.warn("[AuthoredStory] authored story 경고\n" + authoredStory.warnings.join("\n"));
+      }
+
+      if (authoredStory.fatalIssues.length > 0) {
         const issueMessage =
-          "[AuthoredStory] authored story 데이터 불일치가 감지되었습니다.\n" + authoredStory.issues.join("\n");
+          "[AuthoredStory] authored story 치명적 불일치가 감지되었습니다.\n" + authoredStory.fatalIssues.join("\n");
         console.error(issueMessage);
-        if (import.meta.env.DEV) {
-          throw new Error(issueMessage);
-        }
+        throw new Error(issueMessage);
       }
 
       setDialogueRegistry(authoredStory.dialogues);

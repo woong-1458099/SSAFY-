@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sceneStates"],
+  "properties": {
+    "sceneStates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "area", "npcs"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "area": {
+            "type": "string",
+            "enum": ["world", "downtown", "campus"]
+          },
+          "npcs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["npcId", "x", "y", "dialogueId"],
+              "properties": {
+                "npcId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "facing": {
+                  "type": "string",
+                  "enum": ["up", "down", "left", "right"]
+                },
+                "dialogueId": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
