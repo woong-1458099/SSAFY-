@@ -12,6 +12,7 @@ import type { AreaId } from "../../common/enums/area";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
+import { DialogueBox } from "../../features/ui/components/DialogueBox";
 import { GameHud } from "../../features/ui/components/GameHud";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
@@ -60,6 +61,7 @@ export class MainScene extends Phaser.Scene {
   private statSystemManager?: StatSystemManager;
   private inventoryService?: InventoryService;
   private saveService?: SaveService;
+  private dialogueBox?: DialogueBox;
   private hud?: GameHud;
   private menuManager?: InGameMenuManager;
   private progressionManager?: ProgressionManager;
@@ -85,7 +87,9 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager = new StatSystemManager();
     this.inventoryService = new InventoryService();
     this.saveService = new SaveService();
+    this.dialogueBox = new DialogueBox(this);
     this.hud = new GameHud(this);
+    this.dialogueManager.setDialogueBox(this.dialogueBox);
     this.menuManager = new InGameMenuManager({
       scene: this,
       getStatsState: () => this.statSystemManager!.getStatsState(),
@@ -196,6 +200,8 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.debugMinigameHud?.destroy();
       this.debugInputController?.destroy();
+      this.dialogueManager?.destroy();
+      this.dialogueBox?.destroy();
       this.progressionManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
