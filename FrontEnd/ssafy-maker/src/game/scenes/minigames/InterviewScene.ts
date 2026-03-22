@@ -10,10 +10,9 @@ import {
   LEGACY_INTERVIEW_TOTAL_TIME,
   resolveLegacyInterviewResult
 } from '@features/minigame/legacy/legacyInterviewConfig';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
-const W = 800;
-const H = 600;
+const { W, H } = SCREEN;
 
 export default class InterviewScene extends Phaser.Scene {
   private returnSceneKey = 'main';
@@ -43,19 +42,19 @@ export default class InterviewScene extends Phaser.Scene {
     this.add.rectangle(W / 2, 80, W, 3, 0xFFD700);
 
     this.add.text(W / 2, 20, '💼 기술 면접', {
-      fontSize: '22px', color: '#FFD700', fontFamily: PF
+      fontSize: '22px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.scoreTxt = this.add.text(30, 55, 'SCORE: 0', {
-      fontSize: '14px', color: '#00ff88', fontFamily: PF
+      fontSize: '14px', color: '#00ff88', fontFamily: PIXEL_FONT
     });
 
     this.progressTxt = this.add.text(W / 2, 55, `1 / ${LEGACY_INTERVIEW_QUESTION_COUNT}`, {
-      fontSize: '14px', color: '#ffffff', fontFamily: PF
+      fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.timerTxt = this.add.text(W - 30, 55, `${LEGACY_INTERVIEW_TOTAL_TIME}`, {
-      fontSize: '14px', color: '#ff4466', fontFamily: PF
+      fontSize: '14px', color: '#ff4466', fontFamily: PIXEL_FONT
     }).setOrigin(1, 0);
 
     // 타이머 바
@@ -65,19 +64,19 @@ export default class InterviewScene extends Phaser.Scene {
     // 카테고리 배지
     this.categoryBadge = this.add.rectangle(W / 2, 130, 100, 30, 0x4499ff);
     this.categoryTxt = this.add.text(W / 2, 130, 'WEB', {
-      fontSize: '12px', color: '#ffffff', fontFamily: PF
+      fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // 질문 박스
     this.add.rectangle(W / 2, 195, W - 40, 90, 0x0d1545).setStrokeStyle(3, 0xFFD700);
     this.questionTxt = this.add.text(W / 2, 195, '', {
-      fontSize: '15px', color: '#ffffff', fontFamily: PF,
+      fontSize: '15px', color: '#ffffff', fontFamily: PIXEL_FONT,
       wordWrap: { width: W - 100 }, align: 'center', lineSpacing: 6
     }).setOrigin(0.5);
 
     // 결과 텍스트
     this.resultTxt = this.add.text(W / 2, H - 25, '', {
-      fontSize: '16px', color: '#FFD700', fontFamily: PF
+      fontSize: '16px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5).setDepth(10);
 
     // 옵션 영역 (나중에 loadQuestion에서 생성)
@@ -134,12 +133,12 @@ export default class InterviewScene extends Phaser.Scene {
       numBadge.__isOption = true;
 
       const numTxt = this.add.text(55, y, String(i + 1), {
-        fontSize: '16px', color: '#ffffff', fontFamily: PF
+        fontSize: '16px', color: '#ffffff', fontFamily: PIXEL_FONT
       }).setOrigin(0.5);
       numTxt.__isOption = true;
 
       const txt = this.add.text(W / 2 + 20, y, opt, {
-        fontSize: '13px', color: '#ffffff', fontFamily: PF,
+        fontSize: '13px', color: '#ffffff', fontFamily: PIXEL_FONT,
         wordWrap: { width: W - 180 }, align: 'center'
       }).setOrigin(0.5);
       txt.__isOption = true;
@@ -251,31 +250,31 @@ export default class InterviewScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, 520, 400, 0x0d1545).setStrokeStyle(4, 0xFFD700);
 
     this.add.text(W / 2, 130, '💼 면접 결과', {
-      fontSize: '24px', color: '#FFD700', fontFamily: PF
+      fontSize: '24px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     const correct = this.score / 100;
 
     this.add.text(W / 2, 200, `${this.score}`, {
-      fontSize: '56px', color: '#ffffff', fontFamily: PF
+      fontSize: '56px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     const result = resolveLegacyInterviewResult(correct);
 
     this.add.text(W / 2 + 160, 200, result.grade, {
-      fontSize: '56px', color: result.gradeColor, fontFamily: PF
+      fontSize: '56px', color: result.gradeColor, fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 270, result.message, {
-      fontSize: '14px', color: result.gradeColor, fontFamily: PF
+      fontSize: '14px', color: result.gradeColor, fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 320, `정답: ${correct} / ${LEGACY_INTERVIEW_QUESTION_COUNT}`, {
-      fontSize: '14px', color: '#88ccff', fontFamily: PF
+      fontSize: '14px', color: '#88ccff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 360, result.reward, {
-      fontSize: '14px', color: '#FFD700', fontFamily: PF
+      fontSize: '14px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 440, '다시하기', 0x002266, 0x4499ff, () => this.scene.restart());
@@ -285,7 +284,7 @@ export default class InterviewScene extends Phaser.Scene {
   createBtn(x, y, label, bg, border, cb) {
     this.add.rectangle(x + 2, y + 2, 180, 50, 0x000000, 0.5);
     const btn = this.add.rectangle(x, y, 180, 50, bg).setInteractive().setStrokeStyle(3, border);
-    this.add.text(x, y, label, { fontSize: '14px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(x, y, label, { fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border));
     btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => {

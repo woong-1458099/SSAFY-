@@ -11,10 +11,9 @@ import {
   LEGACY_TYPING_WORDS,
   resolveLegacyTypingResult
 } from '@features/minigame/legacy/legacyTypingConfig';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createGridBackground, createPanel, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
-const W = 800;
-const H = 600;
+const { W, H } = SCREEN;
 
 export default class TypingScene extends Phaser.Scene {
   private returnSceneKey = 'main';
@@ -55,11 +54,11 @@ export default class TypingScene extends Phaser.Scene {
     this.add.rectangle(W / 2, 80, W, 3, 0x44ff88);
 
     this.add.text(W / 2, 18, '⌨️ 타이핑 디펜스', {
-      fontSize: '18px', color: '#44ff88', fontFamily: PF
+      fontSize: '18px', color: '#44ff88', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.scoreTxt = this.add.text(30, 50, 'SCORE: 0', {
-      fontSize: '12px', color: '#ffffff', fontFamily: PF
+      fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT
     });
 
     // 목숨 표시
@@ -73,7 +72,7 @@ export default class TypingScene extends Phaser.Scene {
     // 데드라인 (빨간 선)
     this.add.rectangle(W / 2, H - 63, W, 4, 0xff4444, 0.8);
     this.add.text(30, H - 75, '⚠️ DEADLINE', {
-      fontSize: '8px', color: '#ff4444', fontFamily: PF
+      fontSize: '8px', color: '#ff4444', fontFamily: PIXEL_FONT
     });
 
     // 입력창
@@ -93,7 +92,7 @@ export default class TypingScene extends Phaser.Scene {
 
     // 안내 문구
     this.hintTxt = this.add.text(W / 2, H - 8, '떨어지는 단어를 입력하세요!', {
-      fontSize: '9px', color: '#668888', fontFamily: PF
+      fontSize: '9px', color: '#668888', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // 키보드 입력
@@ -268,7 +267,7 @@ export default class TypingScene extends Phaser.Scene {
 
     // 이펙트
     const exp = this.add.text(container.x, container.y, `+${points}`, {
-      fontSize: '16px', color: '#44ff88', fontFamily: PF
+      fontSize: '16px', color: '#44ff88', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
     this.tweens.add({
       targets: exp,
@@ -352,26 +351,26 @@ export default class TypingScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, 500, 380, 0x0d1545).setStrokeStyle(4, 0x44ff88);
 
     this.add.text(W / 2, 150, '⌨️ 게임 종료', {
-      fontSize: '24px', color: '#44ff88', fontFamily: PF
+      fontSize: '24px', color: '#44ff88', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 220, `${this.score}`, {
-      fontSize: '56px', color: '#ffffff', fontFamily: PF
+      fontSize: '56px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // 등급 계산
     const result = resolveLegacyTypingResult(this.score);
 
     this.add.text(W / 2 + 100, 220, result.grade, {
-      fontSize: '48px', color: result.gradeColor, fontFamily: PF
+      fontSize: '48px', color: result.gradeColor, fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 290, result.message, {
-      fontSize: '14px', color: result.gradeColor, fontFamily: PF
+      fontSize: '14px', color: result.gradeColor, fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 340, `보상: ${result.reward}`, {
-      fontSize: '12px', color: '#FFD700', fontFamily: PF
+      fontSize: '12px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 420, '다시하기', 0x004422, 0x44ff88, () => this.scene.restart());
@@ -381,7 +380,7 @@ export default class TypingScene extends Phaser.Scene {
   createBtn(x, y, label, bg, border, cb) {
     this.add.rectangle(x + 2, y + 2, 180, 50, 0x000000, 0.5);
     const btn = this.add.rectangle(x, y, 180, 50, bg).setInteractive().setStrokeStyle(3, border);
-    this.add.text(x, y, label, { fontSize: '12px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(x, y, label, { fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border));
     btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => {

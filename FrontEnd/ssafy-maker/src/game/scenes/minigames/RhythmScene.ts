@@ -12,8 +12,9 @@ import {
   resolveLegacyRhythmResult,
   type LegacyRhythmDifficulty
 } from '@features/minigame/legacy/legacyRhythmConfig';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
+const { W, H } = SCREEN;
 
 export default class RhythmScene extends Phaser.Scene {
   private difficulty: LegacyRhythmDifficulty = 'Normal';
@@ -51,14 +52,14 @@ export default class RhythmScene extends Phaser.Scene {
     
     const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.8);
     const panel = this.add.rectangle(W / 2, H / 2, 500, 360, 0x0d1545).setStrokeStyle(4, 0xffd700);
-    const title = this.add.text(W / 2, H / 2 - 140, 'SELECT DIFFICULTY', { fontSize: '20px', color: '#ffd700', fontFamily: PF }).setOrigin(0.5);
+    const title = this.add.text(W / 2, H / 2 - 140, 'SELECT DIFFICULTY', { fontSize: '20px', color: '#ffd700', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     
     this.selectionRoot.add([overlay, panel, title]);
 
     LEGACY_RHYTHM_DIFFICULTIES.forEach((level, i) => {
       const y = H / 2 - 40 + i * 70;
       const btn = this.add.rectangle(W / 2, y, 300, 50, 0x1a2a4a).setStrokeStyle(2, 0x44ff88).setInteractive({ useHandCursor: true });
-      const txt = this.add.text(W / 2, y, level, { fontSize: '14px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+      const txt = this.add.text(W / 2, y, level, { fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
       
       btn.on('pointerover', () => btn.setFillStyle(0x2a3a6a));
       btn.on('pointerout', () => btn.setFillStyle(0x1a2a4a));
@@ -86,16 +87,16 @@ export default class RhythmScene extends Phaser.Scene {
     this.keyBtns = {};
     LEGACY_RHYTHM_LANES.forEach((lane) => {
       const bg = this.add.rectangle(lane.x, LEGACY_RHYTHM_HIT_Y + 2, 78, 76, lane.darkColor).setStrokeStyle(3, lane.color);
-      const label = this.add.text(lane.x, LEGACY_RHYTHM_HIT_Y + 2, lane.key, { fontSize: '20px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+      const label = this.add.text(lane.x, LEGACY_RHYTHM_HIT_Y + 2, lane.key, { fontSize: '20px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
       this.keyBtns[lane.key] = { bg, label };
     });
 
     this.add.rectangle(W / 2, 30, W, 60, 0x0d1545, 0.9); this.add.rectangle(W / 2, 4, W, 6, 0xFFD700);
-    this.add.text(W / 2, 18, `${LEGACY_RHYTHM_SONGS[0].title} (${this.difficulty})`, { fontSize: '12px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5, 0);
+    this.add.text(W / 2, 18, `${LEGACY_RHYTHM_SONGS[0].title} (${this.difficulty})`, { fontSize: '12px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5, 0);
     
-    this.scoreTxt = this.add.text(W - 20, 10, 'SCORE\n0', { fontSize: '9px', color: '#ffffff', fontFamily: PF, align: 'right' }).setOrigin(1, 0);
-    this.comboTxt = this.add.text(W / 2, 50, '', { fontSize: '9px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5, 0);
-    this.judgeTxt = this.add.text(W / 2, 420, '', { fontSize: '14px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5).setAlpha(0);
+    this.scoreTxt = this.add.text(W - 20, 10, 'SCORE\n0', { fontSize: '9px', color: '#ffffff', fontFamily: PIXEL_FONT, align: 'right' }).setOrigin(1, 0);
+    this.comboTxt = this.add.text(W / 2, 50, '', { fontSize: '9px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5, 0);
+    this.judgeTxt = this.add.text(W / 2, 420, '', { fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5).setAlpha(0);
     
     this.showCountdown();
     this.input.keyboard.on('keydown', this.handleKey, this);
@@ -112,7 +113,7 @@ export default class RhythmScene extends Phaser.Scene {
 
   showCountdown() {
     const W = 800; let count = 3;
-    const countTxt = this.add.text(W / 2, 280, '3', { fontSize: '60px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5);
+    const countTxt = this.add.text(W / 2, 280, '3', { fontSize: '60px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.time.addEvent({
       delay: 800, repeat: 2,
       callback: () => {
@@ -181,7 +182,7 @@ export default class RhythmScene extends Phaser.Scene {
     const lane = LEGACY_RHYTHM_LANES.find((l) => l.key === noteData.key); if (!lane) return;
     const startY = LEGACY_RHYTHM_HIT_Y - (noteData.time / 1000) * this.config.speed + ((this.time.now - this.startTime) / 1000) * this.config.speed;
     const noteGroup = this.add.container(lane.x, startY);
-    noteGroup.add([this.add.rectangle(3, 3, 72, 28, 0x000000, 0.5), this.add.rectangle(0, 0, 72, 28, lane.color), this.add.rectangle(-18, -6, 24, 6, 0xffffff, 0.3), this.add.text(0, 0, noteData.key, { fontSize: '11px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5)]);
+    noteGroup.add([this.add.rectangle(3, 3, 72, 28, 0x000000, 0.5), this.add.rectangle(0, 0, 72, 28, lane.color), this.add.rectangle(-18, -6, 24, 6, 0xffffff, 0.3), this.add.text(0, 0, noteData.key, { fontSize: '11px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5)]);
     this.noteObjects.push({ obj: noteGroup, laneKey: noteData.key, noteTime: noteData.time, hit: false });
   }
 
@@ -197,15 +198,15 @@ export default class RhythmScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2 + 208, 620, 4, 0xFFD700);
     this.add.rectangle(W / 2 - 308, H / 2, 4, 420, 0xFFD700);
     this.add.rectangle(W / 2 + 308, H / 2, 4, 420, 0xFFD700);
-    this.add.text(W / 2, 110, `RESULT (${this.difficulty})`, { fontSize: '20px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 175, `${this.score}`, { fontSize: '32px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, 110, `RESULT (${this.difficulty})`, { fontSize: '20px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, 175, `${this.score}`, { fontSize: '32px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     [{ label: 'PERFECT', value: this.perfect, color: '#FFD700' }, { label: 'GOOD', value: this.good, color: '#44ff88' }, { label: 'MISS', value: this.miss, color: '#ff4466' }, { label: 'MAX COMBO', value: this.maxCombo, color: '#aaddff' }].forEach((s, i) => {
-      this.add.text(W / 2 - 120, 240 + i * 40, s.label, { fontSize: '9px', color: '#888888', fontFamily: PF }).setOrigin(0, 0.5);
-      this.add.text(W / 2 + 120, 240 + i * 40, String(s.value), { fontSize: '11px', color: s.color, fontFamily: PF }).setOrigin(1, 0.5);
+      this.add.text(W / 2 - 120, 240 + i * 40, s.label, { fontSize: '9px', color: '#888888', fontFamily: PIXEL_FONT }).setOrigin(0, 0.5);
+      this.add.text(W / 2 + 120, 240 + i * 40, String(s.value), { fontSize: '11px', color: s.color, fontFamily: PIXEL_FONT }).setOrigin(1, 0.5);
     });
     const result = resolveLegacyRhythmResult({ perfect: this.perfect, good: this.good, miss: this.miss });
-    this.add.text(W / 2 + 200, 270, result.grade, { fontSize: '60px', color: result.gradeColor, fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 415, this.config.reward, { fontSize: '10px', color: '#aaddff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2 + 200, 270, result.grade, { fontSize: '60px', color: result.gradeColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, 415, this.config.reward, { fontSize: '10px', color: '#aaddff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.createBtn(270, 490, 'RETRY', 0x001888, 0x4499ff, () => this.scene.restart());
     this.createBtn(530, 490, 'EXIT', 0x440088, 0xcc55ff, () => returnToScene(this, this.returnSceneKey));
   }
@@ -213,7 +214,7 @@ export default class RhythmScene extends Phaser.Scene {
   createBtn(x, y, label, bg, border, cb) {
     this.add.rectangle(x + 3, y + 3, 200, 52, 0x000000, 0.8);
     const btn = this.add.rectangle(x, y, 200, 52, bg).setInteractive().setStrokeStyle(3, border);
-    this.add.text(x, y, label, { fontSize: '12px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(x, y, label, { fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border)); btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => { this.cameras.main.flash(150, 255, 255, 255, false); this.time.delayedCall(150, cb); });
   }

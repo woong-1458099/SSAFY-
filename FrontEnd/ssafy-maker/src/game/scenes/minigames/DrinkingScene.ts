@@ -10,8 +10,9 @@ import {
   preloadLegacyDrinkingAssets,
   resolveLegacyDrinkingJudge
 } from '@features/minigame/legacy/legacyDrinkingConfig';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
+const { W, H } = SCREEN;
 
 export default class DrinkingScene extends Phaser.Scene {
   private round = 1;
@@ -181,19 +182,19 @@ export default class DrinkingScene extends Phaser.Scene {
   setupUI(W: number, H: number) {
     const hudDepth = 20;
     this.add.rectangle(W/2, 25, W, 50, 0x0d1545, 0.95).setDepth(hudDepth);
-    this.scoreTxt = this.add.text(20, 15, 'SCORE: 0', { fontSize: '12px', color: '#ffffff', fontFamily: PF }).setDepth(hudDepth);
-    this.roundTxt = this.add.text(W-20, 15, `ROUND 1 / ${LEGACY_DRINKING_ROUNDS}`, { fontSize: '12px', color: '#ffaa00', fontFamily: PF }).setOrigin(1,0).setDepth(hudDepth);
+    this.scoreTxt = this.add.text(20, 15, 'SCORE: 0', { fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT }).setDepth(hudDepth);
+    this.roundTxt = this.add.text(W-20, 15, `ROUND 1 / ${LEGACY_DRINKING_ROUNDS}`, { fontSize: '12px', color: '#ffaa00', fontFamily: PIXEL_FONT }).setOrigin(1,0).setDepth(hudDepth);
     this.add.rectangle(W-100, 300, 40, 350, 0x223355).setStrokeStyle(2, 0x445577).setDepth(hudDepth);
     this.add.rectangle(W-100, 220, 36, 50, 0x44ff88, 0.3).setDepth(hudDepth); 
     this.foamBar = this.add.rectangle(W-100, 475, 32, 12, 0xffaa00).setDepth(hudDepth+1);
-    this.resultTxt = this.add.text(W/2, 550, '', { fontSize: '20px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5).setDepth(hudDepth);
+    this.resultTxt = this.add.text(W/2, 550, '', { fontSize: '20px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(hudDepth);
   }
 
   createSpeechBubble(x: number, y: number) {
     this.bubbleGroup = this.add.container(x, y).setDepth(30);
     this.bubbleBg = this.add.graphics();
     this.npcChatTxt = this.add.text(0, 0, '', {
-      fontSize: '14px', color: '#000000', fontFamily: PF,
+      fontSize: '14px', color: '#000000', fontFamily: PIXEL_FONT,
       align: 'center', wordWrap: { width: 250 }
     }).setOrigin(0.5);
     this.bubbleGroup.add([this.bubbleBg, this.npcChatTxt]);
@@ -216,10 +217,10 @@ export default class DrinkingScene extends Phaser.Scene {
     this.bubbleGroup.setVisible(false);
     const W = 800, H = 600;
     this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.8).setDepth(100);
-    this.add.text(W/2, H/2 - 50, 'FINISHED!', { fontSize: '40px', fontFamily: PF, color: '#FFD700' }).setOrigin(0.5).setDepth(101);
-    this.add.text(W/2, H/2 + 30, `Score: ${this.score}`, { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101);
-    this.add.text(W/2, H/2 + 110, '[ RETRY ]', { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => this.scene.restart());
-    this.add.text(W/2, H/2 + 160, '[ EXIT ]', { fontSize: '20px', fontFamily: PF }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => {
+    this.add.text(W/2, H/2 - 50, 'FINISHED!', { fontSize: '40px', fontFamily: PIXEL_FONT, color: '#FFD700' }).setOrigin(0.5).setDepth(101);
+    this.add.text(W/2, H/2 + 30, `Score: ${this.score}`, { fontSize: '20px', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(101);
+    this.add.text(W/2, H/2 + 110, '[ RETRY ]', { fontSize: '20px', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => this.scene.restart());
+    this.add.text(W/2, H/2 + 160, '[ EXIT ]', { fontSize: '20px', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => {
       this.sound.stopAll();
       returnToScene(this, this.returnSceneKey);
     });

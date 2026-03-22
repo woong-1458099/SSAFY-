@@ -9,10 +9,9 @@ import {
   LEGACY_COOKING_INGREDIENTS,
   preloadLegacyCookingAssets,
 } from '@features/minigame/legacy/legacyCookingConfig';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
-const W = 800;
-const H = 600;
+const { W, H } = SCREEN;
 export default class CookingScene extends Phaser.Scene {
   private returnSceneKey = 'main';
 
@@ -48,21 +47,21 @@ export default class CookingScene extends Phaser.Scene {
     this.add.rectangle(W / 2, 90, W, 3, 0x442200);
 
     this.add.text(W / 2, 22, '🍜 SSAFY 라면 장인', {
-      fontSize: '20px', color: '#ffcc88', fontFamily: PF
+      fontSize: '20px', color: '#ffcc88', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
   
     this.scoreTxt = this.add.text(30, 55, 'SCORE: 0', {
-      fontSize: '14px', color: '#ffffff', fontFamily: PF 
+      fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT 
     });
 
     this.timeTxt = this.add.text(W - 30, 55, 'TIME: 25', {
-      fontSize: '14px', color: '#ff6644', fontFamily: PF 
+      fontSize: '14px', color: '#ff6644', fontFamily: PIXEL_FONT 
     }).setOrigin(1, 0);
 
     this.add.rectangle(W / 2, H - 25, W, 50, 0x1a0a00, 0.9);
     this.add.text(W / 2, H - 25, '← → 방향키로 냄비 이동 | 재료를 받으세요!', {
-      fontSize: '11px', color: '#aaaa88', fontFamily: PF
+      fontSize: '11px', color: '#aaaa88', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.pot = this.add.container(W / 2, H - 100);
@@ -82,7 +81,7 @@ export default class CookingScene extends Phaser.Scene {
     });
 
     this.msgTxt = this.add.text(W / 2, H / 2, '', {
-      fontSize: '26px', color: '#ffffff', fontFamily: PF 
+      fontSize: '26px', color: '#ffffff', fontFamily: PIXEL_FONT 
     }).setOrigin(0.5).setAlpha(0).setDepth(100);
     this.events.once('shutdown', this.shutdown, this);
     this.events.once('destroy', this.shutdown, this);
@@ -203,37 +202,37 @@ update() {
 
  
     this.add.text(W / 2, 120, '🍳 요리 완성!', {
-      fontSize: '24px', color: '#ffcc88', fontFamily: PF
+      fontSize: '24px', color: '#ffcc88', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
 
     this.add.text(W / 2, 180, dish.name, {
-      fontSize: '28px', color: dish.color, fontFamily: PF
+      fontSize: '28px', color: dish.color, fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
   
     this.add.text(W / 2, 230, dish.desc, {
-      fontSize: '12px', color: '#ffffff', fontFamily: PF
+      fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
   
     this.add.text(W / 2, 280, `최종 점수: ${this.score}`, {
-      fontSize: '18px', color: '#ffff88', fontFamily: PF
+      fontSize: '18px', color: '#ffff88', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     const ingText = `면 ${this.caughtItems['면']} | 수프 ${this.caughtItems['수프']} | 파 ${this.caughtItems['파']} | 계란 ${this.caughtItems['계란']} | 차슈 ${this.caughtItems['차슈']}`;
     this.add.text(W / 2, 330, ingText, {
-      fontSize: '10px', color: '#88ccff', fontFamily: PF
+      fontSize: '10px', color: '#88ccff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     if (this.caughtItems['탄것'] > 0) {
       this.add.text(W / 2, 355, `탄 것 ${this.caughtItems['탄것']}개 받음...`, {
-        fontSize: '10px', color: '#ff6666', fontFamily: PF
+        fontSize: '10px', color: '#ff6666', fontFamily: PIXEL_FONT
       }).setOrigin(0.5);
     }
 
     this.add.text(W / 2, 400, `보상: ${dish.reward}`, {
-      fontSize: '12px', color: '#FFD700', fontFamily: PF
+      fontSize: '12px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 470, '다시하기', 0x442200, 0xff8822, () => this.scene.restart());
@@ -243,7 +242,7 @@ update() {
   createBtn(x, y, label, bg, border, cb) {
     this.add.rectangle(x + 2, y + 2, 180, 50, 0x000000, 0.5);
     const btn = this.add.rectangle(x, y, 180, 50, bg).setInteractive().setStrokeStyle(3, border);
-    this.add.text(x, y, label, { fontSize: '14px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(x, y, label, { fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border));
     btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => {

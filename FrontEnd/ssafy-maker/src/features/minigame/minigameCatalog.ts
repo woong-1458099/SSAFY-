@@ -43,17 +43,6 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x443300
   },
   {
-    key: "DragScene",
-    title: "코드 정렬",
-    sub: "드래그 앤 드롭",
-    desc: "60초 / 순서 맞추기",
-    reward: "지능 +10, 골드 +30",
-    bgColor: 0x440088,
-    borderColor: 0xcc55ff,
-    glowColor: 0x6600aa
-  },
-
-  {
     key: "RunnerScene",
     title: "러너",
     sub: "장애물 점프",
@@ -143,16 +132,6 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     bgColor: 0x221100,
     borderColor: 0xffaa00,
     glowColor: 0x442200,
-  },
-  {
-    key: "MiniGameTypingScene",
-    title: "타이핑 훈련",
-    sub: "실험형 단어 입력",
-    desc: "30초 / 6단어",
-    reward: "실험용",
-    bgColor: 0x16324b,
-    borderColor: 0x7df0ff,
-    glowColor: 0x214e75
   },
   {
     key: "MiniGameReflexScene",

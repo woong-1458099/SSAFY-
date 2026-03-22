@@ -9,10 +9,9 @@ import {
   LEGACY_QUIZ_TOTAL_TIME,
   resolveLegacyQuizResult
 } from '@features/minigame/legacy/legacyQuizConfig';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
-const W = 800;
-const H = 600;
+const { W, H } = SCREEN;
 
 export default class QuizScene extends Phaser.Scene {
   private returnSceneKey = 'main';
@@ -42,28 +41,28 @@ export default class QuizScene extends Phaser.Scene {
     this.add.rectangle(W / 2, 80, W, 3, 0x4488ff);
 
     this.add.text(W / 2, 25, '📝 정보처리기사 퀴즈', {
-      fontSize: '20px', color: '#FFD700', fontFamily: PF
+      fontSize: '20px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.questionNum = this.add.text(30, 55, 'Q 1/8', {
-      fontSize: '14px', color: '#88ccff', fontFamily: PF
+      fontSize: '14px', color: '#88ccff', fontFamily: PIXEL_FONT
     });
 
     this.scoreText = this.add.text(W - 30, 55, 'SCORE: 0', {
-      fontSize: '14px', color: '#00ff88', fontFamily: PF
+      fontSize: '14px', color: '#00ff88', fontFamily: PIXEL_FONT
     }).setOrigin(1, 0);
 
     // 타이머 영역
     this.add.rectangle(W / 2, 105, W - 60, 20, 0x1a1a3e);
     this.timerBar = this.add.rectangle(30, 105, W - 60, 16, 0x00cc66).setOrigin(0, 0.5);
     this.timerText = this.add.text(W / 2, 105, `${LEGACY_QUIZ_TOTAL_TIME}`, {
-      fontSize: '12px', color: '#ffffff', fontFamily: PF
+      fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // 질문 박스
     this.add.rectangle(W / 2, 185, W - 40, 100, 0x1e3a5f).setStrokeStyle(3, 0x4488ff);
     this.questionText = this.add.text(W / 2, 185, '', {
-      fontSize: '16px', color: '#ffffff', fontFamily: PF,
+      fontSize: '16px', color: '#ffffff', fontFamily: PIXEL_FONT,
       align: 'center', wordWrap: { width: W - 100 }, lineSpacing: 8
     }).setOrigin(0.5);
 
@@ -85,11 +84,11 @@ export default class QuizScene extends Phaser.Scene {
       // 번호 뱃지
       this.add.rectangle(55, y, 44, 44, optColors[i]);
       this.add.text(55, y, optLabels[i], {
-        fontSize: '18px', color: '#ffffff', fontFamily: PF
+        fontSize: '18px', color: '#ffffff', fontFamily: PIXEL_FONT
       }).setOrigin(0.5);
 
       const label = this.add.text(W / 2 + 20, y, '', {
-        fontSize: '14px', color: '#ffffff', fontFamily: PF,
+        fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT,
         align: 'center', wordWrap: { width: W - 180 }
       }).setOrigin(0.5);
 
@@ -112,7 +111,7 @@ export default class QuizScene extends Phaser.Scene {
 
     // 결과 텍스트
     this.resultText = this.add.text(W / 2, H - 30, '', {
-      fontSize: '16px', color: '#FFD700', fontFamily: PF
+      fontSize: '16px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.timerEvent = this.time.addEvent({
@@ -221,22 +220,22 @@ export default class QuizScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, 500, 380, 0x162447).setStrokeStyle(4, 0xFFD700);
 
     this.add.text(W / 2, 150, '📝 퀴즈 결과', {
-      fontSize: '24px', color: '#FFD700', fontFamily: PF
+      fontSize: '24px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     const total = this.questions.length;
     const result = resolveLegacyQuizResult(this.score, total);
 
     this.add.text(W / 2, 220, `${this.score} / ${total}`, {
-      fontSize: '48px', color: '#ffffff', fontFamily: PF
+      fontSize: '48px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 290, result.grade, {
-      fontSize: '20px', color: result.color, fontFamily: PF
+      fontSize: '20px', color: result.color, fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 340, result.reward, {
-      fontSize: '14px', color: '#88ccff', fontFamily: PF
+      fontSize: '14px', color: '#88ccff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 420, '다시하기', 0x2255aa, 0x4488ff, () => this.scene.restart());
@@ -246,7 +245,7 @@ export default class QuizScene extends Phaser.Scene {
   createBtn(x, y, label, bg, border, callback) {
     this.add.rectangle(x + 2, y + 2, 180, 50, 0x000000, 0.5);
     const btn = this.add.rectangle(x, y, 180, 50, bg).setInteractive().setStrokeStyle(3, border);
-    this.add.text(x, y, label, { fontSize: '14px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(x, y, label, { fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border));
     btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => {

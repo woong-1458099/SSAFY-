@@ -3,22 +3,20 @@ import { PreloadScene } from "../../game/scenes/PreloadScene";
 import { MainScene } from "../../game/scenes/MainScene";
 import { MiniGameCenterScene } from "../../game/scenes/minigames/MiniGameCenterScene";
 import { MiniGameReflexScene } from "../../game/scenes/minigames/MiniGameReflexScene";
-import { MiniGameTypingScene } from "../../game/scenes/minigames/MiniGameTypingScene";
-import LegacyBusinessSmileScene from "../../game/scenes/legacyMinigames/BusinessSmileScene";
-import LegacyCookingScene from "../../game/scenes/legacyMinigames/CookingScene";
-import LegacyDontSmileScene from "../../game/scenes/legacyMinigames/DontSmileScene";
-import LegacyDragScene from "../../game/scenes/legacyMinigames/DragScene";
-import LegacyDrinkingScene from "../../game/scenes/legacyMinigames/DrinkingScene";
-import LegacyGymScene from "../../game/scenes/legacyMinigames/GymScene";
-import LegacyInterviewScene from "../../game/scenes/legacyMinigames/InterviewScene";
-import LegacyLottoScene from "../../game/scenes/legacyMinigames/LottoScene";
-import LegacyMenuScene from "../../game/scenes/legacyMinigames/MenuScene";
-import LegacyMinigamePauseScene from "../../game/scenes/legacyMinigames/MinigamePauseScene";
-import LegacyQuizScene from "../../game/scenes/legacyMinigames/QuizScene";
-import LegacyRhythmScene from "../../game/scenes/legacyMinigames/RhythmScene";
-import LegacyRunnerScene from "../../game/scenes/legacyMinigames/RunnerScene";
-import LegacyTankScene from "../../game/scenes/legacyMinigames/TankScene";
-import LegacyTypingScene from "../../game/scenes/legacyMinigames/TypingScene";
+import LegacyBusinessSmileScene from "../../game/scenes/minigames/BusinessSmileScene";
+import LegacyCookingScene from "../../game/scenes/minigames/CookingScene";
+import LegacyDontSmileScene from "../../game/scenes/minigames/DontSmileScene";
+import LegacyDrinkingScene from "../../game/scenes/minigames/DrinkingScene";
+import LegacyGymScene from "../../game/scenes/minigames/GymScene";
+import LegacyInterviewScene from "../../game/scenes/minigames/InterviewScene";
+import LegacyLottoScene from "../../game/scenes/minigames/LottoScene";
+import LegacyMenuScene from "../../game/scenes/minigames/MenuScene";
+import LegacyMinigamePauseScene from "../../game/scenes/minigames/MinigamePauseScene";
+import LegacyQuizScene from "../../game/scenes/minigames/QuizScene";
+import LegacyRhythmScene from "../../game/scenes/minigames/RhythmScene";
+import LegacyRunnerScene from "../../game/scenes/minigames/RunnerScene";
+import LegacyTankScene from "../../game/scenes/minigames/TankScene";
+import LegacyTypingScene from "../../game/scenes/minigames/TypingScene";
 
 export const SCENE_REGISTRY = [
   BootScene,
@@ -31,7 +29,6 @@ export const SCENE_REGISTRY = [
   LegacyInterviewScene,
   LegacyRunnerScene,
   LegacyTankScene,
-  LegacyDragScene,
   LegacyTypingScene,
   LegacyBusinessSmileScene,
   LegacyDontSmileScene,
@@ -40,6 +37,5 @@ export const SCENE_REGISTRY = [
   LegacyLottoScene,
   LegacyDrinkingScene,
   MiniGameCenterScene,
-  MiniGameTypingScene,
   MiniGameReflexScene
 ];
