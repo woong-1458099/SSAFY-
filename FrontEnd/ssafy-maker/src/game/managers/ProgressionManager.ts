@@ -7,6 +7,7 @@ import {
   parseWeeklyPlanOptionId,
   type WeeklyPlanOptionId
 } from "../../features/planning/weeklyPlan";
+import { createWeeklySalaryModal } from "../../features/progression/weeklySalaryModal";
 import {
   DAY_CYCLE,
   advanceTime,
@@ -16,14 +17,18 @@ import {
 } from "../../features/progression/TimeService";
 import type { HudState, PlayerStatKey } from "../state/gameState";
 
+const WEEKLY_SALARY_AMOUNT = 50000;
+
 type ProgressionSnapshot = {
   timeState: TimeState;
   weeklyPlan: WeeklyPlanOptionId[];
   weeklyPlanWeek: number;
+  lastPaidWeeklySalaryWeek: number;
 };
 
 type ProgressionManagerOptions = {
   scene: Phaser.Scene;
+  getHudState: () => HudState;
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
@@ -32,6 +37,7 @@ type ProgressionManagerOptions = {
 
 export class ProgressionManager {
   private readonly scene: Phaser.Scene;
+  private readonly getHudState: () => HudState;
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   private readonly getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
@@ -39,11 +45,15 @@ export class ProgressionManager {
 
   private timeState: TimeState = createDefaultTimeState();
   private weeklyPlan: WeeklyPlanOptionId[] = createDefaultWeeklyPlan();
-  private weeklyPlanWeek = 1;
+  private weeklyPlanWeek = 0;
+  private lastPaidWeeklySalaryWeek = 0;
+  private pendingWeeklySalaryWeek: number | null = null;
   private plannerRoot?: Phaser.GameObjects.Container;
+  private salaryRoot?: Phaser.GameObjects.Container;
 
   constructor(options: ProgressionManagerOptions) {
     this.scene = options.scene;
+    this.getHudState = options.getHudState;
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
     this.getFixedEventSlots = options.getFixedEventSlots;
@@ -55,11 +65,12 @@ export class ProgressionManager {
   }
 
   destroy(): void {
+    this.closeSalaryModal();
     this.closePlanner();
   }
 
   isPlannerOpen(): boolean {
-    return Boolean(this.plannerRoot?.visible);
+    return Boolean(this.plannerRoot?.visible || this.salaryRoot?.visible);
   }
 
   getTimeCycleIndex(): number {
@@ -74,9 +85,25 @@ export class ProgressionManager {
     return this.timeState.maxActionPoint;
   }
 
+  processAutomaticFlow(): boolean {
+    this.grantWeeklySalaryIfDue();
+    if (this.pendingWeeklySalaryWeek !== null) {
+      this.openSalaryModal();
+      return true;
+    }
+    if (this.shouldOpenWeeklyPlanner()) {
+      this.openPlanner();
+      return true;
+    }
+    return false;
+  }
+
   consumeActionPoint(): boolean {
     if (this.timeState.actionPoint <= 0) {
       this.onNotice?.("행동력이 부족합니다");
+      return false;
+    }
+    if (this.salaryRoot?.visible) {
       return false;
     }
 
@@ -84,11 +111,11 @@ export class ProgressionManager {
     this.timeState = result.next;
     this.patchHudState(result.hudPatch);
 
-    if (this.timeState.week > this.weeklyPlanWeek) {
+    if (result.dayPassed && this.timeState.dayCycleIndex === 0) {
       this.weeklyPlan = createDefaultWeeklyPlan();
-      this.weeklyPlanWeek = this.timeState.week;
     }
 
+    this.grantWeeklySalaryIfDue();
     return true;
   }
 
@@ -104,7 +131,8 @@ export class ProgressionManager {
     return {
       timeState: { ...this.timeState },
       weeklyPlan: [...this.weeklyPlan],
-      weeklyPlanWeek: this.weeklyPlanWeek
+      weeklyPlanWeek: this.weeklyPlanWeek,
+      lastPaidWeeklySalaryWeek: this.lastPaidWeeklySalaryWeek
     };
   }
 
@@ -118,12 +146,20 @@ export class ProgressionManager {
       );
     }
     if (typeof snapshot?.weeklyPlanWeek === "number") {
-      this.weeklyPlanWeek = Math.max(1, Math.round(snapshot.weeklyPlanWeek));
+      this.weeklyPlanWeek = Math.max(0, Math.round(snapshot.weeklyPlanWeek));
     }
+    if (typeof snapshot?.lastPaidWeeklySalaryWeek === "number") {
+      this.lastPaidWeeklySalaryWeek = Math.max(0, Math.round(snapshot.lastPaidWeeklySalaryWeek));
+    }
+    this.pendingWeeklySalaryWeek = null;
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
   }
 
   private openPlanner(): void {
+    if (this.plannerRoot?.visible || this.salaryRoot?.visible) {
+      return;
+    }
+
     this.closePlanner();
     this.plannerRoot = createWeeklyPlannerModal(this.scene, {
       week: this.timeState.week,
@@ -154,6 +190,29 @@ export class ProgressionManager {
     this.plannerRoot = undefined;
   }
 
+  private openSalaryModal(): void {
+    const week = this.pendingWeeklySalaryWeek;
+    if (week === null || this.salaryRoot?.visible) {
+      return;
+    }
+
+    this.closeSalaryModal();
+    this.salaryRoot = createWeeklySalaryModal(this.scene, {
+      week,
+      amount: WEEKLY_SALARY_AMOUNT,
+      onConfirm: () => {
+        this.closeSalaryModal();
+        this.processAutomaticFlow();
+      }
+    });
+    this.pendingWeeklySalaryWeek = null;
+  }
+
+  private closeSalaryModal(): void {
+    this.salaryRoot?.destroy(true);
+    this.salaryRoot = undefined;
+  }
+
   private advanceCurrentSlot(): void {
     const previousState = {
       dayCycleIndex: this.timeState.dayCycleIndex,
@@ -172,5 +231,27 @@ export class ProgressionManager {
     } else {
       this.onNotice?.("이번 시간대에는 계획 보상이 없습니다");
     }
+  }
+
+  private shouldPayWeeklySalary(): boolean {
+    return this.timeState.dayCycleIndex === 0 && this.timeState.week > this.lastPaidWeeklySalaryWeek;
+  }
+
+  private grantWeeklySalaryIfDue(): boolean {
+    if (!this.shouldPayWeeklySalary()) {
+      return false;
+    }
+
+    this.lastPaidWeeklySalaryWeek = this.timeState.week;
+    this.pendingWeeklySalaryWeek = this.timeState.week;
+    const hudState = this.getHudState();
+    this.patchHudState({
+      money: hudState.money + WEEKLY_SALARY_AMOUNT
+    });
+    return true;
+  }
+
+  private shouldOpenWeeklyPlanner(): boolean {
+    return this.timeState.dayCycleIndex === 0 && this.weeklyPlanWeek < this.timeState.week;
   }
 }

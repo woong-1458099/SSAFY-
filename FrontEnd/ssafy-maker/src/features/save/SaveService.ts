@@ -15,6 +15,7 @@ export type SavePayload = {
     timeState: TimeState;
     weeklyPlan: WeeklyPlanOptionId[];
     weeklyPlanWeek: number;
+    lastPaidWeeklySalaryWeek: number;
   };
   world?: {
     areaId: AreaId;

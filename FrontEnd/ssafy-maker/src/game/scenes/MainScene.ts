@@ -161,6 +161,7 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager.attachHud(this.hud);
     this.progressionManager = new ProgressionManager({
       scene: this,
+      getHudState: () => this.statSystemManager!.getHudState(),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
       getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
@@ -363,7 +364,10 @@ export class MainScene extends Phaser.Scene {
       this.progressionManager?.togglePlanner();
     }
 
+    const automaticProgressionFlowOpened = this.progressionManager?.processAutomaticFlow() === true;
+
     if (
+      !automaticProgressionFlowOpened &&
       !menuOpen &&
       !placePopupOpen &&
       !plannerOpen &&
