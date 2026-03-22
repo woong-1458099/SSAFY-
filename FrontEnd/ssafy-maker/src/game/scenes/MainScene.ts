@@ -29,6 +29,7 @@ import {
 import { resolvePlayerAppearanceDefinition } from "../definitions/player/playerAppearanceResolver";
 import { getSceneState } from "../definitions/sceneStates/sceneStateRegistry";
 import { DialogueManager } from "../managers/DialogueManager";
+import { FixedEventNpcManager } from "../managers/FixedEventNpcManager";
 import { InGameMenuManager } from "../managers/InGameMenuManager";
 import {
   InteractionManager,
@@ -72,6 +73,7 @@ export class MainScene extends Phaser.Scene {
   private dialogueBox?: DialogueBox;
   private hud?: GameHud;
   private menuManager?: InGameMenuManager;
+  private fixedEventNpcManager?: FixedEventNpcManager;
   private minigameRewardManager?: MinigameRewardManager;
   private placeActionManager?: PlaceActionManager;
   private progressionManager?: ProgressionManager;
@@ -104,6 +106,7 @@ export class MainScene extends Phaser.Scene {
     this.saveService = new SaveService();
     this.dialogueBox = new DialogueBox(this);
     this.hud = new GameHud(this);
+    this.fixedEventNpcManager = new FixedEventNpcManager(this);
     this.dialogueManager.setDialogueBox(this.dialogueBox);
     this.dialogueManager.setRuntimeHooks({
       getMetricValue: (stat) => {
@@ -171,6 +174,7 @@ export class MainScene extends Phaser.Scene {
     this.storyEventManager = new StoryEventManager({
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
+      getCurrentArea: () => this.worldManager?.getCurrentAreaId() ?? "world",
       getCurrentLocation: () => this.statSystemManager!.getHudState().locationLabel,
       getPlayerName: () => {
         const raw = this.registry.get("playerData") as { name?: string } | undefined;
@@ -213,7 +217,13 @@ export class MainScene extends Phaser.Scene {
       this.debugLogger
     );
     this.interactionManager.setHud(this.hud);
-    this.interactionManager.setPlaceInteractHandler((placeId) => this.placeActionManager?.open(placeId) === true);
+    this.interactionManager.setPlaceInteractHandler((placeId) => {
+      if (this.storyEventManager?.tryStartFixedEventForLocation(placeId) === true) {
+        return true;
+      }
+
+      return this.placeActionManager?.open(placeId) === true;
+    });
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.plannerKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.statSystemManager.setStatsChangedListener(() => {
@@ -306,6 +316,7 @@ export class MainScene extends Phaser.Scene {
       this.debugInputController?.destroy();
       this.dialogueManager?.destroy();
       this.dialogueBox?.destroy();
+      this.fixedEventNpcManager?.destroy();
       this.minigameRewardManager?.destroy();
       this.placeActionManager?.destroy();
       this.progressionManager?.destroy();
@@ -334,6 +345,7 @@ export class MainScene extends Phaser.Scene {
     const menuOpen = this.menuManager?.isOpen() === true;
     const placePopupOpen = this.placeActionManager?.isOpen() === true;
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
+    const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
 
     this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible);
     this.playerManager.setInputLocked(
@@ -343,7 +355,7 @@ export class MainScene extends Phaser.Scene {
     if (
       this.escapeKey &&
       Phaser.Input.Keyboard.JustDown(this.escapeKey) &&
-      !this.dialogueManager?.isDialoguePlaying() &&
+      !dialoguePlaying &&
       !plannerOpen
     ) {
       if (placePopupOpen) {
@@ -356,7 +368,7 @@ export class MainScene extends Phaser.Scene {
     if (
       this.plannerKey &&
       Phaser.Input.Keyboard.JustDown(this.plannerKey) &&
-      !this.dialogueManager?.isDialoguePlaying() &&
+      !dialoguePlaying &&
       !menuOpen &&
       !placePopupOpen &&
       !debugHudVisible
@@ -365,6 +377,11 @@ export class MainScene extends Phaser.Scene {
     }
 
     const automaticProgressionFlowOpened = this.progressionManager?.processAutomaticFlow() === true;
+    this.fixedEventNpcManager?.render({
+      presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
+      areaId: this.worldManager.getCurrentAreaId() ?? "world",
+      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !dialoguePlaying
+    });
 
     if (
       !automaticProgressionFlowOpened &&
@@ -372,7 +389,7 @@ export class MainScene extends Phaser.Scene {
       !placePopupOpen &&
       !plannerOpen &&
       !debugHudVisible &&
-      !this.dialogueManager?.isDialoguePlaying()
+      !dialoguePlaying
     ) {
       this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
       this.storyEventManager?.tryStartCurrentFixedEvent();

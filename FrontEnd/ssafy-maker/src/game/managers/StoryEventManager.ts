@@ -1,8 +1,15 @@
 import Phaser from "phaser";
+import type { AreaId } from "../../common/enums/area";
 import type { DialogueScript } from "../../common/types/dialogue";
 import type { HudState } from "../state/gameState";
 import { TIME_CYCLE } from "../../features/progression/TimeService";
 import { getWeeklyPlanSlotIndex, WEEKLY_PLAN_TIME_LABELS } from "../../features/planning/weeklyPlan";
+import {
+  buildFixedEventNpcPresentation,
+  resolveFixedEventLocationId,
+  resolveFixedEventRenderArea,
+  type FixedEventNpcPresentation
+} from "../../features/story/fixedEventNpcPresence";
 import {
   buildDialogueScriptFromFixedEventEntry,
   findMatchingFixedEvent,
@@ -18,6 +25,7 @@ export type StoryEventSnapshot = {
 type StoryEventManagerOptions = {
   scene: Phaser.Scene;
   getHudState: () => HudState;
+  getCurrentArea: () => AreaId;
   getCurrentLocation: () => string;
   getPlayerName: () => string;
   setRuntimeDialogueScript: (script: DialogueScript) => void;
@@ -32,6 +40,7 @@ export class StoryEventManager {
 
   private readonly scene: Phaser.Scene;
   private readonly getHudState: () => HudState;
+  private readonly getCurrentArea: () => AreaId;
   private readonly getCurrentLocation: () => string;
   private readonly getPlayerName: () => string;
   private readonly setRuntimeDialogueScript: (script: DialogueScript) => void;
@@ -49,6 +58,7 @@ export class StoryEventManager {
   constructor(options: StoryEventManagerOptions) {
     this.scene = options.scene;
     this.getHudState = options.getHudState;
+    this.getCurrentArea = options.getCurrentArea;
     this.getCurrentLocation = options.getCurrentLocation;
     this.getPlayerName = options.getPlayerName;
     this.setRuntimeDialogueScript = options.setRuntimeDialogueScript;
@@ -122,49 +132,32 @@ export class StoryEventManager {
     return slots;
   }
 
-  tryStartCurrentFixedEvent(): void {
-    const hudState = this.getHudState();
-    const week = hudState.week;
-    const rawData = this.weekData.get(week);
-
-    if (this.starting || this.activeFixedEventId || !rawData) {
-      this.syncWeek(week);
-      return;
+  getCurrentFixedEventPresentation(): FixedEventNpcPresentation | null {
+    if (this.starting || this.activeFixedEventId) {
+      return null;
     }
 
-    const event = findMatchingFixedEvent(
-      rawData,
-      {
-        week,
-        day: this.resolveDayIndex(hudState.dayLabel) + 1,
-        timeOfDay: hudState.timeLabel,
-        location: this.getCurrentLocation()
-      },
-      this.completedFixedEventIds
-    );
-
+    const event = this.findPresentableFixedEventForCurrentArea();
     if (!event) {
-      return;
+      return null;
     }
 
-    const eventId = typeof event.eventId === "string" ? event.eventId : null;
-    const runtimeScript = buildDialogueScriptFromFixedEventEntry(
-      StoryEventManager.FIXED_EVENT_DIALOGUE_ID,
-      event,
-      {
-        fallbackNpcLabel: typeof event.eventName === "string" ? event.eventName : "이벤트",
-        playerName: this.getPlayerName()
-      }
-    );
+    return buildFixedEventNpcPresentation(event, {
+      fallbackLocation: this.getCurrentArea()
+    });
+  }
 
-    if (!runtimeScript) {
-      return;
+  tryStartCurrentFixedEvent(): boolean {
+    return this.tryStartFixedEventForLocation(this.getCurrentLocation());
+  }
+
+  tryStartFixedEventForLocation(location: string): boolean {
+    const event = this.findMatchingFixedEventForLocation(location);
+    if (!event) {
+      return false;
     }
 
-    this.starting = true;
-    this.activeFixedEventId = eventId;
-    this.setRuntimeDialogueScript(runtimeScript);
-    void this.playFixedEventDialogue(event, runtimeScript, eventId);
+    return this.startFixedEvent(event);
   }
 
   private async playFixedEventDialogue(
@@ -220,6 +213,80 @@ export class StoryEventManager {
       const message = error instanceof Error ? error.message : "고정 이벤트 데이터를 불러오지 못했습니다";
       this.onNotice?.(message);
     }
+  }
+
+  private findMatchingFixedEventForLocation(location: string): FixedEventEntry | null {
+    const hudState = this.getHudState();
+    const week = hudState.week;
+    const rawData = this.weekData.get(week);
+
+    if (this.starting || this.activeFixedEventId || !rawData) {
+      this.syncWeek(week);
+      return null;
+    }
+
+    return findMatchingFixedEvent(
+      rawData,
+      {
+        week,
+        day: this.resolveDayIndex(hudState.dayLabel) + 1,
+        timeOfDay: hudState.timeLabel,
+        location
+      },
+      this.completedFixedEventIds
+    );
+  }
+
+  private findPresentableFixedEventForCurrentArea(): FixedEventEntry | null {
+    const hudState = this.getHudState();
+    const rawData = this.weekData.get(hudState.week);
+
+    if (!rawData) {
+      this.syncWeek(hudState.week);
+      return null;
+    }
+
+    return (
+      getFixedEventEntries(rawData).find((event) => {
+        const timing = event.triggerTiming;
+        if (!timing || event.eventType !== "FIXED") {
+          return false;
+        }
+
+        const eventId = typeof event.eventId === "string" ? event.eventId : "";
+        if (event.isRepeatable !== true && eventId && this.completedFixedEventIds.includes(eventId)) {
+          return false;
+        }
+
+        const sameWeek = Math.round(timing.week ?? -1) === hudState.week;
+        const sameDay = Math.round(timing.day ?? -1) === this.resolveDayIndex(hudState.dayLabel) + 1;
+        const sameTime = typeof timing.timeOfDay === "string" && timing.timeOfDay.trim() === hudState.timeLabel;
+        if (!sameWeek || !sameDay || !sameTime) {
+          return false;
+        }
+
+        const locationId = resolveFixedEventLocationId(event.location, this.getCurrentArea());
+        return resolveFixedEventRenderArea(locationId) === this.getCurrentArea();
+      }) ?? null
+    );
+  }
+
+  private startFixedEvent(event: FixedEventEntry): boolean {
+    const eventId = typeof event.eventId === "string" ? event.eventId : null;
+    const runtimeScript = buildDialogueScriptFromFixedEventEntry(StoryEventManager.FIXED_EVENT_DIALOGUE_ID, event, {
+      fallbackNpcLabel: typeof event.eventName === "string" ? event.eventName : "이벤트",
+      playerName: this.getPlayerName()
+    });
+
+    if (!runtimeScript) {
+      return false;
+    }
+
+    this.starting = true;
+    this.activeFixedEventId = eventId;
+    this.setRuntimeDialogueScript(runtimeScript);
+    void this.playFixedEventDialogue(event, runtimeScript, eventId);
+    return true;
   }
 
   private resolveDayIndex(dayLabel: string): number {
