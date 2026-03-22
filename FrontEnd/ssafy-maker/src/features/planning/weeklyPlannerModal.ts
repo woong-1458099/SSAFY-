@@ -71,7 +71,7 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   const legendPanelWidth = 270;
   const legendPanelHeight = 346;
   const legendPanelX = centerX + 320;
-  const legendPanelY = centerY - 26;
+  const legendPanelY = centerY + 12;
 
   const amHeader = scene.add.text(amX, headerY, "오전 일정", {
     fontFamily: FONT_FAMILY,
@@ -196,7 +196,7 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
 
   objects.push(legendOuter, legendBox, legendTitle);
   legendEntries.forEach((entry, index) => {
-    const legendY = legendPanelY - legendPanelHeight / 2 + 78 + index * 74;
+    const legendY = legendPanelY - legendPanelHeight / 2 + 64 + index * 72;
     const swatch = scene.add.rectangle(legendPanelX - 102, legendY - 8, 18, 18, entry.color, 1).setScrollFactor(0);
     swatch.setStrokeStyle(2, 0x8ed2ff, 1);
     const label = scene.add.text(legendPanelX - 82, legendY - 16, entry.label, {
@@ -219,14 +219,15 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
     objects.push(swatch, label, description);
   });
 
-  const saveButton = createActionButton(scene, centerX - 126, centerY + 274, 220, 54, "계획 저장", () => {
+  const actionButtonY = centerY + 286;
+  const saveButton = createActionButton(scene, centerX - 126, actionButtonY, 220, 54, "계획 저장", () => {
     onConfirm([...draftPlan]);
   });
-  const advanceButton = createActionButton(scene, centerX + 126, centerY + 274, 220, 54, "현재 시간 진행", () => {
+  const advanceButton = createActionButton(scene, centerX + 126, actionButtonY, 220, 54, "현재 시간 진행", () => {
     onAdvance([...draftPlan]);
   });
 
-  objects.push(legendBox, legendTitle, saveButton, advanceButton);
+  objects.push(saveButton, advanceButton);
   root.add(objects);
   return root;
 }
