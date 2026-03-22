@@ -17,6 +17,7 @@ import type { SceneState } from "../../common/types/sceneState";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { launchMinigame, openMinigameMenu } from "../../features/minigame/MinigameGateway";
+import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../features/progression/TimeService";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
 import { GameHud } from "../../features/ui/components/GameHud";
@@ -62,6 +63,7 @@ import {
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
   private static readonly PENDING_RESTORE_PAYLOAD_KEY = "pendingRestorePayload";
+  private static readonly PENDING_DEBUG_FIXED_EVENT_KEY = "pendingDebugFixedEvent";
   private initialized = false;
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
@@ -367,6 +369,7 @@ export class MainScene extends Phaser.Scene {
     this.initialized = true;
 
     await director.run(runtimeSceneScript);
+    this.applyPendingDebugFixedEvent();
   }
 
   update() {
@@ -486,6 +489,9 @@ export class MainScene extends Phaser.Scene {
           break;
         case "toggleDebugPanel":
           this.debugPanel?.toggle();
+          if (this.debugPanel?.isVisible()) {
+            this.storyEventManager?.debugSyncAllWeeks();
+          }
           break;
         case "toggleWorldGrid":
           if (this.worldGridOverlay) {
@@ -569,6 +575,28 @@ export class MainScene extends Phaser.Scene {
             this.storyEventManager?.tryStartCurrentFixedEvent() ? "고정 이벤트 실행" : "실행 가능한 고정 이벤트가 없습니다"
           );
           break;
+        case "jumpToFixedEvent":
+          this.handleDebugFixedEventJump(command.week, command.eventId, {
+            resetCompletion: command.resetCompletion === true,
+            runImmediately: false
+          });
+          break;
+        case "runFixedEvent":
+          this.handleDebugFixedEventJump(command.week, command.eventId, {
+            resetCompletion: command.resetCompletion === true,
+            runImmediately: true
+          });
+          break;
+        case "resetFixedEventCompletion": {
+          const changed = this.storyEventManager?.debugResetFixedEventCompletion(command.eventId) === true;
+          this.menuManager?.showNotice(changed ? `이벤트 완료 기록 초기화: ${command.eventId}` : `완료 기록이 없습니다: ${command.eventId}`);
+          break;
+        }
+        case "resetFixedEventCompletionsForWeek": {
+          const cleared = this.storyEventManager?.debugResetFixedEventCompletionsForWeek(command.week) ?? 0;
+          this.menuManager?.showNotice(cleared > 0 ? `${command.week}주차 완료 기록 ${cleared}건 초기화` : `${command.week}주차 완료 기록이 없습니다`);
+          break;
+        }
         case "saveAuto":
           if (this.saveService) {
             this.saveService.saveSlot("auto", this.buildSavePayload());
@@ -820,6 +848,14 @@ export class MainScene extends Phaser.Scene {
     const stats = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
     const usedSlotCount = this.inventoryService?.getInventorySlots().filter((slot) => slot !== null).length ?? 0;
     const totalSlotCount = this.inventoryService?.getInventorySlots().length ?? 0;
+    const storyWeeks = Array.from({ length: 6 }, (_, index) => {
+      const week = index + 1;
+      return {
+        week,
+        loaded: this.storyEventManager?.hasWeekLoaded(week) === true,
+        events: this.storyEventManager?.getFixedEventDebugEntriesForWeek(week) ?? []
+      };
+    });
 
     return {
       currentSceneId: this.currentSceneId ?? "-",
@@ -828,7 +864,11 @@ export class MainScene extends Phaser.Scene {
       inventoryUsageText: `${usedSlotCount}/${totalSlotCount}`,
       fixedEventId: this.storyEventManager?.getCurrentFixedEventPresentation()?.eventId,
       hud,
-      stats
+      stats,
+      storyDebug: {
+        currentWeek: hud.week,
+        weeks: storyWeeks
+      }
     };
   }
 
@@ -953,5 +993,96 @@ export class MainScene extends Phaser.Scene {
     }
     this.menuManager?.refreshStatsUi();
     this.menuManager?.refreshInventoryUi();
+  }
+
+  private handleDebugFixedEventJump(
+    week: number,
+    eventId: string,
+    options: {
+      resetCompletion: boolean;
+      runImmediately: boolean;
+    }
+  ): void {
+    const event = this.storyEventManager?.getFixedEventDebugEntry(week, eventId);
+    if (!event) {
+      this.menuManager?.showNotice("선택한 이벤트 데이터를 아직 불러오지 못했습니다");
+      this.storyEventManager?.syncWeek(week);
+      return;
+    }
+
+    const payload = this.buildSavePayload();
+    const targetSceneId = getDefaultSceneIdForArea(event.areaId);
+    const timeCycleIndex = Math.max(0, TIME_CYCLE.findIndex((label) => label === event.timeOfDay));
+    const dayCycleIndex = Phaser.Math.Clamp(event.day - 1, 0, DAY_CYCLE.length - 1);
+
+    if (payload.progression) {
+      payload.progression.timeState = {
+        ...payload.progression.timeState,
+        week: event.week,
+        dayCycleIndex,
+        timeCycleIndex,
+        actionPoint: payload.progression.timeState.maxActionPoint
+      };
+      payload.progression.weeklyPlanWeek = event.week;
+      payload.progression.lastPaidWeeklySalaryWeek = Math.max(payload.progression.lastPaidWeeklySalaryWeek, event.week);
+    }
+
+    payload.gameState.hud = {
+      ...payload.gameState.hud,
+      ...buildHudPatchFromTimeState(payload.progression?.timeState ?? {
+        actionPoint: payload.gameState.hud.actionPoint,
+        maxActionPoint: payload.gameState.hud.maxActionPoint,
+        timeCycleIndex,
+        dayCycleIndex,
+        week: event.week
+      }),
+      locationLabel: event.locationLabel
+    };
+
+    if (options.resetCompletion) {
+      payload.story = {
+        completedFixedEventIds: (payload.story?.completedFixedEventIds ?? []).filter((completedEventId) => completedEventId !== event.eventId)
+      };
+    }
+
+    payload.world = {
+      areaId: event.areaId,
+      sceneId: targetSceneId
+    };
+
+    if (options.runImmediately) {
+      this.registry.set(MainScene.PENDING_DEBUG_FIXED_EVENT_KEY, {
+        week: event.week,
+        eventId: event.eventId
+      });
+    } else {
+      this.registry.remove(MainScene.PENDING_DEBUG_FIXED_EVENT_KEY);
+    }
+
+    const moved = this.restoreSavePayload(payload);
+    if (moved) {
+      this.menuManager?.showNotice(
+        options.runImmediately
+          ? `이벤트 실행 준비: ${event.eventName}`
+          : `이벤트 조건으로 이동: ${event.eventName}`
+      );
+    }
+  }
+
+  private applyPendingDebugFixedEvent(): void {
+    const pending = this.registry.get(MainScene.PENDING_DEBUG_FIXED_EVENT_KEY) as
+      | {
+          week: number;
+          eventId: string;
+        }
+      | undefined;
+
+    if (!pending) {
+      return;
+    }
+
+    this.registry.remove(MainScene.PENDING_DEBUG_FIXED_EVENT_KEY);
+    const started = this.storyEventManager?.debugStartFixedEventById(pending.week, pending.eventId) === true;
+    this.menuManager?.showNotice(started ? `고정 이벤트 실행: ${pending.eventId}` : `고정 이벤트 실행 실패: ${pending.eventId}`);
   }
 }

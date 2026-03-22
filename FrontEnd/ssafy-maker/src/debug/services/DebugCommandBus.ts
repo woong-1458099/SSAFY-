@@ -17,6 +17,10 @@ export type DebugCommand =
   | { type: "refillActionPoint" }
   | { type: "giveInventoryItem"; templateId: string }
   | { type: "triggerCurrentFixedEvent" }
+  | { type: "jumpToFixedEvent"; week: number; eventId: string; resetCompletion?: boolean }
+  | { type: "runFixedEvent"; week: number; eventId: string; resetCompletion?: boolean }
+  | { type: "resetFixedEventCompletion"; eventId: string }
+  | { type: "resetFixedEventCompletionsForWeek"; week: number }
   | { type: "saveAuto" };
 
 type DebugCommandListener = (command: DebugCommand) => void;

@@ -1,4 +1,5 @@
 import type { HudState, PlayerStatsState } from "../../game/state/gameState";
+import type { FixedEventDebugEntry } from "../../features/story/fixedEventDebug";
 
 // 디버그 오버레이에서 표시할 월드와 액션 상태 타입 정의
 export type DebugState = {
@@ -26,4 +27,12 @@ export type DebugPanelState = {
   fixedEventId?: string;
   hud: HudState;
   stats: PlayerStatsState;
+  storyDebug: {
+    currentWeek: number;
+    weeks: Array<{
+      week: number;
+      loaded: boolean;
+      events: FixedEventDebugEntry[];
+    }>;
+  };
 };

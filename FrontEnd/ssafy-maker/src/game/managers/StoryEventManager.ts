@@ -5,17 +5,16 @@ import type { HudState } from "../state/gameState";
 import { TIME_CYCLE } from "../../features/progression/TimeService";
 import { getWeeklyPlanSlotIndex, WEEKLY_PLAN_TIME_LABELS } from "../../features/planning/weeklyPlan";
 import {
+  buildFixedEventDebugEntry,
+  type FixedEventDebugEntry
+} from "../../features/story/fixedEventDebug";
+import {
   buildFixedEventNpcPresentation,
   resolveFixedEventLocationId,
   resolveFixedEventRenderArea,
   type FixedEventNpcPresentation
 } from "../../features/story/fixedEventNpcPresence";
-import {
-  buildDialogueScriptFromFixedEventEntry,
-  findMatchingFixedEvent,
-  getFixedEventEntries,
-  type FixedEventEntry
-} from "../../features/story/jsonDialogueAdapter";
+import { buildDialogueScriptFromFixedEventEntry, findMatchingFixedEvent, getFixedEventEntries, type FixedEventEntry } from "../../features/story/jsonDialogueAdapter";
 import { loadFixedEventWeek } from "../../infra/story/fixedEventRepository";
 
 export type StoryEventSnapshot = {
@@ -92,6 +91,64 @@ export class StoryEventManager {
 
   syncWeek(week: number): void {
     void this.ensureWeekLoaded(week);
+  }
+
+  debugSyncAllWeeks(): void {
+    Array.from({ length: 6 }, (_, index) => index + 1).forEach((week) => {
+      this.syncWeek(week);
+    });
+  }
+
+  hasWeekLoaded(week: number): boolean {
+    return this.weekData.has(Phaser.Math.Clamp(Math.round(week), 1, 6));
+  }
+
+  getFixedEventDebugEntriesForWeek(week: number): FixedEventDebugEntry[] {
+    const normalizedWeek = Phaser.Math.Clamp(Math.round(week), 1, 6);
+    const rawData = this.weekData.get(normalizedWeek);
+    if (!rawData) {
+      this.syncWeek(normalizedWeek);
+      return [];
+    }
+
+    return getFixedEventEntries(rawData)
+      .filter((event) => event.eventType === "FIXED")
+      .map((event) =>
+        buildFixedEventDebugEntry(event, {
+          completedEventIds: this.completedFixedEventIds
+        })
+      );
+  }
+
+  getFixedEventDebugEntry(week: number, eventId: string): FixedEventDebugEntry | null {
+    return this.getFixedEventDebugEntriesForWeek(week).find((event) => event.eventId === eventId) ?? null;
+  }
+
+  debugResetFixedEventCompletion(eventId: string): boolean {
+    const nextIds = this.completedFixedEventIds.filter((id) => id !== eventId);
+    const changed = nextIds.length !== this.completedFixedEventIds.length;
+    this.completedFixedEventIds = nextIds;
+    return changed;
+  }
+
+  debugResetFixedEventCompletionsForWeek(week: number): number {
+    const eventIds = new Set(this.getFixedEventDebugEntriesForWeek(week).map((event) => event.eventId));
+    if (eventIds.size === 0) {
+      return 0;
+    }
+
+    const previousLength = this.completedFixedEventIds.length;
+    this.completedFixedEventIds = this.completedFixedEventIds.filter((eventId) => !eventIds.has(eventId));
+    return previousLength - this.completedFixedEventIds.length;
+  }
+
+  debugStartFixedEventById(week: number, eventId: string): boolean {
+    const event = this.findFixedEventById(week, eventId);
+    if (!event) {
+      return false;
+    }
+
+    return this.startFixedEvent(event);
   }
 
   getFixedEventSlotsForWeek(week: number): ReadonlyMap<number, string> {
@@ -213,6 +270,23 @@ export class StoryEventManager {
       const message = error instanceof Error ? error.message : "고정 이벤트 데이터를 불러오지 못했습니다";
       this.onNotice?.(message);
     }
+  }
+
+  private findFixedEventById(week: number, eventId: string): FixedEventEntry | null {
+    const normalizedWeek = Phaser.Math.Clamp(Math.round(week), 1, 6);
+    const normalizedEventId = eventId.trim();
+    const rawData = this.weekData.get(normalizedWeek);
+
+    if (!normalizedEventId || !rawData) {
+      this.syncWeek(normalizedWeek);
+      return null;
+    }
+
+    return (
+      getFixedEventEntries(rawData).find((event) => {
+        return event.eventType === "FIXED" && typeof event.eventId === "string" && event.eventId.trim() === normalizedEventId;
+      }) ?? null
+    );
   }
 
   private findMatchingFixedEventForLocation(location: string): FixedEventEntry | null {
