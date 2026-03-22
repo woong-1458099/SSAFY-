@@ -1,10 +1,11 @@
-import type {
-  DialogueAction,
-  DialogueChoice,
-  DialogueChoiceActionType,
-  DialogueNode,
-  DialogueRequirement,
-  DialogueScript
+import {
+  createRuntimeDialogueId,
+  type DialogueAction,
+  type DialogueChoice,
+  type DialogueChoiceActionType,
+  type DialogueNode,
+  type DialogueRequirement,
+  type DialogueScript
 } from "../../common/types/dialogue";
 import { matchesFixedEventLocation, normalizeFixedEventLocationToken } from "./fixedEventLocation";
 
@@ -284,6 +285,7 @@ export function buildDialogueScriptFromFixedEventEntry(
   event: FixedEventEntry,
   options: BuildDialogueOptions
 ): DialogueScript | null {
+  const runtimeDialogueId = createRuntimeDialogueId(dialogueId);
   const fallbackNpcLabel = options.fallbackNpcLabel;
   const playerName = options.playerName ?? "플레이어";
   const dialogues = Array.isArray(event.dialogues) ? event.dialogues : [];
@@ -363,7 +365,7 @@ export function buildDialogueScriptFromFixedEventEntry(
   }
 
   return {
-    id: dialogueId,
+    id: runtimeDialogueId,
     label: event.eventName ?? fallbackNpcLabel,
     startNodeId: "json_dialogue_1",
     nodes

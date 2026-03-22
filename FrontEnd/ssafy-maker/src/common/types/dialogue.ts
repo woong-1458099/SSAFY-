@@ -3,6 +3,8 @@ import type { DialogueId } from "../enums/dialogue";
 
 export type DialogueBaseStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
 export type DialogueStatKey = DialogueBaseStatKey | "hp" | "gold";
+export type RuntimeDialogueId = string & { readonly __runtimeDialogueId: unique symbol };
+export type DialogueScriptId = DialogueId | RuntimeDialogueId;
 export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
 export type DialogueAction =
   | "openShop"
@@ -44,8 +46,16 @@ export type DialogueNode = {
 };
 
 export type DialogueScript = {
-  id: DialogueId | string;
+  id: DialogueScriptId;
   label: string;
   startNodeId: string;
   nodes: Record<string, DialogueNode>;
 };
+
+export function createRuntimeDialogueId(value: string): RuntimeDialogueId {
+  const normalized = value.trim();
+  if (!normalized) {
+    throw new Error("Runtime dialogue id must be a non-empty string");
+  }
+  return normalized as RuntimeDialogueId;
+}

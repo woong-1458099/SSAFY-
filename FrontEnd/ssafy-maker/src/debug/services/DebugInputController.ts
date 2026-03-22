@@ -18,30 +18,33 @@ type DebugKeys = {
 
 // 디버그 입력은 명령만 발행하고 실제 상태 변경은 각 책임자에게 위임한다.
 export class DebugInputController {
-  private readonly keys: DebugKeys;
+  private readonly keyboard?: Phaser.Input.Keyboard.KeyboardPlugin;
+  private keys: DebugKeys = {};
+  private bound = false;
+  private destroyed = false;
 
   constructor(
     private scene: Phaser.Scene,
     private commandBus: DebugCommandBus
   ) {
-    this.keys = {
-      overlay: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F1),
-      panel: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F3),
-      worldGrid: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F2),
-      teleport: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.T),
-      minigameHud: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.M),
-      world1: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
-      world1Numpad: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE),
-      downtown2: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
-      downtown2Numpad: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO),
-      campus3: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
-      campus3Numpad: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE)
-    };
+    this.keyboard = scene.input.keyboard;
+    this.keys = this.createKeys();
   }
 
-  bind() {}
+  bind() {
+    if (this.destroyed || this.bound) {
+      return;
+    }
+
+    this.bound = true;
+    Object.values(this.keys).forEach((key) => key?.reset());
+  }
 
   update() {
+    if (!this.bound || this.destroyed) {
+      return;
+    }
+
     if (this.justPressed(this.keys.overlay)) {
       this.commandBus.emit({ type: "toggleDebugOverlay" });
     }
@@ -81,10 +84,39 @@ export class DebugInputController {
   }
 
   destroy() {
-    Object.values(this.keys).forEach((key) => key?.destroy());
+    if (this.destroyed) {
+      return;
+    }
+
+    this.bound = false;
+    this.destroyed = true;
+    Object.values(this.keys).forEach((key) => {
+      if (!key) {
+        return;
+      }
+      key.reset();
+      this.keyboard?.removeKey(key, true, false);
+    });
+    this.keys = {};
   }
 
   private justPressed(key?: Phaser.Input.Keyboard.Key): boolean {
     return Boolean(key && Phaser.Input.Keyboard.JustDown(key));
+  }
+
+  private createKeys(): DebugKeys {
+    return {
+      overlay: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F1),
+      panel: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F3),
+      worldGrid: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F2),
+      teleport: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.T),
+      minigameHud: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.M),
+      world1: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
+      world1Numpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE),
+      downtown2: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
+      downtown2Numpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO),
+      campus3: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
+      campus3Numpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE)
+    };
   }
 }
