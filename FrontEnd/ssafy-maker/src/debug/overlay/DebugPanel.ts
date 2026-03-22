@@ -24,15 +24,28 @@ export class DebugPanel {
     private readonly scene: Phaser.Scene,
     private readonly commandBus: DebugCommandBus
   ) {
-    this.overlay = scene.add.rectangle(640, 360, 1280, 720, 0x02060d, 0.72);
-    this.panel = scene.add.rectangle(640, 360, 1100, 610, 0x101820, 0.96);
+    const centerX = scene.scale.width / 2;
+    const centerY = scene.scale.height / 2;
+    const panelWidth = 1120;
+    const panelHeight = 610;
+    const panelLeft = centerX - panelWidth / 2;
+    const titleX = panelLeft + 70;
+    const stateX = panelLeft + 70;
+    const controlStartX = panelLeft + 700;
+    const controlGapX = 130;
+    const rowStartY = 120;
+    const rowGapY = 70;
+    const col = (index: number) => controlStartX + controlGapX * index;
+
+    this.overlay = scene.add.rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x02060d, 0.72);
+    this.panel = scene.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x101820, 0.96);
     this.panel.setStrokeStyle(3, 0x6ce7ff, 1);
-    this.title = scene.add.text(160, 84, "F3 DEBUG PANEL", {
+    this.title = scene.add.text(titleX, 84, "F3 DEBUG PANEL", {
       fontSize: "24px",
       color: "#6ce7ff",
       fontStyle: "bold"
     });
-    this.stateText = scene.add.text(160, 128, "", {
+    this.stateText = scene.add.text(stateX, 128, "", {
       fontSize: "15px",
       color: "#f4fbff",
       lineSpacing: 6
@@ -40,47 +53,47 @@ export class DebugPanel {
 
     this.buttons.push(
       ...this.createButtonRow([
-        { label: "HP -10", x: 790, y: 120, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "hp", delta: -10 }) },
-        { label: "HP +10", x: 930, y: 120, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "hp", delta: 10 }) },
-        { label: "스트 -10", x: 1070, y: 120, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "stress", delta: -10 }) },
-        { label: "스트 +10", x: 1210, y: 120, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "stress", delta: 10 }) }
+        { label: "HP -10", x: col(0), y: rowStartY, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "hp", delta: -10 }) },
+        { label: "HP +10", x: col(1), y: rowStartY, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "hp", delta: 10 }) },
+        { label: "스트 -10", x: col(2), y: rowStartY, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "stress", delta: -10 }) },
+        { label: "스트 +10", x: col(3), y: rowStartY, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "stress", delta: 10 }) }
       ]),
       ...this.createButtonRow([
-        { label: "돈 -1만", x: 790, y: 190, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "money", delta: -10000 }) },
-        { label: "돈 +1만", x: 930, y: 190, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "money", delta: 10000 }) },
-        { label: "행동 -1", x: 1070, y: 190, onClick: () => this.commandBus.emit({ type: "adjustActionPoint", delta: -1 }) },
-        { label: "행동 FULL", x: 1210, y: 190, onClick: () => this.commandBus.emit({ type: "refillActionPoint" }) }
+        { label: "돈 -1만", x: col(0), y: rowStartY + rowGapY, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "money", delta: -10000 }) },
+        { label: "돈 +1만", x: col(1), y: rowStartY + rowGapY, onClick: () => this.commandBus.emit({ type: "adjustHudValue", key: "money", delta: 10000 }) },
+        { label: "행동 -1", x: col(2), y: rowStartY + rowGapY, onClick: () => this.commandBus.emit({ type: "adjustActionPoint", delta: -1 }) },
+        { label: "행동 FULL", x: col(3), y: rowStartY + rowGapY, onClick: () => this.commandBus.emit({ type: "refillActionPoint" }) }
       ]),
       ...this.createButtonRow([
-        { label: "FE -5", x: 790, y: 260, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "fe", delta: -5 }) },
-        { label: "FE +5", x: 930, y: 260, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "fe", delta: 5 }) },
-        { label: "BE -5", x: 1070, y: 260, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "be", delta: -5 }) },
-        { label: "BE +5", x: 1210, y: 260, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "be", delta: 5 }) }
+        { label: "FE -5", x: col(0), y: rowStartY + rowGapY * 2, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "fe", delta: -5 }) },
+        { label: "FE +5", x: col(1), y: rowStartY + rowGapY * 2, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "fe", delta: 5 }) },
+        { label: "BE -5", x: col(2), y: rowStartY + rowGapY * 2, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "be", delta: -5 }) },
+        { label: "BE +5", x: col(3), y: rowStartY + rowGapY * 2, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "be", delta: 5 }) }
       ]),
       ...this.createButtonRow([
-        { label: "협업 -5", x: 790, y: 330, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "teamwork", delta: -5 }) },
-        { label: "협업 +5", x: 930, y: 330, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "teamwork", delta: 5 }) },
-        { label: "운 -5", x: 1070, y: 330, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "luck", delta: -5 }) },
-        { label: "운 +5", x: 1210, y: 330, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "luck", delta: 5 }) }
+        { label: "협업 -5", x: col(0), y: rowStartY + rowGapY * 3, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "teamwork", delta: -5 }) },
+        { label: "협업 +5", x: col(1), y: rowStartY + rowGapY * 3, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "teamwork", delta: 5 }) },
+        { label: "운 -5", x: col(2), y: rowStartY + rowGapY * 3, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "luck", delta: -5 }) },
+        { label: "운 +5", x: col(3), y: rowStartY + rowGapY * 3, onClick: () => this.commandBus.emit({ type: "adjustStatValue", key: "luck", delta: 5 }) }
       ]),
       ...this.createButtonRow([
-        { label: "시간 +1", x: 790, y: 400, onClick: () => this.commandBus.emit({ type: "advanceTime" }) },
-        { label: "주차 -1", x: 930, y: 400, onClick: () => this.commandBus.emit({ type: "adjustWeek", delta: -1 }) },
-        { label: "주차 +1", x: 1070, y: 400, onClick: () => this.commandBus.emit({ type: "adjustWeek", delta: 1 }) },
-        { label: "이벤트 실행", x: 1210, y: 400, onClick: () => this.commandBus.emit({ type: "triggerCurrentFixedEvent" }) }
+        { label: "시간 +1", x: col(0), y: rowStartY + rowGapY * 4, onClick: () => this.commandBus.emit({ type: "advanceTime" }) },
+        { label: "주차 -1", x: col(1), y: rowStartY + rowGapY * 4, onClick: () => this.commandBus.emit({ type: "adjustWeek", delta: -1 }) },
+        { label: "주차 +1", x: col(2), y: rowStartY + rowGapY * 4, onClick: () => this.commandBus.emit({ type: "adjustWeek", delta: 1 }) },
+        { label: "이벤트 실행", x: col(3), y: rowStartY + rowGapY * 4, onClick: () => this.commandBus.emit({ type: "triggerCurrentFixedEvent" }) }
       ]),
       ...this.createButtonRow([
-        { label: "초코 지급", x: 790, y: 470, onClick: () => this.commandBus.emit({ type: "giveInventoryItem", templateId: "item-chocolate" }) },
-        { label: "에너지 지급", x: 930, y: 470, onClick: () => this.commandBus.emit({ type: "giveInventoryItem", templateId: "item-energy-drink" }) },
-        { label: "키보드 지급", x: 1070, y: 470, onClick: () => this.commandBus.emit({ type: "giveInventoryItem", templateId: "kbd-gaming" }) },
-        { label: "오토세이브", x: 1210, y: 470, onClick: () => this.commandBus.emit({ type: "saveAuto" }) }
+        { label: "초코 지급", x: col(0), y: rowStartY + rowGapY * 5, onClick: () => this.commandBus.emit({ type: "giveInventoryItem", templateId: "item-chocolate" }) },
+        { label: "에너지 지급", x: col(1), y: rowStartY + rowGapY * 5, onClick: () => this.commandBus.emit({ type: "giveInventoryItem", templateId: "item-energy-drink" }) },
+        { label: "키보드 지급", x: col(2), y: rowStartY + rowGapY * 5, onClick: () => this.commandBus.emit({ type: "giveInventoryItem", templateId: "kbd-gaming" }) },
+        { label: "오토세이브", x: col(3), y: rowStartY + rowGapY * 5, onClick: () => this.commandBus.emit({ type: "saveAuto" }) }
       ]),
       ...this.createButtonRow([
-        { label: "닫기", x: 1210, y: 545, width: 140, onClick: () => this.hide() }
+        { label: "닫기", x: col(3), y: rowStartY + rowGapY * 6 + 5, width: 140, onClick: () => this.hide() }
       ])
     );
 
-    const footer = scene.add.text(160, 590, "F3 패널 토글 | 실제 상태 변경은 MainScene과 manager를 통해서만 수행", {
+    const footer = scene.add.text(titleX, 590, "F3 패널 토글 | 실제 상태 변경은 MainScene과 manager를 통해서만 수행", {
       fontSize: "12px",
       color: "#8db8c4"
     });
