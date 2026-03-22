@@ -1,5 +1,9 @@
 import Phaser from "phaser";
-import type { DialogueNode } from "../../../common/types/dialogue";
+import type {
+  DialogueChoice,
+  DialogueChoiceActionType,
+  DialogueNode
+} from "../../../common/types/dialogue";
 
 const FONT_FAMILY =
   "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
@@ -8,6 +12,28 @@ type ChoiceView = {
   root: Phaser.GameObjects.Container;
   bg: Phaser.GameObjects.Rectangle;
   text: Phaser.GameObjects.Text;
+  choice: DialogueChoice;
+  requirementText: string;
+  available: boolean;
+};
+
+type DialogueRenderOptions = {
+  selectedChoiceIndex?: number;
+  getRequirementText?: (choice: DialogueChoice) => string;
+  isChoiceAvailable?: (choice: DialogueChoice) => boolean;
+};
+
+const EMOTION_LABELS: Record<string, string> = {
+  NORMAL: "평온",
+  ANGRY: "분노",
+  FLUSTERED: "당황",
+  SHY: "수줍",
+  HAPPY: "기쁨",
+  SAD: "슬픔",
+  SURPRISED: "놀람",
+  SMILE: "미소",
+  SPEECHLESS: "멍함",
+  TIRED: "지침"
 };
 
 export class DialogueBox {
@@ -87,14 +113,16 @@ export class DialogueBox {
     this.clearChoices();
   }
 
-  renderNode(node: DialogueNode, selectedChoiceIndex = 0): void {
+  renderNode(node: DialogueNode, options: DialogueRenderOptions = {}): void {
+    const selectedChoiceIndex = options.selectedChoiceIndex ?? 0;
     this.show();
-    this.speakerText.setText(node.speaker);
+    this.speakerText.setText(this.formatSpeakerTitle(node));
+    this.speakerText.setColor(this.getSpeakerColor(node));
     this.bodyText.setText(node.text);
 
     if (node.choices && node.choices.length > 0) {
-      this.renderChoices(node, selectedChoiceIndex);
-      this.hintText.setText("[UP/DOWN] 선택   [SPACE] 확정");
+      this.renderChoices(node, selectedChoiceIndex, options);
+      this.hintText.setText("[UP/DOWN] 선택   [1-4] 바로 선택   [SPACE] 확정");
     } else {
       this.clearChoices();
       this.hintText.setText("[SPACE] 다음");
@@ -109,7 +137,7 @@ export class DialogueBox {
     this.root.destroy(true);
   }
 
-  private renderChoices(node: DialogueNode, selectedChoiceIndex: number): void {
+  private renderChoices(node: DialogueNode, selectedChoiceIndex: number, options: DialogueRenderOptions): void {
     this.clearChoices();
     const choices = node.choices ?? [];
     const { panelX, panelY, panelWidth, panelHeight } = this.getLayoutMetrics();
@@ -117,21 +145,28 @@ export class DialogueBox {
 
     choices.forEach((choice, index) => {
       const isSelected = index === selectedChoiceIndex;
+      const requirementText = options.getRequirementText?.(choice) ?? "";
+      const available = options.isChoiceAvailable?.(choice) ?? true;
+      const actionType = choice.actionType ?? "NORMAL";
+      const { fillColor, borderColor, textColor, alpha } = this.getChoicePalette(actionType, isSelected, available);
+      const content = this.formatChoiceText(choice, index, isSelected, requirementText, available);
       const bg = this.scene.add
-        .rectangle(panelX + 30, choiceStartY + index * 54, panelWidth - 60, 42, isSelected ? 0x3f74a6 : 0x234360, 1)
+        .rectangle(panelX + 30, choiceStartY + index * 54, panelWidth - 60, 42, fillColor, 1)
         .setOrigin(0, 0.5)
-        .setScrollFactor(0);
-      bg.setStrokeStyle(2, isSelected ? 0xbbe9ff : 0x629dd5, 1);
-      const text = this.scene.add.text(panelX + 48, choiceStartY + index * 54 - 1, `${index + 1}. ${choice.text}`, {
+        .setScrollFactor(0)
+        .setAlpha(alpha);
+      bg.setStrokeStyle(2, borderColor, 1);
+      const text = this.scene.add.text(panelX + 48, choiceStartY + index * 54 - 1, content, {
         fontFamily: FONT_FAMILY,
         fontSize: "18px",
-        color: isSelected ? "#f5fbff" : "#d4e8fb",
+        color: textColor,
         resolution: 2,
+        lineSpacing: 4,
         wordWrap: { width: panelWidth - 96 }
-      }).setOrigin(0, 0.5).setScrollFactor(0);
+      }).setOrigin(0, 0.5).setScrollFactor(0).setAlpha(alpha);
       const root = this.scene.add.container(0, 0, [bg, text]).setScrollFactor(0);
       this.choiceRoot.add(root);
-      this.choiceViews.push({ root, bg, text });
+      this.choiceViews.push({ root, bg, text, choice, requirementText, available });
     });
   }
 
@@ -172,5 +207,83 @@ export class DialogueBox {
     const panelX = Math.round((this.scene.scale.width - panelWidth) / 2);
     const panelY = Math.round(this.scene.scale.height - panelHeight - 28);
     return { panelX, panelY, panelWidth, panelHeight };
+  }
+
+  private formatSpeakerTitle(node: DialogueNode): string {
+    const emotionToken = typeof node.emotion === "string" ? node.emotion.trim().toUpperCase() : "";
+    const emotionLabel = EMOTION_LABELS[emotionToken];
+    if (!emotionLabel) {
+      return node.speaker;
+    }
+    return `${node.speaker} · ${emotionLabel}`;
+  }
+
+  private getSpeakerColor(node: DialogueNode): string {
+    const speakerId = typeof node.speakerId === "string" ? node.speakerId.trim().toUpperCase() : "";
+    if (speakerId === "SYSTEM") {
+      return "#ffe39c";
+    }
+    if (speakerId === "PLAYER") {
+      return "#aee3ff";
+    }
+    return "#eef8ff";
+  }
+
+  private formatChoiceText(
+    choice: DialogueChoice,
+    index: number,
+    selected: boolean,
+    requirementText: string,
+    available: boolean
+  ): string {
+    const actionType = choice.actionType ?? "NORMAL";
+    const prefix =
+      actionType === "LOCKED" ? "[잠금] " : actionType === "MADNESS" ? "※ " : selected ? "> " : `${index + 1}. `;
+    let content = `${prefix}${choice.text}`;
+
+    if (requirementText.length > 0) {
+      content += ` (${requirementText})`;
+    }
+    if (!available) {
+      content += " [조건 미달]";
+    }
+
+    return content;
+  }
+
+  private getChoicePalette(actionType: DialogueChoiceActionType, selected: boolean, available: boolean) {
+    if (!available) {
+      return {
+        fillColor: 0x2b3c4f,
+        borderColor: 0x58758f,
+        textColor: "#7f9cbc",
+        alpha: 0.82
+      };
+    }
+
+    if (actionType === "MADNESS") {
+      return {
+        fillColor: selected ? 0x6b2f37 : 0x472129,
+        borderColor: selected ? 0xffb4b4 : 0xd77b7b,
+        textColor: selected ? "#ffd4d4" : "#ff9b9b",
+        alpha: 1
+      };
+    }
+
+    if (actionType === "LOCKED") {
+      return {
+        fillColor: selected ? 0x5d5030 : 0x443a22,
+        borderColor: selected ? 0xffefbb : 0xe1c278,
+        textColor: selected ? "#fff2bf" : "#f3d58d",
+        alpha: 1
+      };
+    }
+
+    return {
+      fillColor: selected ? 0x3f74a6 : 0x234360,
+      borderColor: selected ? 0xbbe9ff : 0x629dd5,
+      textColor: selected ? "#f5fbff" : "#d4e8fb",
+      alpha: 1
+    };
   }
 }

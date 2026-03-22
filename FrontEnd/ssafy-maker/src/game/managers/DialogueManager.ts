@@ -182,7 +182,11 @@ export class DialogueManager {
 
   private waitForChoice(node: DialogueNode): Promise<number> {
     let selectedIndex = 0;
-    this.dialogueBox?.renderNode(node, selectedIndex);
+    this.dialogueBox?.renderNode(node, {
+      selectedChoiceIndex: selectedIndex,
+      getRequirementText: (choice) => this.getRequirementText(choice),
+      isChoiceAvailable: (choice) => this.isChoiceAvailable(choice)
+    });
 
     return new Promise<number>((resolve) => {
       let cancel = () => {};
@@ -192,7 +196,11 @@ export class DialogueManager {
           (this.wKey && Phaser.Input.Keyboard.JustDown(this.wKey))
         ) {
           selectedIndex = Phaser.Math.Wrap(selectedIndex - 1, 0, node.choices!.length);
-          this.dialogueBox?.renderNode(node, selectedIndex);
+          this.dialogueBox?.renderNode(node, {
+            selectedChoiceIndex: selectedIndex,
+            getRequirementText: (choice) => this.getRequirementText(choice),
+            isChoiceAvailable: (choice) => this.isChoiceAvailable(choice)
+          });
           return;
         }
 
@@ -201,7 +209,11 @@ export class DialogueManager {
           (this.sKey && Phaser.Input.Keyboard.JustDown(this.sKey))
         ) {
           selectedIndex = Phaser.Math.Wrap(selectedIndex + 1, 0, node.choices!.length);
-          this.dialogueBox?.renderNode(node, selectedIndex);
+          this.dialogueBox?.renderNode(node, {
+            selectedChoiceIndex: selectedIndex,
+            getRequirementText: (choice) => this.getRequirementText(choice),
+            isChoiceAvailable: (choice) => this.isChoiceAvailable(choice)
+          });
           return;
         }
 
@@ -302,6 +314,7 @@ export class DialogueManager {
 
     const hudPatch: Partial<HudState> = {};
     const statDelta: Partial<Record<PlayerStatKey, number>> = {};
+    const summary: string[] = [];
 
     (Object.entries(choice.statChanges) as Array<[DialogueStatKey, number]>).forEach(([key, value]) => {
       if (!value) {
@@ -311,16 +324,19 @@ export class DialogueManager {
       if (key === "hp") {
         const currentHp = this.getMetricValue?.("hp") ?? 0;
         hudPatch.hp = currentHp + value;
+        summary.push(`HP ${value > 0 ? "+" : ""}${value}`);
         return;
       }
 
       if (key === "gold") {
         const currentMoney = this.getMetricValue?.("gold") ?? 0;
         hudPatch.money = Math.max(0, currentMoney + value);
+        summary.push(`재화 ${value > 0 ? "+" : ""}${value}`);
         return;
       }
 
       statDelta[key] = value;
+      summary.push(`${this.describeStatKey(key)} ${value > 0 ? "+" : ""}${value}`);
     });
 
     if (Object.keys(statDelta).length > 0) {
@@ -328,6 +344,28 @@ export class DialogueManager {
     }
     if (Object.keys(hudPatch).length > 0) {
       this.patchHudState?.(hudPatch);
+    }
+    if (summary.length > 0) {
+      this.onNotice?.(`능력치 변화: ${summary.join(", ")}`);
+    }
+  }
+
+  private describeStatKey(key: DialogueStatKey): string {
+    switch (key) {
+      case "hp":
+        return "HP";
+      case "gold":
+        return "재화";
+      case "fe":
+        return "FE";
+      case "be":
+        return "BE";
+      case "teamwork":
+        return "협업";
+      case "luck":
+        return "운";
+      case "stress":
+        return "스트레스";
     }
   }
 }
