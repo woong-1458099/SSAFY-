@@ -12,6 +12,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "validate": "npm run validate:authored-story",
     "validate:authored-story": "node scripts/validate-authored-story.mjs"
   },
   "dependencies": {
