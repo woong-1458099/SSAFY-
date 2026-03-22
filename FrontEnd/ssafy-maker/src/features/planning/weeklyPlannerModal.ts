@@ -30,7 +30,7 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   const centerY = Math.round(scene.scale.height / 2);
   const panelWidth = 1080;
   const panelHeight = 640;
-  const root = scene.add.container(0, 0).setDepth(2000).setScrollFactor(0);
+  const root = scene.add.container(0, 0).setDepth(9700).setScrollFactor(0);
   const overlay = scene.add.rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x04101d, 0.62).setScrollFactor(0);
   const panel = scene.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x14314f, 0.97).setScrollFactor(0);
   panel.setStrokeStyle(3, 0x8ed2ff, 1);
