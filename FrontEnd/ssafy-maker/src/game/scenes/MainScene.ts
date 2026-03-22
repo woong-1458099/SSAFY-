@@ -52,6 +52,7 @@ import {
 
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
+  private static readonly PENDING_RESTORE_PAYLOAD_KEY = "pendingRestorePayload";
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
   private worldGridOverlay?: WorldGridOverlay;
@@ -203,6 +204,8 @@ export class MainScene extends Phaser.Scene {
       const startTile = this.resolvePlayerStartTile(runtimeSceneScript.area, parsedMap, runtimeGrids);
       this.playerManager.create(startTile.tileX, startTile.tileY, parsedMap.tileWidth);
     }
+
+    this.applyPendingRestorePayload();
 
     if (DEBUG_FLAGS.overlayEnabled && this.debugLogger && this.npcManager) {
       this.debugOverlay = new DebugOverlay(this, this.debugLogger, this.npcManager);
@@ -518,10 +521,20 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buildSavePayload(): SavePayload {
+    const playerSnapshot = this.playerManager?.getSnapshot();
     return {
       gameState: this.statSystemManager!.getState(),
       inventory: this.inventoryService!.serialize(),
-      progression: this.progressionManager?.getSnapshot()
+      progression: this.progressionManager?.getSnapshot(),
+      world: {
+        areaId: this.worldManager?.getCurrentAreaId() ?? "world",
+        playerTile: playerSnapshot
+          ? {
+              tileX: playerSnapshot.tileX,
+              tileY: playerSnapshot.tileY
+            }
+          : undefined
+      }
     };
   }
 
@@ -530,11 +543,39 @@ export class MainScene extends Phaser.Scene {
       return false;
     }
 
+    if (payload.world?.playerTile) {
+      this.registry.set(MainScene.PENDING_START_TILE_KEY, payload.world.playerTile);
+    }
+    this.registry.set(MainScene.PENDING_RESTORE_PAYLOAD_KEY, payload);
+
+    if (payload.world?.areaId) {
+      this.registry.set("startSceneId", getDefaultSceneIdForArea(payload.world.areaId));
+      this.scene.restart();
+      return true;
+    }
+
     this.statSystemManager.restore(payload.gameState);
     this.inventoryService.restore(payload.inventory);
     this.progressionManager.restore(payload.progression);
     this.menuManager?.refreshStatsUi();
     this.menuManager?.refreshInventoryUi();
     return true;
+  }
+
+  private applyPendingRestorePayload(): void {
+    const payload = this.registry.get(MainScene.PENDING_RESTORE_PAYLOAD_KEY) as SavePayload | undefined;
+    if (!payload || !this.statSystemManager || !this.inventoryService || !this.progressionManager) {
+      return;
+    }
+
+    this.registry.remove(MainScene.PENDING_RESTORE_PAYLOAD_KEY);
+    this.statSystemManager.restore(payload.gameState);
+    this.inventoryService.restore(payload.inventory);
+    this.progressionManager.restore(payload.progression);
+    if (payload.world?.playerTile) {
+      this.playerManager?.debugTeleportToTile(payload.world.playerTile.tileX, payload.world.playerTile.tileY);
+    }
+    this.menuManager?.refreshStatsUi();
+    this.menuManager?.refreshInventoryUi();
   }
 }
