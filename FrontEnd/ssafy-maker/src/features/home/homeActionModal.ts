@@ -16,6 +16,7 @@ type ButtonFactory = (params: {
 export function createHomeActionModal(scene: Phaser.Scene, options: {
   actionPoint: number;
   maxActionPoint: number;
+  backgroundImage?: Phaser.GameObjects.Image | null;
   createButton: ButtonFactory;
   onAction: (action: HomeActionId) => void;
   onClose: () => void;
@@ -73,7 +74,7 @@ export function createHomeActionModal(scene: Phaser.Scene, options: {
     onClick: options.onClose
   });
 
-  return scene.add.container(0, 0, [
+  const objects: Phaser.GameObjects.GameObject[] = [
     overlay,
     panel,
     title,
@@ -82,5 +83,11 @@ export function createHomeActionModal(scene: Phaser.Scene, options: {
     studyButton,
     gameButton,
     closeButton
-  ]);
+  ];
+
+  if (options.backgroundImage) {
+    objects.unshift(options.backgroundImage);
+  }
+
+  return scene.add.container(0, 0, objects);
 }

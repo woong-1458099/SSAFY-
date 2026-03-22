@@ -3,6 +3,7 @@ import Phaser from "phaser";
 import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "../../features/minigame/minigameSceneKeys";
+import { preloadPlaceBackgroundAssets } from "../../features/place/placeBackgrounds";
 import { AREA_TRANSITION_MARKER_SPRITE } from "../definitions/assets/areaTransitionAssetCatalog";
 import { NPC_ASSET_LIST } from "../definitions/assets/npcAssetCatalog";
 import { preloadNpcVisualAsset, registerNpcAnimations } from "../systems/npcAnimation";
@@ -35,6 +36,9 @@ export class PreloadScene extends Phaser.Scene {
 
     // 플레이어 기본 비주얼 에셋은 전용 시스템에서 로드한다.
     preloadPlayerVisualAssets(this);
+
+    // 장소 팝업에서 사용하는 배경 에셋은 feature 계층 메타로 로드한다.
+    preloadPlaceBackgroundAssets(this);
   }
 
   create() {

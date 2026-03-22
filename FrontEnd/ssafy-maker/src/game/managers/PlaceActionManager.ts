@@ -9,6 +9,7 @@ import {
 } from "../../features/inventory/InventoryService";
 import { LOTTO_COMPLETED_EVENT, type LottoOutcome } from "../../features/minigame/lottoOutcome";
 import { launchMinigame } from "../../features/minigame/MinigameGateway";
+import { createPlaceBackgroundImage, PLACE_BACKGROUND_KEYS } from "../../features/place/placeBackgrounds";
 import { createPlaceActionModal } from "../../features/place/placeModal";
 import { getPlacePopupContent, resolvePlaceEffect } from "../../features/place/placeActions";
 import { createShopModal } from "../../features/shop/ShopModal";
@@ -117,10 +118,12 @@ export class PlaceActionManager {
   }
 
   private openHomeModal(): void {
+    const backgroundImage = createPlaceBackgroundImage(this.scene, PLACE_BACKGROUND_KEYS.home);
     this.mount(
       createHomeActionModal(this.scene, {
         actionPoint: this.getActionPoint(),
         maxActionPoint: this.getMaxActionPoint(),
+        backgroundImage,
         createButton: (params) => this.createActionButton(params),
         onAction: (action) => this.useHomeAction(action),
         onClose: () => this.close()
