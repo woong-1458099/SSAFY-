@@ -44,7 +44,7 @@ export type DialogueNode = {
 };
 
 export type DialogueScript = {
-  id: DialogueId;
+  id: DialogueId | string;
   label: string;
   startNodeId: string;
   nodes: Record<string, DialogueNode>;

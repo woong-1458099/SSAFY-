@@ -23,6 +23,7 @@ type DialogueRuntimeHooks = {
 export class DialogueManager {
   private scene: Phaser.Scene;
   private dialogueBox?: DialogueBox;
+  private runtimeDialogueScripts: Record<string, DialogueScript> = {};
   private isPlaying = false;
   private destroyed = false;
   private advanceKey?: Phaser.Input.Keyboard.Key;
@@ -59,6 +60,10 @@ export class DialogueManager {
 
   setDialogueBox(dialogueBox?: DialogueBox): void {
     this.dialogueBox = dialogueBox;
+  }
+
+  setRuntimeDialogueScripts(scripts: Record<string, DialogueScript>): void {
+    this.runtimeDialogueScripts = scripts;
   }
 
   setRuntimeHooks(hooks: DialogueRuntimeHooks): void {
@@ -145,7 +150,7 @@ export class DialogueManager {
   }
 
   private requireDialogue(dialogueId: string): DialogueScript {
-    const script = DIALOGUE_REGISTRY[dialogueId];
+    const script = this.runtimeDialogueScripts[dialogueId] ?? DIALOGUE_REGISTRY[dialogueId];
     if (!script) {
       throw new Error(`Dialogue not found: ${dialogueId}`);
     }

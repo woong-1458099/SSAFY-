@@ -10,6 +10,7 @@ import { DebugCommandBus } from "../../debug/services/DebugCommandBus";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugInputController } from "../../debug/services/DebugInputController";
 import type { AreaId } from "../../common/enums/area";
+import type { DialogueScript } from "../../common/types/dialogue";
 import type { SceneState } from "../../common/types/sceneState";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
@@ -81,6 +82,7 @@ export class MainScene extends Phaser.Scene {
   private plannerKey?: Phaser.Input.Keyboard.Key;
   private currentSceneId?: SceneId;
   private currentSceneState?: SceneState;
+  private runtimeDialogueScripts: Record<string, DialogueScript> = {};
 
   constructor() {
     super(SCENE_KEYS.main);
@@ -94,6 +96,7 @@ export class MainScene extends Phaser.Scene {
     this.playerManager = new PlayerManager(this);
     this.npcManager = new NpcManager(this);
     this.dialogueManager = new DialogueManager(this);
+    this.dialogueManager.setRuntimeDialogueScripts(this.runtimeDialogueScripts);
     this.statSystemManager = new StatSystemManager();
     this.inventoryService = new InventoryService();
     this.saveService = new SaveService();
@@ -646,6 +649,21 @@ export class MainScene extends Phaser.Scene {
 
   private getPendingRestorePayload(): SavePayload | undefined {
     return this.registry.get(MainScene.PENDING_RESTORE_PAYLOAD_KEY) as SavePayload | undefined;
+  }
+
+  setRuntimeDialogueScript(script: DialogueScript): void {
+    this.runtimeDialogueScripts[script.id] = script;
+    this.dialogueManager?.setRuntimeDialogueScripts(this.runtimeDialogueScripts);
+  }
+
+  removeRuntimeDialogueScript(dialogueId: string): void {
+    delete this.runtimeDialogueScripts[dialogueId];
+    this.dialogueManager?.setRuntimeDialogueScripts(this.runtimeDialogueScripts);
+  }
+
+  clearRuntimeDialogueScripts(): void {
+    this.runtimeDialogueScripts = {};
+    this.dialogueManager?.setRuntimeDialogueScripts(this.runtimeDialogueScripts);
   }
 
   private applyPendingRestorePayload(): void {
