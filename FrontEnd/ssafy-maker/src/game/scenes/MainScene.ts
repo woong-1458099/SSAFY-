@@ -163,6 +163,7 @@ export class MainScene extends Phaser.Scene {
       scene: this,
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
       onNotice: (message) => this.menuManager?.showNotice(message)
     });
     this.progressionManager.initialize();

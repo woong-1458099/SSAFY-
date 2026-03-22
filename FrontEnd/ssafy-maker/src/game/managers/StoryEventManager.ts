@@ -1,9 +1,12 @@
 import Phaser from "phaser";
 import type { DialogueScript } from "../../common/types/dialogue";
 import type { HudState } from "../state/gameState";
+import { TIME_CYCLE } from "../../features/progression/TimeService";
+import { getWeeklyPlanSlotIndex, WEEKLY_PLAN_TIME_LABELS } from "../../features/planning/weeklyPlan";
 import {
   buildDialogueScriptFromFixedEventEntry,
   findMatchingFixedEvent,
+  getFixedEventEntries,
   type FixedEventEntry
 } from "../../features/story/jsonDialogueAdapter";
 import { loadFixedEventWeek } from "../../infra/story/fixedEventRepository";
@@ -79,6 +82,44 @@ export class StoryEventManager {
 
   syncWeek(week: number): void {
     void this.ensureWeekLoaded(week);
+  }
+
+  getFixedEventSlotsForWeek(week: number): ReadonlyMap<number, string> {
+    const rawData = this.weekData.get(week);
+    if (!rawData) {
+      this.syncWeek(week);
+      return new Map();
+    }
+
+    const slots = new Map<number, string>();
+    const entries = getFixedEventEntries(rawData);
+
+    entries.forEach((event) => {
+      const timing = event.triggerTiming;
+      if (!timing || event.eventType !== "FIXED") {
+        return;
+      }
+
+      const day = Math.round(timing.day ?? -1);
+      if (day < 1 || day > 5) {
+        return;
+      }
+
+      const normalizedTime = typeof timing.timeOfDay === "string" ? timing.timeOfDay.trim() : "";
+      const timeIndex = TIME_CYCLE.findIndex((label) => label === normalizedTime);
+      if (timeIndex < 0 || timeIndex >= WEEKLY_PLAN_TIME_LABELS.length) {
+        return;
+      }
+
+      const slotIndex = getWeeklyPlanSlotIndex(day - 1, timeIndex);
+      const eventName =
+        typeof event.eventName === "string" && event.eventName.trim().length > 0
+          ? event.eventName.trim()
+          : "고정 이벤트";
+      slots.set(slotIndex, eventName);
+    });
+
+    return slots;
   }
 
   tryStartCurrentFixedEvent(): void {

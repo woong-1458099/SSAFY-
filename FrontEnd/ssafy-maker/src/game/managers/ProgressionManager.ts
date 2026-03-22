@@ -26,6 +26,7 @@ type ProgressionManagerOptions = {
   scene: Phaser.Scene;
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
   onNotice?: (message: string) => void;
 };
 
@@ -33,6 +34,7 @@ export class ProgressionManager {
   private readonly scene: Phaser.Scene;
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  private readonly getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
   private readonly onNotice?: (message: string) => void;
 
   private timeState: TimeState = createDefaultTimeState();
@@ -44,6 +46,7 @@ export class ProgressionManager {
     this.scene = options.scene;
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
+    this.getFixedEventSlots = options.getFixedEventSlots;
     this.onNotice = options.onNotice;
   }
 
@@ -129,6 +132,7 @@ export class ProgressionManager {
       currentTimeLabel: buildHudPatchFromTimeState(this.timeState).timeLabel ?? "오전",
       actionPoint: this.timeState.actionPoint,
       maxActionPoint: this.timeState.maxActionPoint,
+      fixedEventSlots: this.getFixedEventSlots?.(this.timeState.week) ?? new Map(),
       initialPlan: this.weeklyPlan,
       onConfirm: (plan) => {
         this.weeklyPlan = [...plan];

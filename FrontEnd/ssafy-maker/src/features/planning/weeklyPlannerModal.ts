@@ -18,11 +18,12 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   currentTimeLabel: string;
   actionPoint: number;
   maxActionPoint: number;
+  fixedEventSlots?: ReadonlyMap<number, string>;
   initialPlan: WeeklyPlanOptionId[];
   onConfirm: (plan: WeeklyPlanOptionId[]) => void;
   onAdvance: (plan: WeeklyPlanOptionId[]) => void;
 }): Phaser.GameObjects.Container {
-  const { week, dayLabels, currentDayLabel, currentTimeLabel, actionPoint, maxActionPoint, initialPlan, onConfirm, onAdvance } =
+  const { week, dayLabels, currentDayLabel, currentTimeLabel, actionPoint, maxActionPoint, fixedEventSlots, initialPlan, onConfirm, onAdvance } =
     options;
 
   const centerX = Math.round(scene.scale.width / 2);
@@ -98,20 +99,31 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
       }).setOrigin(0, 0.5).setScrollFactor(0);
 
       const refresh = () => {
+        const fixedEventName = fixedEventSlots?.get(slotIndex);
+        if (fixedEventName) {
+          bg.setFillStyle(0x5e3654, 0.96);
+          bg.setStrokeStyle(2, 0xffaacb, 1);
+          infoText.setText(`고정 이벤트\n${fixedEventName}`);
+          return;
+        }
+
         const option = getWeeklyPlanOption(draftPlan[slotIndex]);
         bg.setFillStyle(option.color, 0.96);
+        bg.setStrokeStyle(2, 0x5aa8ee, 1);
         infoText.setText(`${option.label}\n${option.description}`);
       };
       refresh();
       refreshers.push(refresh);
 
-      bg.setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", () => {
-        const currentIndex = WEEKLY_PLAN_OPTIONS.findIndex((option) => option.id === draftPlan[slotIndex]);
-        const nextIndex = (currentIndex + 1) % WEEKLY_PLAN_OPTIONS.length;
-        draftPlan[slotIndex] = WEEKLY_PLAN_OPTIONS[nextIndex].id;
-        refresh();
-      });
+      if (!fixedEventSlots?.has(slotIndex)) {
+        bg.setInteractive({ useHandCursor: true });
+        bg.on("pointerdown", () => {
+          const currentIndex = WEEKLY_PLAN_OPTIONS.findIndex((option) => option.id === draftPlan[slotIndex]);
+          const nextIndex = (currentIndex + 1) % WEEKLY_PLAN_OPTIONS.length;
+          draftPlan[slotIndex] = WEEKLY_PLAN_OPTIONS[nextIndex].id;
+          refresh();
+        });
+      }
 
       objects.push(bg, badge, badgeText, infoText);
     });
@@ -126,7 +138,7 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
     color: "#eef7ff",
     resolution: 2
   }).setOrigin(0.5).setScrollFactor(0);
-  const infoBody = scene.add.text(centerX + 206, centerY - 138, "칸을 클릭하면 일정이 순환됩니다.\n계획 저장 후 '현재 시간 진행'을 누르면 현재 슬롯의 보상이 적용되고 시간이 흐릅니다.\n주말/저녁/밤에는 계획 보상이 적용되지 않습니다.", {
+  const infoBody = scene.add.text(centerX + 206, centerY - 138, "칸을 클릭하면 일정이 순환됩니다.\n분홍색 칸은 고정 이벤트라 수정할 수 없습니다.\n계획 저장 후 '현재 시간 진행'을 누르면 현재 슬롯의 보상이 적용되고 시간이 흐릅니다.\n주말/저녁/밤에는 계획 보상이 적용되지 않습니다.", {
     fontFamily: FONT_FAMILY,
     fontSize: "15px",
     color: "#b8d8f7",
