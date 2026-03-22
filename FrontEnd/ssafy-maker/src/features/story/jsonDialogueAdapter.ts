@@ -1,5 +1,6 @@
 import {
   createRuntimeDialogueId,
+  isRuntimeDialogueId,
   type DialogueAction,
   type DialogueChoice,
   type DialogueChoiceActionType,
@@ -20,6 +21,7 @@ export type FixedEventChoiceCondition = {
   social?: number;
   code?: number;
   gold?: number;
+  money?: number;
   luck?: number;
   hp?: number;
   stress?: number;
@@ -31,6 +33,7 @@ export type FixedEventStatChangeKey =
   | "social"
   | "code"
   | "gold"
+  | "money"
   | "hp"
   | "stress"
   | "luck"
@@ -175,8 +178,9 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
     requirements.push({ stat: "fe", min: value, label: `코딩 ${value} 이상` });
     requirements.push({ stat: "be", min: value, label: `코딩 ${value} 이상` });
   }
-  if (typeof condition.gold === "number") {
-    requirements.push({ stat: "money", min: Math.round(condition.gold), label: `재화 ${Math.round(condition.gold)}` });
+  const currencyRequirement = typeof condition.gold === "number" ? condition.gold : condition.money;
+  if (typeof currencyRequirement === "number") {
+    requirements.push({ stat: "gold", min: Math.round(currencyRequirement), label: `재화 ${Math.round(currencyRequirement)}` });
   }
   if (typeof condition.luck === "number") {
     requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `운 ${Math.round(condition.luck)} 이상` });
@@ -219,7 +223,8 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
         mapped.stress = (mapped.stress ?? 0) + value;
         break;
       case "gold":
-        mapped.money = (mapped.money ?? 0) + value;
+      case "money":
+        mapped.gold = (mapped.gold ?? 0) + value;
         break;
       case "hp":
         mapped.hp = (mapped.hp ?? 0) + value;
@@ -240,6 +245,10 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
 }
 
 function validateDialogueScript(script: DialogueScript): DialogueScript {
+  if (!isRuntimeDialogueId(script.id)) {
+    throw new Error(`Runtime dialogue id is invalid: ${script.id}`);
+  }
+
   if (!script.startNodeId || !script.nodes[script.startNodeId]) {
     throw new Error(`Dialogue start node is missing: ${script.id}`);
   }

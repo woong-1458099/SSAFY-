@@ -2,6 +2,12 @@
 
 이 문서는 스토리 추가, NPC 배치, 간단한 컷신 연출을 수정할 AI에게 바로 먹이는 작업용 문서다.
 
+범위:
+
+- 이 문서는 전체 프로젝트 구조 설명서가 아니다.
+- 목적은 스토리, NPC, 대화, 컷신, 지역 이동 관련 작업을 빠르게 처리하게 하는 것이다.
+- 저장, 인증, 인벤토리, 진행, 미니게임 전체 구조는 `docs/Front/AI_FRONT_STRUCTURE_GUIDE.md`를 먼저 확인한 뒤 들어가라.
+
 ## 먼저 알아야 할 것
 
 - 이 프로젝트의 메인 런타임 씬은 `src/game/scenes/MainScene.ts`다.
@@ -12,6 +18,10 @@
   - 컷신 액션: `src/game/scripts/scenes/*`
   - 대화 내용: `src/game/scripts/dialogues/*`
   - 실제 대화 등록: `src/game/scripts/dialogues/dialogueRegistry.ts`
+- 상호작용 진입점은 `InteractionManager`다.
+  - NPC 대화
+  - area transition
+  - static place 대화
 
 ## 디버그 툴 사용법
 
@@ -19,6 +29,7 @@
 
 - `F1`: 디버그 오버레이 표시/숨김
 - `F2`: 월드 그리드 표시/숨김
+- `F3`: 디버그 패널 표시/숨김
 - `T`: 현재 마우스 월드 위치로 플레이어 순간이동
 - `M`: 미니게임 디버그 HUD 토글
 - `1`: 시작 씬을 `scene_world_default`로 바꾸고 재시작
@@ -133,7 +144,8 @@ const action = { type: "wait", duration: 500 };
 - 맵에서 대화 가능한 NPC는 `SceneState.npcs`에 있어야 한다.
 - 컷신 액션에서 `moveNpc`를 쓰려면 그 NPC가 먼저 spawn 되어 있어야 한다.
 - `dialogueId`는 `src/common/enums/dialogue.ts`와 `src/game/scripts/dialogues/dialogueRegistry.ts`에 맞아야 한다.
-- 현재 `DialogueManager`는 선택지가 있어도 첫 선택지만 따라간다. 복잡한 분기형 대화를 설계할 때 이 제한을 감안할 것.
+- authored 대화는 `src/common/enums/dialogue.ts`와 `src/game/scripts/dialogues/dialogueRegistry.ts`를 따른다. 단, 고정 이벤트 JSON은 `src/features/story/jsonDialogueAdapter.ts`와 `StoryEventManager`를 통해 런타임 대화 ID로 주입된다.
+- 현재 `DialogueManager`는 방향키/W/S, 숫자키, Enter/Space로 선택지를 고를 수 있다. 숫자키 `1/2/3/4`는 대화 중 디버그 씬 전환보다 선택 입력이 우선되도록 막혀 있다.
 
 ## 작업 위치 빠른 안내
 

@@ -8,6 +8,12 @@ import type {
   DialogueScript,
   DialogueStatKey
 } from "../../common/types/dialogue";
+import {
+  isDialogueCurrencyStatKey,
+  isRuntimeDialogueId,
+  isStaticDialogueId,
+  toDialogueCurrencyHudKey
+} from "../../common/types/dialogue";
 import type { DialogueBox } from "../../features/ui/components/DialogueBox";
 import type { HudState, PlayerStatKey } from "../state/gameState";
 import { DIALOGUE_REGISTRY } from "../scripts/dialogues/dialogueRegistry";
@@ -63,7 +69,9 @@ export class DialogueManager {
   }
 
   setRuntimeDialogueScripts(scripts: Record<string, DialogueScript>): void {
-    this.runtimeDialogueScripts = scripts;
+    this.runtimeDialogueScripts = Object.fromEntries(
+      Object.entries(scripts).filter(([id, script]) => isRuntimeDialogueId(id) && script.id === id)
+    );
   }
 
   setRuntimeHooks(hooks: DialogueRuntimeHooks): void {
@@ -75,7 +83,12 @@ export class DialogueManager {
   }
 
   async play(dialogueId: string) {
-    const script = this.requireDialogue(dialogueId);
+    const script = this.resolveDialogue(dialogueId);
+    if (!script) {
+      this.onNotice?.(`대화 스크립트를 찾을 수 없습니다: ${dialogueId}`);
+      return;
+    }
+
     this.destroyed = false;
     this.isPlaying = true;
 
@@ -149,12 +162,21 @@ export class DialogueManager {
     this.isPlaying = false;
   }
 
-  private requireDialogue(dialogueId: string): DialogueScript {
-    const script = this.runtimeDialogueScripts[dialogueId] ?? DIALOGUE_REGISTRY[dialogueId];
-    if (!script) {
-      throw new Error(`Dialogue not found: ${dialogueId}`);
+  private resolveDialogue(dialogueId: string): DialogueScript | null {
+    const normalizedDialogueId = dialogueId.trim();
+    if (!normalizedDialogueId) {
+      return null;
     }
-    return script;
+
+    if (isRuntimeDialogueId(normalizedDialogueId)) {
+      return this.runtimeDialogueScripts[normalizedDialogueId] ?? null;
+    }
+
+    if (isStaticDialogueId(normalizedDialogueId)) {
+      return DIALOGUE_REGISTRY[normalizedDialogueId] ?? null;
+    }
+
+    return null;
   }
 
   private waitForAdvance() {
@@ -288,7 +310,7 @@ export class DialogueManager {
     const label =
       req.stat === "hp"
         ? "HP"
-        : req.stat === "money"
+        : isDialogueCurrencyStatKey(req.stat)
           ? "재화"
           : req.stat === "fe"
             ? "FE"
@@ -333,9 +355,10 @@ export class DialogueManager {
         return;
       }
 
-      if (key === "money") {
-        const currentMoney = this.getMetricValue?.("money") ?? 0;
-        hudPatch.money = Math.max(0, currentMoney + value);
+      if (isDialogueCurrencyStatKey(key)) {
+        const hudCurrencyKey = toDialogueCurrencyHudKey(key);
+        const currentMoney = this.getMetricValue?.(key) ?? 0;
+        hudPatch[hudCurrencyKey] = Math.max(0, currentMoney + value);
         summary.push(`재화 ${value > 0 ? "+" : ""}${value}`);
         return;
       }
@@ -359,6 +382,7 @@ export class DialogueManager {
     switch (key) {
       case "hp":
         return "HP";
+      case "gold":
       case "money":
         return "재화";
       case "fe":

@@ -12,7 +12,7 @@ import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugInputController } from "../../debug/services/DebugInputController";
 import type { DebugPanelState } from "../../debug/types/debugTypes";
 import type { AreaId } from "../../common/enums/area";
-import type { DialogueScript } from "../../common/types/dialogue";
+import { isRuntimeDialogueId, type DialogueScript } from "../../common/types/dialogue";
 import type { SceneState } from "../../common/types/sceneState";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
@@ -99,7 +99,28 @@ export class MainScene extends Phaser.Scene {
   async create() {
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
-    this.debugInputController = new DebugInputController(this, this.debugCommandBus);
+    this.debugInputController = new DebugInputController(this, this.debugCommandBus, (command) => {
+      const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
+      const debugPanelVisible = this.debugPanel?.isVisible() === true;
+      const menuOpen = this.menuManager?.isOpen() === true;
+      const placePopupOpen = this.placeActionManager?.isOpen() === true;
+      const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
+      const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+
+      if (
+        command.type === "toggleDebugOverlay" ||
+        command.type === "toggleWorldGrid" ||
+        command.type === "toggleDebugPanel"
+      ) {
+        return true;
+      }
+
+      if (command.type === "toggleMinigameHud") {
+        return !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying;
+      }
+
+      return !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible;
+    });
     this.worldManager = new WorldManager(this);
     this.playerManager = new PlayerManager(this);
     this.npcManager = new NpcManager(this);
@@ -119,6 +140,7 @@ export class MainScene extends Phaser.Scene {
         switch (stat) {
           case "hp":
             return hudState.hp;
+          case "gold":
           case "money":
             return hudState.money;
           default:
@@ -414,8 +436,6 @@ export class MainScene extends Phaser.Scene {
 
     this.playerManager.update(runtimeGrids, parsedMap);
     this.interactionManager.update();
-    this.debugInputController?.update();
-
     if (this.worldGridOverlay) {
       this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
     }
@@ -849,12 +869,22 @@ export class MainScene extends Phaser.Scene {
   }
 
   setRuntimeDialogueScript(script: DialogueScript): void {
+    if (!isRuntimeDialogueId(script.id)) {
+      this.debugLogger?.log(`debug:invalid-runtime-dialogue:${script.id}`);
+      return;
+    }
+
     this.runtimeDialogueScripts[script.id] = script;
     this.dialogueManager?.setRuntimeDialogueScripts(this.runtimeDialogueScripts);
   }
 
   removeRuntimeDialogueScript(dialogueId: string): void {
-    delete this.runtimeDialogueScripts[dialogueId];
+    const normalizedDialogueId = dialogueId.trim();
+    if (!isRuntimeDialogueId(normalizedDialogueId)) {
+      return;
+    }
+
+    delete this.runtimeDialogueScripts[normalizedDialogueId];
     this.dialogueManager?.setRuntimeDialogueScripts(this.runtimeDialogueScripts);
   }
 

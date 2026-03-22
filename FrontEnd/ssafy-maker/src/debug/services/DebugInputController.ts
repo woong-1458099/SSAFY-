@@ -1,86 +1,73 @@
 import Phaser from "phaser";
-import type { DebugCommandBus } from "./DebugCommandBus";
+import type { DebugCommand, DebugCommandBus } from "./DebugCommandBus";
 import { SCENE_IDS } from "../../game/scripts/scenes/sceneIds";
 
-type DebugKeys = {
-  overlay?: Phaser.Input.Keyboard.Key;
-  panel?: Phaser.Input.Keyboard.Key;
-  worldGrid?: Phaser.Input.Keyboard.Key;
-  teleport?: Phaser.Input.Keyboard.Key;
-  minigameHud?: Phaser.Input.Keyboard.Key;
-  world1?: Phaser.Input.Keyboard.Key;
-  world1Numpad?: Phaser.Input.Keyboard.Key;
-  downtown2?: Phaser.Input.Keyboard.Key;
-  downtown2Numpad?: Phaser.Input.Keyboard.Key;
-  campus3?: Phaser.Input.Keyboard.Key;
-  campus3Numpad?: Phaser.Input.Keyboard.Key;
+type DebugBinding = {
+  eventName: string;
+  handler: (event: KeyboardEvent) => void;
 };
 
 // 디버그 입력은 명령만 발행하고 실제 상태 변경은 각 책임자에게 위임한다.
 export class DebugInputController {
   private readonly keyboard?: Phaser.Input.Keyboard.KeyboardPlugin;
-  private keys: DebugKeys = {};
+  private bindings: DebugBinding[] = [];
   private bound = false;
   private destroyed = false;
 
   constructor(
     private scene: Phaser.Scene,
-    private commandBus: DebugCommandBus
+    private commandBus: DebugCommandBus,
+    private canHandleCommand: (command: DebugCommand) => boolean = () => true
   ) {
     this.keyboard = scene.input.keyboard;
-    this.keys = this.createKeys();
   }
 
   bind() {
-    if (this.destroyed || this.bound) {
+    if (this.destroyed || this.bound || !this.keyboard) {
       return;
     }
 
     this.bound = true;
-    Object.values(this.keys).forEach((key) => key?.reset());
-  }
-
-  update() {
-    if (!this.bound || this.destroyed) {
-      return;
-    }
-
-    if (this.justPressed(this.keys.overlay)) {
-      this.commandBus.emit({ type: "toggleDebugOverlay" });
-    }
-
-    if (this.justPressed(this.keys.panel)) {
-      this.commandBus.emit({ type: "toggleDebugPanel" });
-    }
-
-    if (this.justPressed(this.keys.worldGrid)) {
-      this.commandBus.emit({ type: "toggleWorldGrid" });
-    }
-
-    if (this.justPressed(this.keys.teleport)) {
-      const pointer = this.scene.input.activePointer;
-      this.commandBus.emit({
-        type: "teleportPlayerToWorld",
-        worldX: pointer.worldX,
-        worldY: pointer.worldY
-      });
-    }
-
-    if (this.justPressed(this.keys.minigameHud)) {
-      this.commandBus.emit({ type: "toggleMinigameHud" });
-    }
-
-    if (this.justPressed(this.keys.world1) || this.justPressed(this.keys.world1Numpad)) {
-      this.commandBus.emit({ type: "switchStartScene", sceneId: SCENE_IDS.worldDefault });
-    }
-
-    if (this.justPressed(this.keys.downtown2) || this.justPressed(this.keys.downtown2Numpad)) {
-      this.commandBus.emit({ type: "switchStartScene", sceneId: SCENE_IDS.downtownDefault });
-    }
-
-    if (this.justPressed(this.keys.campus3) || this.justPressed(this.keys.campus3Numpad)) {
-      this.commandBus.emit({ type: "switchStartScene", sceneId: SCENE_IDS.campusDefault });
-    }
+    this.bindings = [
+      this.register("keydown-F1", (event) => {
+        this.emitIfAllowed({ type: "toggleDebugOverlay" }, event);
+      }),
+      this.register("keydown-F2", (event) => {
+        this.emitIfAllowed({ type: "toggleWorldGrid" }, event);
+      }),
+      this.register("keydown-F3", (event) => {
+        this.emitIfAllowed({ type: "toggleDebugPanel" }, event);
+      }),
+      this.register("keydown-T", (event) => {
+        const pointer = this.scene.input.activePointer;
+        this.emitIfAllowed({
+          type: "teleportPlayerToWorld",
+          worldX: pointer.worldX,
+          worldY: pointer.worldY
+        }, event);
+      }),
+      this.register("keydown-M", (event) => {
+        this.emitIfAllowed({ type: "toggleMinigameHud" }, event);
+      }),
+      this.register("keydown-ONE", (event) => {
+        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.worldDefault }, event);
+      }),
+      this.register("keydown-NUMPAD_ONE", (event) => {
+        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.worldDefault }, event);
+      }),
+      this.register("keydown-TWO", (event) => {
+        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.downtownDefault }, event);
+      }),
+      this.register("keydown-NUMPAD_TWO", (event) => {
+        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.downtownDefault }, event);
+      }),
+      this.register("keydown-THREE", (event) => {
+        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.campusDefault }, event);
+      }),
+      this.register("keydown-NUMPAD_THREE", (event) => {
+        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.campusDefault }, event);
+      })
+    ];
   }
 
   destroy() {
@@ -90,33 +77,36 @@ export class DebugInputController {
 
     this.bound = false;
     this.destroyed = true;
-    Object.values(this.keys).forEach((key) => {
-      if (!key) {
+    this.bindings.forEach(({ eventName, handler }) => {
+      this.keyboard?.off(eventName, handler, this);
+    });
+    this.bindings = [];
+  }
+
+  private register(eventName: string, listener: (event: KeyboardEvent) => void): DebugBinding {
+    const handler = (event: KeyboardEvent) => {
+      if (!this.bound || this.destroyed || event.repeat) {
         return;
       }
-      key.reset();
-      this.keyboard?.removeKey(key, true, false);
-    });
-    this.keys = {};
-  }
 
-  private justPressed(key?: Phaser.Input.Keyboard.Key): boolean {
-    return Boolean(key && Phaser.Input.Keyboard.JustDown(key));
-  }
-
-  private createKeys(): DebugKeys {
-    return {
-      overlay: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F1),
-      panel: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F3),
-      worldGrid: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F2),
-      teleport: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.T),
-      minigameHud: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.M),
-      world1: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
-      world1Numpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE),
-      downtown2: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
-      downtown2Numpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO),
-      campus3: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
-      campus3Numpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE)
+      listener(event);
     };
+
+    this.keyboard?.on(eventName, handler, this);
+    return { eventName, handler };
+  }
+
+  private consume(event: KeyboardEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  private emitIfAllowed(command: DebugCommand, event: KeyboardEvent): void {
+    if (!this.canHandleCommand(command)) {
+      return;
+    }
+
+    this.consume(event);
+    this.commandBus.emit(command);
   }
 }

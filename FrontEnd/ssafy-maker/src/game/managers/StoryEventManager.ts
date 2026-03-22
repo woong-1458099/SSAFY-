@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import type { AreaId } from "../../common/enums/area";
-import type { DialogueScript } from "../../common/types/dialogue";
+import { createRuntimeDialogueId, type DialogueScript } from "../../common/types/dialogue";
 import type { HudState } from "../state/gameState";
 import { TIME_CYCLE } from "../../features/progression/TimeService";
 import { getWeeklyPlanSlotIndex, WEEKLY_PLAN_TIME_LABELS } from "../../features/planning/weeklyPlan";
@@ -36,7 +36,7 @@ type StoryEventManagerOptions = {
 };
 
 export class StoryEventManager {
-  private static readonly FIXED_EVENT_DIALOGUE_ID = "fixed_event_runtime";
+  private static readonly FIXED_EVENT_DIALOGUE_ID = createRuntimeDialogueId("fixed_event");
 
   private readonly scene: Phaser.Scene;
   private readonly getHudState: () => HudState;
