@@ -176,7 +176,7 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
     requirements.push({ stat: "be", min: value, label: `코딩 ${value} 이상` });
   }
   if (typeof condition.gold === "number") {
-    requirements.push({ stat: "gold", min: Math.round(condition.gold), label: `재화 ${Math.round(condition.gold)}` });
+    requirements.push({ stat: "money", min: Math.round(condition.gold), label: `재화 ${Math.round(condition.gold)}` });
   }
   if (typeof condition.luck === "number") {
     requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `운 ${Math.round(condition.luck)} 이상` });
@@ -219,7 +219,7 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
         mapped.stress = (mapped.stress ?? 0) + value;
         break;
       case "gold":
-        mapped.gold = (mapped.gold ?? 0) + value;
+        mapped.money = (mapped.money ?? 0) + value;
         break;
       case "hp":
         mapped.hp = (mapped.hp ?? 0) + value;

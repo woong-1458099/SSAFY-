@@ -119,7 +119,7 @@ export class MainScene extends Phaser.Scene {
         switch (stat) {
           case "hp":
             return hudState.hp;
-          case "gold":
+          case "money":
             return hudState.money;
           default:
             return statsState[stat];

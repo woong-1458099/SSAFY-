@@ -288,7 +288,7 @@ export class DialogueManager {
     const label =
       req.stat === "hp"
         ? "HP"
-        : req.stat === "gold"
+        : req.stat === "money"
           ? "재화"
           : req.stat === "fe"
             ? "FE"
@@ -333,8 +333,8 @@ export class DialogueManager {
         return;
       }
 
-      if (key === "gold") {
-        const currentMoney = this.getMetricValue?.("gold") ?? 0;
+      if (key === "money") {
+        const currentMoney = this.getMetricValue?.("money") ?? 0;
         hudPatch.money = Math.max(0, currentMoney + value);
         summary.push(`재화 ${value > 0 ? "+" : ""}${value}`);
         return;
@@ -359,7 +359,7 @@ export class DialogueManager {
     switch (key) {
       case "hp":
         return "HP";
-      case "gold":
+      case "money":
         return "재화";
       case "fe":
         return "FE";

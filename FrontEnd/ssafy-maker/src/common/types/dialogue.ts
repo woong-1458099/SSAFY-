@@ -2,7 +2,7 @@
 import type { DialogueId } from "../enums/dialogue";
 
 export type DialogueBaseStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
-export type DialogueStatKey = DialogueBaseStatKey | "hp" | "gold";
+export type DialogueStatKey = DialogueBaseStatKey | "hp" | "money";
 export type RuntimeDialogueId = string & { readonly __runtimeDialogueId: unique symbol };
 export type DialogueScriptId = DialogueId | RuntimeDialogueId;
 export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
