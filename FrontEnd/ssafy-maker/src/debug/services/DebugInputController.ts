@@ -31,6 +31,7 @@ export class DebugInputController {
   private sceneSwitchKeys: SceneSwitchKeys = {};
   private bound = false;
   private destroyed = false;
+  private lifecycleBound = false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -39,6 +40,7 @@ export class DebugInputController {
   ) {
     this.keyboard = scene.input.keyboard;
     this.sceneSwitchKeys = this.createSceneSwitchKeys();
+    this.bindSceneLifecycle();
   }
 
   bind() {
@@ -46,6 +48,7 @@ export class DebugInputController {
       return;
     }
 
+    this.clearBindings();
     this.bound = true;
     this.keyboard.addCapture(DEBUG_CAPTURE_KEY_CODES);
     this.bindings = [
@@ -99,9 +102,7 @@ export class DebugInputController {
 
     this.bound = false;
     this.destroyed = true;
-    this.bindings.forEach(({ eventName, handler }) => {
-      this.keyboard?.off(eventName, handler, this);
-    });
+    this.clearBindings();
     this.keyboard?.removeCapture(DEBUG_CAPTURE_KEY_CODES);
     Object.values(this.sceneSwitchKeys).forEach((key) => {
       if (key) {
@@ -124,6 +125,27 @@ export class DebugInputController {
 
     this.keyboard?.on(eventName, handler, this);
     return { eventName, handler };
+  }
+
+  private bindSceneLifecycle(): void {
+    if (this.lifecycleBound) {
+      return;
+    }
+
+    this.lifecycleBound = true;
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.destroy();
+    });
+    this.scene.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      this.destroy();
+    });
+  }
+
+  private clearBindings(): void {
+    this.bindings.forEach(({ eventName, handler }) => {
+      this.keyboard?.off(eventName, handler, this);
+    });
+    this.bindings = [];
   }
 
   private consume(event: KeyboardEvent): void {
