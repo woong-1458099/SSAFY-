@@ -31,6 +31,7 @@ import {
   type RuntimeStaticPlaceTarget
 } from "../managers/InteractionManager";
 import { NpcManager } from "../managers/NpcManager";
+import { PlaceActionManager } from "../managers/PlaceActionManager";
 import { ProgressionManager } from "../managers/ProgressionManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { StatSystemManager } from "../managers/StatSystemManager";
@@ -64,6 +65,7 @@ export class MainScene extends Phaser.Scene {
   private dialogueBox?: DialogueBox;
   private hud?: GameHud;
   private menuManager?: InGameMenuManager;
+  private placeActionManager?: PlaceActionManager;
   private progressionManager?: ProgressionManager;
   private interactionManager?: InteractionManager;
   private areaTransitionOverlay?: AreaTransitionOverlay;
@@ -109,6 +111,17 @@ export class MainScene extends Phaser.Scene {
       onNotice: (message) => this.menuManager?.showNotice(message)
     });
     this.progressionManager.initialize();
+    this.placeActionManager = new PlaceActionManager({
+      scene: this,
+      getHudState: () => this.statSystemManager!.getHudState(),
+      patchHudState: (next) => this.statSystemManager!.patchHudState(next),
+      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      inventoryService: this.inventoryService,
+      getTimeCycleIndex: () => this.progressionManager!.getTimeCycleIndex(),
+      getActionPoint: () => this.progressionManager!.getActionPoint(),
+      getMaxActionPoint: () => this.progressionManager!.getMaxActionPoint(),
+      consumeActionPoint: () => this.progressionManager!.consumeActionPoint()
+    });
     this.interactionManager = new InteractionManager(
       this,
       this.playerManager,
@@ -117,6 +130,7 @@ export class MainScene extends Phaser.Scene {
       this.debugLogger
     );
     this.interactionManager.setHud(this.hud);
+    this.interactionManager.setPlaceInteractHandler((placeId) => this.placeActionManager?.open(placeId) === true);
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.plannerKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.statSystemManager.setStatsChangedListener(() => {
@@ -202,6 +216,7 @@ export class MainScene extends Phaser.Scene {
       this.debugInputController?.destroy();
       this.dialogueManager?.destroy();
       this.dialogueBox?.destroy();
+      this.placeActionManager?.destroy();
       this.progressionManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
@@ -225,11 +240,12 @@ export class MainScene extends Phaser.Scene {
     const renderBounds = this.worldManager.getCurrentRenderBounds();
     const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
     const menuOpen = this.menuManager?.isOpen() === true;
+    const placePopupOpen = this.placeActionManager?.isOpen() === true;
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
 
-    this.interactionManager.setOverlayBlocked(menuOpen || plannerOpen || debugHudVisible);
+    this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible);
     this.playerManager.setInputLocked(
-      this.interactionManager.isInputLocked() || debugHudVisible || menuOpen || plannerOpen
+      this.interactionManager.isInputLocked() || debugHudVisible || menuOpen || placePopupOpen || plannerOpen
     );
 
     if (
@@ -238,6 +254,10 @@ export class MainScene extends Phaser.Scene {
       !this.dialogueManager?.isDialoguePlaying() &&
       !plannerOpen
     ) {
+      if (placePopupOpen) {
+        this.placeActionManager?.close();
+        return;
+      }
       this.menuManager?.toggle();
     }
 
@@ -246,6 +266,7 @@ export class MainScene extends Phaser.Scene {
       Phaser.Input.Keyboard.JustDown(this.plannerKey) &&
       !this.dialogueManager?.isDialoguePlaying() &&
       !menuOpen &&
+      !placePopupOpen &&
       !debugHudVisible
     ) {
       this.progressionManager?.togglePlanner();

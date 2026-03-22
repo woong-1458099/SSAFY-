@@ -59,6 +59,36 @@ export class ProgressionManager {
     return Boolean(this.plannerRoot?.visible);
   }
 
+  getTimeCycleIndex(): number {
+    return this.timeState.timeCycleIndex;
+  }
+
+  getActionPoint(): number {
+    return this.timeState.actionPoint;
+  }
+
+  getMaxActionPoint(): number {
+    return this.timeState.maxActionPoint;
+  }
+
+  consumeActionPoint(): boolean {
+    if (this.timeState.actionPoint <= 0) {
+      this.onNotice?.("행동력이 부족합니다");
+      return false;
+    }
+
+    const result = advanceTime(this.timeState);
+    this.timeState = result.next;
+    this.patchHudState(result.hudPatch);
+
+    if (this.timeState.week > this.weeklyPlanWeek) {
+      this.weeklyPlan = createDefaultWeeklyPlan();
+      this.weeklyPlanWeek = this.timeState.week;
+    }
+
+    return true;
+  }
+
   togglePlanner(): void {
     if (this.isPlannerOpen()) {
       this.closePlanner();
@@ -121,27 +151,22 @@ export class ProgressionManager {
   }
 
   private advanceCurrentSlot(): void {
-    if (this.timeState.actionPoint <= 0) {
-      this.onNotice?.("행동력이 부족합니다");
+    const previousState = {
+      dayCycleIndex: this.timeState.dayCycleIndex,
+      timeCycleIndex: this.timeState.timeCycleIndex
+    };
+
+    if (!this.consumeActionPoint()) {
       return;
     }
 
-    if (this.timeState.dayCycleIndex < 5 && this.timeState.timeCycleIndex < 2) {
-      const slotIndex = getWeeklyPlanSlotIndex(this.timeState.dayCycleIndex, this.timeState.timeCycleIndex);
+    if (previousState.dayCycleIndex < 5 && previousState.timeCycleIndex < 2) {
+      const slotIndex = getWeeklyPlanSlotIndex(previousState.dayCycleIndex, previousState.timeCycleIndex);
       const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex]);
       this.applyStatDelta(option.statDelta, 1);
       this.onNotice?.(`${option.label} 완료`);
     } else {
       this.onNotice?.("이번 시간대에는 계획 보상이 없습니다");
-    }
-
-    const result = advanceTime(this.timeState);
-    this.timeState = result.next;
-    this.patchHudState(result.hudPatch);
-
-    if (this.timeState.week > this.weeklyPlanWeek) {
-      this.weeklyPlan = createDefaultWeeklyPlan();
-      this.weeklyPlanWeek = this.timeState.week;
     }
   }
 }

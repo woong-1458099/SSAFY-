@@ -40,6 +40,11 @@ export type InventoryEffectResult = {
   toastMessage: string;
 };
 
+export type InventoryPurchaseResult = {
+  hudPatch?: Partial<HudState>;
+  toastMessage: string;
+};
+
 const INVENTORY_CAPACITY = 16;
 
 export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
@@ -224,6 +229,31 @@ export class InventoryService {
     return cloneEquippedSlots(this.equippedSlots);
   }
 
+  getShopCatalog(): InventoryItemTemplate[] {
+    return [...SHOP_ITEM_TEMPLATES];
+  }
+
+  purchaseItem(templateId: string, hudState: HudState): InventoryPurchaseResult {
+    const template = this.templateMap.get(templateId);
+    if (!template) {
+      return { toastMessage: "구매할 수 없는 아이템입니다" };
+    }
+
+    if (hudState.money < template.price) {
+      return { toastMessage: "돈이 부족합니다" };
+    }
+
+    if (!this.addItem(template, 1)) {
+      return { toastMessage: "가방이 가득 찼습니다" };
+    }
+
+    this.onChange?.();
+    return {
+      hudPatch: { money: hudState.money - template.price },
+      toastMessage: `${template.name} 구매 완료`
+    };
+  }
+
   interactInventorySlot(index: number, hudState: HudState): InventoryEffectResult | null {
     const slot = this.inventorySlots[index];
     if (!slot) {
@@ -352,5 +382,32 @@ export class InventoryService {
       statDelta: signedDelta(slot.template.statDelta, 1),
       toastMessage: `${slot.template.name} 사용`
     };
+  }
+
+  private addItem(template: InventoryItemTemplate, quantity: number): boolean {
+    if (template.stackable) {
+      const existingIndex = this.inventorySlots.findIndex(
+        (slot) => slot?.template.templateId === template.templateId
+      );
+      if (existingIndex >= 0) {
+        const existing = this.inventorySlots[existingIndex]!;
+        this.inventorySlots[existingIndex] = {
+          template: existing.template,
+          quantity: existing.quantity + quantity
+        };
+        return true;
+      }
+    }
+
+    const emptyIndex = this.inventorySlots.findIndex((slot) => slot === null);
+    if (emptyIndex < 0) {
+      return false;
+    }
+
+    this.inventorySlots[emptyIndex] = {
+      template,
+      quantity
+    };
+    return true;
   }
 }

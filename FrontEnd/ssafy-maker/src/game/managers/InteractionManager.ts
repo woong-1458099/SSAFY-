@@ -36,6 +36,7 @@ export class InteractionManager {
   private wasDialoguePlaying = false;
   private currentSceneState?: SceneState;
   private onTransitionInteract?: (transitionId: AreaTransitionId) => void;
+  private onPlaceInteract?: (placeId: PlaceId) => boolean | void;
   private currentTransitionTargets: RuntimeAreaTransitionTarget[] = [];
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
   private overlayBlocked = false;
@@ -73,6 +74,10 @@ export class InteractionManager {
 
   setTransitionInteractHandler(handler?: (transitionId: AreaTransitionId) => void) {
     this.onTransitionInteract = handler;
+  }
+
+  setPlaceInteractHandler(handler?: (placeId: PlaceId) => boolean | void) {
+    this.onPlaceInteract = handler;
   }
 
   setHud(hud?: GameHud) {
@@ -145,6 +150,11 @@ export class InteractionManager {
 
     const place = this.currentStaticPlaceTargets.find((item) => item.id === this.currentTargetPlaceId);
     if (!place) {
+      return;
+    }
+
+    if (this.onPlaceInteract?.(place.id) === true) {
+      this.requiresInteractKeyRelease = true;
       return;
     }
 
