@@ -12,7 +12,12 @@ import type {
   DialogueStatKey
 } from "../../common/types/dialogue";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
-import { SCENE_STATE_IDS, isSceneStateId, type SceneStateId } from "../../game/definitions/sceneStates/sceneStateIds";
+import {
+  SCENE_STATE_IDS,
+  isSceneStateId,
+  resolveSceneStateId,
+  type SceneStateId
+} from "../../game/definitions/sceneStates/sceneStateIds";
 
 type AuthoredDialogueJson = {
   dialogues?: AuthoredDialogueScriptJson[];
@@ -102,10 +107,21 @@ function normalizeChoice(choice: AuthoredDialogueChoiceJson, index: number): Dia
   };
 }
 
+function resolveFallbackSpeakerLabel(node: AuthoredDialogueNodeJson): string {
+  const speakerId = normalizeString(node.speakerId).toUpperCase();
+  if (speakerId === "SYSTEM") {
+    return "시스템";
+  }
+  if (speakerId === "PLAYER") {
+    return "플레이어";
+  }
+  return "내레이션";
+}
+
 function normalizeNode(nodeKey: string, node: AuthoredDialogueNodeJson): DialogueNode {
   return {
     id: normalizeString(node.id) || nodeKey,
-    speaker: normalizeString(node.speaker) || "NPC",
+    speaker: normalizeString(node.speaker) || resolveFallbackSpeakerLabel(node),
     speakerId: normalizeString(node.speakerId) || undefined,
     emotion: normalizeString(node.emotion) || undefined,
     text: normalizeString(node.text) || "...",
@@ -150,11 +166,6 @@ function validateDialogueNode(
   const explicitNodeId = normalizeString(node.id);
   if (explicitNodeId && explicitNodeId !== nodeKey) {
     fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey}.id=${explicitNodeId} 는 nodes 키와 일치해야 합니다.`);
-    valid = false;
-  }
-
-  if (!normalizeString(node.speaker)) {
-    fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey}.speaker 가 비어 있거나 문자열이 아닙니다.`);
     valid = false;
   }
 
@@ -348,32 +359,41 @@ export function buildSceneStateRegistryFromJson(
   const seenSceneStateIds = new Set<SceneStateId>();
 
   entries.forEach((entry, entryIndex) => {
-    const sceneStateId = normalizeString(entry.id);
-    if (!isSceneStateId(sceneStateId)) {
+    const rawSceneStateId = normalizeString(entry.id);
+    const resolvedSceneStateId = resolveSceneStateId(rawSceneStateId);
+
+    if (!resolvedSceneStateId || !isSceneStateId(resolvedSceneStateId)) {
       fatalIssues.push(`[sceneStates.${entryIndex}] id=${JSON.stringify(entry.id)} 가 유효한 SceneStateId가 아닙니다.`);
       return;
     }
 
-    if (seenSceneStateIds.has(sceneStateId)) {
-      fatalIssues.push(`[sceneStates] 중복 sceneState id=${sceneStateId} 가 있습니다.`);
+    if (rawSceneStateId !== resolvedSceneStateId) {
+      fatalIssues.push(
+        `[sceneStates.${entryIndex}] id=${JSON.stringify(entry.id)} 는 레거시 형식입니다. canonical=${resolvedSceneStateId} 를 사용하세요.`
+      );
       return;
     }
 
-    seenSceneStateIds.add(sceneStateId);
+    if (seenSceneStateIds.has(resolvedSceneStateId)) {
+      fatalIssues.push(`[sceneStates] 중복 sceneState id=${resolvedSceneStateId} 가 있습니다.`);
+      return;
+    }
+
+    seenSceneStateIds.add(resolvedSceneStateId);
 
     if (!isAreaId(entry.area)) {
-      fatalIssues.push(`[${sceneStateId}] area=${JSON.stringify(entry.area)} 가 유효한 AreaId가 아닙니다.`);
+      fatalIssues.push(`[${resolvedSceneStateId}] area=${JSON.stringify(entry.area)} 가 유효한 AreaId가 아닙니다.`);
       return;
     }
 
     const npcs = Array.isArray(entry.npcs)
       ? entry.npcs
-          .map((npc, npcIndex) => normalizeSceneStateNpc(npc, sceneStateId, npcIndex, fatalIssues))
+          .map((npc, npcIndex) => normalizeSceneStateNpc(npc, resolvedSceneStateId, npcIndex, fatalIssues))
           .filter((npc): npc is SceneStateNpc => npc !== null)
       : [];
 
-    registry[sceneStateId] = {
-      id: sceneStateId,
+    registry[resolvedSceneStateId] = {
+      id: resolvedSceneStateId,
       area: entry.area,
       npcs
     };

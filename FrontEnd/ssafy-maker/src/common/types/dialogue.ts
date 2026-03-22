@@ -8,14 +8,16 @@ export type StaticDialogueId = string & { readonly __staticDialogueId: unique sy
 export type RuntimeDialogueId = string & { readonly __runtimeDialogueId: unique symbol };
 export type DialogueScriptId = DialogueId | StaticDialogueId | RuntimeDialogueId;
 export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
-export type DialogueAction =
-  | "openShop"
-  | "openMiniGame"
-  | "playDrinking"
-  | "playInterview"
-  | "playGym"
-  | "playRhythm"
-  | "playCooking";
+export const DIALOGUE_ACTIONS = [
+  "openShop",
+  "openMiniGame",
+  "playDrinking",
+  "playInterview",
+  "playGym",
+  "playRhythm",
+  "playCooking"
+] as const;
+export type DialogueAction = (typeof DIALOGUE_ACTIONS)[number];
 
 export type DialogueRequirement = {
   stat: DialogueStatKey;

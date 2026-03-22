@@ -3,6 +3,7 @@ import type { SpawnNpcAction } from "../../common/types/sceneAction";
 import type { SceneScript } from "../../common/types/sceneScript";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import { DEFAULT_SCENE_STATE_NPC_FACING } from "../definitions/sceneStates/sceneStateDefaults";
+import { resolveSceneStateId } from "../definitions/sceneStates/sceneStateIds";
 
 function normalizeSceneStateNpc(npc: SceneStateNpc): SceneStateNpc {
   return {
@@ -17,8 +18,11 @@ export function normalizeSceneState(sceneState?: SceneState): SceneState | undef
     return undefined;
   }
 
+  const resolvedSceneStateId = resolveSceneStateId(sceneState.id);
+
   return {
     ...sceneState,
+    id: resolvedSceneStateId ?? sceneState.id,
     npcs: sceneState.npcs.map(normalizeSceneStateNpc)
   };
 }

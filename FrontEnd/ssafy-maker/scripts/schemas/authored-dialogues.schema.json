@@ -38,7 +38,7 @@
     "dialogueNode": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "speaker", "text"],
+      "required": ["id", "text"],
       "properties": {
         "id": {
           "type": "string",
@@ -72,7 +72,7 @@
         },
         "action": {
           "type": "string",
-          "enum": ["openShop", "openMiniGame", "playDrinking", "playInterview", "playGym", "playRhythm", "playCooking"]
+          "minLength": 1
         }
       }
     },
@@ -117,7 +117,7 @@
         },
         "action": {
           "type": "string",
-          "enum": ["openShop", "openMiniGame", "playDrinking", "playInterview", "playGym", "playRhythm", "playCooking"]
+          "minLength": 1
         }
       }
     },

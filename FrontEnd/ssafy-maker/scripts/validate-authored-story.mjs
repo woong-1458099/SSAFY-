@@ -12,6 +12,7 @@ const dialoguesPath = path.join(projectRoot, "public/assets/game/data/story/auth
 const sceneStatesPath = path.join(projectRoot, "public/assets/game/data/story/authored/scene_states.json");
 const npcEnumPath = path.join(projectRoot, "src/common/enums/npc.ts");
 const dialogueEnumPath = path.join(projectRoot, "src/common/enums/dialogue.ts");
+const dialogueTypesPath = path.join(projectRoot, "src/common/types/dialogue.ts");
 const sceneStateIdsPath = path.join(projectRoot, "src/game/definitions/sceneStates/sceneStateIds.ts");
 const dialoguesSchemaPath = path.join(projectRoot, "scripts/schemas/authored-dialogues.schema.json");
 const sceneStatesSchemaPath = path.join(projectRoot, "scripts/schemas/authored-scene-states.schema.json");
@@ -105,6 +106,53 @@ function parseExportedStringMap(sourceText, filePath, exportName) {
   throw new Error(`${exportName} 상수를 찾지 못했습니다.`);
 }
 
+function parseExportedStringArray(sourceText, filePath, exportName) {
+  const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) {
+      continue;
+    }
+
+    const isExported = statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) === true;
+    if (!isExported) {
+      continue;
+    }
+
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportName) {
+        continue;
+      }
+
+      if (!declaration.initializer) {
+        throw new Error(`${exportName} 상수 초기값이 없습니다.`);
+      }
+
+      const initializer = unwrapExpression(declaration.initializer);
+      if (!ts.isArrayLiteralExpression(initializer)) {
+        throw new Error(`${exportName} 상수가 배열 리터럴이 아닙니다.`);
+      }
+
+      const values = initializer.elements.map((element, index) => {
+        const resolvedElement = unwrapExpression(element);
+        if (!ts.isStringLiteralLike(resolvedElement)) {
+          throw new Error(`${exportName}[${index}] 값이 문자열 리터럴이 아닙니다.`);
+        }
+
+        return resolvedElement.text;
+      });
+
+      if (values.length === 0) {
+        throw new Error(`${exportName} 상수에 문자열 값이 없습니다.`);
+      }
+
+      return values;
+    }
+  }
+
+  throw new Error(`${exportName} 상수를 찾지 못했습니다.`);
+}
+
 function formatSchemaErrors(schemaName, errors) {
   return ensureArray(errors).map((error) => {
     const instancePath = error.instancePath || "/";
@@ -112,7 +160,7 @@ function formatSchemaErrors(schemaName, errors) {
   });
 }
 
-function validateDialogueScript(dialogue, dialogueIndex, issues) {
+function validateDialogueScript(dialogue, dialogueIndex, allowedActions, issues) {
   const dialogueId = normalizeString(dialogue?.id) || "(empty)";
   const dialoguePrefix = `[dialogues.${dialogueIndex}] id=${dialogueId}`;
   const startNodeId = normalizeString(dialogue?.startNodeId);
@@ -155,12 +203,13 @@ function validateDialogueScript(dialogue, dialogueIndex, issues) {
       normalizedNodeIds.add(normalizedNodeId);
     }
 
-    if (!normalizeString(node.speaker)) {
-      issues.push(`${dialoguePrefix} nodes.${nodeKey}.speaker 가 비어 있거나 문자열이 아닙니다.`);
-    }
-
     if (!normalizeString(node.text)) {
       issues.push(`${dialoguePrefix} nodes.${nodeKey}.text 가 비어 있거나 문자열이 아닙니다.`);
+    }
+
+    const action = normalizeString(node.action);
+    if (action && !allowedActions.has(action)) {
+      issues.push(`${dialoguePrefix} nodes.${nodeKey}.action=${action} 는 지원하지 않는 DialogueAction 입니다.`);
     }
 
     const nextNodeId = normalizeString(node.nextNodeId);
@@ -198,11 +247,16 @@ function validateDialogueScript(dialogue, dialogueIndex, issues) {
       if (choiceNextNodeId && !nodeKeys.has(choiceNextNodeId)) {
         issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices[${choiceIndex}].nextNodeId=${choiceNextNodeId} 가 nodes에 없습니다.`);
       }
+
+      const choiceAction = normalizeString(choice.action);
+      if (choiceAction && !allowedActions.has(choiceAction)) {
+        issues.push(`${dialoguePrefix} nodes.${nodeKey}.choices[${choiceIndex}].action=${choiceAction} 는 지원하지 않는 DialogueAction 입니다.`);
+      }
     });
   });
 }
 
-function collectDialogueIds(dialoguesJson, requiredDialogueIds, issues) {
+function collectDialogueIds(dialoguesJson, requiredDialogueIds, allowedActions, issues) {
   const dialogueIds = new Set();
 
   ensureArray(dialoguesJson?.dialogues).forEach((dialogue, dialogueIndex) => {
@@ -218,7 +272,7 @@ function collectDialogueIds(dialoguesJson, requiredDialogueIds, issues) {
     }
 
     dialogueIds.add(id);
-    validateDialogueScript(dialogue, dialogueIndex, issues);
+    validateDialogueScript(dialogue, dialogueIndex, allowedActions, issues);
   });
 
   for (const requiredDialogueId of requiredDialogueIds) {
@@ -285,6 +339,7 @@ async function main() {
     sceneStatesRaw,
     npcEnumSource,
     dialogueEnumSource,
+    dialogueTypesSource,
     sceneStateIdsSource,
     dialoguesSchemaRaw,
     sceneStatesSchemaRaw
@@ -293,6 +348,7 @@ async function main() {
     readFile(sceneStatesPath, "utf8"),
     readFile(npcEnumPath, "utf8"),
     readFile(dialogueEnumPath, "utf8"),
+    readFile(dialogueTypesPath, "utf8"),
     readFile(sceneStateIdsPath, "utf8"),
     readFile(dialoguesSchemaPath, "utf8"),
     readFile(sceneStatesSchemaPath, "utf8")
@@ -305,6 +361,7 @@ async function main() {
 
   const npcIds = new Set(parseExportedStringMap(npcEnumSource, npcEnumPath, "NPC_IDS").values());
   const requiredDialogueIds = new Set(parseExportedStringMap(dialogueEnumSource, dialogueEnumPath, "DIALOGUE_IDS").values());
+  const allowedActions = new Set(parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_ACTIONS"));
   const requiredSceneStateIds = new Set(parseExportedStringMap(sceneStateIdsSource, sceneStateIdsPath, "SCENE_STATE_IDS").values());
   const ajv = new Ajv2020({
     allErrors: true,
@@ -323,7 +380,7 @@ async function main() {
     issues.push(...formatSchemaErrors("sceneStates", sceneStatesSchemaValidator.errors));
   }
 
-  const dialogueIds = collectDialogueIds(dialoguesJson, requiredDialogueIds, issues);
+  const dialogueIds = collectDialogueIds(dialoguesJson, requiredDialogueIds, allowedActions, issues);
   validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, issues);
 
   if (issues.length > 0) {
