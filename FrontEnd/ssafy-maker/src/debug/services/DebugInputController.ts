@@ -4,6 +4,7 @@ import { SCENE_IDS } from "../../game/scripts/scenes/sceneIds";
 
 type DebugKeys = {
   overlay?: Phaser.Input.Keyboard.Key;
+  panel?: Phaser.Input.Keyboard.Key;
   worldGrid?: Phaser.Input.Keyboard.Key;
   teleport?: Phaser.Input.Keyboard.Key;
   minigameHud?: Phaser.Input.Keyboard.Key;
@@ -25,6 +26,7 @@ export class DebugInputController {
   ) {
     this.keys = {
       overlay: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F1),
+      panel: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F3),
       worldGrid: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F2),
       teleport: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.T),
       minigameHud: scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.M),
@@ -42,6 +44,10 @@ export class DebugInputController {
   update() {
     if (this.justPressed(this.keys.overlay)) {
       this.commandBus.emit({ type: "toggleDebugOverlay" });
+    }
+
+    if (this.justPressed(this.keys.panel)) {
+      this.commandBus.emit({ type: "toggleDebugPanel" });
     }
 
     if (this.justPressed(this.keys.worldGrid)) {

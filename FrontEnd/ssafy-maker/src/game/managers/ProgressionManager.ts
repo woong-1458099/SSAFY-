@@ -10,6 +10,7 @@ import {
 import { createWeeklySalaryModal } from "../../features/progression/weeklySalaryModal";
 import {
   DAY_CYCLE,
+  TIME_CYCLE,
   advanceTime,
   buildHudPatchFromTimeState,
   createDefaultTimeState,
@@ -85,6 +86,10 @@ export class ProgressionManager {
     return this.timeState.maxActionPoint;
   }
 
+  getTimeState(): TimeState {
+    return { ...this.timeState };
+  }
+
   processAutomaticFlow(): boolean {
     this.grantWeeklySalaryIfDue();
     if (this.pendingWeeklySalaryWeek !== null) {
@@ -117,6 +122,55 @@ export class ProgressionManager {
 
     this.grantWeeklySalaryIfDue();
     return true;
+  }
+
+  debugAdvanceTime(): void {
+    this.closeSalaryModal();
+    this.closePlanner();
+
+    const result = advanceTime(this.timeState);
+    this.timeState = result.next;
+    this.patchHudState(result.hudPatch);
+
+    if (result.dayPassed && this.timeState.dayCycleIndex === 0) {
+      this.weeklyPlan = createDefaultWeeklyPlan();
+    }
+
+    this.grantWeeklySalaryIfDue();
+  }
+
+  debugPatchTimeState(next: Partial<TimeState>): void {
+    this.closeSalaryModal();
+    this.closePlanner();
+
+    const maxActionPoint = Math.max(0, Math.round(next.maxActionPoint ?? this.timeState.maxActionPoint));
+    const actionPoint = Phaser.Math.Clamp(
+      Math.round(next.actionPoint ?? this.timeState.actionPoint),
+      0,
+      maxActionPoint
+    );
+
+    this.timeState = {
+      ...this.timeState,
+      ...next,
+      maxActionPoint,
+      actionPoint,
+      timeCycleIndex: Phaser.Math.Clamp(
+        Math.round(next.timeCycleIndex ?? this.timeState.timeCycleIndex),
+        0,
+        TIME_CYCLE.length - 1
+      ),
+      dayCycleIndex: Phaser.Math.Clamp(
+        Math.round(next.dayCycleIndex ?? this.timeState.dayCycleIndex),
+        0,
+        DAY_CYCLE.length - 1
+      ),
+      week: Math.max(1, Math.round(next.week ?? this.timeState.week))
+    };
+
+    this.lastPaidWeeklySalaryWeek = Math.min(this.lastPaidWeeklySalaryWeek, Math.max(0, this.timeState.week - 1));
+    this.pendingWeeklySalaryWeek = null;
+    this.patchHudState(buildHudPatchFromTimeState(this.timeState));
   }
 
   togglePlanner(): void {

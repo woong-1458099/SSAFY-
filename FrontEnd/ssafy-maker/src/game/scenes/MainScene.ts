@@ -3,12 +3,14 @@ import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { DIALOGUE_IDS, type DialogueId } from "../../common/enums/dialogue";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
+import { DebugPanel } from "../../debug/overlay/DebugPanel";
 import { DebugMinigameHud } from "../../debug/overlay/DebugMinigameHud";
 import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
 import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
 import { DebugCommandBus } from "../../debug/services/DebugCommandBus";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import { DebugInputController } from "../../debug/services/DebugInputController";
+import type { DebugPanelState } from "../../debug/types/debugTypes";
 import type { AreaId } from "../../common/enums/area";
 import type { DialogueScript } from "../../common/types/dialogue";
 import type { SceneState } from "../../common/types/sceneState";
@@ -61,6 +63,7 @@ export class MainScene extends Phaser.Scene {
   private static readonly PENDING_RESTORE_PAYLOAD_KEY = "pendingRestorePayload";
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
+  private debugPanel?: DebugPanel;
   private worldGridOverlay?: WorldGridOverlay;
   private debugMinigameHud?: DebugMinigameHud;
   private worldManager?: WorldManager;
@@ -298,6 +301,7 @@ export class MainScene extends Phaser.Scene {
 
     if (DEBUG_FLAGS.overlayEnabled && this.debugLogger && this.npcManager) {
       this.debugOverlay = new DebugOverlay(this, this.debugLogger, this.npcManager);
+      this.debugPanel = new DebugPanel(this, this.debugCommandBus);
       this.debugMinigameHud = new DebugMinigameHud(this);
     }
 
@@ -313,6 +317,7 @@ export class MainScene extends Phaser.Scene {
     this.debugInputController.bind();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.debugMinigameHud?.destroy();
+      this.debugPanel?.destroy();
       this.debugInputController?.destroy();
       this.dialogueManager?.destroy();
       this.dialogueBox?.destroy();
@@ -342,14 +347,15 @@ export class MainScene extends Phaser.Scene {
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
     const renderBounds = this.worldManager.getCurrentRenderBounds();
     const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
+    const debugPanelVisible = this.debugPanel?.isVisible() === true;
     const menuOpen = this.menuManager?.isOpen() === true;
     const placePopupOpen = this.placeActionManager?.isOpen() === true;
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
 
-    this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible);
+    this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible);
     this.playerManager.setInputLocked(
-      this.interactionManager.isInputLocked() || debugHudVisible || menuOpen || placePopupOpen || plannerOpen
+      this.interactionManager.isInputLocked() || debugHudVisible || debugPanelVisible || menuOpen || placePopupOpen || plannerOpen
     );
 
     if (
@@ -358,6 +364,10 @@ export class MainScene extends Phaser.Scene {
       !dialoguePlaying &&
       !plannerOpen
     ) {
+      if (debugPanelVisible) {
+        this.debugPanel?.hide();
+        return;
+      }
       if (placePopupOpen) {
         this.placeActionManager?.close();
         return;
@@ -371,7 +381,8 @@ export class MainScene extends Phaser.Scene {
       !dialoguePlaying &&
       !menuOpen &&
       !placePopupOpen &&
-      !debugHudVisible
+      !debugHudVisible &&
+      !debugPanelVisible
     ) {
       this.progressionManager?.togglePlanner();
     }
@@ -380,8 +391,9 @@ export class MainScene extends Phaser.Scene {
     this.fixedEventNpcManager?.render({
       presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
       areaId: this.worldManager.getCurrentAreaId() ?? "world",
-      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !dialoguePlaying
+      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !dialoguePlaying
     });
+    this.debugPanel?.render(this.buildDebugPanelState());
 
     if (
       !automaticProgressionFlowOpened &&
@@ -389,6 +401,7 @@ export class MainScene extends Phaser.Scene {
       !placePopupOpen &&
       !plannerOpen &&
       !debugHudVisible &&
+      !debugPanelVisible &&
       !dialoguePlaying
     ) {
       this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
@@ -431,6 +444,9 @@ export class MainScene extends Phaser.Scene {
             }
           }
           break;
+        case "toggleDebugPanel":
+          this.debugPanel?.toggle();
+          break;
         case "toggleWorldGrid":
           if (this.worldGridOverlay) {
             this.worldGridOverlay.setVisible(!this.worldGridOverlay.isVisible());
@@ -448,6 +464,78 @@ export class MainScene extends Phaser.Scene {
           this.registry.set("startSceneId", command.sceneId);
           this.debugLogger?.log(`debug:switch-scene:${command.sceneId}`);
           this.scene.restart();
+          break;
+        case "adjustHudValue": {
+          const hudState = this.statSystemManager?.getHudState();
+          if (!hudState || !this.statSystemManager) {
+            break;
+          }
+          this.statSystemManager.patchHudState({
+            [command.key]: hudState[command.key] + command.delta
+          });
+          this.menuManager?.showNotice(`디버그 ${command.key} ${command.delta > 0 ? "+" : ""}${command.delta}`);
+          break;
+        }
+        case "adjustStatValue":
+          this.statSystemManager?.applyStatDelta({ [command.key]: command.delta });
+          this.menuManager?.showNotice(`디버그 ${command.key} ${command.delta > 0 ? "+" : ""}${command.delta}`);
+          break;
+        case "advanceTime":
+          this.progressionManager?.debugAdvanceTime();
+          this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
+          this.menuManager?.showNotice("디버그 시간 진행");
+          break;
+        case "adjustWeek": {
+          const timeState = this.progressionManager?.getTimeState();
+          if (!timeState) {
+            break;
+          }
+          this.progressionManager?.debugPatchTimeState({
+            week: timeState.week + command.delta
+          });
+          this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
+          this.menuManager?.showNotice(`디버그 주차 ${command.delta > 0 ? "+" : ""}${command.delta}`);
+          break;
+        }
+        case "adjustActionPoint": {
+          const timeState = this.progressionManager?.getTimeState();
+          if (!timeState) {
+            break;
+          }
+          this.progressionManager?.debugPatchTimeState({
+            actionPoint: timeState.actionPoint + command.delta
+          });
+          this.menuManager?.showNotice(`디버그 행동력 ${command.delta > 0 ? "+" : ""}${command.delta}`);
+          break;
+        }
+        case "refillActionPoint": {
+          const timeState = this.progressionManager?.getTimeState();
+          if (!timeState) {
+            break;
+          }
+          this.progressionManager?.debugPatchTimeState({
+            actionPoint: timeState.maxActionPoint
+          });
+          this.menuManager?.showNotice("디버그 행동력 최대치");
+          break;
+        }
+        case "giveInventoryItem": {
+          const result = this.inventoryService?.debugGrantItem(command.templateId);
+          if (result) {
+            this.menuManager?.showNotice(result.message);
+          }
+          break;
+        }
+        case "triggerCurrentFixedEvent":
+          this.menuManager?.showNotice(
+            this.storyEventManager?.tryStartCurrentFixedEvent() ? "고정 이벤트 실행" : "실행 가능한 고정 이벤트가 없습니다"
+          );
+          break;
+        case "saveAuto":
+          if (this.saveService) {
+            this.saveService.saveSlot("auto", this.buildSavePayload());
+            this.menuManager?.showNotice("오토 세이브 완료");
+          }
           break;
       }
     });
@@ -630,6 +718,23 @@ export class MainScene extends Phaser.Scene {
       default:
         return "전체 지도";
     }
+  }
+
+  private buildDebugPanelState(): DebugPanelState {
+    const hud = this.statSystemManager?.getHudState() ?? this.statSystemManager!.getHudState();
+    const stats = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
+    const usedSlotCount = this.inventoryService?.getInventorySlots().filter((slot) => slot !== null).length ?? 0;
+    const totalSlotCount = this.inventoryService?.getInventorySlots().length ?? 0;
+
+    return {
+      currentSceneId: this.currentSceneId ?? "-",
+      currentAreaId: this.worldManager?.getCurrentAreaId(),
+      currentLocationLabel: hud.locationLabel,
+      inventoryUsageText: `${usedSlotCount}/${totalSlotCount}`,
+      fixedEventId: this.storyEventManager?.getCurrentFixedEventPresentation()?.eventId,
+      hud,
+      stats
+    };
   }
 
   private buildSavePayload(): SavePayload {

@@ -64,6 +64,7 @@ export class DebugOverlay {
       `[DEBUG KEYS]`,
       `F1 디버그 모드 ON/OFF`,
       `F2 히트박스 ON/OFF`,
+      `F3 디버그 패널`,
       `T 마우스 위치로 순간이동`,
       `M 미니게임 HUD`,
       `1 전체지도 이동`,

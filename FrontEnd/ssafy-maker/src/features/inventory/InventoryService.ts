@@ -277,6 +277,24 @@ export class InventoryService {
     return [...SHOP_ITEM_TEMPLATES];
   }
 
+  debugGrantItem(templateId: string, quantity = 1): { ok: boolean; message: string } {
+    const template = this.templateMap.get(templateId);
+    if (!template) {
+      return { ok: false, message: "존재하지 않는 아이템입니다" };
+    }
+
+    const normalizedQuantity = Math.max(1, Math.round(quantity));
+    if (!this.addItem(template, normalizedQuantity)) {
+      return { ok: false, message: "가방이 가득 차서 지급할 수 없습니다" };
+    }
+
+    this.onChange?.();
+    return {
+      ok: true,
+      message: `${template.name} x${normalizedQuantity} 지급`
+    };
+  }
+
   purchaseItem(templateId: string, hudState: HudState): InventoryPurchaseResult {
     const template = this.templateMap.get(templateId);
     if (!template) {
