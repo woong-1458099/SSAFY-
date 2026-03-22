@@ -239,6 +239,46 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
   return Object.keys(mapped).length > 0 ? mapped : undefined;
 }
 
+function validateDialogueScript(script: DialogueScript): DialogueScript {
+  if (!script.startNodeId || !script.nodes[script.startNodeId]) {
+    throw new Error(`Dialogue start node is missing: ${script.id}`);
+  }
+
+  const nodeEntries = Object.entries(script.nodes);
+  if (nodeEntries.length === 0) {
+    throw new Error(`Dialogue nodes are empty: ${script.id}`);
+  }
+
+  const referencedNodeIds = new Set<string>();
+
+  nodeEntries.forEach(([nodeId, node]) => {
+    if (node.id !== nodeId) {
+      throw new Error(`Dialogue node id mismatch: ${script.id}:${nodeId}`);
+    }
+
+    if (node.nextNodeId) {
+      referencedNodeIds.add(node.nextNodeId);
+    }
+
+    node.choices?.forEach((choice, choiceIndex) => {
+      if (!choice.id.trim()) {
+        throw new Error(`Dialogue choice id is empty: ${script.id}:${nodeId}:${choiceIndex}`);
+      }
+      if (choice.nextNodeId) {
+        referencedNodeIds.add(choice.nextNodeId);
+      }
+    });
+  });
+
+  referencedNodeIds.forEach((nodeId) => {
+    if (!script.nodes[nodeId]) {
+      throw new Error(`Dialogue references missing node: ${script.id}:${nodeId}`);
+    }
+  });
+
+  return script;
+}
+
 export function getFixedEventEntries(rawData: unknown): FixedEventEntry[] {
   if (Array.isArray(rawData)) {
     return rawData.filter((entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object"));
@@ -364,12 +404,12 @@ export function buildDialogueScriptFromFixedEventEntry(
     });
   }
 
-  return {
+  return validateDialogueScript({
     id: runtimeDialogueId,
     label: event.eventName ?? fallbackNpcLabel,
     startNodeId: "json_dialogue_1",
     nodes
-  };
+  });
 }
 
 export function buildDialogueScriptFromFixedEventJson(

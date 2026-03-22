@@ -35,4 +35,8 @@ export class DebugCommandBus {
   emit(command: DebugCommand) {
     this.listeners.forEach((listener) => listener(command));
   }
+
+  destroy() {
+    this.listeners.clear();
+  }
 }

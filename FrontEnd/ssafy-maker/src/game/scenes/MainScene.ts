@@ -85,6 +85,7 @@ export class MainScene extends Phaser.Scene {
   private areaTransitionOverlay?: AreaTransitionOverlay;
   private debugCommandBus?: DebugCommandBus;
   private debugInputController?: DebugInputController;
+  private unsubscribeDebugCommandBus?: () => void;
   private escapeKey?: Phaser.Input.Keyboard.Key;
   private plannerKey?: Phaser.Input.Keyboard.Key;
   private currentSceneId?: SceneId;
@@ -316,6 +317,9 @@ export class MainScene extends Phaser.Scene {
     this.bindDebugControls();
     this.debugInputController.bind();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.unsubscribeDebugCommandBus?.();
+      this.unsubscribeDebugCommandBus = undefined;
+      this.debugCommandBus?.destroy();
       this.debugMinigameHud?.destroy();
       this.debugPanel?.destroy();
       this.debugInputController?.destroy();
@@ -433,7 +437,8 @@ export class MainScene extends Phaser.Scene {
   }
 
   private bindDebugControls() {
-    this.debugCommandBus?.subscribe((command) => {
+    this.unsubscribeDebugCommandBus?.();
+    this.unsubscribeDebugCommandBus = this.debugCommandBus?.subscribe((command) => {
       switch (command.type) {
         case "toggleDebugOverlay":
           if (this.debugOverlay) {
@@ -535,8 +540,14 @@ export class MainScene extends Phaser.Scene {
             this.menuManager?.showNotice("오토 세이브 완료");
           }
           break;
+        default:
+          this.assertNeverDebugCommand(command);
       }
     });
+  }
+
+  private assertNeverDebugCommand(command: never): never {
+    throw new Error(`Unhandled debug command: ${JSON.stringify(command)}`);
   }
 
   private handleDebugTeleport(worldX: number, worldY: number) {
