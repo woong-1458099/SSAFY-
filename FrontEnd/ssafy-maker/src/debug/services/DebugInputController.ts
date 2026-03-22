@@ -4,6 +4,29 @@ import { SCENE_IDS } from "../../game/scripts/scenes/sceneIds";
 
 // 디버그 입력은 명령만 발행하고 실제 상태 변경은 각 책임자에게 위임한다.
 export class DebugInputController {
+  private readonly handleNumberKeyDown = (event: KeyboardEvent) => {
+    if (event.repeat) {
+      return;
+    }
+
+    const code = event.code;
+    const key = event.key;
+
+    if (code === "Digit1" || code === "Numpad1" || key === "1") {
+      this.handleSwitchWorld();
+      return;
+    }
+
+    if (code === "Digit2" || code === "Numpad2" || key === "2") {
+      this.handleSwitchDowntown();
+      return;
+    }
+
+    if (code === "Digit3" || code === "Numpad3" || key === "3") {
+      this.handleSwitchCampus();
+    }
+  };
+
   constructor(
     private scene: Phaser.Scene,
     private commandBus: DebugCommandBus
@@ -14,9 +37,7 @@ export class DebugInputController {
     this.scene.input.keyboard?.on("keydown-F2", this.handleToggleWorldGrid, this);
     this.scene.input.keyboard?.on("keydown-T", this.handleTeleportPlayer, this);
     this.scene.input.keyboard?.on("keydown-M", this.handleToggleMinigameHud, this);
-    this.scene.input.keyboard?.on("keydown-ONE", this.handleSwitchWorld, this);
-    this.scene.input.keyboard?.on("keydown-TWO", this.handleSwitchDowntown, this);
-    this.scene.input.keyboard?.on("keydown-THREE", this.handleSwitchCampus, this);
+    this.scene.input.keyboard?.on("keydown", this.handleNumberKeyDown);
   }
 
   destroy() {
@@ -24,9 +45,7 @@ export class DebugInputController {
     this.scene.input.keyboard?.off("keydown-F2", this.handleToggleWorldGrid, this);
     this.scene.input.keyboard?.off("keydown-T", this.handleTeleportPlayer, this);
     this.scene.input.keyboard?.off("keydown-M", this.handleToggleMinigameHud, this);
-    this.scene.input.keyboard?.off("keydown-ONE", this.handleSwitchWorld, this);
-    this.scene.input.keyboard?.off("keydown-TWO", this.handleSwitchDowntown, this);
-    this.scene.input.keyboard?.off("keydown-THREE", this.handleSwitchCampus, this);
+    this.scene.input.keyboard?.off("keydown", this.handleNumberKeyDown);
   }
 
   private handleToggleOverlay() {
