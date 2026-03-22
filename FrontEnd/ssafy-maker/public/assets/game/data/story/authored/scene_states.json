@@ -56,25 +56,25 @@
           "npcId": "hyewon",
           "x": 360,
           "y": 430,
-          "dialogueId": "hyewon_greeting"
+          "dialogueId": "npc_hyewon"
         },
         {
           "npcId": "sunmi",
           "x": 200,
           "y": 430,
-          "dialogueId": "campus_sunmi"
+          "dialogueId": "npc_sunmi"
         },
         {
           "npcId": "doyeon",
           "x": 270,
           "y": 430,
-          "dialogueId": "campus_doyeon"
+          "dialogueId": "npc_doyeon"
         },
         {
           "npcId": "hyunseok",
           "x": 520,
           "y": 430,
-          "dialogueId": "campus_hyunseok"
+          "dialogueId": "npc_hyunseok"
         }
       ]
     }

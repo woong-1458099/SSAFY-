@@ -109,7 +109,7 @@
       }
     },
     {
-      "id": "hyewon_greeting",
+      "id": "npc_hyewon",
       "label": "혜원 인사",
       "startNodeId": "start",
       "nodes": {
@@ -229,7 +229,7 @@
       }
     },
     {
-      "id": "campus_sunmi",
+      "id": "npc_sunmi",
       "label": "조선미 프로",
       "startNodeId": "intro",
       "nodes": {
@@ -247,7 +247,7 @@
       }
     },
     {
-      "id": "campus_doyeon",
+      "id": "npc_doyeon",
       "label": "김도연 프로",
       "startNodeId": "intro",
       "nodes": {
@@ -265,7 +265,7 @@
       }
     },
     {
-      "id": "campus_hyunseok",
+      "id": "npc_hyunseok",
       "label": "이현석 컨설턴트",
       "startNodeId": "intro",
       "nodes": {

@@ -67,6 +67,7 @@ type SceneStateNpcJson = {
 
 const AREA_ID_SET = new Set<AreaId>(["world", "downtown", "campus"]);
 export const AUTHORED_DIALOGUE_FALLBACK_ID = "authored_dialogue_missing";
+const SCENE_STATE_NPC_DIALOGUE_ID_PATTERN = /^npc_[a-z0-9_]+$/;
 
 function isAreaId(value: unknown): value is AreaId {
   return typeof value === "string" && AREA_ID_SET.has(value as AreaId);
@@ -150,6 +151,10 @@ function createMissingDialogueFallback(): DialogueScript {
   };
 }
 
+function buildExpectedSceneStateDialogueId(npcId: NpcId): string {
+  return `npc_${npcId}`;
+}
+
 function normalizeSceneStateNpc(
   entry: SceneStateNpcJson,
   sceneStateId: string,
@@ -173,6 +178,13 @@ function normalizeSceneStateNpc(
   if (!dialogueId) {
     issues.push(`[${sceneStateId}] npcs[${npcIndex}] npcId=${rawNpcId} dialogueId가 비어 있어 제외합니다.`);
     return null;
+  }
+
+  const expectedDialogueId = buildExpectedSceneStateDialogueId(rawNpcId as NpcId);
+  if (!SCENE_STATE_NPC_DIALOGUE_ID_PATTERN.test(dialogueId) || dialogueId !== expectedDialogueId) {
+    issues.push(
+      `[${sceneStateId}] npcs[${npcIndex}] npcId=${rawNpcId} dialogueId=${dialogueId} 가 규칙과 다릅니다. expected=${expectedDialogueId}`
+    );
   }
 
   return {

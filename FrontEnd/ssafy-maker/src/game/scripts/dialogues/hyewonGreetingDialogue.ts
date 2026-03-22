@@ -3,7 +3,7 @@ import { DIALOGUE_IDS } from "../../../common/enums/dialogue";
 import type { DialogueScript } from "../../../common/types/dialogue";
 
 export const HYEWON_GREETING_DIALOGUE: DialogueScript = {
-  id: DIALOGUE_IDS.hyewonGreeting,
+  id: DIALOGUE_IDS.npcHyewon,
   label: "혜원 인사",
   startNodeId: "greeting_1",
   nodes: {

@@ -9,19 +9,65 @@ const projectRoot = path.resolve(__dirname, "..");
 const dialoguesPath = path.join(projectRoot, "public/assets/game/data/story/authored/dialogues.json");
 const sceneStatesPath = path.join(projectRoot, "public/assets/game/data/story/authored/scene_states.json");
 const npcEnumPath = path.join(projectRoot, "src/common/enums/npc.ts");
+const SCENE_STATE_NPC_DIALOGUE_ID_PATTERN = /^npc_[a-z0-9_]+$/;
+
+function extractExportedObjectLiteral(source, exportName) {
+  const exportIndex = source.indexOf(`export const ${exportName}`);
+  if (exportIndex < 0) {
+    throw new Error(`${exportName} 상수를 찾지 못했습니다.`);
+  }
+
+  const braceStart = source.indexOf("{", exportIndex);
+  if (braceStart < 0) {
+    throw new Error(`${exportName} 상수의 시작 중괄호를 찾지 못했습니다.`);
+  }
+
+  let depth = 0;
+  let inString = false;
+  let stringQuote = "";
+
+  for (let index = braceStart; index < source.length; index += 1) {
+    const char = source[index];
+    const prevChar = source[index - 1];
+
+    if (inString) {
+      if (char === stringQuote && prevChar !== "\\") {
+        inString = false;
+        stringQuote = "";
+      }
+      continue;
+    }
+
+    if (char === "'" || char === "\"" || char === "`") {
+      inString = true;
+      stringQuote = char;
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(braceStart, index + 1);
+      }
+    }
+  }
+
+  throw new Error(`${exportName} 상수의 종료 중괄호를 찾지 못했습니다.`);
+}
 
 function parseNpcIds(source) {
-  const npcIds = new Set();
-  const match = source.match(/export const NPC_IDS = \{([\s\S]*?)\} as const;/);
-  if (!match) {
+  const objectLiteral = extractExportedObjectLiteral(source, "NPC_IDS");
+  const parsed = Function(`"use strict"; return (${objectLiteral});`)();
+  if (!parsed || typeof parsed !== "object") {
     throw new Error("NPC_IDS 상수를 npc.ts에서 찾지 못했습니다.");
   }
 
-  for (const valueMatch of match[1].matchAll(/:\s*"([^"]+)"/g)) {
-    npcIds.add(valueMatch[1]);
-  }
-
-  return npcIds;
+  return new Set(Object.values(parsed).filter((value) => typeof value === "string"));
 }
 
 function ensureArray(value) {
@@ -70,6 +116,13 @@ async function main() {
       if (!dialogueId) {
         issues.push(`[${sceneStateId}] npcs[${index}] npcId=${npcId || "(empty)"} dialogueId가 비어 있습니다.`);
         continue;
+      }
+
+      const expectedDialogueId = npcId ? `npc_${npcId}` : "";
+      if (!SCENE_STATE_NPC_DIALOGUE_ID_PATTERN.test(dialogueId) || (expectedDialogueId && dialogueId !== expectedDialogueId)) {
+        issues.push(
+          `[${sceneStateId}] npcs[${index}] npcId=${npcId || "(empty)"} dialogueId=${dialogueId} 는 규칙과 다릅니다. expected=${expectedDialogueId || "npc_<npcId>"}`
+        );
       }
 
       if (!dialogueIds.has(dialogueId)) {
