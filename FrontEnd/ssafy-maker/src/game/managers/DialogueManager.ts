@@ -11,12 +11,11 @@ import type {
 import {
   isDialogueCurrencyStatKey,
   isRuntimeDialogueId,
-  isStaticDialogueId,
   toDialogueCurrencyHudKey
 } from "../../common/types/dialogue";
 import type { DialogueBox } from "../../features/ui/components/DialogueBox";
 import type { HudState, PlayerStatKey } from "../state/gameState";
-import { DIALOGUE_REGISTRY } from "../scripts/dialogues/dialogueRegistry";
+import { resolveRegisteredDialogue } from "../scripts/dialogues/dialogueRegistry";
 
 type DialogueRuntimeHooks = {
   getMetricValue?: (stat: DialogueStatKey) => number;
@@ -172,11 +171,7 @@ export class DialogueManager {
       return this.runtimeDialogueScripts[normalizedDialogueId] ?? null;
     }
 
-    if (isStaticDialogueId(normalizedDialogueId)) {
-      return DIALOGUE_REGISTRY[normalizedDialogueId] ?? null;
-    }
-
-    return null;
+    return resolveRegisteredDialogue(normalizedDialogueId);
   }
 
   private waitForAdvance() {

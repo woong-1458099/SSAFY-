@@ -18,7 +18,8 @@
 - Phaser 씬 클래스 등록은 `src/app/registry/sceneRegistry.ts`에서 관리한다.
 - 시작 씬/scene script 해석은 `src/game/scripts/scenes/`에서 관리한다.
 - 미니게임 추가 시 `src/app/registry/sceneRegistry.ts`, `src/features/minigame/minigameCatalog.ts`, `src/features/minigame/minigameSceneKeys.ts`, `src/game/scenes/legacyMinigames` 연결 지점을 반드시 함께 확인한다.
-- NPC 대화 스크립트 로딩은 `src/features/story/jsonDialogueAdapter.ts`를 통해 수행하며, 동적 대화 데이터는 `MainScene`의 `runtimeDialogueScripts`에서 관리한다.
+- 고정 이벤트 JSON 대화는 `src/features/story/jsonDialogueAdapter.ts`를 통해 수행하며, 동적 대화 데이터는 `MainScene`의 `runtimeDialogueScripts`에서 관리한다.
+- authored NPC 대사와 기본 scene state 배치는 `public/assets/game/data/story/authored/*.json`을 `src/infra/story/authoredStoryRepository.ts`로 hydrate한다.
 - 외부 연동은 가능하면 `src/infra`를 통해 수행한다.
 - 씬 종료 시 이벤트 리스너, 타이머, 비동기 후속 처리를 반드시 정리한다.
 - API 응답 필드는 항상 부분 누락 가능성을 고려한다.
@@ -40,7 +41,7 @@
 - 이벤트 리스너 중복 등록 가능성이 있는가
 - 타이머, interval, delayedCall 정리가 되는가
 - 신규 미니게임의 경우 `sceneRegistry.ts`, `minigameCatalog.ts`, `minigameSceneKeys.ts`, 씬 연결 지점이 함께 갱신되었는가?
-- JSON 기반 대화 데이터가 어댑터를 통해 올바르게 주입되고, 런타임 ID 검증이 있는가?
+- JSON 기반 대화/scene state 데이터가 로더와 어댑터를 통해 올바르게 주입되고, 런타임 ID 검증이 있는가?
 - API 실패, null, 필드 누락 처리가 있는가
 - 기존 registry 또는 구조 규칙을 깨지 않는가
 - 기능이 `game`, `features`, `common`, `infra`, `debug` 책임을 침범하지 않는가

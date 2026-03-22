@@ -1,11 +1,12 @@
 // 대화 스크립트와 대화 매니저가 함께 사용하는 공통 대화 타입 정의
-import { DIALOGUE_IDS, type DialogueId } from "../enums/dialogue";
+import type { DialogueId } from "../enums/dialogue";
 
 export type DialogueBaseStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
 export type DialogueCurrencyStatKey = "gold" | "money";
 export type DialogueStatKey = DialogueBaseStatKey | "hp" | DialogueCurrencyStatKey;
+export type StaticDialogueId = string & { readonly __staticDialogueId: unique symbol };
 export type RuntimeDialogueId = string & { readonly __runtimeDialogueId: unique symbol };
-export type DialogueScriptId = DialogueId | RuntimeDialogueId;
+export type DialogueScriptId = DialogueId | StaticDialogueId | RuntimeDialogueId;
 export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
 export type DialogueAction =
   | "openShop"
@@ -54,8 +55,6 @@ export type DialogueScript = {
 };
 
 const RUNTIME_DIALOGUE_ID_PREFIX = "runtime:";
-const STATIC_DIALOGUE_ID_SET = new Set<string>(Object.values(DIALOGUE_IDS));
-
 export function isDialogueCurrencyStatKey(stat: DialogueStatKey): stat is DialogueCurrencyStatKey {
   return stat === "gold" || stat === "money";
 }
@@ -64,8 +63,8 @@ export function toDialogueCurrencyHudKey(stat: DialogueCurrencyStatKey): "money"
   return "money";
 }
 
-export function isStaticDialogueId(value: string): value is DialogueId {
-  return STATIC_DIALOGUE_ID_SET.has(value);
+export function isStaticDialogueId(value: string): value is DialogueId | StaticDialogueId {
+  return !isRuntimeDialogueId(value) && value.trim().length > 0;
 }
 
 export function isRuntimeDialogueId(value: string): value is RuntimeDialogueId {

@@ -8,14 +8,16 @@
 - `src/game/scenes`: 공통 씬 계층과 메인 흐름
 - `src/game/scenes/legacyMinigames`: 레거시 및 개별 미니게임 로직
 - `src/features`: 기능 단위 구현 (Minigame, Story, Inventory 등)
-- `src/features/story`: NPC 대화 스크립트 및 JSON 어댑터 로직
+- `src/features/story`: authored/fixed-event story 어댑터 로직
 - `src/infra`: API, 저장, 외부 서비스 연동
+- `public/assets/game/data/story`: authored dialogue, scene state, fixed event JSON 자산
 
 ## Important Anchors
 - Phaser scene registry: `src/app/registry/sceneRegistry.ts`
 - Scene script registry / start scene resolution: `src/game/scripts/scenes/sceneRegistry.ts`
 - Minigame Catalog: `src/features/minigame/minigameCatalog.ts`
 - JSON Dialogue Adapter: `src/features/story/jsonDialogueAdapter.ts`
+- Authored Story Loader: `src/infra/story/authoredStoryRepository.ts`
 - App bootstrap: `src/app`
 - Shared scene layer: `src/game/scenes`
 - Main orchestration scene: `src/game/scenes/MainScene.ts`

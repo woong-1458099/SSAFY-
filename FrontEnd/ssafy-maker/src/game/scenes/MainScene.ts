@@ -1,7 +1,7 @@
 // 씬 조립만 담당하고 디버그 오버레이에도 render bounds를 연결한다.
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
-import { DIALOGUE_IDS, type DialogueId } from "../../common/enums/dialogue";
+import { DIALOGUE_IDS } from "../../common/enums/dialogue";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
 import { DebugPanel } from "../../debug/overlay/DebugPanel";
 import { DebugMinigameHud } from "../../debug/overlay/DebugMinigameHud";
@@ -20,6 +20,7 @@ import { launchMinigame, openMinigameMenu } from "../../features/minigame/Miniga
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
 import { GameHud } from "../../features/ui/components/GameHud";
+import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
 import { getStaticPlaceDefinitions } from "../definitions/places/placeDefinitions";
@@ -61,6 +62,7 @@ import {
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
   private static readonly PENDING_RESTORE_PAYLOAD_KEY = "pendingRestorePayload";
+  private initialized = false;
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
   private debugPanel?: DebugPanel;
@@ -97,6 +99,8 @@ export class MainScene extends Phaser.Scene {
   }
 
   async create() {
+    this.initialized = false;
+    await ensureAuthoredStoryLoaded();
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
     this.debugInputController = new DebugInputController(this, this.debugCommandBus, (command) => {
@@ -113,6 +117,10 @@ export class MainScene extends Phaser.Scene {
         command.type === "toggleDebugPanel"
       ) {
         return true;
+      }
+
+      if (command.type === "switchStartScene") {
+        return !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying;
       }
 
       if (command.type === "toggleMinigameHud") {
@@ -356,10 +364,16 @@ export class MainScene extends Phaser.Scene {
       this.hud?.destroy();
     });
 
+    this.initialized = true;
+
     await director.run(runtimeSceneScript);
   }
 
   update() {
+    if (!this.initialized) {
+      return;
+    }
+
     if (
       !this.worldManager ||
       !this.playerManager ||
@@ -436,6 +450,7 @@ export class MainScene extends Phaser.Scene {
 
     this.playerManager.update(runtimeGrids, parsedMap);
     this.interactionManager.update();
+    this.debugInputController?.update();
     if (this.worldGridOverlay) {
       this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
     }
@@ -606,18 +621,38 @@ export class MainScene extends Phaser.Scene {
   }
 
   private restartWithScene(sceneId: SceneId) {
-    this.registry.set("startSceneId", sceneId);
+    if (!this.prepareSceneRestart(sceneId, { preservePendingStartTile: true })) {
+      return;
+    }
     this.scene.restart();
   }
 
   private restartWithDebugScene(sceneId: SceneId) {
-    const nextSceneScript = getSceneScript(sceneId);
-    if (!nextSceneScript) {
+    if (!this.prepareSceneRestart(sceneId, { preservePendingStartTile: false })) {
       return;
     }
 
+    this.debugLogger?.log(`debug:switch-scene:${sceneId}`);
+    this.scene.restart();
+  }
+
+  private prepareSceneRestart(
+    sceneId: SceneId,
+    options: {
+      preservePendingStartTile: boolean;
+    }
+  ): boolean {
+    const nextSceneScript = getSceneScript(sceneId);
+    if (!nextSceneScript) {
+      return false;
+    }
+
     const payload = this.buildSavePayload();
-    this.registry.remove(MainScene.PENDING_START_TILE_KEY);
+
+    if (!options.preservePendingStartTile) {
+      this.registry.remove(MainScene.PENDING_START_TILE_KEY);
+    }
+
     this.registry.set(MainScene.PENDING_RESTORE_PAYLOAD_KEY, {
       ...payload,
       world: {
@@ -629,8 +664,8 @@ export class MainScene extends Phaser.Scene {
       }
     });
     this.registry.set("startSceneId", sceneId);
-    this.debugLogger?.log(`debug:switch-scene:${sceneId}`);
-    this.scene.restart();
+
+    return true;
   }
 
   private handleAreaTransition(transitionId: AreaTransitionId) {
@@ -751,13 +786,21 @@ export class MainScene extends Phaser.Scene {
       return [];
     }
 
-    return getStaticPlaceDefinitions(areaId).map((place) => ({
-      id: place.id,
-      label: place.label,
-      dialogueId: place.dialogueId!,
-      x: renderBounds.offsetX + (place.zone.x + place.zone.width / 2) * renderBounds.scale,
-      y: renderBounds.offsetY + (place.zone.y + place.zone.height / 2) * renderBounds.scale
-    }));
+    return getStaticPlaceDefinitions(areaId).map((place) => {
+      const interactionZone = place.interactionZone ?? place.zone;
+
+      return {
+        id: place.id,
+        label: place.label,
+        dialogueId: place.dialogueId!,
+        x: renderBounds.offsetX + (interactionZone.x + interactionZone.width / 2) * renderBounds.scale,
+        y: renderBounds.offsetY + (interactionZone.y + interactionZone.height / 2) * renderBounds.scale,
+        zoneX: renderBounds.offsetX + interactionZone.x * renderBounds.scale,
+        zoneY: renderBounds.offsetY + interactionZone.y * renderBounds.scale,
+        zoneWidth: interactionZone.width * renderBounds.scale,
+        zoneHeight: interactionZone.height * renderBounds.scale
+      };
+    });
   }
 
   private getAreaLabel(areaId: AreaId): string {
@@ -859,7 +902,7 @@ export class MainScene extends Phaser.Scene {
         x: npc.x,
         y: npc.y,
         facing: npc.facing,
-        dialogueId: (dialogueIdByNpcId.get(npc.id) ?? fallbackDialogueId) as DialogueId
+        dialogueId: dialogueIdByNpcId.get(npc.id) ?? fallbackDialogueId
       }))
     });
   }

@@ -14,14 +14,16 @@
 - "맵에 서 있는 NPC"는 주로 `scene state`에서 초기 배치된다.
 - "컷신처럼 순차 실행되는 연출"은 `scene script`의 액션 배열에서 실행된다.
 - NPC와 대화는 분리되어 있다.
-  - 배치: `src/game/definitions/sceneStates/*`
+  - 배치 원본: `public/assets/game/data/story/authored/scene_states.json`
   - 컷신 액션: `src/game/scripts/scenes/*`
-  - 대화 내용: `src/game/scripts/dialogues/*`
-  - 실제 대화 등록: `src/game/scripts/dialogues/dialogueRegistry.ts`
+  - 대화 원본: `public/assets/game/data/story/authored/dialogues.json`
+  - authored JSON 로드: `src/infra/story/authoredStoryRepository.ts`
+  - 실제 대화 등록 버퍼: `src/game/scripts/dialogues/dialogueRegistry.ts`
 - 상호작용 진입점은 `InteractionManager`다.
   - NPC 대화
   - area transition
   - static place 대화
+- 집 행동, 카페/편의점/헬스장 같은 장소 수치와 문구는 `src/game/definitions/places/placeActionDefinitions.ts`에서 관리한다.
 
 ## 디버그 툴 사용법
 
@@ -32,9 +34,9 @@
 - `F3`: 디버그 패널 표시/숨김
 - `T`: 현재 마우스 월드 위치로 플레이어 순간이동
 - `M`: 미니게임 디버그 HUD 토글
-- `1`: 시작 씬을 `scene_world_default`로 바꾸고 재시작
-- `2`: 시작 씬을 `scene_downtown_default`로 바꾸고 재시작
-- `3`: 시작 씬을 `scene_campus_default`로 바꾸고 재시작
+- `1` 또는 `NumPad 1`: 시작 씬을 `scene_world_default`로 바꾸고 재시작
+- `2` 또는 `NumPad 2`: 시작 씬을 `scene_downtown_default`로 바꾸고 재시작
+- `3` 또는 `NumPad 3`: 시작 씬을 `scene_campus_default`로 바꾸고 재시작
 
 오버레이에서 바로 확인 가능한 정보:
 
@@ -136,27 +138,28 @@ const action = { type: "wait", duration: 500 };
 
 ## 중요한 제약
 
-- 현재 `NpcId`는 `minsu`, `hyewon`, `hyunseok`만 정의되어 있다.
+- 현재 `NpcId`는 `minsu`, `hyewon`, `hyunseok`, `hyoryeon`, `jiwoo`, `jongmin`, `myungjin`, `yeonwoong`, `doyeon`, `sunmi`가 정의되어 있다.
 - 새로운 NPC를 추가하려면 최소한 아래를 같이 수정해야 한다.
   - `src/common/enums/npc.ts`
   - `src/game/definitions/npcs/npcDefinitions.ts`
   - 필요 시 NPC 에셋 카탈로그와 실제 이미지
 - 맵에서 대화 가능한 NPC는 `SceneState.npcs`에 있어야 한다.
 - 컷신 액션에서 `moveNpc`를 쓰려면 그 NPC가 먼저 spawn 되어 있어야 한다.
-- `dialogueId`는 `src/common/enums/dialogue.ts`와 `src/game/scripts/dialogues/dialogueRegistry.ts`에 맞아야 한다.
-- authored 대화는 `src/common/enums/dialogue.ts`와 `src/game/scripts/dialogues/dialogueRegistry.ts`를 따른다. 단, 고정 이벤트 JSON은 `src/features/story/jsonDialogueAdapter.ts`와 `StoryEventManager`를 통해 런타임 대화 ID로 주입된다.
-- 현재 `DialogueManager`는 방향키/W/S, 숫자키, Enter/Space로 선택지를 고를 수 있다. 숫자키 `1/2/3/4`는 대화 중 디버그 씬 전환보다 선택 입력이 우선되도록 막혀 있다.
+- `dialogueId`는 authored JSON 또는 런타임 대화 ID와 맞아야 한다.
+- authored 대화는 `public/assets/game/data/story/authored/dialogues.json`에서 관리되고, 고정 이벤트 JSON은 `src/features/story/jsonDialogueAdapter.ts`와 `StoryEventManager`를 통해 런타임 대화 ID로 주입된다.
+- 현재 `DialogueManager`는 방향키/W/S, 숫자키, Enter/Space로 선택지를 고를 수 있다. 디버그 씬 전환도 `1/2/3`를 함께 사용하지만, 대화/메뉴 중에는 `MainScene` guard가 먼저 막아서 선택 입력과 직접 충돌하지 않게 한다.
 
 ## 작업 위치 빠른 안내
 
 작업 목표별 수정 위치:
 
-- 캠퍼스/번화가/월드에 기본 NPC 배치 추가: `src/game/definitions/sceneStates/*`
+- 캠퍼스/번화가/월드에 기본 NPC 배치 추가: `public/assets/game/data/story/authored/scene_states.json`
 - 새 컷신 스크립트 추가: `src/game/scripts/scenes/*`
 - 컷신 등록: `src/game/scripts/scenes/sceneRegistry.ts`
-- 새 대화 스크립트 추가: `src/game/scripts/dialogues/*`
-- 대화 등록: `src/game/scripts/dialogues/dialogueRegistry.ts`
+- 새 대화 스크립트 추가: `public/assets/game/data/story/authored/dialogues.json`
+- authored JSON 로드 경로: `src/infra/story/authoredStoryRepository.ts`
 - 지역 전환 위치 수정: `src/game/definitions/places/areaTransitionDefinitions.ts`
+- 집/카페/장소 행동 수치 수정: `src/game/definitions/places/placeActionDefinitions.ts`
 - 지역 TMX/레이어 계약 수정: `src/game/definitions/areas/areaDefinitions.ts`
 
 ## AI에게 바로 먹일 프롬프트 템플릿
