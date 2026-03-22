@@ -7,10 +7,28 @@ type DebugBinding = {
   handler: (event: KeyboardEvent) => void;
 };
 
+const DEBUG_CAPTURE_KEY_CODES = [
+  Phaser.Input.Keyboard.KeyCodes.F1,
+  Phaser.Input.Keyboard.KeyCodes.F2,
+  Phaser.Input.Keyboard.KeyCodes.F3,
+  Phaser.Input.Keyboard.KeyCodes.T,
+  Phaser.Input.Keyboard.KeyCodes.M
+];
+
+type SceneSwitchKeys = {
+  world?: Phaser.Input.Keyboard.Key;
+  worldNumpad?: Phaser.Input.Keyboard.Key;
+  downtown?: Phaser.Input.Keyboard.Key;
+  downtownNumpad?: Phaser.Input.Keyboard.Key;
+  campus?: Phaser.Input.Keyboard.Key;
+  campusNumpad?: Phaser.Input.Keyboard.Key;
+};
+
 // 디버그 입력은 명령만 발행하고 실제 상태 변경은 각 책임자에게 위임한다.
 export class DebugInputController {
   private readonly keyboard?: Phaser.Input.Keyboard.KeyboardPlugin;
   private bindings: DebugBinding[] = [];
+  private sceneSwitchKeys: SceneSwitchKeys = {};
   private bound = false;
   private destroyed = false;
 
@@ -20,6 +38,7 @@ export class DebugInputController {
     private canHandleCommand: (command: DebugCommand) => boolean = () => true
   ) {
     this.keyboard = scene.input.keyboard;
+    this.sceneSwitchKeys = this.createSceneSwitchKeys();
   }
 
   bind() {
@@ -28,6 +47,7 @@ export class DebugInputController {
     }
 
     this.bound = true;
+    this.keyboard.addCapture(DEBUG_CAPTURE_KEY_CODES);
     this.bindings = [
       this.register("keydown-F1", (event) => {
         this.emitIfAllowed({ type: "toggleDebugOverlay" }, event);
@@ -48,26 +68,28 @@ export class DebugInputController {
       }),
       this.register("keydown-M", (event) => {
         this.emitIfAllowed({ type: "toggleMinigameHud" }, event);
-      }),
-      this.register("keydown-ONE", (event) => {
-        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.worldDefault }, event);
-      }),
-      this.register("keydown-NUMPAD_ONE", (event) => {
-        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.worldDefault }, event);
-      }),
-      this.register("keydown-TWO", (event) => {
-        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.downtownDefault }, event);
-      }),
-      this.register("keydown-NUMPAD_TWO", (event) => {
-        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.downtownDefault }, event);
-      }),
-      this.register("keydown-THREE", (event) => {
-        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.campusDefault }, event);
-      }),
-      this.register("keydown-NUMPAD_THREE", (event) => {
-        this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.campusDefault }, event);
       })
     ];
+  }
+
+  update() {
+    if (!this.bound || this.destroyed) {
+      return;
+    }
+
+    if (this.justPressed(this.sceneSwitchKeys.world) || this.justPressed(this.sceneSwitchKeys.worldNumpad)) {
+      this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.worldDefault });
+      return;
+    }
+
+    if (this.justPressed(this.sceneSwitchKeys.downtown) || this.justPressed(this.sceneSwitchKeys.downtownNumpad)) {
+      this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.downtownDefault });
+      return;
+    }
+
+    if (this.justPressed(this.sceneSwitchKeys.campus) || this.justPressed(this.sceneSwitchKeys.campusNumpad)) {
+      this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.campusDefault });
+    }
   }
 
   destroy() {
@@ -80,7 +102,15 @@ export class DebugInputController {
     this.bindings.forEach(({ eventName, handler }) => {
       this.keyboard?.off(eventName, handler, this);
     });
+    this.keyboard?.removeCapture(DEBUG_CAPTURE_KEY_CODES);
+    Object.values(this.sceneSwitchKeys).forEach((key) => {
+      if (key) {
+        key.reset();
+        this.keyboard?.removeKey(key, false, false);
+      }
+    });
     this.bindings = [];
+    this.sceneSwitchKeys = {};
   }
 
   private register(eventName: string, listener: (event: KeyboardEvent) => void): DebugBinding {
@@ -101,12 +131,29 @@ export class DebugInputController {
     event.stopPropagation();
   }
 
-  private emitIfAllowed(command: DebugCommand, event: KeyboardEvent): void {
+  private emitIfAllowed(command: DebugCommand, event?: KeyboardEvent): void {
     if (!this.canHandleCommand(command)) {
       return;
     }
 
-    this.consume(event);
+    if (event) {
+      this.consume(event);
+    }
     this.commandBus.emit(command);
+  }
+
+  private justPressed(key?: Phaser.Input.Keyboard.Key): boolean {
+    return Boolean(key && Phaser.Input.Keyboard.JustDown(key));
+  }
+
+  private createSceneSwitchKeys(): SceneSwitchKeys {
+    return {
+      world: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ONE, false),
+      worldNumpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE, false),
+      downtown: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.TWO, false),
+      downtownNumpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO, false),
+      campus: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.THREE, false),
+      campusNumpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE, false)
+    };
   }
 }

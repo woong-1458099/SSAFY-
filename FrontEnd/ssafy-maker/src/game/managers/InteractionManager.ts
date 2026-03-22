@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import type { AreaId, PlaceId } from "../../common/enums/area";
-import type { DialogueId } from "../../common/enums/dialogue";
 import type { NpcId } from "../../common/enums/npc";
+import type { DialogueScriptId } from "../../common/types/dialogue";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import type { DebugEventLogger } from "../../debug/services/DebugEventLogger";
 import type { GameHud } from "../../features/ui/components/GameHud";
@@ -14,10 +14,16 @@ import type { PlayerManager } from "./PlayerManager";
 export type RuntimeStaticPlaceTarget = {
   id: PlaceId;
   label: string;
-  dialogueId: DialogueId;
+  dialogueId: DialogueScriptId;
   x: number;
   y: number;
+  zoneX: number;
+  zoneY: number;
+  zoneWidth: number;
+  zoneHeight: number;
 };
+
+const PLACE_INTERACTION_PADDING = 24;
 
 export class InteractionManager {
   private scene: Phaser.Scene;
@@ -221,9 +227,12 @@ export class InteractionManager {
     }
 
     for (const place of this.currentStaticPlaceTargets) {
-      const distance = Phaser.Math.Distance.Between(player.x, player.y, place.x, place.y);
+      const minX = place.zoneX - PLACE_INTERACTION_PADDING;
+      const maxX = place.zoneX + place.zoneWidth + PLACE_INTERACTION_PADDING;
+      const minY = place.zoneY - PLACE_INTERACTION_PADDING;
+      const maxY = place.zoneY + place.zoneHeight + PLACE_INTERACTION_PADDING;
 
-      if (distance <= 110) {
+      if (player.x >= minX && player.x <= maxX && player.y >= minY && player.y <= maxY) {
         return place.id;
       }
     }
