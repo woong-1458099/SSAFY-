@@ -33,6 +33,15 @@ function finalizeAuthBootstrap(state: AuthBootstrapState): AuthBootstrapState {
   return state;
 }
 
+function buildUnauthenticatedState(source: AuthBootstrapSource, error?: string): AuthBootstrapState {
+  return finalizeAuthBootstrap({
+    authenticated: false,
+    session: null,
+    source,
+    ...(error ? { error } : {})
+  });
+}
+
 export async function initializeAuthGateway(): Promise<AuthBootstrapState> {
   if (authBootstrapPromise) {
     return authBootstrapPromise;
@@ -69,17 +78,12 @@ export async function initializeAuthGateway(): Promise<AuthBootstrapState> {
 
       clearPendingAuthRedirect();
       clearStoredSession();
-      return finalizeAuthBootstrap(DEFAULT_AUTH_BOOTSTRAP_STATE);
+      return buildUnauthenticatedState("none");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       clearPendingAuthRedirect();
       clearStoredSession();
-      return finalizeAuthBootstrap({
-        authenticated: false,
-        session: null,
-        source: "error",
-        error: message
-      });
+      return buildUnauthenticatedState("error", message);
     }
   })();
 

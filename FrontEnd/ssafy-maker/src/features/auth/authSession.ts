@@ -21,6 +21,11 @@ function cleanupCallbackUrl(): void {
   window.history.replaceState({}, document.title, url.toString());
 }
 
+function clearAuthClientState(): void {
+  clearPendingAuthRedirect();
+  clearStoredSession();
+}
+
 function readPendingRedirectState(): string | null {
   try {
     return window.sessionStorage.getItem(AUTH_REDIRECT_PENDING_KEY);
@@ -183,13 +188,20 @@ export async function completeAuthIfPresent(): Promise<AuthSession | null> {
     authResult
   });
 
-  if (authResult !== "success") {
+  if (authResult == null) {
     return null;
+  }
+
+  if (authResult !== "success") {
+    cleanupCallbackUrl();
+    clearAuthClientState();
+    throw new Error(`Authentication callback failed: ${authResult}`);
   }
 
   const session = await fetchBackendSession();
   cleanupCallbackUrl();
   if (!session.authenticated || !session.user) {
+    clearAuthClientState();
     throw new Error("Authentication failed");
   }
 
@@ -213,6 +225,7 @@ export async function fetchExistingSession(): Promise<AuthSession | null> {
     }
     return session;
   } catch {
+    clearStoredSession();
     return null;
   }
 }

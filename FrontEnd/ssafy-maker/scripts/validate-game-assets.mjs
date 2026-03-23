@@ -9,6 +9,7 @@ const projectRoot = path.resolve(__dirname, "..");
 const srcRoot = path.join(projectRoot, "src");
 const publicRoot = path.join(projectRoot, "public");
 const assetRoot = path.join(publicRoot, "assets", "game");
+const assetKeysPath = path.join(projectRoot, "src", "common", "assets", "assetKeys.ts");
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 const MODULE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
@@ -335,11 +336,108 @@ function getLineNumber(sourceFile, node) {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
 }
 
+function getPropertyNameText(name) {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+
+  return null;
+}
+
+function collectObjectLeafEntries(expression, prefix = []) {
+  const unwrapped = unwrapExpression(expression);
+
+  if (ts.isStringLiteral(unwrapped) || ts.isNoSubstitutionTemplateLiteral(unwrapped)) {
+    return [{
+      chain: prefix.join("."),
+      value: unwrapped.text
+    }];
+  }
+
+  if (!ts.isObjectLiteralExpression(unwrapped)) {
+    return [];
+  }
+
+  return unwrapped.properties.flatMap((property) => {
+    if (!ts.isPropertyAssignment(property)) {
+      return [];
+    }
+
+    const propertyName = getPropertyNameText(property.name);
+    if (!propertyName) {
+      return [];
+    }
+
+    return collectObjectLeafEntries(property.initializer, [...prefix, propertyName]);
+  });
+}
+
+function collectExportedObjectLeafEntries(filePath, exportName) {
+  const sourceFile = readSourceFile(filePath);
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) {
+      continue;
+    }
+
+    const isExported = statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
+    if (!isExported) {
+      continue;
+    }
+
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportName || !declaration.initializer) {
+        continue;
+      }
+
+      return collectObjectLeafEntries(declaration.initializer);
+    }
+  }
+
+  return [];
+}
+
+function collectDuplicateValues(entries) {
+  const valuesByEntry = new Map();
+
+  entries.forEach((entry) => {
+    const bucket = valuesByEntry.get(entry.value) ?? [];
+    bucket.push(entry.chain);
+    valuesByEntry.set(entry.value, bucket);
+  });
+
+  return [...valuesByEntry.entries()]
+    .filter(([, chains]) => chains.length > 1)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([value, chains]) => ({ value, chains }));
+}
+
+function collectPropertyAccessReference(node) {
+  const segments = [];
+  let current = node;
+
+  while (ts.isPropertyAccessExpression(current)) {
+    segments.unshift(current.name.text);
+    current = current.expression;
+  }
+
+  if (!ts.isIdentifier(current)) {
+    return null;
+  }
+
+  return {
+    root: current.text,
+    chain: segments.join(".")
+  };
+}
+
 function collectAssetReferences(filePath) {
   const sourceFile = readSourceFile(filePath);
   const initialEnv = buildInitialEnvironment(filePath, sourceFile);
   const references = [];
   const issues = [];
+  const assetKeyReferences = [];
+  const assetPathReferences = [];
 
   function visit(node, env) {
     if (ts.isVariableStatement(node)) {
@@ -403,23 +501,59 @@ function collectAssetReferences(filePath) {
       }
     }
 
+    if (ts.isPropertyAccessExpression(node)) {
+      const parent = node.parent;
+      if (ts.isPropertyAccessExpression(parent) && parent.expression === node) {
+        ts.forEachChild(node, (child) => visit(child, env));
+        return;
+      }
+
+      const reference = collectPropertyAccessReference(node);
+      if (reference?.root === "ASSET_KEYS" && reference.chain.length > 0) {
+        assetKeyReferences.push({
+          chain: reference.chain,
+          filePath,
+          line: getLineNumber(sourceFile, node)
+        });
+      }
+
+      if (reference?.root === "ASSET_PATHS" && reference.chain.length > 0) {
+        assetPathReferences.push({
+          chain: reference.chain,
+          filePath,
+          line: getLineNumber(sourceFile, node)
+        });
+      }
+    }
+
     ts.forEachChild(node, (child) => visit(child, env));
   }
 
   visit(sourceFile, initialEnv);
-  return { references, issues };
+  return { references, issues, assetKeyReferences, assetPathReferences };
 }
 
 function main() {
   const sourceFiles = walkFiles(srcRoot);
   const allReferences = [];
   const issues = [];
+  const allAssetKeyReferences = [];
+  const allAssetPathReferences = [];
 
   sourceFiles.forEach((filePath) => {
-    const { references, issues: fileIssues } = collectAssetReferences(filePath);
+    const { references, issues: fileIssues, assetKeyReferences, assetPathReferences } = collectAssetReferences(filePath);
     allReferences.push(...references);
     issues.push(...fileIssues);
+    if (filePath !== assetKeysPath) {
+      allAssetKeyReferences.push(...assetKeyReferences);
+      allAssetPathReferences.push(...assetPathReferences);
+    }
   });
+
+  const assetKeyEntries = collectExportedObjectLeafEntries(assetKeysPath, "ASSET_KEYS");
+  const assetPathEntries = collectExportedObjectLeafEntries(assetKeysPath, "ASSET_PATHS");
+  const assetKeyChainSet = new Set(assetKeyEntries.map((entry) => entry.chain));
+  const assetPathChainSet = new Set(assetPathEntries.map((entry) => entry.chain));
 
   const uniqueReferences = new Map();
   allReferences.forEach((reference) => {
@@ -438,6 +572,48 @@ function main() {
       }
     });
 
+  collectDuplicateValues(assetKeyEntries).forEach(({ value, chains }) => {
+    issues.push(`[validate:game-assets] Duplicate ASSET_KEYS value "${value}" declared by: ${chains.join(", ")}`);
+  });
+
+  collectDuplicateValues(assetPathEntries).forEach(({ value, chains }) => {
+    issues.push(`[validate:game-assets] Duplicate ASSET_PATHS value "${value}" declared by: ${chains.join(", ")}`);
+  });
+
+  assetPathEntries.forEach((entry) => {
+    const publicAssetPath = path.join(publicRoot, ...entry.value.split("/"));
+    if (!fs.existsSync(publicAssetPath)) {
+      issues.push(`[validate:game-assets] Missing asset file for ASSET_PATHS.${entry.chain}: ${entry.value}`);
+    }
+  });
+
+  allAssetKeyReferences.forEach((reference) => {
+    if (!assetKeyChainSet.has(reference.chain)) {
+      issues.push(
+        `[validate:game-assets] Undefined ASSET_KEYS reference ${reference.chain} at ${toProjectRelative(reference.filePath)}:${reference.line}`
+      );
+    }
+  });
+
+  allAssetPathReferences.forEach((reference) => {
+    if (!assetPathChainSet.has(reference.chain)) {
+      issues.push(
+        `[validate:game-assets] Undefined ASSET_PATHS reference ${reference.chain} at ${toProjectRelative(reference.filePath)}:${reference.line}`
+      );
+    }
+  });
+
+  const referencedAssetKeys = new Set(allAssetKeyReferences.map((reference) => reference.chain));
+  const referencedAssetPaths = new Set(allAssetPathReferences.map((reference) => reference.chain));
+  const unusedAssetKeys = assetKeyEntries
+    .map((entry) => entry.chain)
+    .filter((chain) => !referencedAssetKeys.has(chain))
+    .sort();
+  const unusedAssetPaths = assetPathEntries
+    .map((entry) => entry.chain)
+    .filter((chain) => !referencedAssetPaths.has(chain))
+    .sort();
+
   if (issues.length > 0) {
     console.error("[validate:game-assets] failed");
     issues.forEach((issue) => console.error(`- ${issue}`));
@@ -449,6 +625,10 @@ function main() {
   console.log(`- asset root: ${toProjectRelative(assetRoot)}`);
   console.log(`- source files scanned: ${sourceFiles.length}`);
   console.log(`- asset references validated: ${uniqueReferences.size}`);
+  console.log(`- ASSET_KEYS definitions: ${assetKeyEntries.length}`);
+  console.log(`- ASSET_PATHS definitions: ${assetPathEntries.length}`);
+  console.log(`- unused ASSET_KEYS: ${unusedAssetKeys.length > 0 ? unusedAssetKeys.join(", ") : "none"}`);
+  console.log(`- unused ASSET_PATHS: ${unusedAssetPaths.length > 0 ? unusedAssetPaths.join(", ") : "none"}`);
 }
 
 main();
