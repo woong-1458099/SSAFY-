@@ -1,5 +1,1 @@
-export const GAME_ASSET_ROOT = "assets/game" as const;
-
-export function buildGameAssetPath(...segments: string[]): string {
-  return [GAME_ASSET_ROOT, ...segments].join("/");
-}
+export { GAME_ASSET_ROOT, buildGameAssetPath } from "../../common/assets/gameAssetPath";
