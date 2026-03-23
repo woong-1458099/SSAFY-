@@ -34,6 +34,7 @@ type ProgressionManagerOptions = {
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
   onNotice?: (message: string) => void;
+  onStartEndingFlow?: () => void;
 };
 
 export class ProgressionManager {
@@ -43,6 +44,7 @@ export class ProgressionManager {
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   private readonly getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
   private readonly onNotice?: (message: string) => void;
+  private readonly onStartEndingFlow?: () => void;
 
   private timeState: TimeState = createDefaultTimeState();
   private weeklyPlan: WeeklyPlanOptionId[] = createDefaultWeeklyPlan();
@@ -51,6 +53,7 @@ export class ProgressionManager {
   private pendingWeeklySalaryWeek: number | null = null;
   private plannerRoot?: Phaser.GameObjects.Container;
   private salaryRoot?: Phaser.GameObjects.Container;
+  private endingFlowStarted = false;
 
   constructor(options: ProgressionManagerOptions) {
     this.scene = options.scene;
@@ -59,6 +62,7 @@ export class ProgressionManager {
     this.applyStatDelta = options.applyStatDelta;
     this.getFixedEventSlots = options.getFixedEventSlots;
     this.onNotice = options.onNotice;
+    this.onStartEndingFlow = options.onStartEndingFlow;
   }
 
   initialize(): void {
@@ -91,6 +95,9 @@ export class ProgressionManager {
   }
 
   processAutomaticFlow(): boolean {
+    if (this.endingFlowStarted) {
+      return false;
+    }
     this.grantWeeklySalaryIfDue();
     if (this.pendingWeeklySalaryWeek !== null) {
       this.openSalaryModal();
@@ -121,6 +128,9 @@ export class ProgressionManager {
     }
 
     this.grantWeeklySalaryIfDue();
+    if (result.shouldStartEndingAfterUpdate) {
+      this.requestEndingFlow();
+    }
     return true;
   }
 
@@ -137,6 +147,9 @@ export class ProgressionManager {
     }
 
     this.grantWeeklySalaryIfDue();
+    if (result.shouldStartEndingAfterUpdate) {
+      this.requestEndingFlow();
+    }
   }
 
   debugPatchTimeState(next: Partial<TimeState>): void {
@@ -169,7 +182,19 @@ export class ProgressionManager {
     };
 
     this.pendingWeeklySalaryWeek = null;
+    this.endingFlowStarted = false;
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
+  }
+
+  private requestEndingFlow(): void {
+    if (this.endingFlowStarted) {
+      return;
+    }
+
+    this.endingFlowStarted = true;
+    this.closeSalaryModal();
+    this.closePlanner();
+    this.onStartEndingFlow?.();
   }
 
   togglePlanner(): void {

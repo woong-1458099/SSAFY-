@@ -100,7 +100,7 @@ export class DialogueManager {
           if (this.destroyed) {
             break;
           }
-          const selectedChoice = currentNode.choices[selectedIndex] ?? currentNode.choices[0];
+          const selectedChoice: DialogueChoice | undefined = currentNode.choices[selectedIndex] ?? currentNode.choices[0];
           if (selectedChoice && !this.isChoiceAvailable(selectedChoice)) {
             const requirementText = this.getRequirementText(selectedChoice);
             this.onNotice?.(

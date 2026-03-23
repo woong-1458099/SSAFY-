@@ -3,7 +3,7 @@ import type { DebugPanelState } from "../types/debugTypes";
 import type { DebugCommandBus } from "../services/DebugCommandBus";
 import { UI_DEPTH } from "../../game/systems/uiDepth";
 
-type PanelPage = "stats" | "story";
+type PanelPage = "stats" | "story" | "ending";
 
 type ButtonPreset = {
   label: string;
@@ -173,6 +173,7 @@ export class DebugPanel {
   private readonly tabEntries: TabEntry[];
   private readonly statsButtonEntries: ButtonEntry[];
   private readonly storyButtonEntries: ButtonEntry[];
+  private readonly endingButtonEntries: ButtonEntry[];
   private readonly statsStateCard: CardEntry;
   private readonly statsHelpCard: CardEntry;
   private readonly statsButtonsCard: CardEntry;
@@ -181,6 +182,9 @@ export class DebugPanel {
   private readonly storyDetailCard: CardEntry;
   private readonly storyChoicesCard: CardEntry;
   private readonly storyControlCard: CardEntry;
+  private readonly endingPreviewCard: CardEntry;
+  private readonly endingDetailCard: CardEntry;
+  private readonly endingButtonsCard: CardEntry;
   private readonly allCards: CardEntry[];
   private readonly handleResize: () => void;
   private readonly handleWheel: (
@@ -229,6 +233,7 @@ export class DebugPanel {
     this.tabEntries = this.createTabEntries();
     this.statsButtonEntries = this.createButtonEntries(this.getStatsButtonPresets());
     this.storyButtonEntries = this.createButtonEntries(this.getStoryButtonPresets());
+    this.endingButtonEntries = this.createButtonEntries(this.getEndingButtonPresets());
     this.statsStateCard = createCard(scene, "현재 상태");
     this.statsHelpCard = createCard(scene, "조작");
     this.statsButtonsCard = createCard(scene, "버튼");
@@ -237,6 +242,9 @@ export class DebugPanel {
     this.storyDetailCard = createCard(scene, "이벤트 설명 / 조건");
     this.storyChoicesCard = createCard(scene, "선택지 요약");
     this.storyControlCard = createCard(scene, "조작");
+    this.endingPreviewCard = createCard(scene, "현재 엔딩 후보");
+    this.endingDetailCard = createCard(scene, "엔딩 정보");
+    this.endingButtonsCard = createCard(scene, "엔딩 실행");
     this.allCards = [
       this.statsStateCard,
       this.statsHelpCard,
@@ -245,7 +253,10 @@ export class DebugPanel {
       this.storyListCard,
       this.storyDetailCard,
       this.storyChoicesCard,
-      this.storyControlCard
+      this.storyControlCard,
+      this.endingPreviewCard,
+      this.endingDetailCard,
+      this.endingButtonsCard
     ];
 
     this.root = scene.add.container(0, 0, [
@@ -256,6 +267,7 @@ export class DebugPanel {
       ...this.allCards.flatMap((card) => [card.background, card.title, card.body, card.maskShape]),
       ...this.statsButtonEntries.flatMap((entry) => [entry.shadow, entry.rect, entry.text]),
       ...this.storyButtonEntries.flatMap((entry) => [entry.shadow, entry.rect, entry.text]),
+      ...this.endingButtonEntries.flatMap((entry) => [entry.shadow, entry.rect, entry.text]),
       this.footer,
       this.footerCloseShadow,
       this.footerCloseRect,
@@ -302,11 +314,14 @@ export class DebugPanel {
 
     this.renderStatsState(state);
     this.renderStoryState(state);
+    this.renderEndingState(state);
     this.layout();
     this.footer.setText(
       this.page === "stats"
         ? "F3 패널 토글 | 상단 탭에서 스토리 디버그 페이지로 전환"
-        : "스토리 디버그 | 카드 안에서 마우스 휠로 스크롤 가능"
+        : this.page === "story"
+          ? "스토리 디버그 | 카드 안에서 마우스 휠로 스크롤 가능"
+          : "엔딩 디버그 | 현재 스탯 기준 또는 프리셋으로 바로 엔딩 확인"
     );
   }
 
@@ -350,7 +365,8 @@ export class DebugPanel {
   private createTabEntries(): TabEntry[] {
     return ([
       { page: "stats", label: "기본 디버그" },
-      { page: "story", label: "스토리 디버그" }
+      { page: "story", label: "스토리 디버그" },
+      { page: "ending", label: "엔딩 디버그" }
     ] as const).map(({ page, label }) => {
       const shadow = this.scene.add.rectangle(0, 0, 1, 1, 0x000000, 0.55);
       const rect = this.scene.add.rectangle(0, 0, TAB_WIDTH, TAB_HEIGHT, 0x17303b, 1);
@@ -438,6 +454,18 @@ export class DebugPanel {
       { label: "초기화 실행", row: 3, col: 1, width: 136, onClick: () => this.emitSelectedEventCommand("runFixedEvent", true) },
       { label: "선택 초기화", row: 4, col: 0, width: 136, onClick: () => this.resetSelectedEventCompletion() },
       { label: "주차 초기화", row: 4, col: 1, width: 136, onClick: () => this.resetSelectedWeekCompletions() }
+    ];
+  }
+
+  private getEndingButtonPresets(): ButtonPreset[] {
+    return [
+      { label: "현재 스탯 엔딩", row: 0, col: 0, width: 130, onClick: () => this.commandBus.emit({ type: "startEndingFlow" }) },
+      { label: "FE 엔딩", row: 0, col: 1, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "frontend-developer" }) },
+      { label: "BE 엔딩", row: 0, col: 2, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "backend-developer" }) },
+      { label: "협업 엔딩", row: 1, col: 0, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "team-player" }) },
+      { label: "체력 엔딩", row: 1, col: 1, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "stamina-survivor" }) },
+      { label: "운 엔딩", row: 1, col: 2, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "lucky-break" }) },
+      { label: "프론트 리더", row: 2, col: 0, width: 130, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "frontend-leader" }) }
     ];
   }
 
@@ -553,6 +581,41 @@ export class DebugPanel {
     ]);
   }
 
+  private renderEndingState(state: DebugPanelState): void {
+    this.setCardText(this.endingPreviewCard, [
+      `엔딩 ID: ${state.endingDebug.endingId}`,
+      `제목: ${state.endingDebug.title}`,
+      "",
+      state.endingDebug.shortDescription,
+      "",
+      `키워드: ${state.endingDebug.dominantLabels.join(" / ")}`,
+      "",
+      ...state.endingDebug.summaryStats.map((stat) => `- ${stat.label}: ${stat.value}`)
+    ]);
+
+    this.setCardText(this.endingDetailCard, [
+      "인트로 라인",
+      "",
+      ...state.endingDebug.introLines,
+      "",
+      "NPC 한마디",
+      state.endingDebug.npcLine,
+      "",
+      "안내",
+      "- 현재 스탯 엔딩: 지금 상태로 바로 Completion부터 진입",
+      "- 프리셋 버튼: 특정 엔딩이 나오도록 수치 고정 후 바로 진입",
+      "- 실제 6주차까지 진행하지 않아도 연출 확인 가능"
+    ]);
+
+    this.setCardText(this.endingButtonsCard, [
+      "실행 버튼",
+      "",
+      "- 현재 스탯 기준 결과 확인",
+      "- FE / BE / 협업 / 체력 / 운 엔딩 확인",
+      "- 프론트 리더 특수 분기 확인"
+    ]);
+  }
+
   private setCardText(card: CardEntry, lines: string[]): void {
     const nextText = lines.join("\n");
     if (card.body.text === nextText) {
@@ -567,18 +630,24 @@ export class DebugPanel {
 
   private updatePageVisibility(): void {
     const statsVisible = this.page === "stats";
+    const storyVisible = this.page === "story";
+    const endingVisible = this.page === "ending";
 
     this.setCardVisibility(this.statsStateCard, statsVisible);
     this.setCardVisibility(this.statsHelpCard, statsVisible);
     this.setCardVisibility(this.statsButtonsCard, statsVisible);
-    this.setCardVisibility(this.storySummaryCard, !statsVisible);
-    this.setCardVisibility(this.storyListCard, !statsVisible);
-    this.setCardVisibility(this.storyDetailCard, !statsVisible);
-    this.setCardVisibility(this.storyChoicesCard, !statsVisible);
-    this.setCardVisibility(this.storyControlCard, !statsVisible);
+    this.setCardVisibility(this.storySummaryCard, storyVisible);
+    this.setCardVisibility(this.storyListCard, storyVisible);
+    this.setCardVisibility(this.storyDetailCard, storyVisible);
+    this.setCardVisibility(this.storyChoicesCard, storyVisible);
+    this.setCardVisibility(this.storyControlCard, storyVisible);
+    this.setCardVisibility(this.endingPreviewCard, endingVisible);
+    this.setCardVisibility(this.endingDetailCard, endingVisible);
+    this.setCardVisibility(this.endingButtonsCard, endingVisible);
 
     this.setButtonVisibility(this.statsButtonEntries, statsVisible);
-    this.setButtonVisibility(this.storyButtonEntries, !statsVisible);
+    this.setButtonVisibility(this.storyButtonEntries, storyVisible);
+    this.setButtonVisibility(this.endingButtonEntries, endingVisible);
     this.updateTabStyles();
   }
 
@@ -784,6 +853,9 @@ export class DebugPanel {
     this.layoutCard(this.storyDetailCard, layout.storyDetail);
     this.layoutCard(this.storyChoicesCard, layout.storyChoices);
     this.layoutCard(this.storyControlCard, layout.storyControl);
+    this.layoutCard(this.endingPreviewCard, layout.statsState);
+    this.layoutCard(this.endingDetailCard, layout.statsHelp);
+    this.layoutCard(this.endingButtonsCard, layout.statsButtons);
 
     this.layoutButtonGrid(this.statsButtonEntries, this.statsButtonsCard, layout.statsButtons, {
       columns: 3,
@@ -791,6 +863,10 @@ export class DebugPanel {
     });
     this.layoutButtonGrid(this.storyButtonEntries, this.storyControlCard, layout.storyControl, {
       columns: 2,
+      mode: "preset"
+    });
+    this.layoutButtonGrid(this.endingButtonEntries, this.endingButtonsCard, layout.statsButtons, {
+      columns: 3,
       mode: "preset"
     });
   }
@@ -915,6 +991,9 @@ export class DebugPanel {
     const storyChoicesLeft = storyDetailLeft + storyMiddleWidth + PANEL_INNER_GAP;
     const storyControlLeft = storyChoicesLeft + storyMiddleWidth + PANEL_INNER_GAP;
 
+    const tabGapX = TAB_WIDTH + 14;
+    const tabGroupWidth = TAB_WIDTH + tabGapX * Math.max(this.tabEntries.length - 1, 0);
+
     return {
       centerX,
       centerY,
@@ -924,9 +1003,9 @@ export class DebugPanel {
       panelTop,
       titleX: panelLeft + PANEL_PADDING + 8,
       titleY: panelTop + PANEL_PADDING + 4,
-      tabStartX: panelLeft + panelWidth - 308,
+      tabStartX: panelLeft + panelWidth - PANEL_PADDING - tabGroupWidth + TAB_WIDTH / 2,
       tabY: panelTop + PANEL_PADDING + 6,
-      tabGapX: 150,
+      tabGapX,
       footerX: panelLeft + PANEL_PADDING + 8,
       footerY: footerTop + PANEL_FOOTER_HEIGHT / 2 - 6,
       footerCloseX: panelLeft + panelWidth - PANEL_PADDING - 56,

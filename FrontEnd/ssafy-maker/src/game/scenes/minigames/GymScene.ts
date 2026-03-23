@@ -4,6 +4,7 @@ import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { LEGACY_GYM_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 import {
   LEGACY_GYM_EXERCISES,
   LEGACY_GYM_MAX_REPS,
@@ -28,7 +29,7 @@ export default class GymScene extends Phaser.Scene {
   private completedRewardText = null;
   private rewardEmitted = false;
 
-  constructor() { super({ key: 'GymScene' }); }
+  constructor() { super({ key: LEGACY_GYM_SCENE_KEY }); }
 
   init(data) {
     this.returnSceneKey = data?.returnSceneKey || 'main';
@@ -392,7 +393,7 @@ export default class GymScene extends Phaser.Scene {
 
   emitRewardIfNeeded() {
     if (!this.completedRewardText || this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'GymScene', rewardText: this.completedRewardText });
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: this.completedRewardText });
     this.rewardEmitted = true;
   }
 }

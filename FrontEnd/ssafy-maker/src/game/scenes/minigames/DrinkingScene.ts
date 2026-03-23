@@ -4,6 +4,10 @@ import { installMinigamePause } from './installMinigamePause';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
+  LEGACY_DRINKING_SCENE_KEY,
+  LEGACY_MINIGAME_MENU_SCENE_KEY
+} from '@features/minigame/minigameSceneKeys';
+import {
   LEGACY_DRINKING_ASSET_KEYS,
   LEGACY_DRINKING_NPCS,
   LEGACY_DRINKING_PERFECT_RANGE,
@@ -42,15 +46,15 @@ export default class DrinkingScene extends Phaser.Scene {
   private npcChatTxt!: Phaser.GameObjects.Text;
   private bubbleBg!: Phaser.GameObjects.Graphics;
 
-  private returnSceneKey: string = 'MenuScene';
+  private returnSceneKey: string = LEGACY_MINIGAME_MENU_SCENE_KEY;
   private rewardEmitted = false;
 
   constructor() {
-    super({ key: 'DrinkingScene' });
+    super({ key: LEGACY_DRINKING_SCENE_KEY });
   }
 
   init(data: any) {
-    this.returnSceneKey = data?.returnSceneKey || 'MenuScene';
+    this.returnSceneKey = data?.returnSceneKey || LEGACY_MINIGAME_MENU_SCENE_KEY;
   }
 
   preload() {
@@ -232,7 +236,7 @@ export default class DrinkingScene extends Phaser.Scene {
 
   emitRewardIfNeeded() {
     if (this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'DrinkingScene', rewardText: 'STRESS -20 GP +10' });
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: 'STRESS -20 GP +10' });
     this.rewardEmitted = true;
   }
 }

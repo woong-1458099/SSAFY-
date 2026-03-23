@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
 
 type MiniGameData = {
   returnSceneKey?: string;
@@ -20,7 +21,7 @@ export class MiniGameReflexScene extends Phaser.Scene {
   private finished = false;
 
   constructor() {
-    super("MiniGameReflexScene");
+    super(EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY);
   }
 
   create(data: MiniGameData = {}): void {
@@ -117,7 +118,7 @@ export class MiniGameReflexScene extends Phaser.Scene {
   }
 
   private returnToMain(): void {
-    this.scene.stop("MiniGameReflexScene");
+    this.scene.stop(EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY);
     if (this.scene.isPaused(this.returnSceneKey)) {
       this.scene.resume(this.returnSceneKey);
       return;

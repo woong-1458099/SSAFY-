@@ -18,7 +18,10 @@ export type AdvanceTimeResult = {
   next: TimeState;
   hudPatch: Partial<HudState>;
   dayPassed: boolean;
+  shouldStartEndingAfterUpdate: boolean;
 };
+
+const DEFAULT_ENDING_WEEK = 6;
 
 export function createDefaultTimeState(): TimeState {
   return {
@@ -48,13 +51,19 @@ export function advanceTime(timeState: TimeState): AdvanceTimeResult {
   let nextWeek = timeState.week;
   let nextAvailableActionPoint = nextActionPoint;
   let dayPassed = false;
+  let shouldStartEndingAfterUpdate = false;
 
   if (nextTimeCycleIndex === 0) {
     dayPassed = true;
     nextAvailableActionPoint = timeState.maxActionPoint;
     nextDayCycleIndex = (timeState.dayCycleIndex + 1) % DAY_CYCLE.length;
     if (nextDayCycleIndex === 0) {
-      nextWeek += 1;
+      const candidateWeek = timeState.week + 1;
+      if (candidateWeek > DEFAULT_ENDING_WEEK) {
+        shouldStartEndingAfterUpdate = true;
+      } else {
+        nextWeek = candidateWeek;
+      }
     }
   }
 
@@ -69,6 +78,7 @@ export function advanceTime(timeState: TimeState): AdvanceTimeResult {
   return {
     next,
     hudPatch: buildHudPatchFromTimeState(next),
-    dayPassed
+    dayPassed,
+    shouldStartEndingAfterUpdate
   };
 }
