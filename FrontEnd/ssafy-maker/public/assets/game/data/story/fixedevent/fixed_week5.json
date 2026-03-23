@@ -1,300 +1,396 @@
-{
-  "dialogues": [
-    {
-      "id": "EVT_MAIN_W4_D1_AFTERNOON_HEALTH",
-      "label": "거북목과 손목 터널",
-      "startNodeId": "health_n1",
-      "nodes": {
-        "health_n1": {
-          "id": "health_n1",
-          "speaker": "SYSTEM",
-          "text": "하루 종일 모니터만 봤더니 목이 뻣뻣하고 손목이 시큰거린다. 동기들도 하나 둘씩 파스를 붙이고 있다. 개발자의 숙명인가…? 생존 아이템이 필요할지도 모르겠다.",
-          "choices": [
-            {
-              "id": "health_c1",
-              "text": "\"돈도 없는데 무슨... 기세로 버티자.\" 목을 우두둑 꺾고 다시 키보드를 잡는다.",
-              "actionType": "NORMAL",
-              "statChanges": { "hp": -15, "stress": 10 },
-              "nextNodeId": "health_c1_res1"
-            },
-            {
-              "id": "health_c2",
-              "text": "🔒 [재화 30,000] “원래 개발은 템빨” 로켓배송으로 인체공학 마우스와 노트북 거치대를 풀세트로 지른다.",
-              "actionType": "LOCKED",
-              "requirements": [{ "stat": "gold", "min": 30000, "label": "재화 30000 이상" }],
-              "lockedReason": "장비를 구매할 재화가 부족합니다.",
-              "statChanges": { "gold": -30000, "hp": 20 },
-              "nextNodeId": "health_c2_res1"
-            },
-            {
-              "id": "health_c3",
-              "text": "🔒 [체력 80] 잠시 강의장을 나와 벽에 기대어 전신 스트레칭을 하며 요가 마스터가 된다.",
-              "actionType": "LOCKED",
-              "requirements": [{ "stat": "hp", "min": 80, "label": "체력(HP) 80 이상" }],
-              "lockedReason": "스트레칭을 할 최소한의 기력조차 없습니다.",
-              "statChanges": { "hp": 20, "stress": -20 },
-              "nextNodeId": "health_c3_res1"
-            },
-            {
-              "id": "health_c4",
-              "text": "🤪 [사교 70] 그러고보니 효련이가 마사지건 같은 걸 들고 있던데… \"아플 땐 물리 치료다.\" 커피를 뇌물로 마사지건을 빌린다.",
-              "actionType": "MADNESS",
-              "requirements": [{ "stat": "teamwork", "min": 70, "label": "사교 70 이상" }],
-              "lockedReason": "마사지건을 빌릴 만큼 친하지 않습니다.",
-              "statChanges": { "gold": -2000, "hp": 15 },
-              "nextNodeId": "health_c4_res1"
-            }
-          ]
-        },
-        "health_c1_res1": {
-          "id": "health_c1_res1",
-          "speaker": "PLAYER",
-          "speakerId": "PLAYER",
-          "text": "\"(우두둑!) 으으... 시원하다. 역시 스트레칭이 최... 으악!\"",
-          "nextNodeId": "health_c1_res2"
-        },
-        "health_c1_res2": {
-          "id": "health_c1_res2",
-          "speaker": "SYSTEM",
-          "text": "(일시적인 시원함이 찾아왔지만, 이내 손목과 목줄기에 찌릿한 통증이 스친다. 미래의 내가 현재의 나를 원망할 것 같다...)"
-        },
-        "health_c2_res1": {
-          "id": "health_c2_res1",
-          "speaker": "PLAYER",
-          "speakerId": "PLAYER",
-          "text": "\"3만원 아낄 바에 손목 지켜야지. 결제 진행시켜.\"",
-          "nextNodeId": "health_c2_res2"
-        },
-        "health_c2_res2": {
-          "id": "health_c2_res2",
-          "speaker": "SYSTEM",
-          "text": "(며칠간은 쪼들리겠지만 마음은 편안하다! 내일부터는 새삥 마우스로 코딩해야지~)"
-        },
-        "health_c3_res1": {
-          "id": "health_c3_res1",
-          "speaker": "김도연 프로",
-          "speakerId": "NPC_PRO_DOYEON",
-          "emotion": "FLUSTERED",
-          "text": "\"어... {playerName}님, 복도에서 기우제 지내시나요...?\"",
-          "nextNodeId": "health_c3_res2"
-        },
-        "health_c3_res2": {
-          "id": "health_c3_res2",
-          "speaker": "PLAYER",
-          "speakerId": "PLAYER",
-          "text": "\"아, 도연 프로님! 승모근에 평화를 찾고 있었습니다... (머쓱)\"",
-          "nextNodeId": "health_c3_res3"
-        },
-        "health_c3_res3": {
-          "id": "health_c3_res3",
-          "speaker": "SYSTEM",
-          "text": "(지나가던 프로님과 눈이 마주쳐 살짝 민망했지만, 돌덩이 같던 승모근이 사르르 풀리며 뇌에 산소가 도는 기분이다.)"
-        },
-        "health_c4_res1": {
-          "id": "health_c4_res1",
-          "speaker": "효련",
-          "speakerId": "NPC_CLASSMATE_HYORYEON",
-          "emotion": "SMILE",
-          "text": "\"시원하냐? 내일 커피는 아이스 아메리카노 사이즈업으로 부탁한다.\"",
-          "nextNodeId": "health_c4_res2"
-        },
-        "health_c4_res2": {
-          "id": "health_c4_res2",
-          "speaker": "SYSTEM",
-          "text": "(덜덜덜덜덜덜. 마사지건 소리가 뇌를 울릴 때마다 굳어있던 승모근이 조금씩 풀린다.)"
-        }
-      }
+[
+  {
+    "eventId": "EVT_MAIN_W5_D1_BREAKTIME",
+    "eventName": "폭풍이 지나간 자리",
+    "eventType": "FIXED",
+    "triggerTiming": {
+      "week": 5,
+      "day": 1,
+      "timeOfDay": "오전"
     },
-    {
-      "id": "EVT_MAIN_W4_D3_MORNING_SPEED",
-      "label": "코드의 속도",
-      "startNodeId": "speed_n1",
-      "nodes": {
-        "speed_n1": {
-          "id": "speed_n1",
-          "speaker": "SYSTEM",
-          "text": "내 코드가 자꾸 시간 초과로 터진다. 컨설턴트님이 팩트를 꽂는다.",
-          "nextNodeId": "speed_n2"
-        },
-        "speed_n2": {
-          "id": "speed_n2",
-          "speaker": "이현석 컨설턴트",
-          "speakerId": "NPC_CONSULTANT_HYUNSEOK",
-          "emotion": "SERIOUS",
-          "text": "\"코드 실행 속도가 이거 완전 달구지 같네요…\"",
-          "choices": [
+    "location": "캠퍼스",
+    "isRepeatable": false,
+    "dialogues": [
+      {
+        "speakerId": "SYSTEM",
+        "text": "“제출 시간 종료되었습니다. 다들 수고하셨습니다.”\n\n강사님의 말이 끝나자마자 실습장 곳곳에서 곡소리와 깊은 한숨이 터져 나온다. 역량 테스트가 드디어 끝났다.\n\n하지만 안타깝게도 오늘은 금요일이 아니다. 꿀 같은 15분의 쉬는 시간이 지나면, 곧바로 오후 정규 실습이 우리를 기다리고 있다. 남은 쉬는 시간 동안 나는 뭘 할까?"
+      }
+    ],
+    "choices": [
+      {
+        "choiceId": 1,
+        "actionType": "NORMAL",
+        "condition": null,
+        "text": "\"하얗게 불태웠어...\" 어젯밤 벼락치기로 잃어버린 수면을 보충하기 위해 책상에 엎드려 기절한다.",
+        "result": {
+          "statChanges": {
+            "hp": 20,
+            "stress": -10
+          },
+          "feedbackDialogues": [
             {
-              "id": "speed_c1",
-              "text": "\"그러게요... 왜 이렇게 느릴까요 ㅠㅠ...\"",
-              "actionType": "NORMAL",
-              "statChanges": { "stress": 10, "fe": 3, "be": 2 },
-              "nextNodeId": "speed_c1_res1"
+              "speakerId": "PLAYER",
+              "text": "\"하얗게 불태웠어... 내장 메모리까지 싹 다 쓴 기분이야...\""
             },
             {
-              "id": "speed_c2",
-              "text": "🔒 [FE 45 / BE 45] \"지금 이중 루프 빼고 투 포인터로 달구지에 모터 다는 중입니다.\"",
-              "actionType": "LOCKED",
-              "requirements": [
-                { "stat": "fe", "min": 45, "label": "프론트엔드 45 이상" },
-                { "stat": "be", "min": 45, "label": "백엔드 45 이상" }
-              ],
-              "lockedReason": "투 포인터 알고리즘을 구현할 실력이 부족합니다.",
-              "statChanges": { "fe": 8, "be": 7, "stress": -10 },
-              "nextNodeId": "speed_c2_res1"
-            },
-            {
-              "id": "speed_c3",
-              "text": "🔒 [운 45] (변명을 하려는 찰나, 갑자기 실습장 전체의 와이파이가 끊기며 에러 창이 뜬다!)",
-              "actionType": "LOCKED",
-              "requirements": [{ "stat": "luck", "min": 45, "label": "운빨 45 이상" }],
-              "lockedReason": "기적의 타이밍을 잡지 못했습니다.",
-              "statChanges": { "luck": 15, "hp": 5 },
-              "nextNodeId": "speed_c3_res1"
-            },
-            {
-              "id": "speed_c4",
-              "text": "🤪 [광기] \"컨설턴트님, O(N^3)은 미학입니다. 배열의 모든 데이터를 다정하게 쓰다듬는 제 감수성이 안 느껴지시나요?\"",
-              "actionType": "MADNESS",
-              "statChanges": { "stress": -15 },
-              "nextNodeId": "speed_c4_res1"
+              "speakerId": "SYSTEM",
+              "text": "(10분 꿀잠으로 오후를 버틸 체력을 아주 조금 회복했다. 입가에 침이 흐른 건 비밀이다.)"
             }
           ]
+        }
+      },
+      {
+        "choiceId": 2,
+        "actionType": "LOCKED",
+        "condition": {
+          "social": 60
         },
-        "speed_c1_res1": {
-          "id": "speed_c1_res1",
-          "speaker": "이현석 컨설턴트",
-          "speakerId": "NPC_CONSULTANT_HYUNSEOK",
-          "emotion": "TIRED",
-          "text": "\"for문 안에 for문을 넣고 거기에 또 for문을 넣으셨잖아요. 이건 달구지가 아니라 수레를 직접 끌고 가는 수준입니다. 한숨 쉴 시간에 저랑 로직부터 다시 짜봅시다.\""
+        "text": "🔒 [사교 60] 삼삼오오 모여있는 동기들 자리로 다가간다.",
+        "result": {
+          "statChanges": {
+            "social": 10,
+            "stress": 15,
+            "code": 5
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"얘들아 방금 2번 문제 말이야...\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_JIWOO",
+              "speakerName": "지우",
+              "emotion": "URGENT",
+              "text": "\"저기, 그거 다익스트라로 푸는 거 맞나요?!\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(나만 예외 처리를 안 했다는 사실을 깨닫고 스트레스가 확 올랐지만, 다 같이 망했다는 사실에 묘한 전우애가 생겼다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 3,
+        "actionType": "LOCKED",
+        "condition": {
+          "code": 70
         },
-        "speed_c2_res1": {
-          "id": "speed_c2_res1",
-          "speaker": "이현석 컨설턴트",
-          "speakerId": "NPC_CONSULTANT_HYUNSEOK",
-          "emotion": "SMILE",
-          "text": "\"오, 병목 구간을 정확히 파악하셨네요. 투 포인터 인덱스 조건만 조금 더 다듬으면 F1도 가능하겠어요. 방향 좋으니까 계속 진행하세요.\""
+        "text": "🔒 [코딩 70] \"과거에 얽매이지 않는다.\" 방금 끝난 시험은 잊어버리고, 당장 오후에 있을 프레임워크 수업 교재를 미리 예습한다.",
+        "result": {
+          "statChanges": {
+            "code": 15,
+            "hp": -10
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"과거에 얽매이지 않는다. 다음은 프레임워크다.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(주변 동기들이 존경 반 경악 반의 눈빛으로 쳐다보지만, 오후 실습 준비는 완벽하다. 나는 멈추지 않는 폭주 기관차다.)"
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 4,
+        "actionType": "LOCKED",
+        "condition": {
+          "luck": 50
         },
-        "speed_c3_res1": {
-          "id": "speed_c3_res1",
-          "speaker": "이현석 컨설턴트",
-          "speakerId": "NPC_CONSULTANT_HYUNSEOK",
-          "emotion": "FLUSTERED",
-          "text": "\"아니, 이건 건물 공유기 문젠데... 하아, 타이밍 참. 일단 네트워크 복구될 때까지 전원 10분 휴식합시다. 코드는 이따 다시 보죠.\""
-        },
-        "speed_c4_res1": {
-          "id": "speed_c4_res1",
-          "speaker": "이현석 컨설턴트",
-          "speakerId": "NPC_CONSULTANT_HYUNSEOK",
-          "emotion": "SPEECHLESS",
-          "text": "\"{playerName}님의 따뜻한 마음이 채점 서버도 불태워버리네요...\""
+        "text": "🔒 [운빨 50] 혹시나 하는 마음에 테스트 코드를 다시 머릿속으로 굴려본다. '아... 아까 시간 없어서 대충 찍다시피 낸 엣지 케이스 조건, 설마 정답인가?'",
+        "result": {
+          "statChanges": {
+            "luck": 15,
+            "stress": -20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"잠깐... 아까 시간 없어서 대충 찍다시피 낸 엣지 케이스 조건, 설마 정답인가?\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(단톡방을 보니 내가 무지성으로 찍은 그 조건이 히든 테케(Hidden Testcase)의 핵심이었다! 갑자기 세상을 다 가진 기분이다.)"
+            }
+          ]
         }
       }
+    ]
+  },
+  {
+    "eventId": "EVT_ROMANCE_MINSU_W5_D2_RECURSION",
+    "eventName": "재귀함수의 굴레",
+    "eventType": "FIXED",
+    "triggerTiming": {
+      "week": 5,
+      "day": 2,
+      "timeOfDay": "오후"
     },
-    {
-      "id": "EVT_MAIN_W4_D5_MORNING_MOCKTEST",
-      "label": "모의고사 멘붕",
-      "startNodeId": "mock_n1",
-      "nodes": {
-        "mock_n1": {
-          "id": "mock_n1",
-          "speaker": "SYSTEM",
-          "text": "다음 주 있을 역량 테스트를 대비해 모의고사를 보는데 배열 인덱스를 자꾸 벗어나 IndexError가 뜬다. 남은 시간은 10분.",
-          "choices": [
+    "location": "캠퍼스",
+    "isRepeatable": false,
+    "dialogues": [
+      {
+        "speakerId": "SYSTEM",
+        "text": "재귀함수(Recursion) 개념이 등장했다. \"함수 안에서 자기를 또 부른다고?\" 머릿속에 인셉션이 펼쳐진다."
+      },
+      {
+        "speakerId": "NPC_CLASSMATE_MINSU",
+        "emotion": "NORMAL",
+        "text": "\"스택 메모리 터지기 딱 좋은 뇌 상태시네요.\""
+      },
+      {
+        "speakerId": "SYSTEM",
+        "text": "(민수가 팩트를 날린다.)"
+      }
+    ],
+    "choices": [
+      {
+        "choiceId": 1,
+        "actionType": "NORMAL",
+        "condition": null,
+        "text": "\"어... 일단 강사님이 치는 거 그대로 쳐볼게...\"",
+        "result": {
+          "statChanges": {
+            "stress": 15,
+            "code": 5
+          },
+          "feedbackDialogues": [
             {
-              "id": "mock_c1",
-              "text": "멘붕에 빠져 try-except로 에러를 다 무시하게 하드코딩한다.",
-              "actionType": "NORMAL",
-              "statChanges": { "stress": 25, "fe": -3, "be": -2 },
-              "nextNodeId": "mock_c1_res1"
+              "speakerId": "PLAYER",
+              "text": "\"어... 일단 강사님이 치는 거 그대로 쳐볼게...\""
             },
             {
-              "id": "mock_c2",
-              "text": "🔒 [FE 75 / BE 75] 심호흡을 하고 dx, dy 델타 배열 위치를 침착하게 수정한다.",
-              "actionType": "LOCKED",
-              "requirements": [
-                { "stat": "fe", "min": 75, "label": "프론트엔드 75 이상" },
-                { "stat": "be", "min": 75, "label": "백엔드 75 이상" }
-              ],
-              "lockedReason": "델타 탐색을 활용할 코딩 지식이 부족합니다.",
-              "statChanges": { "fe": 15, "be": 15, "stress": -20 },
-              "nextNodeId": "mock_c2_res1"
+              "speakerId": "SYSTEM",
+              "text": "(이해하지 못한 채 손가락만 기계적으로 움직인다.)"
             },
             {
-              "id": "mock_c3",
-              "text": "🔒 [운빨 80] if문 8개로 무식하게 때려 박았는데 기적적으로 테스트 케이스를 통과했다.",
-              "actionType": "LOCKED",
-              "requirements": [{ "stat": "luck", "min": 80, "label": "운빨 80 이상" }],
-              "lockedReason": "무식한 코드가 우연히 정답일 확률이 매우 낮습니다.",
-              "statChanges": { "luck": 30, "fe": 5, "be": 5 },
-              "nextNodeId": "mock_c3_res1"
-            },
-            {
-              "id": "mock_c4",
-              "text": "🤪 [광기] 주석으로 채점자에게 살려달라고 장문의 편지를 쓴다.",
-              "actionType": "MADNESS",
-              "statChanges": { "stress": 10 },
-              "nextNodeId": "mock_c4_res1"
+              "speakerId": "PLAYER",
+              "text": "\"이게 진짜 도움이 되는 걸까...\""
             }
           ]
+        }
+      },
+      {
+        "choiceId": 2,
+        "actionType": "LOCKED",
+        "condition": {
+          "code": 50
         },
-        "mock_c1_res1": {
-          "id": "mock_c1_res1",
-          "speaker": "최민석 코치",
-          "speakerId": "NPC_COACH_MINSEOK",
-          "emotion": "TIRED",
-          "text": "\"{playerName}님... 에러 메시지를 강제로 지운다고 해서 로직의 오류가 사라지는 건 아닙니다. 코드가 엉망이잖아요...\"",
-          "nextNodeId": "mock_c1_res2"
+        "text": "🔒 [코딩 50] \"이거 종료 조건(Base Case) 안 걸어주면 무한 루프 도는 거 맞지?\"",
+        "result": {
+          "statChanges": {
+            "code": 20
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"이거 종료 조건(Base Case) 안 걸어주면 무한 루프 도는 거 맞지?\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_MINSU",
+              "emotion": "NORMAL",
+              "text": "\"정답입니다. 생각보다 눈썰미가 있네요.\""
+            }
+          ],
+          "affectionChanges": {
+            "minsu": 10
+          }
+        }
+      },
+      {
+        "choiceId": 3,
+        "actionType": "LOCKED",
+        "condition": {
+          "nunchi": 50
         },
-        "mock_c1_res2": {
-          "id": "mock_c1_res2",
-          "speaker": "SYSTEM",
-          "text": "(내 코드를 확인한 코치님의 표정이 급격히 어두워졌다...)"
+        "text": "🔒 [눈치 50] (민수의 모니터를 슬쩍 보니 이미 캐싱(Memoization)까지 적용해 놨다. 조용히 벤치마킹한다.)",
+        "result": {
+          "statChanges": {
+            "nunchi": 20,
+            "code": 15
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"(오호, 저렇게 메모이제이션을 쓰는 거구나...)\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_MINSU",
+              "emotion": "ANNOYED",
+              "text": "\"...남의 코드 훔쳐보지 말고 본인 모니터나 보시죠.\""
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 4,
+        "actionType": "LOCKED",
+        "condition": {
+          "luck": 60
         },
-        "mock_c2_res1": {
-          "id": "mock_c2_res1",
-          "speaker": "PLAYER",
-          "speakerId": "PLAYER",
-          "text": "\"그래, 델타 탐색 범위만 정확히 통제하면 돼. 자, 제출!\"",
-          "nextNodeId": "mock_c2_res2"
-        },
-        "mock_c2_res2": {
-          "id": "mock_c2_res2",
-          "speaker": "SYSTEM",
-          "text": "(새빨갛던 에러 창이 초록색 'PASS'로 바뀌었다. 알고리즘의 꽃, 델타 탐색을 정복한 짜릿한 쾌감이 밀려온다.)"
-        },
-        "mock_c3_res1": {
-          "id": "mock_c3_res1",
-          "speaker": "최민석 코치",
-          "speakerId": "NPC_COACH_MINSEOK",
-          "emotion": "SPEECHLESS",
-          "text": "\"가독성은 다 박살 났고 코드 길이도 3배인데... 어? 이게 왜 테케를 다 통과하죠?\"",
-          "nextNodeId": "mock_c3_res2"
-        },
-        "mock_c3_res2": {
-          "id": "mock_c3_res2",
-          "speaker": "PLAYER",
-          "speakerId": "PLAYER",
-          "text": "\"코딩은 기세입니다, 코치님.\"",
-          "nextNodeId": "mock_c3_res3"
-        },
-        "mock_c3_res3": {
-          "id": "mock_c3_res3",
-          "speaker": "SYSTEM",
-          "text": "(기적적으로 모든 히든 케이스를 뚫어냈다! 테케에서 살아남았다는 건, 강하다는 것.)"
-        },
-        "mock_c4_res1": {
-          "id": "mock_c4_res1",
-          "speaker": "PLAYER",
-          "speakerId": "PLAYER",
-          "text": "\"// 제발 부분 점수라도 주시면 평생 서버가 있는 방향으로 매일 절하겠습니다... 제발요...\"",
-          "nextNodeId": "mock_c4_res2"
-        },
-        "mock_c4_res2": {
-          "id": "mock_c4_res2",
-          "speaker": "SYSTEM",
-          "text": "(애석하게도 1차 채점 서버는 감정이 없는 차가운 기계였다. 나의 눈물겨운 100줄짜리 호소문은 전부 # 처리되어 허공으로 날아갔고, 깔끔하게 0점을 기록했다.)"
+        "text": "🔒 [운 60] \"뭔지 하나도 모르겠는데, 대충 if n <= 1: return 1 찍었더니 초록불(PASS) 떴어! 나 혹시 알고리즘 천재인가?\"",
+        "result": {
+          "statChanges": {
+            "luck": 10
+          },
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"뭔지 하나도 모르겠는데, 대충 if n <= 1: return 1 찍었더니 초록불(PASS) 떴어! 나 혹시 알고리즘 천재인가?\""
+            },
+            {
+              "speakerId": "NPC_CLASSMATE_MINSU",
+              "emotion": "ANNOYED",
+              "text": "\"...방금 짠 코드 논리 설명해 보십쇼. 못하죠? 이 인간 이거 또 GPT 썼네.\""
+            },
+            {
+              "speakerId": "SYSTEM",
+              "text": "(민수가 뒷목을 잡는다. 이 정도의 운빨은 믿지 못 하는 듯 하다. 하긴 나 같아도...)"
+            }
+          ]
         }
       }
-    }
-  ]
-}
+    ]
+  },
+  {
+    "eventId": "EVT_MAIN_W5_D4_AFTERNOON_COUNSELING",
+    "eventName": "팩트 폭격과 억지 미소",
+    "eventType": "FIXED",
+    "triggerTiming": {
+      "week": 5,
+      "day": 4,
+      "timeOfDay": "오후"
+    },
+    "location": "캠퍼스",
+    "isRepeatable": false,
+    "dialogues": [
+      {
+        "speakerId": "SYSTEM",
+        "text": "드디어 올 것이 왔다. 도연 프로님과의 1:1 취업 상담 시간. 내 이력서와 포트폴리오 초안을 모니터에 띄워둔 프로님의 표정이 심상치 않다."
+      },
+      {
+        "speakerId": "NPC_PRO_DOYEON",
+        "emotion": "SERIOUS",
+        "text": "\"OO씨, 솔직하게 말씀드릴게요. 지금 이 상태로는 서류 통과도 장담하기 힘듭니다. 비전공자에, 남들 다 하는 뻔한 프로젝트 경험... OO씨를 뽑아야 할 '결정적인 무기'가 안 보여요.\""
+      },
+      {
+        "speakerId": "SYSTEM",
+        "text": "(이미 알고 있는 사실이지만 명치를 세게 맞은 기분이다. 뼈가 부러질 것 같다.)"
+      },
+      {
+        "speakerId": "NPC_PRO_DOYEON",
+        "emotion": "NORMAL",
+        "text": "\"무엇보다 표정이 너무 얼어있어요. 스펙이 부족하면 자신감 넘치는 태도와 인상으로라도 압도해야죠! 지금부터 웃는 연습이라도 해 볼까요? 자, 면접장에 들어왔다고 생각하고! 본인의 취업 전략을 미소와 함께 말해보세요!\""
+      }
+    ],
+    "choices": [
+      {
+        "choiceId": 1,
+        "actionType": "NORMAL",
+        "condition": null,
+        "text": "[기본] (안면 근육에 경련이 일어나는 억지 미소로) \"솔직히... 찬밥 더운밥 가릴 처지가 아닌 것 같습니다. 어디든 붙여주시는 곳으로 가겠습니다 ㅠㅠ\"",
+        "result": {
+          "statChanges": {
+            "stress": 20,
+            "hp": -10
+          },
+          "triggerMiniGame": "SMILE_DETECTION_START",
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"솔직히... 찬밥 더운밥 가릴 처지가 아닌 것 같습니다. 어디든 붙여주시는 곳으로 가겠습니다 ㅠㅠ\""
+            },
+            {
+              "speakerId": "NPC_PRO_DOYEON",
+              "emotion": "ANGRY",
+              "text": "\"자신감부터 가지세요! 그런 우는 상으로는 면접관 못 뚫습니다. 당장 입꼬리부터 올리세요!\""
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 2,
+        "actionType": "LOCKED",
+        "condition": {
+          "social": 60
+        },
+        "text": "🔒 [사교 60] (여유로운 비즈니스 미소 장착) \"비전공자라는 약점 대신, 제 이전 전공 지식을 살리겠습니다! 전공 특화 기업 위주로 뾰족하게 파고들겠습니다.\"",
+        "result": {
+          "statChanges": {
+            "stress": -10
+          },
+          "triggerMiniGame": "SMILE_DETECTION_START",
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"비전공자라는 약점 대신, 제 이전 전공 지식을 살리겠습니다! 전공 특화 기업 위주로 뾰족하게 파고들겠습니다.\""
+            },
+            {
+              "speakerId": "NPC_PRO_DOYEON",
+              "emotion": "HAPPY",
+              "text": "\"오, 좋은 접근입니다! 표정도 아까보다 훨씬 낫네요. 그 여유로운 미소, 면접 끝날 때까지 유지할 수 있는지 볼까요?\""
+            }
+          ],
+          "affectionChanges": {
+            "sunmi": 15
+          }
+        }
+      },
+      {
+        "choiceId": 3,
+        "actionType": "LOCKED",
+        "condition": {
+          "code": 70
+        },
+        "text": "🔒 [코딩 70] (자신감 넘치는 씨익-) \"어설픈 스펙으로 포장하느니, 압도적인 코딩 실력으로 증명하겠습니다. 오늘부터 잠 줄이고 아키텍처 싹 다 고도화할 겁니다.\"",
+        "result": {
+          "statChanges": {
+            "code": 20,
+            "hp": -20
+          },
+          "triggerMiniGame": "SMILE_DETECTION_START",
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"어설픈 스펙으로 포장하느니, 압도적인 코딩 실력으로 증명하겠습니다. 오늘부터 잠 줄이고 아키텍처 싹 다 고도화할 겁니다.\""
+            },
+            {
+              "speakerId": "NPC_PRO_DOYEON",
+              "emotion": "NORMAL",
+              "text": "\"열정은 좋은데, 면접관 앞에선 그 개발자 특유의 썩소(?) 말고 부드럽게 웃어야 합니다. 자, 진짜 미소 연습 들어갑니다!\""
+            }
+          ]
+        }
+      },
+      {
+        "choiceId": 4,
+        "actionType": "MADNESS",
+        "condition": null,
+        "text": "🤪 [광기] \"서류로 안 된다면... 지원 회사의 인사망을 해킹해서 제 이력서를 DB 1번에 INSERT 하겠습니다.\"",
+        "result": {
+          "statChanges": {
+            "madness": 25
+          },
+          "triggerMiniGame": "SMILE_DETECTION_START",
+          "feedbackDialogues": [
+            {
+              "speakerId": "PLAYER",
+              "text": "\"서류로 안 된다면... 지원 회사의 인사망을 해킹해서 제 이력서를 DB 1번에 INSERT 하겠습니다.\""
+            },
+            {
+              "speakerId": "NPC_PRO_DOYEON",
+              "emotion": "SURPRISED",
+              "text": "\"철컹철컹하기 싫으면 당장 그 위험한 생각 버리세요! 범죄자 말고 선량한 지원자의 미소부터 다시 배웁시다!\""
+            }
+          ],
+          "affectionChanges": {
+            "sunmi": -10
+          }
+        }
+      }
+    ]
+  }
+]
