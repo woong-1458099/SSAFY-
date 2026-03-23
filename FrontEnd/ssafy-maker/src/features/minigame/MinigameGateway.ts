@@ -14,7 +14,7 @@ export type MinigameLaunchKey = LegacyMinigameSceneKey | LegacyMinigameFlowScene
 type ReturnSceneResolution = {
   requestedKey: string;
   resolvedKey: string;
-  usedFallback: "requested" | "current" | "main";
+  usedFallback: "requested" | "current" | "main" | "invalid-type";
 };
 
 export function openMinigameMenu(scene: Phaser.Scene, returnSceneKey: string) {
@@ -23,10 +23,29 @@ export function openMinigameMenu(scene: Phaser.Scene, returnSceneKey: string) {
 }
 
 function isRegisteredSceneKey(scene: Phaser.Scene, sceneKey: string): boolean {
-  return sceneKey.length > 0 && sceneKey in scene.scene.manager.keys;
+  return sceneKey.length > 0 && !isDeprecatedMinigameSceneKey(sceneKey) && sceneKey in scene.scene.manager.keys;
 }
 
-function normalizeReturnSceneKey(scene: Phaser.Scene, returnSceneKey: string): ReturnSceneResolution {
+function normalizeReturnSceneKey(scene: Phaser.Scene, returnSceneKey: unknown): ReturnSceneResolution {
+  if (typeof returnSceneKey !== "string") {
+    const currentSceneKey = scene.scene.key;
+    if (isRegisteredSceneKey(scene, currentSceneKey)) {
+      console.warn(`[minigame] non-string returnSceneKey requested: ${String(returnSceneKey)}. Falling back to current scene ${currentSceneKey}.`);
+      return {
+        requestedKey: "",
+        resolvedKey: currentSceneKey,
+        usedFallback: "invalid-type",
+      };
+    }
+
+    console.warn(`[minigame] non-string returnSceneKey requested: ${String(returnSceneKey)}. Falling back to ${SCENE_KEYS.main}.`);
+    return {
+      requestedKey: "",
+      resolvedKey: SCENE_KEYS.main,
+      usedFallback: "invalid-type",
+    };
+  }
+
   const normalizedKey = returnSceneKey.trim();
   if (isRegisteredSceneKey(scene, normalizedKey)) {
     return {

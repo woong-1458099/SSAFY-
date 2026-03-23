@@ -142,6 +142,15 @@ export function assertSceneRegistryIntegrity(): void {
 }
 
 export const SCENE_REGISTRY = (() => {
-  assertSceneRegistryIntegrity();
+  try {
+    assertSceneRegistryIntegrity();
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      throw error;
+    }
+
+    console.error("[sceneRegistry] integrity validation failed during boot.", error);
+  }
+
   return SCENE_REGISTRY_ENTRIES.map((entry) => entry.scene);
 })();
