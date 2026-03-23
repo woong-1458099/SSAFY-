@@ -1,38 +1,50 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const FIXED_EVENT_DIR = process.cwd(); // Assuming we are in the directory already
+const DEFAULT_FIXED_EVENT_DIR = __dirname;
+function resolveTargetDirectory(inputPath, fallbackPath) {
+  const resolvedPath = inputPath
+    ? path.resolve(process.cwd(), inputPath)
+    : fallbackPath;
+
+  if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isDirectory()) {
+    throw new Error(`Directory not found: ${resolvedPath}`);
+  }
+
+  return resolvedPath;
+}
 
 function traverse(obj) {
   let changed = false;
 
-  if (typeof obj !== 'object' || obj === null) {
+  if (typeof obj !== "object" || obj === null) {
     return false;
   }
 
   if (Array.isArray(obj)) {
-    for (let item of obj) {
+    for (const item of obj) {
       if (traverse(item)) changed = true;
     }
     return changed;
   }
 
-  // If this is a choice node containing statChanges
   if (obj.statChanges) {
-    let newAffection = obj.affectionChanges || {};
-    let migratedKeys = [];
+    const newAffection = obj.affectionChanges || {};
+    const migratedKeys = [];
 
     for (const key of Object.keys(obj.statChanges)) {
-      if (key.startsWith('favor_')) {
-        let val = obj.statChanges[key];
-        let npcId = key.replace('favor_', '');
-        
-        if (npcId === 'hyo') npcId = 'hyoryeon';
-        else if (npcId === 'pro') npcId = 'sunmi';
-
-        newAffection[npcId] = val;
-        migratedKeys.push(key);
+      if (!key.startsWith("favor_")) {
+        continue;
       }
+
+      const val = obj.statChanges[key];
+      let npcId = key.replace("favor_", "");
+
+      if (npcId === "hyo") npcId = "hyoryeon";
+      else if (npcId === "pro") npcId = "sunmi";
+
+      newAffection[npcId] = val;
+      migratedKeys.push(key);
     }
 
     if (migratedKeys.length > 0) {
@@ -40,8 +52,7 @@ function traverse(obj) {
       for (const key of migratedKeys) {
         delete obj.statChanges[key];
       }
-      
-      // Remove statChanges if empty
+
       if (Object.keys(obj.statChanges).length === 0) {
         delete obj.statChanges;
       }
@@ -49,7 +60,6 @@ function traverse(obj) {
     }
   }
 
-  // Recurse down
   for (const key of Object.keys(obj)) {
     if (traverse(obj[key])) {
       changed = true;
@@ -62,24 +72,31 @@ function traverse(obj) {
 function processDirectory(dirPath) {
   const files = fs.readdirSync(dirPath);
   for (const file of files) {
-    if (file.endsWith('.json')) {
-      const fullPath = path.join(dirPath, file);
-      const content = fs.readFileSync(fullPath, 'utf8');
-      
-      let parsed;
-      try { parsed = JSON.parse(content); } catch (e) { continue; }
-      
-      if (traverse(parsed)) {
-        console.log(`Updated ${file}`);
-        fs.writeFileSync(fullPath, JSON.stringify(parsed, null, 2), 'utf8');
-      }
+    if (!file.endsWith(".json")) {
+      continue;
+    }
+
+    const fullPath = path.join(dirPath, file);
+    const content = fs.readFileSync(fullPath, "utf8");
+
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      continue;
+    }
+
+    if (traverse(parsed)) {
+      console.log(`Updated ${fullPath}`);
+      fs.writeFileSync(fullPath, JSON.stringify(parsed, null, 2), "utf8");
     }
   }
 }
 
-processDirectory(FIXED_EVENT_DIR);
-// Also go up one level and do romance
-const ROMANCE_DIR = path.join(__dirname, '..', 'romance');
-if (fs.existsSync(ROMANCE_DIR)) {
-    processDirectory(ROMANCE_DIR);
+const fixedEventDir = resolveTargetDirectory(process.argv[2], DEFAULT_FIXED_EVENT_DIR);
+const romanceDirArg = process.argv[3];
+
+processDirectory(fixedEventDir);
+if (romanceDirArg) {
+  processDirectory(resolveTargetDirectory(romanceDirArg, DEFAULT_FIXED_EVENT_DIR));
 }
