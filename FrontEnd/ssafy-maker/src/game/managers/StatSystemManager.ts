@@ -40,6 +40,28 @@ export class StatSystemManager {
     return { ...this.state.stats };
   }
 
+  getAffection(npcId: string): number {
+    return this.state.affection[npcId] ?? 0;
+  }
+
+  applyAffectionDelta(changes: Record<string, number>): void {
+    Object.entries(changes).forEach(([npcId, delta]) => {
+      const current = this.state.affection[npcId] ?? 0;
+      this.state.affection[npcId] = current + delta;
+    });
+  }
+
+  addFlags(flags: string[]): void {
+    const newFlags = flags.filter((f) => !this.state.flags.includes(f));
+    if (newFlags.length > 0) {
+      this.state.flags.push(...newFlags);
+    }
+  }
+
+  hasFlag(flag: string): boolean {
+    return this.state.flags.includes(flag);
+  }
+
   reset(): void {
     this.state = createDefaultGameState();
     this.emitChanges(true);
@@ -48,7 +70,9 @@ export class StatSystemManager {
   restore(nextState: RuntimeGameState): void {
     this.state = {
       hud: clampHudState({ ...nextState.hud }),
-      stats: clampStatsState({ ...nextState.stats })
+      stats: clampStatsState({ ...nextState.stats }),
+      affection: { ...(nextState.affection || {}) },
+      flags: [...(nextState.flags || [])]
     };
 
     if (this.state.hud.stress !== this.state.stats.stress) {

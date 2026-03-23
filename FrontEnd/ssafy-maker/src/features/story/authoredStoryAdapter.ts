@@ -8,6 +8,7 @@ import type {
   DialogueChoiceActionType,
   DialogueNode,
   DialogueRequirement,
+  AffectionRequirement,
   DialogueScript,
   DialogueStatKey
 } from "../../common/types/dialogue";
@@ -39,6 +40,7 @@ type AuthoredDialogueNodeJson = {
   nextNodeId?: string;
   choices?: AuthoredDialogueChoiceJson[];
   action?: DialogueAction;
+  affectionChanges?: Record<string, number>;
 };
 
 type AuthoredDialogueChoiceJson = {
@@ -47,10 +49,13 @@ type AuthoredDialogueChoiceJson = {
   nextNodeId?: string;
   actionType?: DialogueChoiceActionType;
   statChanges?: Partial<Record<DialogueStatKey, number>>;
+  affectionChanges?: Record<string, number>;
   requirements?: DialogueRequirement[];
+  affectionRequirements?: AffectionRequirement[];
   lockedReason?: string;
   feedbackText?: string;
   action?: DialogueAction;
+  setFlags?: string[];
 };
 
 type SceneStateJson = {
@@ -100,10 +105,13 @@ function normalizeChoice(choice: AuthoredDialogueChoiceJson, index: number): Dia
     nextNodeId: normalizeString(choice.nextNodeId) || undefined,
     actionType: choice.actionType,
     statChanges: choice.statChanges,
+    affectionChanges: choice.affectionChanges,
     requirements: Array.isArray(choice.requirements) ? choice.requirements : undefined,
+    affectionRequirements: Array.isArray(choice.affectionRequirements) ? choice.affectionRequirements : undefined,
     lockedReason: typeof choice.lockedReason === "string" ? choice.lockedReason : undefined,
     feedbackText: typeof choice.feedbackText === "string" ? choice.feedbackText : undefined,
-    action: choice.action
+    action: choice.action,
+    setFlags: Array.isArray(choice.setFlags) ? choice.setFlags : undefined
   };
 }
 
@@ -127,7 +135,8 @@ function normalizeNode(nodeKey: string, node: AuthoredDialogueNodeJson): Dialogu
     text: normalizeString(node.text) || "...",
     nextNodeId: normalizeString(node.nextNodeId) || undefined,
     choices: Array.isArray(node.choices) ? node.choices.map(normalizeChoice) : undefined,
-    action: node.action
+    action: node.action,
+    affectionChanges: node.affectionChanges
   };
 }
 

@@ -20,6 +20,8 @@ export type PlayerStatsState = Record<PlayerStatKey, number>;
 export type RuntimeGameState = {
   hud: HudState;
   stats: PlayerStatsState;
+  affection: Record<string, number>;
+  flags: string[];
 };
 
 export const DEFAULT_HUD_STATE: HudState = {
@@ -46,14 +48,18 @@ export const DEFAULT_STATS_STATE: PlayerStatsState = {
 export function createDefaultGameState(): RuntimeGameState {
   return {
     hud: { ...DEFAULT_HUD_STATE },
-    stats: { ...DEFAULT_STATS_STATE }
+    stats: { ...DEFAULT_STATS_STATE },
+    affection: {},
+    flags: []
   };
 }
 
 export function cloneGameState(state: RuntimeGameState): RuntimeGameState {
   return {
     hud: { ...state.hud },
-    stats: { ...state.stats }
+    stats: { ...state.stats },
+    affection: { ...(state.affection || {}) },
+    flags: [...(state.flags || [])]
   };
 }
 

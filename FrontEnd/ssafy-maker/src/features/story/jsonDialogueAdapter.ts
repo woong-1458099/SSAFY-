@@ -1,6 +1,7 @@
 import {
   createRuntimeDialogueId,
   isRuntimeDialogueId,
+  type AffectionRequirement,
   type DialogueAction,
   type DialogueChoice,
   type DialogueChoiceActionType,
@@ -45,14 +46,17 @@ export type FixedEventStatChangeKey =
 
 export type FixedEventChoiceResult = {
   statChanges?: Partial<Record<FixedEventStatChangeKey, number>>;
+  affectionChanges?: Record<string, number>;
   feedbackText?: string;
   feedbackDialogues?: FixedEventDialogueEntry[];
+  setFlags?: string[];
 };
 
 export type FixedEventChoiceEntry = {
   choiceId?: number;
   actionType?: string;
   condition?: FixedEventChoiceCondition | null;
+  affectionRequirements?: AffectionRequirement[];
   text?: string;
   result?: FixedEventChoiceResult;
   action?: DialogueAction;
@@ -383,8 +387,11 @@ export function buildDialogueScriptFromFixedEventEntry(
         actionType,
         action: choice.action,
         requirements,
+        affectionRequirements: Array.isArray(choice.affectionRequirements) ? choice.affectionRequirements : undefined,
         lockedReason,
         statChanges: mapStatChanges(choice.result?.statChanges),
+        affectionChanges: choice.result?.affectionChanges,
+        setFlags: Array.isArray(choice.result?.setFlags) ? choice.result?.setFlags : undefined,
         feedbackText:
           feedbackDialogues.length === 0
             ? normalizeTextWithPlayerName(choice.result?.feedbackText, "", playerName)

@@ -158,6 +158,9 @@ export class MainScene extends Phaser.Scene {
         }
       },
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      getAffectionValue: (npcId) => this.statSystemManager!.getAffection(npcId),
+      applyAffectionDelta: (changes) => this.statSystemManager!.applyAffectionDelta(changes),
+      setFlags: (flags) => this.statSystemManager!.addFlags(flags),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       onNotice: (message) => this.menuManager?.showNotice(message),
       runAction: (action) => {

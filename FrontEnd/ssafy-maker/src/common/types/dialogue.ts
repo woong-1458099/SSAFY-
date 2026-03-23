@@ -1,13 +1,13 @@
 // 대화 스크립트와 대화 매니저가 함께 사용하는 공통 대화 타입 정의
 import type { DialogueId } from "../enums/dialogue";
 
-export type DialogueBaseStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
+export type DialogueBaseStatKey = "fe" | "be" | "teamwork" | "luck" | "stress" | "playerGender";
 export type DialogueCurrencyStatKey = "gold" | "money";
 export type DialogueStatKey = DialogueBaseStatKey | "hp" | DialogueCurrencyStatKey;
 export type StaticDialogueId = string & { readonly __staticDialogueId: unique symbol };
 export type RuntimeDialogueId = string & { readonly __runtimeDialogueId: unique symbol };
 export type DialogueScriptId = DialogueId | StaticDialogueId | RuntimeDialogueId;
-export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
+export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS" | "ROMANCE_EVENT";
 export const DIALOGUE_ACTIONS = [
   "openShop",
   "openMiniGame",
@@ -21,6 +21,14 @@ export type DialogueAction = (typeof DIALOGUE_ACTIONS)[number];
 
 export type DialogueRequirement = {
   stat: DialogueStatKey;
+  equals?: string;
+  min?: number;
+  max?: number;
+  label?: string;
+};
+
+export type AffectionRequirement = {
+  npcId: string;
   min?: number;
   max?: number;
   label?: string;
@@ -32,10 +40,13 @@ export type DialogueChoice = {
   nextNodeId?: string;
   actionType?: DialogueChoiceActionType;
   statChanges?: Partial<Record<DialogueStatKey, number>>;
+  affectionChanges?: Record<string, number>;
   requirements?: DialogueRequirement[];
+  affectionRequirements?: AffectionRequirement[];
   lockedReason?: string;
   feedbackText?: string;
   action?: DialogueAction;
+  setFlags?: string[];
 };
 
 export type DialogueNode = {
@@ -47,6 +58,7 @@ export type DialogueNode = {
   nextNodeId?: string;
   choices?: DialogueChoice[];
   action?: DialogueAction;
+  affectionChanges?: Record<string, number>;
 };
 
 export type DialogueScript = {
