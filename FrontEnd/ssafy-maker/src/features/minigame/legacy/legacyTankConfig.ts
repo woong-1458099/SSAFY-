@@ -6,14 +6,14 @@ export const LEGACY_TANK_ENDINGS = {
   victory: {
     title: "🏆 VICTORY!",
     subtitle: "적 탱크를 격파했습니다!",
-    reward: "보상: 집중 +10, GP +40",
+    reward: "FE +5, GP +20",
     titleColor: "#88ff00",
     rewardColor: "#FFD700"
   },
   defeat: {
     title: "💥 DEFEAT",
     subtitle: "탱크가 파괴되었습니다...",
-    reward: "보상: 집중 +3, 스트레스 +5",
+    reward: "FE +1, STRESS +3",
     titleColor: "#ff4466",
     rewardColor: "#ffaa00"
   }

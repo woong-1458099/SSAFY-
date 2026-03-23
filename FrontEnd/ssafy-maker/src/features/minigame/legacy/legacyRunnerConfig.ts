@@ -47,10 +47,10 @@ export const LEGACY_RUNNER_OBSTACLES = [
 ] as const;
 
 const LEGACY_RUNNER_RESULT_RULES = [
-  { minScore: 3000, grade: "S", gradeColor: "#FFD700", reward: "AGI +7    GP +20" },
-  { minScore: 1500, grade: "A", gradeColor: "#00ff88", reward: "AGI +7    GP +20" },
-  { minScore: 800, grade: "B", gradeColor: "#4499ff", reward: "AGI +3    GP +5" },
-  { minScore: 0, grade: "C", gradeColor: "#ff4466", reward: "AGI +3    GP +5" },
+  { minScore: 3000, grade: "S", gradeColor: "#FFD700", reward: "LUCK +5, GP +15" },
+  { minScore: 1500, grade: "A", gradeColor: "#00ff88", reward: "LUCK +3, GP +10" },
+  { minScore: 800, grade: "B", gradeColor: "#4499ff", reward: "LUCK +2, GP +5" },
+  { minScore: 0, grade: "C", gradeColor: "#ff4466", reward: "LUCK +1, GP +3" },
 ] as const;
 
 export function resolveLegacyRunnerResult(finalScore: number) {

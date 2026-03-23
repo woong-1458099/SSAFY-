@@ -37,9 +37,9 @@ export const LEGACY_DRAG_CHALLENGES = [
 ] as const;
 
 const LEGACY_DRAG_SUCCESS_RULES = [
-  { minRemainingTime: 41, message: "⚡ PERFECT! GENIUS CODER!", color: "#FFD700", reward: "INT +10    GP +30" },
-  { minRemainingTime: 21, message: "✅ CORRECT!", color: "#00ff88", reward: "INT +7    GP +20" },
-  { minRemainingTime: 0, message: "👍 CLEAR!", color: "#aaddff", reward: "INT +5    GP +10" },
+  { minRemainingTime: 41, message: "⚡ PERFECT! GENIUS CODER!", color: "#FFD700", reward: "BE +5, GP +15" },
+  { minRemainingTime: 21, message: "✅ CORRECT!", color: "#00ff88", reward: "BE +3, GP +10" },
+  { minRemainingTime: 0, message: "👍 CLEAR!", color: "#aaddff", reward: "BE +2, GP +5" },
 ] as const;
 
 export function resolveLegacyDragSuccess(remainingTime: number) {
@@ -49,5 +49,5 @@ export function resolveLegacyDragSuccess(remainingTime: number) {
 export const LEGACY_DRAG_FAILURE = {
   message: "⏰ TIME UP...",
   color: "#ff4444",
-  reward: "STRESS +5"
+  reward: "STRESS +3"
 } as const;

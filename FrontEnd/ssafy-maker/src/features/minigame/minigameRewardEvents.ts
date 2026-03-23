@@ -18,20 +18,14 @@ export type ParsedMinigameReward = {
 };
 
 const STAT_LABEL_TO_KEY: Record<string, PlayerStatKey> = {
+  // 영문 스탯명 (권장)
   FE: "fe",
-  "집중": "fe",
   BE: "be",
-  INT: "be",
-  "지능": "be",
-  "협업": "teamwork",
-  "매력": "teamwork",
   LUCK: "luck",
-  AGI: "luck",
-  "민첩": "luck",
-  "운": "luck",
-  "요리": "luck",
-  STRESS: "stress",
-  "스트레스": "stress"
+  TEAMWORK: "teamwork",
+  // 한글 스탯명
+  "협업": "teamwork",
+  "운": "luck"
 };
 
 export function emitMinigameReward(scene: Phaser.Scene, payload: MinigameRewardPayload): void {
