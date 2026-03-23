@@ -4,6 +4,7 @@ import {
   LEGACY_DONT_SMILE_SURVIVAL_TICKS,
   LEGACY_SMILE_MAX_GAUGE
 } from '@features/minigame/legacy/legacySmileConfig';
+import { LEGACY_DONT_SMILE_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 
 export default class DontSmileScene extends BaseSmileScene {
   private remainingTicks = LEGACY_DONT_SMILE_SURVIVAL_TICKS;
@@ -14,7 +15,7 @@ export default class DontSmileScene extends BaseSmileScene {
   protected readonly theme = LEGACY_DONT_SMILE_CONFIG.theme;
 
   constructor() {
-    super('DontSmileScene');
+    super(LEGACY_DONT_SMILE_SCENE_KEY);
   }
 
   create(): void {

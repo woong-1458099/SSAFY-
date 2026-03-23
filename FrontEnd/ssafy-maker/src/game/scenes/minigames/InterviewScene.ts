@@ -4,6 +4,7 @@ import { applyLegacyViewport } from './viewport';
 import { installMinigamePause } from './installMinigamePause';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { LEGACY_INTERVIEW_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 import {
   LEGACY_INTERVIEW_CATEGORY_COLORS,
   LEGACY_INTERVIEW_QUESTION_COUNT,
@@ -20,7 +21,7 @@ export default class InterviewScene extends Phaser.Scene {
   private completedRewardText = null;
   private rewardEmitted = false;
 
-  constructor() { super({ key: 'InterviewScene' }); }
+  constructor() { super({ key: LEGACY_INTERVIEW_SCENE_KEY }); }
 
   init(data) {
     this.returnSceneKey = data?.returnSceneKey || 'main';
@@ -308,7 +309,7 @@ export default class InterviewScene extends Phaser.Scene {
 
   emitCompletedReward() {
     if (!this.completedRewardText || this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'InterviewScene', rewardText: this.completedRewardText });
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: this.completedRewardText });
     this.rewardEmitted = true;
   }
 }

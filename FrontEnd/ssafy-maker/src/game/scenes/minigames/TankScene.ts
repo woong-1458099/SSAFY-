@@ -4,6 +4,7 @@ import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { LEGACY_TANK_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 import {
   LEGACY_TANK_ENDINGS,
   LEGACY_TANK_INITIAL_LIVES,
@@ -20,7 +21,7 @@ export default class TankScene extends Phaser.Scene {
   private rewardEmitted = false;
 
   constructor() {
-    super({ key: 'TankScene' });
+    super({ key: LEGACY_TANK_SCENE_KEY });
   }
 
   init(data) {
@@ -423,7 +424,7 @@ export default class TankScene extends Phaser.Scene {
 
   emitCompletedReward() {
     if (!this.completedRewardText || this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'TankScene', rewardText: this.completedRewardText });
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: this.completedRewardText });
     this.rewardEmitted = true;
   }
 }

@@ -1,5 +1,6 @@
 import BaseSmileScene from './BaseSmileScene';
 import { LEGACY_BUSINESS_SMILE_CONFIG, LEGACY_SMILE_MAX_GAUGE } from '@features/minigame/legacy/legacySmileConfig';
+import { LEGACY_BUSINESS_SMILE_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 
 export default class BusinessSmileScene extends BaseSmileScene {
   protected readonly title = LEGACY_BUSINESS_SMILE_CONFIG.title;
@@ -8,7 +9,7 @@ export default class BusinessSmileScene extends BaseSmileScene {
   protected readonly theme = LEGACY_BUSINESS_SMILE_CONFIG.theme;
 
   constructor() {
-    super('BusinessSmileScene');
+    super(LEGACY_BUSINESS_SMILE_SCENE_KEY);
   }
 
   protected getInitialStatus(): string {

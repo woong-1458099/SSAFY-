@@ -4,6 +4,7 @@ import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { LEGACY_TYPING_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 import {
   LEGACY_TYPING_INITIAL_LIVES,
   LEGACY_TYPING_INITIAL_SPAWN_INTERVAL_MS,
@@ -22,7 +23,7 @@ export default class TypingScene extends Phaser.Scene {
   private rewardEmitted = false;
 
   constructor() {
-    super({ key: 'TypingScene' });
+    super({ key: LEGACY_TYPING_SCENE_KEY });
   }
 
   init(data) {
@@ -406,7 +407,7 @@ export default class TypingScene extends Phaser.Scene {
 
   emitCompletedReward() {
     if (!this.completedRewardText || this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'TypingScene', rewardText: this.completedRewardText });
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: this.completedRewardText });
     this.rewardEmitted = true;
   }
 }

@@ -4,6 +4,7 @@ import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { LEGACY_RHYTHM_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 import {
   LEGACY_RHYTHM_DIFFICULTIES,
   LEGACY_RHYTHM_DIFFICULTY_SETTINGS,
@@ -23,7 +24,7 @@ export default class RhythmScene extends Phaser.Scene {
   private returnSceneKey = 'main';
   private rewardEmitted = false;
 
-  constructor() { super({ key: 'RhythmScene' }); }
+  constructor() { super({ key: LEGACY_RHYTHM_SCENE_KEY }); }
 
   init(data) {
     this.returnSceneKey = data?.returnSceneKey || 'main';
@@ -227,7 +228,7 @@ export default class RhythmScene extends Phaser.Scene {
 
   emitRewardIfNeeded() {
     if (this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'RhythmScene', rewardText: this.config.reward });
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: this.config.reward });
     this.rewardEmitted = true;
   }
 }

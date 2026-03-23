@@ -180,6 +180,18 @@ function parseRegistryEntries(content, simpleConstants, objectConstants) {
   return entries;
 }
 
+function parseCatalogCardKeys(content, simpleConstants, objectConstants) {
+  const cardEntries = [];
+  const cardRegex = /key:\s*([^,\n]+),/g;
+
+  for (const match of content.matchAll(cardRegex)) {
+    const expression = match[1].trim();
+    cardEntries.push(resolveExpression(expression, simpleConstants, objectConstants));
+  }
+
+  return cardEntries;
+}
+
 function parseDeclaredSceneKey(filePath, simpleConstants, objectConstants) {
   const content = readFile(filePath);
   const keyObjectMatch = content.match(/super\(\s*\{\s*key:\s*([^}]+)\}\s*\)/m);
@@ -273,7 +285,7 @@ function main() {
     simpleConstants,
     objectConstants
   );
-  const cardKeys = [...minigameCatalogContent.matchAll(/key:\s*(["'][^"']+["'])/g)].map((match) => unquote(match[1]));
+  const cardKeys = parseCatalogCardKeys(minigameCatalogContent, simpleConstants, objectConstants);
 
   const deprecatedInSupported = supportedMinigameSceneKeys.filter((key) => deprecatedMinigameSceneKeys.includes(key));
   if (deprecatedInSupported.length > 0) {
