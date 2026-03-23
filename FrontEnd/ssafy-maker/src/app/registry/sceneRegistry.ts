@@ -8,7 +8,6 @@ import {
   assertMinigameSceneKeyIntegrity,
   DEPRECATED_MINIGAME_SCENE_KEYS,
   EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY,
-  EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY,
   LEGACY_BUSINESS_SMILE_SCENE_KEY,
   LEGACY_COOKING_SCENE_KEY,
   LEGACY_DONT_SMILE_SCENE_KEY,
@@ -40,7 +39,6 @@ import { FinalSummaryScene } from "../../scenes/FinalSummaryScene";
 import { EndingIntroScene } from "../../scenes/EndingIntroScene";
 import { EndingComicScene } from "../../scenes/EndingComicScene";
 import { MiniGameCenterScene } from "../../game/scenes/minigames/MiniGameCenterScene";
-import { MiniGameReflexScene } from "../../game/scenes/minigames/MiniGameReflexScene";
 import LegacyBusinessSmileScene from "../../game/scenes/minigames/BusinessSmileScene";
 import LegacyCookingScene from "../../game/scenes/minigames/CookingScene";
 import LegacyDontSmileScene from "../../game/scenes/minigames/DontSmileScene";
@@ -89,8 +87,7 @@ const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: LEGACY_COOKING_SCENE_KEY, scene: LegacyCookingScene },
   { key: LEGACY_LOTTO_SCENE_KEY, scene: LegacyLottoScene },
   { key: LEGACY_DRINKING_SCENE_KEY, scene: LegacyDrinkingScene },
-  { key: EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY, scene: MiniGameCenterScene },
-  { key: EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY, scene: MiniGameReflexScene }
+  { key: EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY, scene: MiniGameCenterScene }
 ];
 
 function findMissingKeys(requiredKeys: Iterable<string>, registeredKeySet: Set<string>): string[] {
