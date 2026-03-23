@@ -33,5 +33,61 @@ export const NPC_DEFINITIONS: Record<NpcId, NpcDefinition> = {
     visualAssetId: "hyunseok",
     defaultFacing: "down",
     moveSpeed: 140
+  },
+  hyoryeon: {
+    id: "hyoryeon",
+    label: "효련",
+    visualAssetId: "hyoryeon",
+    defaultFacing: "down",
+    moveSpeed: 140
+  },
+  jiwoo: {
+    id: "jiwoo",
+    label: "지우",
+    visualAssetId: "jiwoo",
+    defaultFacing: "down",
+    moveSpeed: 140
+  },
+  jongmin: {
+    id: "jongmin",
+    label: "종민",
+    visualAssetId: "jongmin",
+    defaultFacing: "down",
+    moveSpeed: 140
+  },
+  myungjin: {
+    id: "myungjin",
+    label: "명진",
+    visualAssetId: "myungjin",
+    defaultFacing: "down",
+    moveSpeed: 140
+  },
+  yeonwoong: {
+    id: "yeonwoong",
+    label: "연웅",
+    visualAssetId: "yeonwoong",
+    defaultFacing: "down",
+    moveSpeed: 140
+  },
+  doyeon: {
+    id: "doyeon",
+    label: "도연",
+    visualAssetId: "doyeon",
+    defaultFacing: "down",
+    moveSpeed: 140
+  },
+  sunmi: {
+    id: "sunmi",
+    label: "선미",
+    visualAssetId: "sunmi",
+    defaultFacing: "down",
+    moveSpeed: 140
+  },
+  minseok: {
+    id: "minseok",
+    label: "민석",
+    visualAssetId: "minseok",
+    defaultFacing: "down",
+    moveSpeed: 140
   }
 };
