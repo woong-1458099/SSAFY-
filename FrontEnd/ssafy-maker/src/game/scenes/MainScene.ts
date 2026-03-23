@@ -48,6 +48,7 @@ import { StatSystemManager } from "../managers/StatSystemManager";
 import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
 import type { SceneId } from "../scripts/scenes/sceneIds";
+import { playPlaceBgm, playWorldBgm, createSkyBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
 import {
   DEFAULT_START_SCENE_ID,
   getDefaultSceneIdForArea,
@@ -95,7 +96,9 @@ export class MainScene extends Phaser.Scene {
   private currentSceneId?: SceneId;
   private currentSceneState?: SceneState;
   private runtimeDialogueScripts: Record<string, DialogueScript> = {};
-
+  private destroySkyBackground?: () => void;
+  private currentTimeOfDay?: TimeOfDay;
+  private wasPlacePopupOpen = false;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -112,6 +115,8 @@ export class MainScene extends Phaser.Scene {
       const placePopupOpen = this.placeActionManager?.isOpen() === true;
       const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
       const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+
+      
 
       if (
         command.type === "toggleDebugOverlay" ||
@@ -185,6 +190,7 @@ export class MainScene extends Phaser.Scene {
             return;
         }
       }
+      
     });
     this.menuManager = new InGameMenuManager({
       scene: this,
@@ -370,17 +376,44 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
+      this.destroySkyBackground?.();
+      this.destroySkyBackground = undefined;
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupSceneResources);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupSceneResources);
 
     this.initialized = true;
-
-    await director.run(runtimeSceneScript);
+await director.run(runtimeSceneScript);
     this.applyPendingDebugFixedEvent();
+
+    const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
+    const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+    const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+    const mapPixelWidth = renderBounds && parsedMap
+      ? parsedMap.width * renderBounds.tileWidth * renderBounds.scale
+      : undefined;
+    const mapPixelHeight = renderBounds && parsedMap
+      ? parsedMap.height * renderBounds.tileHeight * renderBounds.scale
+      : undefined;
+
+    if (currentArea === "world") {
+      playWorldBgm(this, timeOfDay);
+      this.destroySkyBackground?.();
+      this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
+    } else if (currentArea === "downtown") {
+      playPlaceBgm(this, currentArea as any);
+      this.destroySkyBackground?.();
+      this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
+    } else {
+      playPlaceBgm(this, currentArea as any);
+    }
+
+    
   }
 
-  update() {
+  
+update() {
     if (!this.initialized) {
       return;
     }
@@ -401,6 +434,20 @@ export class MainScene extends Phaser.Scene {
     const debugPanelVisible = this.debugPanel?.isVisible() === true;
     const menuOpen = this.menuManager?.isOpen() === true;
     const placePopupOpen = this.placeActionManager?.isOpen() === true;
+
+    if (this.wasPlacePopupOpen && !placePopupOpen) {
+      const area = this.worldManager?.getCurrentAreaId() ?? "world";
+      const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+      const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+      if (area === "world") {
+        playWorldBgm(this, timeOfDay);
+      } else {
+        playPlaceBgm(this, area as any);
+      }
+    }
+    this.wasPlacePopupOpen = placePopupOpen;
+
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
 
@@ -477,6 +524,28 @@ export class MainScene extends Phaser.Scene {
         `${Math.round(player.x)}, ${Math.round(player.y)}`,
         `${player.tileX}, ${player.tileY}`
       );
+    }
+
+    const currentArea = this.worldManager.getCurrentAreaId();
+    if (currentArea === "world" || currentArea === "downtown") {
+      const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+      const newTimeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+      if (newTimeOfDay !== this.currentTimeOfDay) {
+        this.currentTimeOfDay = newTimeOfDay;
+
+        const rb = this.worldManager.getCurrentRenderBounds();
+        const pm = this.worldManager.getCurrentParsedTmxMap();
+        const mapPixelWidth = rb && pm ? pm.width * rb.tileWidth * rb.scale : undefined;
+        const mapPixelHeight = rb && pm ? pm.height * rb.tileHeight * rb.scale : undefined;
+
+        this.destroySkyBackground?.();
+        this.destroySkyBackground = createSkyBackground(this, newTimeOfDay, mapPixelWidth, mapPixelHeight);
+
+        if (currentArea === "world") {
+          playWorldBgm(this, newTimeOfDay);
+        }
+      }
     }
 
     this.debugOverlay?.render();
