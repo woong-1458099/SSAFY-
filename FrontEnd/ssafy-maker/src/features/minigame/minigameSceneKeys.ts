@@ -19,13 +19,11 @@ export const LEGACY_MINIGAME_SCENE_KEYS = [
   "GymScene",
   "CookingScene",
   "LottoScene",
-  "DrinkingScene",
-  "MiniGameReflexScene"
+  "DrinkingScene"
 ] as const;
 
 export const EXPERIMENTAL_MINIGAME_SCENE_KEYS = [
-  "MiniGameCenterScene",
-  "MiniGameReflexScene"
+  "MiniGameCenterScene"
 ] as const;
 
 export const LEGACY_MINIGAME_FLOW_SCENE_KEYS = [

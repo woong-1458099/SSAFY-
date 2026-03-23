@@ -17,21 +17,21 @@ export const WEEKLY_PLAN_OPTIONS: WeeklyPlanOption[] = [
     id: "ui_practice",
     label: "UI 구현 연습",
     description: "FE 능력치 획득",
-    statDelta: { fe: 4 },
+    statDelta: { fe: 2 },
     color: 0x4c8ed9
   },
   {
     id: "rest_api_db",
     label: "REST API와 데이터베이스 설계",
     description: "BE 능력치 획득",
-    statDelta: { be: 4 },
+    statDelta: { be: 2 },
     color: 0x3d9d7a
   },
   {
     id: "team_project",
     label: "팀 프로젝트",
     description: "협업 능력치 획득",
-    statDelta: { teamwork: 4 },
+    statDelta: { teamwork: 2 },
     color: 0xb68543
   }
 ];

@@ -18,7 +18,6 @@ import { BootScene } from "../../game/scenes/BootScene";
 import { PreloadScene } from "../../game/scenes/PreloadScene";
 import { MainScene } from "../../game/scenes/MainScene";
 import { MiniGameCenterScene } from "../../game/scenes/minigames/MiniGameCenterScene";
-import { MiniGameReflexScene } from "../../game/scenes/minigames/MiniGameReflexScene";
 import LegacyBusinessSmileScene from "../../game/scenes/minigames/BusinessSmileScene";
 import LegacyCookingScene from "../../game/scenes/minigames/CookingScene";
 import LegacyDontSmileScene from "../../game/scenes/minigames/DontSmileScene";
@@ -59,8 +58,7 @@ const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: "CookingScene", scene: LegacyCookingScene },
   { key: "LottoScene", scene: LegacyLottoScene },
   { key: "DrinkingScene", scene: LegacyDrinkingScene },
-  { key: "MiniGameCenterScene", scene: MiniGameCenterScene },
-  { key: "MiniGameReflexScene", scene: MiniGameReflexScene }
+  { key: "MiniGameCenterScene", scene: MiniGameCenterScene }
 ];
 
 function findMissingKeys(requiredKeys: Iterable<string>, registeredKeySet: Set<string>): string[] {

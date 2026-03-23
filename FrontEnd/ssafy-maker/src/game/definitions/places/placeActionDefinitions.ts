@@ -41,7 +41,7 @@ export const HOME_ACTION_DEFINITIONS: Record<HomeActionId, HomeActionDefinition>
     label: "공부하기 - FE/BE 증가 / 체력 감소",
     hpDelta: -12,
     stressDelta: 10,
-    statDelta: { fe: 4, be: 4 },
+    statDelta: { fe: 2, be: 2 },
     toastMessage: "공부하기 완료"
   },
   game: {

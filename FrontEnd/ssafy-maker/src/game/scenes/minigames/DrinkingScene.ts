@@ -232,7 +232,7 @@ export default class DrinkingScene extends Phaser.Scene {
 
   emitRewardIfNeeded() {
     if (this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'DrinkingScene', rewardText: 'STRESS -20 GP +10' });
+    emitMinigameReward(this, { sceneKey: 'DrinkingScene', rewardText: 'STRESS -5, GP +10' });
     this.rewardEmitted = true;
   }
 }

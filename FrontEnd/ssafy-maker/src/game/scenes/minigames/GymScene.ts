@@ -192,14 +192,18 @@ export default class GymScene extends Phaser.Scene {
     this.waiting = true; // 판정 후 잠시 대기
     this.inputLocked = true;
 
-    const absPos = Math.abs(this.gaugePos);
+    // 누른 순간의 위치를 캡처하여 판정
+    const pressedPos = this.gaugePos;
+    const absPos = Math.abs(pressedPos);
     let judgment = '';
     let color = '';
+    let colorHex = 0xffffff;
     let success = false;
 
     if (absPos <= this.perfectZone) {
       judgment = 'PERFECT!';
       color = '#44ff88';
+      colorHex = 0x44ff88;
       this.perfectCount++;
       success = true;
       // Perfect면 속도 증가
@@ -207,6 +211,7 @@ export default class GymScene extends Phaser.Scene {
     } else if (absPos <= this.goodZone) {
       judgment = 'GOOD!';
       color = '#ffff44';
+      colorHex = 0xffff44;
       this.goodCount++;
       success = true;
       // Good이면 속도 약간 증가
@@ -214,10 +219,15 @@ export default class GymScene extends Phaser.Scene {
     } else {
       judgment = 'MISS...';
       color = '#ff4444';
+      colorHex = 0xff4444;
       this.missCount++;
       // Miss면 속도 감소
       this.gaugeSpeed = Math.max(this.gaugeSpeed - 0.2, 1.5);
     }
+
+    // 인디케이터를 판정 결과 색상으로 고정 (시각적 피드백)
+    this.indicator.setFillStyle(colorHex);
+    this.indicator.setStrokeStyle(4, colorHex);
 
     // 판정 표시
     this.showJudgment(judgment, color);
@@ -257,6 +267,8 @@ export default class GymScene extends Phaser.Scene {
         this.gaugeDirection = 1;
         this.waiting = false;
         this.inputLocked = false;
+        // 인디케이터 스타일 원래대로 복원
+        this.indicator.setStrokeStyle(2, 0xffff00);
       }
     });
   }

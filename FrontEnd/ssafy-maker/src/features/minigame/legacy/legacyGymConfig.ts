@@ -16,11 +16,11 @@ const LEGACY_GYM_RESULT_RULES: Array<{
   message: string;
   reward: string;
 }> = [
-  { minReps: LEGACY_GYM_MAX_REPS, minPerfectRate: 0.7, grade: "S", gradeColor: "#ffd700", message: "🏆 완벽한 퍼포먼스!", reward: "체력 +10, GP +30" },
-  { minReps: LEGACY_GYM_MAX_REPS, grade: "A", gradeColor: "#44ff88", message: "💪 훌륭해요!", reward: "체력 +7, GP +20" },
-  { minReps: 7, grade: "B", gradeColor: "#4499ff", message: "👍 좋아요!", reward: "체력 +5, GP +10" },
-  { minReps: 4, grade: "C", gradeColor: "#ffaa44", message: "😤 더 노력해봐요", reward: "체력 +3, GP +5" },
-  { minReps: 0, grade: "D", gradeColor: "#ff4466", message: "😢 다음에 다시...", reward: "체력 +1" },
+  { minReps: LEGACY_GYM_MAX_REPS, minPerfectRate: 0.7, grade: "S", gradeColor: "#ffd700", message: "🏆 완벽한 퍼포먼스!", reward: "HP +5, GP +15" },
+  { minReps: LEGACY_GYM_MAX_REPS, grade: "A", gradeColor: "#44ff88", message: "💪 훌륭해요!", reward: "HP +3, GP +10" },
+  { minReps: 7, grade: "B", gradeColor: "#4499ff", message: "👍 좋아요!", reward: "HP +2, GP +5" },
+  { minReps: 4, grade: "C", gradeColor: "#ffaa44", message: "😤 더 노력해봐요", reward: "HP +1, GP +3" },
+  { minReps: 0, grade: "D", gradeColor: "#ff4466", message: "😢 다음에 다시...", reward: "HP +1" },
 ];
 
 export function resolveLegacyGymResult(reps: number, perfectCount: number) {
