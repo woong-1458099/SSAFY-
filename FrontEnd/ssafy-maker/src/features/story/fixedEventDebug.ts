@@ -1,11 +1,11 @@
 import type { AreaId } from "../../common/enums/area";
+import type { FixedEventStatChangeKey } from "../../common/types/fixedEvent";
 import { DAY_CYCLE } from "../progression/TimeService";
 import type {
   FixedEventChoiceCondition,
   FixedEventChoiceEntry,
   FixedEventChoiceResult,
-  FixedEventEntry,
-  FixedEventStatChangeKey
+  FixedEventEntry
 } from "./jsonDialogueAdapter";
 import { resolveFixedEventLocationId, resolveFixedEventRenderArea } from "./fixedEventNpcPresence";
 

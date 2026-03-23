@@ -587,6 +587,9 @@ export async function validateAuthoredStory(options = {}) {
   const dialogueRequirementStatKeys = new Set(
     parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_REQUIREMENT_STAT_KEYS")
   );
+  const dialogueMetricKeys = new Set(
+    parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_METRIC_KEYS")
+  );
   const allowedActions = new Set(parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_ACTIONS"));
   const requiredSceneStateIds = new Set(parseExportedStringMap(sceneStateIdsSource, sceneStateIdsPath, "SCENE_STATE_IDS").values());
   const ajv = new Ajv2020({
@@ -628,6 +631,12 @@ export async function validateAuthoredStory(options = {}) {
     "authored-dialogues.choice.affectionChanges keys",
     new Set(dialoguesSchema?.$defs?.dialogueChoice?.properties?.affectionChanges?.propertyNames?.enum ?? []),
     affectionNpcIds,
+    issues
+  );
+  compareStringSets(
+    "authored-dialogues.choice.statChanges keys",
+    new Set(dialoguesSchema?.$defs?.dialogueChoice?.properties?.statChanges?.propertyNames?.enum ?? []),
+    dialogueMetricKeys,
     issues
   );
 

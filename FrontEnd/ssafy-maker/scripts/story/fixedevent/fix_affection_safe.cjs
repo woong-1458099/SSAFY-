@@ -43,7 +43,8 @@ function traverse(obj) {
       if (npcId === "hyo") npcId = "hyoryeon";
       else if (npcId === "pro") npcId = "sunmi";
 
-      newAffection[npcId] = val;
+      const existingValue = typeof newAffection[npcId] === "number" ? newAffection[npcId] : 0;
+      newAffection[npcId] = existingValue + val;
       migratedKeys.push(key);
     }
 

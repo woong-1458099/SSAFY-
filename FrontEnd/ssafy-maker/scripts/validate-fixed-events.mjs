@@ -14,7 +14,7 @@ const fixedEventsSchemaPath = path.join(projectRoot, "scripts/schemas/fixed-even
 const authoredDialoguesSchemaPath = path.join(projectRoot, "scripts/schemas/authored-dialogues.schema.json");
 const npcEnumPath = path.join(projectRoot, "src/common/enums/npc.ts");
 const dialogueTypesPath = path.join(projectRoot, "src/common/types/dialogue.ts");
-const jsonDialogueAdapterPath = path.join(projectRoot, "src/features/story/jsonDialogueAdapter.ts");
+const fixedEventTypesPath = path.join(projectRoot, "src/common/types/fixedEvent.ts");
 
 function unwrapExpression(expression) {
   let current = expression;
@@ -147,21 +147,49 @@ async function collectFixedEventJsonPaths() {
     .sort();
 }
 
+async function collectRomanceJsonPaths() {
+  const entries = await readdir(fixedEventDir, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && /^romance_.*\.json$/i.test(entry.name))
+    .map((entry) => path.join(fixedEventDir, entry.name))
+    .sort();
+}
+
+function collectStatChangeKeysDeep(value, target = new Set()) {
+  if (!value || typeof value !== "object") {
+    return target;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectStatChangeKeysDeep(entry, target));
+    return target;
+  }
+
+  if (value.statChanges && typeof value.statChanges === "object" && !Array.isArray(value.statChanges)) {
+    Object.keys(value.statChanges).forEach((key) => target.add(key));
+  }
+
+  Object.values(value).forEach((entry) => collectStatChangeKeysDeep(entry, target));
+  return target;
+}
+
 async function main() {
   const [
     fixedEventsSchemaRaw,
     authoredDialoguesSchemaRaw,
     npcEnumSource,
     dialogueTypesSource,
-    jsonDialogueAdapterSource,
-    fixedEventJsonPaths
+    fixedEventTypesSource,
+    fixedEventJsonPaths,
+    romanceJsonPaths
   ] = await Promise.all([
     readFile(fixedEventsSchemaPath, "utf8"),
     readFile(authoredDialoguesSchemaPath, "utf8"),
     readFile(npcEnumPath, "utf8"),
     readFile(dialogueTypesPath, "utf8"),
-    readFile(jsonDialogueAdapterPath, "utf8"),
-    collectFixedEventJsonPaths()
+    readFile(fixedEventTypesPath, "utf8"),
+    collectFixedEventJsonPaths(),
+    collectRomanceJsonPaths()
   ]);
 
   const fixedEventsSchema = JSON.parse(fixedEventsSchemaRaw);
@@ -170,11 +198,14 @@ async function main() {
   const dialogueRequirementStatKeys = new Set(
     parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_REQUIREMENT_STAT_KEYS")
   );
+  const dialogueMetricKeys = new Set(
+    parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_METRIC_KEYS")
+  );
   const fixedEventStatChangeKeys = new Set(
-    parseExportedStringArray(jsonDialogueAdapterSource, jsonDialogueAdapterPath, "FIXED_EVENT_STAT_CHANGE_KEYS")
+    parseExportedStringArray(fixedEventTypesSource, fixedEventTypesPath, "FIXED_EVENT_STAT_CHANGE_KEYS")
   );
   const fixedEventConditionGenderValues = new Set(
-    parseExportedStringArray(jsonDialogueAdapterSource, jsonDialogueAdapterPath, "FIXED_EVENT_CONDITION_GENDER_VALUES")
+    parseExportedStringArray(fixedEventTypesSource, fixedEventTypesPath, "FIXED_EVENT_CONDITION_GENDER_VALUES")
   );
 
   const issues = [];
@@ -233,6 +264,18 @@ async function main() {
     }
   }
 
+  for (const filePath of romanceJsonPaths) {
+    const rawJson = JSON.parse(await readFile(filePath, "utf8"));
+    const statChangeKeys = collectStatChangeKeysDeep(rawJson);
+    const invalidKeys = [...statChangeKeys].filter((key) => !dialogueMetricKeys.has(key)).sort();
+
+    if (invalidKeys.length > 0) {
+      issues.push(
+        `[schema-smoke:${path.relative(projectRoot, filePath)}] unsupported romance statChanges keys: ${invalidKeys.join(", ")}`
+      );
+    }
+  }
+
   if (issues.length > 0) {
     console.error("[validate:fixed-events] failed");
     issues.forEach((issue) => console.error(`- ${issue}`));
@@ -241,7 +284,8 @@ async function main() {
   }
 
   console.log("[validate:fixed-events] OK");
-  console.log(`- files: ${filesToValidate.length}`);
+  console.log(`- fixed-event files: ${filesToValidate.length}`);
+  console.log(`- romance files: ${romanceJsonPaths.length}`);
 }
 
 main().catch((error) => {

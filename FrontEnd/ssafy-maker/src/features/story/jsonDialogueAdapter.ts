@@ -9,6 +9,12 @@ import {
   type DialogueRequirement,
   type DialogueScript
 } from "../../common/types/dialogue";
+import {
+  FIXED_EVENT_CONDITION_GENDER_VALUES,
+  FIXED_EVENT_STAT_CHANGE_KEYS,
+  type FixedEventConditionGenderValue,
+  type FixedEventStatChangeKey
+} from "../../common/types/fixedEvent";
 import { normalizeAffectionNpcId } from "../../common/enums/npc";
 import { matchesFixedEventLocation, normalizeFixedEventLocationToken } from "./fixedEventLocation";
 
@@ -18,8 +24,6 @@ export type FixedEventDialogueEntry = {
   emotion?: string;
   text?: string;
 };
-
-export const FIXED_EVENT_CONDITION_GENDER_VALUES = ["MALE", "FEMALE"] as const;
 
 export type FixedEventChoiceCondition = {
   social?: number;
@@ -32,30 +36,8 @@ export type FixedEventChoiceCondition = {
   stress?: number;
   stress_max?: number;
   trait?: string;
-  playerGender?: (typeof FIXED_EVENT_CONDITION_GENDER_VALUES)[number];
+  playerGender?: FixedEventConditionGenderValue;
 };
-
-export const FIXED_EVENT_STAT_CHANGE_KEYS = [
-  "social",
-  "code",
-  "nunchi",
-  "gold",
-  "money",
-  "hp",
-  "stress",
-  "luck",
-  "favor_minsu",
-  "favor_hyo",
-  "favor_hyoryeon",
-  "favor_pro",
-  "favor_sunmi",
-  "madness",
-  "fe",
-  "be",
-  "teamwork"
-] as const;
-
-export type FixedEventStatChangeKey = (typeof FIXED_EVENT_STAT_CHANGE_KEYS)[number];
 
 export type FixedEventChoiceResult = {
   statChanges?: Partial<Record<FixedEventStatChangeKey, number>>;
