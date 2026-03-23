@@ -1,33 +1,38 @@
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
-import { LEGACY_MINIGAME_CARDS } from "../../features/minigame/minigameCatalog";
 import {
+  assertMinigameCatalogIntegrity,
+  LEGACY_MINIGAME_CARDS
+} from "../../features/minigame/minigameCatalog";
+import {
+  assertMinigameSceneKeyIntegrity,
+  DEPRECATED_MINIGAME_SCENE_KEYS,
   LEGACY_MINIGAME_FLOW_SCENE_KEYS,
   LEGACY_MINIGAME_MENU_SCENE_KEY,
   LEGACY_MINIGAME_PAUSE_SCENE_KEY,
-  LEGACY_MINIGAME_SCENE_KEYS
+  LEGACY_MINIGAME_SCENE_KEYS,
+  isDeprecatedMinigameSceneKey,
+  SUPPORTED_MINIGAME_SCENE_KEYS
 } from "../../features/minigame/minigameSceneKeys";
 import { BootScene } from "../../game/scenes/BootScene";
 import { PreloadScene } from "../../game/scenes/PreloadScene";
 import { MainScene } from "../../game/scenes/MainScene";
 import { MiniGameCenterScene } from "../../game/scenes/minigames/MiniGameCenterScene";
 import { MiniGameReflexScene } from "../../game/scenes/minigames/MiniGameReflexScene";
-import { MiniGameTypingScene } from "../../game/scenes/minigames/MiniGameTypingScene";
-import LegacyBusinessSmileScene from "../../game/scenes/legacyMinigames/BusinessSmileScene";
-import LegacyCookingScene from "../../game/scenes/legacyMinigames/CookingScene";
-import LegacyDontSmileScene from "../../game/scenes/legacyMinigames/DontSmileScene";
-import LegacyDragScene from "../../game/scenes/legacyMinigames/DragScene";
-import LegacyDrinkingScene from "../../game/scenes/legacyMinigames/DrinkingScene";
-import LegacyGymScene from "../../game/scenes/legacyMinigames/GymScene";
-import LegacyInterviewScene from "../../game/scenes/legacyMinigames/InterviewScene";
-import LegacyLottoScene from "../../game/scenes/legacyMinigames/LottoScene";
-import LegacyMenuScene from "../../game/scenes/legacyMinigames/MenuScene";
-import LegacyMinigamePauseScene from "../../game/scenes/legacyMinigames/MinigamePauseScene";
-import LegacyQuizScene from "../../game/scenes/legacyMinigames/QuizScene";
-import LegacyRhythmScene from "../../game/scenes/legacyMinigames/RhythmScene";
-import LegacyRunnerScene from "../../game/scenes/legacyMinigames/RunnerScene";
-import LegacyTankScene from "../../game/scenes/legacyMinigames/TankScene";
-import LegacyTypingScene from "../../game/scenes/legacyMinigames/TypingScene";
+import LegacyBusinessSmileScene from "../../game/scenes/minigames/BusinessSmileScene";
+import LegacyCookingScene from "../../game/scenes/minigames/CookingScene";
+import LegacyDontSmileScene from "../../game/scenes/minigames/DontSmileScene";
+import LegacyDrinkingScene from "../../game/scenes/minigames/DrinkingScene";
+import LegacyGymScene from "../../game/scenes/minigames/GymScene";
+import LegacyInterviewScene from "../../game/scenes/minigames/InterviewScene";
+import LegacyLottoScene from "../../game/scenes/minigames/LottoScene";
+import LegacyMenuScene from "../../game/scenes/minigames/MenuScene";
+import LegacyMinigamePauseScene from "../../game/scenes/minigames/MinigamePauseScene";
+import LegacyQuizScene from "../../game/scenes/minigames/QuizScene";
+import LegacyRhythmScene from "../../game/scenes/minigames/RhythmScene";
+import LegacyRunnerScene from "../../game/scenes/minigames/RunnerScene";
+import LegacyTankScene from "../../game/scenes/minigames/TankScene";
+import LegacyTypingScene from "../../game/scenes/minigames/TypingScene";
 
 type SceneConstructor = new () => Phaser.Scene;
 
@@ -47,7 +52,6 @@ const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: "InterviewScene", scene: LegacyInterviewScene },
   { key: "RunnerScene", scene: LegacyRunnerScene },
   { key: "TankScene", scene: LegacyTankScene },
-  { key: "DragScene", scene: LegacyDragScene },
   { key: "TypingScene", scene: LegacyTypingScene },
   { key: "BusinessSmileScene", scene: LegacyBusinessSmileScene },
   { key: "DontSmileScene", scene: LegacyDontSmileScene },
@@ -56,7 +60,6 @@ const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: "LottoScene", scene: LegacyLottoScene },
   { key: "DrinkingScene", scene: LegacyDrinkingScene },
   { key: "MiniGameCenterScene", scene: MiniGameCenterScene },
-  { key: "MiniGameTypingScene", scene: MiniGameTypingScene },
   { key: "MiniGameReflexScene", scene: MiniGameReflexScene }
 ];
 
@@ -81,8 +84,15 @@ function findDuplicateKeys(keys: readonly string[]): string[] {
 }
 
 export function assertSceneRegistryIntegrity(): void {
+  assertMinigameSceneKeyIntegrity();
+  assertMinigameCatalogIntegrity(LEGACY_MINIGAME_CARDS);
+
+  const coreSceneKeys = [SCENE_KEYS.boot, SCENE_KEYS.preload, SCENE_KEYS.main] as const;
   const registeredKeys = SCENE_REGISTRY_ENTRIES.map((entry) => entry.key);
   const registeredKeySet = new Set(registeredKeys);
+  const registeredMinigameKeys = registeredKeys.filter((key) => !coreSceneKeys.includes(key as (typeof coreSceneKeys)[number]));
+  const registeredMinigameKeySet = new Set(registeredMinigameKeys);
+  const supportedMinigameKeySet = new Set(SUPPORTED_MINIGAME_SCENE_KEYS);
   const cardKeys = new Set(LEGACY_MINIGAME_CARDS.map((card) => card.key));
   const issues: string[] = [];
 
@@ -91,7 +101,7 @@ export function assertSceneRegistryIntegrity(): void {
     issues.push(`[sceneRegistry] 중복 scene key: ${duplicateKeys.join(", ")}`);
   }
 
-  const missingCoreKeys = findMissingKeys([SCENE_KEYS.boot, SCENE_KEYS.preload, SCENE_KEYS.main], registeredKeySet);
+  const missingCoreKeys = findMissingKeys(coreSceneKeys, registeredKeySet);
   if (missingCoreKeys.length > 0) {
     issues.push(`[sceneRegistry] 핵심 scene key 누락: ${missingCoreKeys.join(", ")}`);
   }
@@ -101,9 +111,24 @@ export function assertSceneRegistryIntegrity(): void {
     issues.push(`[sceneRegistry] 미니게임 flow scene key 누락: ${missingFlowKeys.join(", ")}`);
   }
 
+  const missingSupportedRegistryKeys = findMissingKeys(SUPPORTED_MINIGAME_SCENE_KEYS, registeredMinigameKeySet);
+  if (missingSupportedRegistryKeys.length > 0) {
+    issues.push(`[sceneRegistry] 지원 대상 미니게임 scene key가 registry에 누락되었습니다: ${missingSupportedRegistryKeys.join(", ")}`);
+  }
+
+  const unexpectedRegisteredMinigameKeys = findMissingKeys(registeredMinigameKeys, supportedMinigameKeySet);
+  if (unexpectedRegisteredMinigameKeys.length > 0) {
+    issues.push(`[sceneRegistry] 지원 목록에 없는 scene key가 registry에 등록되었습니다: ${unexpectedRegisteredMinigameKeys.join(", ")}`);
+  }
+
   const missingCatalogKeys = findMissingKeys(cardKeys, registeredKeySet);
   if (missingCatalogKeys.length > 0) {
     issues.push(`[sceneRegistry] 미니게임 catalog key 누락: ${missingCatalogKeys.join(", ")}`);
+  }
+
+  const deprecatedRegisteredKeys = registeredMinigameKeys.filter((key) => isDeprecatedMinigameSceneKey(key)).sort();
+  if (deprecatedRegisteredKeys.length > 0) {
+    issues.push(`[sceneRegistry] 제거된 미니게임 scene key가 registry에 남아 있습니다: ${deprecatedRegisteredKeys.join(", ")}`);
   }
 
   const uncataloguedLegacyKeys = findMissingKeys(LEGACY_MINIGAME_SCENE_KEYS, cardKeys);
@@ -116,6 +141,16 @@ export function assertSceneRegistryIntegrity(): void {
   }
 }
 
-assertSceneRegistryIntegrity();
+export const SCENE_REGISTRY = (() => {
+  try {
+    assertSceneRegistryIntegrity();
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      throw error;
+    }
 
-export const SCENE_REGISTRY = SCENE_REGISTRY_ENTRIES.map((entry) => entry.scene);
+    console.error("[sceneRegistry] integrity validation failed during boot.", error);
+  }
+
+  return SCENE_REGISTRY_ENTRIES.map((entry) => entry.scene);
+})();

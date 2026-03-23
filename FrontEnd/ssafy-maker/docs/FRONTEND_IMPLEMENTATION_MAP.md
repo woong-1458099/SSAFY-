@@ -51,8 +51,8 @@ Current main flow is:
 Observed from implementation:
 
 - `TitleScene` exists and is registered, but the current live flow does not route through it.
-- `MiniGameCenterScene`, `MiniGameTypingScene`, and `MiniGameReflexScene` exist, but they are not currently included in `SCENE_REGISTRY`.
-- Legacy minigame scenes under `src/scenes/legacyMinigames` are still registered and still referenced.
+- `MiniGameCenterScene` and `MiniGameReflexScene` are included in the current minigame flow.
+- `MiniGameTypingScene` and `DragScene` are intentionally removed and tracked as deprecated keys to catch stale references early.
 
 ## Directory Map
 
@@ -288,11 +288,10 @@ Practical reading order for future analysis:
 - `MainScene.ts` is effectively the gameplay monolith.
 - Future changes to inventory, map, dialogue, and saving can conflict because they live in one file.
 
-### 2. Mixed old/new minigame structure
+### 2. Minigame compatibility boundaries
 
-- New minigame scene files exist.
-- Legacy minigame scenes are still the ones actively registered.
-- This means minigame migration is incomplete.
+- The runtime uses `src/game/scenes/minigames/*` as the active path.
+- Removed scene keys such as `DragScene` and `MiniGameTypingScene` are tracked explicitly so stale registry/catalog references fail fast.
 
 ### 3. Unused or partially wired runtime pieces
 

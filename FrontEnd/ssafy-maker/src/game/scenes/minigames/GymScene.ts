@@ -10,10 +10,18 @@ import {
   LEGACY_GYM_TOTAL_TIME,
   resolveLegacyGymResult
 } from '@features/minigame/legacy/legacyGymConfig';
+import {
+  SCREEN,
+  COLORS,
+  PIXEL_FONT,
+  createBackground,
+  createGridBackground,
+  createButton,
+  createPanel,
+  TEXT_STYLES,
+} from './utils';
 
-const PF = '"Press Start 2P"';
-const W = 800;
-const H = 600;
+const { W, H } = SCREEN;
 
 export default class GymScene extends Phaser.Scene {
   private returnSceneKey = 'main';
@@ -57,35 +65,32 @@ export default class GymScene extends Phaser.Scene {
     this.inputLocked = false;
 
     // 배경
-    this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
+    createBackground(this, 0x1a1a2e);
 
     // 그리드 패턴
-    const grid = this.add.graphics();
-    grid.lineStyle(1, 0x2a2a4e, 0.3);
-    for (let x = 0; x < W; x += 40) grid.lineBetween(x, 0, x, H);
-    for (let y = 0; y < H; y += 40) grid.lineBetween(0, y, W, y);
+    createGridBackground(this, 40, 0x2a2a4e, 0.3);
 
     // 상단 UI
-    this.add.rectangle(W / 2, 35, W, 70, 0x0d1545, 0.95);
-    this.add.rectangle(W / 2, 0, W, 4, 0xff6600);
-    this.add.rectangle(W / 2, 70, W, 3, 0xff6600);
+    this.add.rectangle(W / 2, 35, W, 70, COLORS.bgPanel, 0.95);
+    this.add.rectangle(W / 2, 0, W, 4, COLORS.orange);
+    this.add.rectangle(W / 2, 70, W, 3, COLORS.orange);
 
     this.add.text(W / 2, 20, `${this.exercise.emoji} ${this.exercise.name}`, {
-      fontSize: '18px', color: '#ff8844', fontFamily: PF
+      fontSize: '18px', color: '#ff8844', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 50, '타이밍에 맞춰 SPACE를 누르세요!', {
-      fontSize: '9px', color: '#88aacc', fontFamily: PF
+      fontSize: '9px', color: '#88aacc', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // 타이머
     this.timerTxt = this.add.text(W - 30, 90, `TIME: ${LEGACY_GYM_TOTAL_TIME}`, {
-      fontSize: '12px', color: '#ff4466', fontFamily: PF
+      ...TEXT_STYLES.timer
     }).setOrigin(1, 0);
 
     // Rep 카운트
     this.repTxt = this.add.text(30, 90, `REPS: 0 / ${LEGACY_GYM_MAX_REPS}`, {
-      fontSize: '12px', color: '#44ff88', fontFamily: PF
+      ...TEXT_STYLES.scoreGreen
     });
 
     // 바벨 시각화
@@ -96,12 +101,12 @@ export default class GymScene extends Phaser.Scene {
 
     // 판정 텍스트
     this.judgeTxt = this.add.text(W / 2, 280, '', {
-      fontSize: '24px', color: '#ffffff', fontFamily: PF
+      fontSize: '24px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5).setDepth(10);
 
     // 힌트
     this.add.text(W / 2, H - 40, '초록 영역에서 SPACE! | Perfect = 더 빠른 게이지', {
-      fontSize: '8px', color: '#666688', fontFamily: PF
+      ...TEXT_STYLES.hint
     }).setOrigin(0.5);
 
     // 입력
@@ -157,7 +162,7 @@ export default class GymScene extends Phaser.Scene {
 
     // 영역 라벨
     this.add.text(W / 2, gaugeY - 35, 'PERFECT', {
-      fontSize: '8px', color: '#44ff88', fontFamily: PF
+      fontSize: '8px', color: '#44ff88', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // 이동하는 바 (인디케이터)
@@ -172,7 +177,7 @@ export default class GymScene extends Phaser.Scene {
 
     // 스피드 표시
     this.speedTxt = this.add.text(W / 2, gaugeY + 45, 'SPEED: x1.0', {
-      fontSize: '10px', color: '#ffaa44', fontFamily: PF
+      fontSize: '10px', color: '#ffaa44', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
   }
 
@@ -324,59 +329,59 @@ export default class GymScene extends Phaser.Scene {
     this.children.removeAll();
 
     // 배경
-    this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
-    this.add.rectangle(W / 2, 0, W, 4, 0xff6600);
+    createBackground(this, 0x1a1a2e);
+    this.add.rectangle(W / 2, 0, W, 4, COLORS.orange);
 
     // 결과 박스
-    this.add.rectangle(W / 2, H / 2, 550, 420, 0x0d1545).setStrokeStyle(4, 0xff6600);
+    createPanel(this, W / 2, H / 2, 550, 420, {
+      bgColor: COLORS.bgPanel,
+      borderColor: COLORS.orange,
+      borderWidth: 4
+    });
 
     this.add.text(W / 2, 120, '🏋️ TRAINING COMPLETE', {
-      fontSize: '20px', color: '#ff8844', fontFamily: PF
+      fontSize: '20px', color: '#ff8844', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // Reps
     this.add.text(W / 2, 180, `${this.reps} REPS`, {
-      fontSize: '40px', color: '#ffffff', fontFamily: PF
+      fontSize: '40px', color: '#ffffff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // 판정 통계
     this.add.text(W / 2, 240, `PERFECT: ${this.perfectCount} | GOOD: ${this.goodCount} | MISS: ${this.missCount}`, {
-      fontSize: '11px', color: '#88ccff', fontFamily: PF
+      fontSize: '11px', color: '#88ccff', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     // 등급 계산
     const result = resolveLegacyGymResult(this.reps, this.perfectCount);
 
     this.add.text(W / 2 + 120, 180, result.grade, {
-      fontSize: '50px', color: result.gradeColor, fontFamily: PF
+      fontSize: '50px', color: result.gradeColor, fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 290, result.message, {
-      fontSize: '14px', color: result.gradeColor, fontFamily: PF
+      fontSize: '14px', color: result.gradeColor, fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 340, `보상: ${result.reward}`, {
-      fontSize: '12px', color: '#ffd700', fontFamily: PF
+      ...TEXT_STYLES.reward
     }).setOrigin(0.5);
     this.completedRewardText = result.reward;
 
     // 버튼
-    this.createBtn(W / 2 - 120, 420, '다시하기', 0x442200, 0xff6600, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 420, '나가기', 0x222244, 0x4488ff, () => {
+    createButton(this, W / 2 - 120, 420, '다시하기', () => this.scene.restart(), {
+      bgColor: 0x442200,
+      hoverColor: COLORS.orange,
+      borderColor: COLORS.orange
+    });
+    createButton(this, W / 2 + 120, 420, '나가기', () => {
       this.emitRewardIfNeeded();
       returnToScene(this, this.returnSceneKey);
-    });
-  }
-
-  createBtn(x, y, label, bg, border, cb) {
-    this.add.rectangle(x + 2, y + 2, 180, 50, 0x000000, 0.5);
-    const btn = this.add.rectangle(x, y, 180, 50, bg).setInteractive().setStrokeStyle(3, border);
-    this.add.text(x, y, label, { fontSize: '12px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
-    btn.on('pointerover', () => btn.setFillStyle(border));
-    btn.on('pointerout', () => btn.setFillStyle(bg));
-    btn.on('pointerdown', () => {
-      this.cameras.main.flash(100, 255, 255, 255);
-      this.time.delayedCall(100, cb);
+    }, {
+      bgColor: 0x222244,
+      hoverColor: COLORS.blue,
+      borderColor: COLORS.blue
     });
   }
 

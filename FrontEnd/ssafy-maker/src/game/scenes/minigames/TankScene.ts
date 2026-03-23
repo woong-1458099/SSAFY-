@@ -10,10 +10,9 @@ import {
   LEGACY_TANK_INITIAL_PLAYER_AIM_ANGLE,
   LEGACY_TANK_SHOOT_COOLDOWN_MS
 } from '@features/minigame/legacy/legacyTankConfig';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createGridBackground, createPanel, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
-const W = 800;
-const H = 600;
+const { W, H } = SCREEN;
 
 export default class TankScene extends Phaser.Scene {
   private returnSceneKey = 'main';
@@ -63,7 +62,7 @@ export default class TankScene extends Phaser.Scene {
     border.strokeRect(20, 20, W - 40, H - 40);
 
     // UI - Player lives (bottom left)
-    this.add.text(30, H - 35, 'PLAYER', { fontSize: '10px', color: '#44aaff', fontFamily: PF });
+    this.add.text(30, H - 35, 'PLAYER', { fontSize: '10px', color: '#44aaff', fontFamily: PIXEL_FONT });
     this.playerLivesIcons = [];
     for (let i = 0; i < LEGACY_TANK_INITIAL_LIVES; i++) {
       const heart = this.add.text(100 + i * 25, H - 38, '❤️', { fontSize: '14px' });
@@ -71,7 +70,7 @@ export default class TankScene extends Phaser.Scene {
     }
 
     // UI - Enemy lives (top right)
-    this.add.text(W - 170, 15, 'ENEMY', { fontSize: '10px', color: '#ff4466', fontFamily: PF });
+    this.add.text(W - 170, 15, 'ENEMY', { fontSize: '10px', color: '#ff4466', fontFamily: PIXEL_FONT });
     this.enemyLivesIcons = [];
     for (let i = 0; i < LEGACY_TANK_INITIAL_LIVES; i++) {
       const heart = this.add.text(W - 100 + i * 25, 12, '❤️', { fontSize: '14px' });
@@ -79,10 +78,10 @@ export default class TankScene extends Phaser.Scene {
     }
 
     // Title
-    this.add.text(W / 2, 15, '🎮 탱크 배틀', { fontSize: '16px', color: '#88ff00', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, 15, '🎮 탱크 배틀', { fontSize: '16px', color: '#88ff00', fontFamily: PIXEL_FONT }).setOrigin(0.5);
 
     // Hint
-    this.hintTxt = this.add.text(W / 2, H - 18, 'WASD: 이동 | 방향키: 조준 | SPACE: 발사', { fontSize: '10px', color: '#88ff88', fontFamily: PF }).setOrigin(0.5);
+    this.hintTxt = this.add.text(W / 2, H - 18, 'WASD: 이동 | 방향키: 조준 | SPACE: 발사', { fontSize: '10px', color: '#88ff88', fontFamily: PIXEL_FONT }).setOrigin(0.5);
 
     // Create Player Tank (bottom - Blue/Green)
     this.player = this.createTank(W / 2, H - 100, 0x334400, 0x88ff00, true);
@@ -129,7 +128,7 @@ export default class TankScene extends Phaser.Scene {
 
   showCountdown() {
     let count = 3;
-    const countTxt = this.add.text(W / 2, H / 2, '3', { fontSize: '72px', color: '#88ff00', fontFamily: PF }).setOrigin(0.5).setDepth(100);
+    const countTxt = this.add.text(W / 2, H / 2, '3', { fontSize: '72px', color: '#88ff00', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(100);
 
     this.time.addEvent({
       delay: 800,
@@ -382,9 +381,9 @@ export default class TankScene extends Phaser.Scene {
 
     const ending = playerWon ? LEGACY_TANK_ENDINGS.victory : LEGACY_TANK_ENDINGS.defeat;
     this.completedRewardText = ending.reward;
-    this.add.text(W / 2, H / 2 - 80, ending.title, { fontSize: '42px', color: ending.titleColor, fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, H / 2 - 20, ending.subtitle, { fontSize: '16px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, H / 2 + 30, ending.reward, { fontSize: '14px', color: ending.rewardColor, fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, H / 2 - 80, ending.title, { fontSize: '42px', color: ending.titleColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, H / 2 - 20, ending.subtitle, { fontSize: '16px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, H / 2 + 30, ending.reward, { fontSize: '14px', color: ending.rewardColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 130, H / 2 + 100, '다시하기', 0x332200, 0x88ff00, () => this.scene.restart());
     this.createBtn(W / 2 + 130, H / 2 + 100, '나가기', 0x222222, 0x666666, () => {
@@ -395,7 +394,7 @@ export default class TankScene extends Phaser.Scene {
 
   createBtn(x, y, label, bg, border, cb) {
     const btn = this.add.rectangle(x, y, 180, 50, bg).setInteractive().setStrokeStyle(3, border);
-    this.add.text(x, y, label, { fontSize: '14px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(x, y, label, { fontSize: '14px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border));
     btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => cb());

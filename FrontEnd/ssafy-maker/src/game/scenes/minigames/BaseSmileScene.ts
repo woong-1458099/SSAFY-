@@ -15,11 +15,11 @@ import {
   LEGACY_SMILE_CAMERA_HEIGHT,
   LEGACY_SMILE_CAMERA_WIDTH,
   LEGACY_SMILE_MAX_GAUGE,
-  LEGACY_SMILE_PIXEL_FONT,
   LEGACY_SMILE_THRESHOLD
 } from '@features/minigame/legacy/legacySmileConfig';
+import { destroyDomElement, registerSceneCleanup, SCREEN, PIXEL_FONT } from './utils';
 
-const PIXEL_FONT = LEGACY_SMILE_PIXEL_FONT;
+const { W, H } = SCREEN;
 const MAX_GAUGE = LEGACY_SMILE_MAX_GAUGE;
 
 type SceneOutcome = 'success' | 'failure';
@@ -86,23 +86,23 @@ abstract class BaseSmileScene extends Phaser.Scene {
   }
 
   protected drawShell(): void {
-    this.add.rectangle(400, 300, 800, 600, 0x060d17);
-    this.add.rectangle(400, 4, 800, 8, this.theme.border);
-    this.add.rectangle(400, 60, 800, 112, this.theme.panel, 0.96);
-    this.add.rectangle(400, 116, 800, 3, this.theme.border, 0.9);
-    this.add.text(400, 26, this.title, {
+    this.add.rectangle(W / 2, H / 2, W, H, 0x060d17);
+    this.add.rectangle(W / 2, 4, W, 8, this.theme.border);
+    this.add.rectangle(W / 2, 60, W, 112, this.theme.panel, 0.96);
+    this.add.rectangle(W / 2, 116, W, 3, this.theme.border, 0.9);
+    this.add.text(W / 2, 26, this.title, {
       fontSize: '18px',
       color: this.theme.accent,
       fontFamily: PIXEL_FONT,
     }).setOrigin(0.5, 0);
-    this.add.text(400, 74, this.subtitle, {
+    this.add.text(W / 2, 74, this.subtitle, {
       fontSize: '8px',
       color: '#d9e9ff',
       fontFamily: PIXEL_FONT,
       align: 'center',
       wordWrap: { width: 680 },
     }).setOrigin(0.5, 0.5);
-    this.add.rectangle(400, 340, 700, 500, 0x000000, 0.42).setStrokeStyle(3, this.theme.border, 0.75);
+    this.add.rectangle(W / 2, 340, 700, 500, 0x000000, 0.42).setStrokeStyle(3, this.theme.border, 0.75);
   }
 
   protected createCameraSurface(): void {
@@ -132,11 +132,11 @@ abstract class BaseSmileScene extends Phaser.Scene {
     this.videoElement = video;
     this.canvasElement = canvas;
     this.canvasContext = canvas.getContext('2d');
-    this.domContainer = this.add.dom(400, 338, container);
+    this.domContainer = this.add.dom(W / 2, 338, container);
   }
 
   protected createStatusArea(): void {
-    this.statusText = this.add.text(400, 573, this.getInitialStatus(), {
+    this.statusText = this.add.text(W / 2, 573, this.getInitialStatus(), {
       fontSize: '8px',
       color: '#f3f8ff',
       fontFamily: PIXEL_FONT,
@@ -152,8 +152,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
   }
 
   protected registerCleanup(): void {
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
-    this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanup, this);
+    registerSceneCleanup(this, () => this.cleanup());
   }
 
   protected async initFaceTracking(): Promise<void> {
@@ -309,27 +308,27 @@ abstract class BaseSmileScene extends Phaser.Scene {
   }
 
   protected showResult(title: string, titleColor: string, sceneLabel: string, outcome: SceneOutcome): void {
-    const overlay = this.add.rectangle(400, 300, 800, 600, 0x02060d, 0.7).setDepth(30);
-    const panel = this.add.rectangle(400, 300, 500, 250, this.theme.panel, 0.97).setDepth(31).setStrokeStyle(3, this.theme.border, 0.95);
-    const titleText = this.add.text(400, 242, title, {
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x02060d, 0.7).setDepth(30);
+    const panel = this.add.rectangle(W / 2, H / 2, 500, 250, this.theme.panel, 0.97).setDepth(31).setStrokeStyle(3, this.theme.border, 0.95);
+    const titleText = this.add.text(W / 2, 242, title, {
       fontSize: '24px',
       color: titleColor,
       fontFamily: PIXEL_FONT,
     }).setOrigin(0.5).setDepth(32);
-    const subtitle = this.add.text(400, 288, sceneLabel, {
+    const subtitle = this.add.text(W / 2, 288, sceneLabel, {
       fontSize: '10px',
       color: '#edf7ff',
       fontFamily: PIXEL_FONT,
       align: 'center',
       wordWrap: { width: 420 },
     }).setOrigin(0.5).setDepth(32);
-    const rewardText = this.add.text(400, 320, outcome === 'success' ? this.completedRewardText ?? '미션 완료' : '다시 도전해 보세요', {
+    const rewardText = this.add.text(W / 2, 320, outcome === 'success' ? this.completedRewardText ?? '미션 완료' : '다시 도전해 보세요', {
       fontSize: '10px',
       color: '#9fd8ff',
       fontFamily: PIXEL_FONT,
     }).setOrigin(0.5).setDepth(32);
-    const retryButton = this.createButton(300, 356, '다시하기', () => this.scene.restart());
-    const menuButton = this.createButton(500, 356, '나가기', () => {
+    const retryButton = this.createButton(W / 2 - 100, 356, '다시하기', () => this.scene.restart());
+    const menuButton = this.createButton(W / 2 + 100, 356, '나가기', () => {
       this.emitCompletedReward();
       returnToScene(this, this.returnSceneKey);
     });
@@ -367,7 +366,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
     this.stopTracking();
     this.resultGroup.forEach((item) => item.destroy());
     this.resultGroup = [];
-    this.domContainer?.destroy();
+    destroyDomElement(this.domContainer);
     this.domContainer = null;
     this.videoElement = null;
     this.canvasElement = null;

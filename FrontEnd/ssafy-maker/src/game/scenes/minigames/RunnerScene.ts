@@ -12,8 +12,9 @@ import {
   LEGACY_RUNNER_OBSTACLES,
   resolveLegacyRunnerResult
 } from '@features/minigame/legacy/legacyRunnerConfig';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
+const { W, H } = SCREEN;
 
 export default class RunnerScene extends Phaser.Scene {
   private returnSceneKey = 'main';
@@ -42,9 +43,9 @@ export default class RunnerScene extends Phaser.Scene {
     this.add.rectangle(W / 2, 25, W, 50, 0x0d1545, 0.95);
     this.add.rectangle(W / 2, 4, W, 6, 0xFFD700);
     this.add.rectangle(W / 2, 50, W, 3, 0x4488ff);
-    this.add.text(W / 2, 10, 'BUS RUNNER', { fontSize: '14px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5, 0);
-    this.scoreTxt = this.add.text(20, 12, 'SCORE: 0', { fontSize: '9px', color: '#ffffff', fontFamily: PF });
-    this.hiTxt = this.add.text(W - 20, 12, 'BEST: 0', { fontSize: '9px', color: '#FFD700', fontFamily: PF }).setOrigin(1, 0);
+    this.add.text(W / 2, 10, 'BUS RUNNER', { fontSize: '14px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5, 0);
+    this.scoreTxt = this.add.text(20, 12, 'SCORE: 0', { fontSize: '9px', color: '#ffffff', fontFamily: PIXEL_FONT });
+    this.hiTxt = this.add.text(W - 20, 12, 'BEST: 0', { fontSize: '9px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(1, 0);
     this.groundY = 480;
     this.add.rectangle(W / 2, this.groundY + 20, W, 3, 0x4488ff, 0.5);
     for (let i = 0; i < 26; i += 1) this.grounds.push(this.add.rectangle(i * 32, this.groundY + 30, 28, 8, 0x223366).setOrigin(0, 0.5));
@@ -63,12 +64,12 @@ export default class RunnerScene extends Phaser.Scene {
     const mouth = this.add.rectangle(4, -26, 10, 4, 0xcc4444);
     const vest = this.add.rectangle(0, 2, 36, 30, 0x002266).setStrokeStyle(2, 0x4499ff);
     const badge = this.add.rectangle(-8, -4, 12, 8, 0xFFD700);
-    const badgeTxt = this.add.text(-8, -4, 'S', { fontSize: '6px', color: '#000000', fontFamily: PF }).setOrigin(0.5);
+    const badgeTxt = this.add.text(-8, -4, 'S', { fontSize: '6px', color: '#000000', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.player.add([body, vest, head, eye, mouth, badge, badgeTxt]).setDepth(5);
     this.legAnim = 0;
     this.legL = this.add.rectangle(this.playerX - 8, this.playerY + 28, 10, 20, 0x4499ff);
     this.legR = this.add.rectangle(this.playerX + 8, this.playerY + 28, 10, 20, 0x4499ff);
-    this.hintTxt = this.add.text(W / 2, 540, 'SPACE / CLICK = JUMP', { fontSize: '9px', color: '#445577', fontFamily: PF }).setOrigin(0.5);
+    this.hintTxt = this.add.text(W / 2, 540, 'SPACE / CLICK = JUMP', { fontSize: '9px', color: '#445577', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.showCountdown();
     this.input.keyboard.on('keydown-SPACE', this.jump, this);
     this.input.on('pointerdown', this.jump, this);
@@ -87,7 +88,7 @@ export default class RunnerScene extends Phaser.Scene {
 
   showCountdown() {
     const W = 800; let count = 3;
-    const countTxt = this.add.text(W / 2, 280, '3', { fontSize: '60px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5);
+    const countTxt = this.add.text(W / 2, 280, '3', { fontSize: '60px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.time.addEvent({
       delay: LEGACY_RUNNER_COUNTDOWN_DELAY_MS, repeat: 2,
       callback: () => {
@@ -119,7 +120,7 @@ export default class RunnerScene extends Phaser.Scene {
     if (this.isGround) { this.playerVY = -520; this.isGround = false; this.jumpCount = 1; this.cameras.main.shake(80, 0.002); }
     else if (this.jumpCount < 2) {
       this.playerVY = -420; this.jumpCount += 1;
-      const effect = this.add.text(this.playerX, this.playerY - 20, '2x JUMP!', { fontSize: '8px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5).setDepth(10);
+      const effect = this.add.text(this.playerX, this.playerY - 20, '2x JUMP!', { fontSize: '8px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(10);
       this.tweens.add({ targets: effect, y: this.playerY - 60, alpha: 0, duration: 500, onComplete: () => effect.destroy() });
     }
   }
@@ -164,15 +165,15 @@ export default class RunnerScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2 + 188, 620, 4, 0xFFD700);
     this.add.rectangle(W / 2 - 308, H / 2, 4, 380, 0xFFD700);
     this.add.rectangle(W / 2 + 308, H / 2, 4, 380, 0xFFD700);
-    this.add.text(W / 2, 130, 'BUS RUNNER', { fontSize: '16px', color: '#FFD700', fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 165, 'GAME OVER', { fontSize: '12px', color: '#ff4466', fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 230, `${finalScore}`, { fontSize: '36px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 275, 'SCORE', { fontSize: '9px', color: '#888888', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2, 130, 'BUS RUNNER', { fontSize: '16px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, 165, 'GAME OVER', { fontSize: '12px', color: '#ff4466', fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, 230, `${finalScore}`, { fontSize: '36px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, 275, 'SCORE', { fontSize: '9px', color: '#888888', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     const result = resolveLegacyRunnerResult(finalScore);
     this.completedRewardText = result.reward;
-    this.add.text(W / 2 + 160, 240, result.grade, { fontSize: '60px', color: result.gradeColor, fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 340, result.reward, { fontSize: '10px', color: '#aaddff', fontFamily: PF }).setOrigin(0.5);
-    this.add.text(W / 2, 375, 'TIP: DOUBLE JUMP IS AVAILABLE!', { fontSize: '7px', color: '#445566', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(W / 2 + 160, 240, result.grade, { fontSize: '60px', color: result.gradeColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, 340, result.reward, { fontSize: '10px', color: '#aaddff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.add.text(W / 2, 375, 'TIP: DOUBLE JUMP IS AVAILABLE!', { fontSize: '7px', color: '#445566', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.createBtn(270, 440, 'RETRY', 0x001888, 0x4499ff, () => this.scene.restart());
     this.createBtn(530, 440, 'EXIT', 0x440088, 0xcc55ff, () => {
       this.emitCompletedReward();
@@ -183,7 +184,7 @@ export default class RunnerScene extends Phaser.Scene {
   createBtn(x, y, label, bg, border, cb) {
     this.add.rectangle(x + 3, y + 3, 200, 52, 0x000000, 0.8);
     const btn = this.add.rectangle(x, y, 200, 52, bg).setInteractive().setStrokeStyle(3, border);
-    this.add.text(x, y, label, { fontSize: '12px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
+    this.add.text(x, y, label, { fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border));
     btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => { this.cameras.main.flash(150, 255, 255, 255, false); this.time.delayedCall(150, cb); });

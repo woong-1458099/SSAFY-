@@ -9,10 +9,9 @@ import {
 import { LOTTO_COMPLETED_EVENT, rollLottoOutcome } from "@features/minigame/lottoOutcome";
 import { returnToScene } from "@features/minigame/minigameLauncher";
 import { applyLegacyViewport } from "./viewport";
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createButton } from './utils';
 
-const PF = '"Press Start 2P"';
-const W = 800;
-const H = 600;
+const { W, H } = SCREEN;
 
 export default class LottoScene extends Phaser.Scene {
   private returnSceneKey = "main";
@@ -61,19 +60,19 @@ export default class LottoScene extends Phaser.Scene {
     this.add.text(W / 2, 30, "SSAFY LOTTO 6/45", {
       fontSize: "20px",
       color: "#ffd700",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 55, "구매 비용: 1,000 GP | 번호 6개 선택", {
       fontSize: "9px",
       color: "#88ccff",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 75, "5등 3,000G | 4등 20,000G | 3등 100,000G | 2등 1,000,000G | 1등 로또 엔딩", {
       fontSize: "7px",
       color: "#666688",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
 
     this.createNumberGrid();
@@ -123,7 +122,7 @@ export default class LottoScene extends Phaser.Scene {
       const txt = this.add.text(x, y, `${num}`, {
         fontSize: "10px",
         color: "#ffffff",
-        fontFamily: PF,
+        fontFamily: PIXEL_FONT,
       }).setOrigin(0.5);
 
       ball.on("pointerdown", () => this.toggleNumber(num));
@@ -147,7 +146,7 @@ export default class LottoScene extends Phaser.Scene {
     this.add.text(160, 320, "선택 번호:", {
       fontSize: "10px",
       color: "#ffd700",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     });
 
     for (let i = 0; i < LEGACY_LOTTO_PICK_COUNT; i += 1) {
@@ -156,7 +155,7 @@ export default class LottoScene extends Phaser.Scene {
       const txt = this.add.text(x, 340, "", {
         fontSize: "12px",
         color: "#ffffff",
-        fontFamily: PF,
+        fontFamily: PIXEL_FONT,
       }).setOrigin(0.5);
       this.selectedBalls.push({ ball, txt });
     }
@@ -167,7 +166,7 @@ export default class LottoScene extends Phaser.Scene {
     this.add.text(120, 395, "당첨 번호:", {
       fontSize: "10px",
       color: "#44ff88",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     });
 
     for (let i = 0; i < LEGACY_LOTTO_PICK_COUNT; i += 1) {
@@ -176,7 +175,7 @@ export default class LottoScene extends Phaser.Scene {
       const txt = this.add.text(x, 420, "?", {
         fontSize: "11px",
         color: "#444466",
-        fontFamily: PF,
+        fontFamily: PIXEL_FONT,
       }).setOrigin(0.5);
       this.drawnBalls.push({ ball, txt });
     }
@@ -184,26 +183,26 @@ export default class LottoScene extends Phaser.Scene {
     this.add.text(545, 420, "+", {
       fontSize: "14px",
       color: "#ff6688",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
 
     this.bonusBall = this.add.circle(590, 420, 20, 0x222244);
     this.bonusTxt = this.add.text(590, 420, "?", {
       fontSize: "11px",
       color: "#444466",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
 
     this.resultTxt = this.add.text(W / 2, 480, "", {
       fontSize: "14px",
       color: "#ffffff",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
 
     this.matchTxt = this.add.text(W / 2, 510, "", {
       fontSize: "10px",
       color: "#88ccff",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
   }
 
@@ -215,7 +214,7 @@ export default class LottoScene extends Phaser.Scene {
     this.exitBtn = this.add.text(30, H - 25, "EXIT", {
       fontSize: "10px",
       color: "#888888",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setInteractive();
     this.exitBtn.on("pointerdown", () => {
       if (this.isDrawing) return;
@@ -485,7 +484,7 @@ export default class LottoScene extends Phaser.Scene {
     this.add.text(x, y, label, {
       fontSize: "8px",
       color: "#ffffff",
-      fontFamily: PF,
+      fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
 
     btn.on("pointerover", () => btn.setFillStyle(border));

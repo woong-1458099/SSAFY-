@@ -5,8 +5,9 @@ import { LEGACY_MINIGAME_CARDS } from "@features/minigame/minigameCatalog";
 import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
 
 import { applyLegacyViewport } from "./viewport";
+import { SCREEN, PIXEL_FONT } from './utils';
 
-const PIXEL_FONT = '"Press Start 2P"';
+const { W, H } = SCREEN;
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -19,9 +20,6 @@ export default class MenuScene extends Phaser.Scene {
 
   create() {
     applyLegacyViewport(this);
-
-    const W = 800;
-    const H = 600;
 
     // 배경
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);
