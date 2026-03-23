@@ -21,6 +21,17 @@ export const ASSET_KEYS = {
     worldTmx: "map_tmx_world",
     downtownTmx: "map_tmx_downtown",
     campusTmx: "map_tmx_campus"
+  },
+  story: {
+    authoredDialogues: "story_authored_dialogues",
+    authoredSceneStates: "story_authored_scene_states"
+  }
+} as const;
+
+export const ASSET_PATHS = {
+  story: {
+    authoredDialogues: "assets/game/data/story/authored/dialogues.json",
+    authoredSceneStates: "assets/game/data/story/authored/scene_states.json"
   }
 } as const;
 

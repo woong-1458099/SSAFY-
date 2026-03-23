@@ -17,7 +17,7 @@ export const CAMPUS_DEFAULT_SCENE_STATE: SceneState = {
       npcId: "hyewon",
       x: 420,
       y: 430,
-      dialogueId: DIALOGUE_IDS.hyewonGreeting
+      dialogueId: DIALOGUE_IDS.npcHyewon
     }
   ]
 };

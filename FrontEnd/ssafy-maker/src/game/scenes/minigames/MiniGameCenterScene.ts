@@ -34,8 +34,7 @@ export class MiniGameCenterScene extends Phaser.Scene {
       fontSize: "22px"
     }).setOrigin(0.5);
 
-    this.createActionButton(430, 302, "타이핑 훈련", () => this.openMiniGame("MiniGameTypingScene"));
-    this.createActionButton(730, 302, "순발력 훈련", () => this.openMiniGame("MiniGameReflexScene"));
+    this.createActionButton(580, 302, "순발력 훈련", () => this.openMiniGame("MiniGameReflexScene"));
     this.createActionButton(580, 380, "레거시 메뉴", () => this.openMiniGame(LEGACY_MINIGAME_MENU_SCENE_KEY));
     this.createActionButton(580, 458, "돌아가기", () => this.closeCenter());
 

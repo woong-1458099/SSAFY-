@@ -11,12 +11,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate": "npm run validate:authored-story && npm run test:authored-story-validator",
+    "validate:authored-story": "node scripts/validate-authored-story.mjs",
+    "test:authored-story-validator": "node scripts/test-authored-story-validator.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "ajv": "^8.18.0",
     "typescript": "^5.8.2",
     "vite": "^7.3.1"
   }

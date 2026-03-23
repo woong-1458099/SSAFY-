@@ -71,14 +71,14 @@ export const NPC_DEFINITIONS: Record<NpcId, NpcDefinition> = {
   },
   doyeon: {
     id: "doyeon",
-    label: "도연",
+    label: "김도연 프로",
     visualAssetId: "doyeon",
     defaultFacing: "down",
     moveSpeed: 140
   },
   sunmi: {
     id: "sunmi",
-    label: "선미",
+    label: "조선미 프로",
     visualAssetId: "sunmi",
     defaultFacing: "down",
     moveSpeed: 140
