@@ -15,8 +15,9 @@ export const GAME_CONFIG: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   dom: {
-    // Smile minigames use Phaser DOMElement for the camera surface.
-    // Those scenes inherit BaseSmileScene and are required to use the shared sceneCleanup helper on shutdown/destroy.
+    // Only the smile minigames (BusinessSmileScene / DontSmileScene via BaseSmileScene)
+    // use Phaser DOMElement for the camera surface.
+    // Those scenes are required to use the shared sceneCleanup helper on shutdown/destroy.
     createContainer: true
   }
 };
