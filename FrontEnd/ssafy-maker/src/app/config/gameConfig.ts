@@ -16,7 +16,7 @@ export const GAME_CONFIG: Phaser.Types.Core.GameConfig = {
   },
   dom: {
     // Smile minigames use Phaser DOMElement for the camera surface.
-    // This enables a single global container, so the scene cleanup path must destroy DOM nodes on shutdown.
+    // This enables a single global container, so DOM scenes must register shutdown/destroy cleanup and remove nodes explicitly.
     createContainer: true
   }
 };

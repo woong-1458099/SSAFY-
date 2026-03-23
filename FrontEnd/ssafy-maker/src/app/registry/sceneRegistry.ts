@@ -1,12 +1,16 @@
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
-import { LEGACY_MINIGAME_CARDS } from "../../features/minigame/minigameCatalog";
+import {
+  assertMinigameCatalogIntegrity,
+  LEGACY_MINIGAME_CARDS
+} from "../../features/minigame/minigameCatalog";
 import {
   DEPRECATED_MINIGAME_SCENE_KEYS,
   LEGACY_MINIGAME_FLOW_SCENE_KEYS,
   LEGACY_MINIGAME_MENU_SCENE_KEY,
   LEGACY_MINIGAME_PAUSE_SCENE_KEY,
-  LEGACY_MINIGAME_SCENE_KEYS
+  LEGACY_MINIGAME_SCENE_KEYS,
+  SUPPORTED_MINIGAME_SCENE_KEYS
 } from "../../features/minigame/minigameSceneKeys";
 import { BootScene } from "../../game/scenes/BootScene";
 import { PreloadScene } from "../../game/scenes/PreloadScene";
@@ -78,8 +82,14 @@ function findDuplicateKeys(keys: readonly string[]): string[] {
 }
 
 export function assertSceneRegistryIntegrity(): void {
+  assertMinigameCatalogIntegrity(LEGACY_MINIGAME_CARDS);
+
+  const coreSceneKeys = [SCENE_KEYS.boot, SCENE_KEYS.preload, SCENE_KEYS.main] as const;
   const registeredKeys = SCENE_REGISTRY_ENTRIES.map((entry) => entry.key);
   const registeredKeySet = new Set(registeredKeys);
+  const registeredMinigameKeys = registeredKeys.filter((key) => !coreSceneKeys.includes(key as (typeof coreSceneKeys)[number]));
+  const registeredMinigameKeySet = new Set(registeredMinigameKeys);
+  const supportedMinigameKeySet = new Set(SUPPORTED_MINIGAME_SCENE_KEYS);
   const cardKeys = new Set(LEGACY_MINIGAME_CARDS.map((card) => card.key));
   const issues: string[] = [];
 
@@ -88,7 +98,7 @@ export function assertSceneRegistryIntegrity(): void {
     issues.push(`[sceneRegistry] 중복 scene key: ${duplicateKeys.join(", ")}`);
   }
 
-  const missingCoreKeys = findMissingKeys([SCENE_KEYS.boot, SCENE_KEYS.preload, SCENE_KEYS.main], registeredKeySet);
+  const missingCoreKeys = findMissingKeys(coreSceneKeys, registeredKeySet);
   if (missingCoreKeys.length > 0) {
     issues.push(`[sceneRegistry] 핵심 scene key 누락: ${missingCoreKeys.join(", ")}`);
   }
@@ -98,15 +108,22 @@ export function assertSceneRegistryIntegrity(): void {
     issues.push(`[sceneRegistry] 미니게임 flow scene key 누락: ${missingFlowKeys.join(", ")}`);
   }
 
+  const missingSupportedRegistryKeys = findMissingKeys(SUPPORTED_MINIGAME_SCENE_KEYS, registeredMinigameKeySet);
+  if (missingSupportedRegistryKeys.length > 0) {
+    issues.push(`[sceneRegistry] 지원 대상 미니게임 scene key가 registry에 누락되었습니다: ${missingSupportedRegistryKeys.join(", ")}`);
+  }
+
+  const unexpectedRegisteredMinigameKeys = findMissingKeys(registeredMinigameKeys, supportedMinigameKeySet);
+  if (unexpectedRegisteredMinigameKeys.length > 0) {
+    issues.push(`[sceneRegistry] 지원 목록에 없는 scene key가 registry에 등록되었습니다: ${unexpectedRegisteredMinigameKeys.join(", ")}`);
+  }
+
   const missingCatalogKeys = findMissingKeys(cardKeys, registeredKeySet);
   if (missingCatalogKeys.length > 0) {
     issues.push(`[sceneRegistry] 미니게임 catalog key 누락: ${missingCatalogKeys.join(", ")}`);
   }
 
-  const deprecatedRegisteredKeys = findMissingKeys(
-    [...registeredKeySet].filter((key) => DEPRECATED_MINIGAME_SCENE_KEYS.includes(key as never)),
-    new Set<string>()
-  );
+  const deprecatedRegisteredKeys = registeredMinigameKeys.filter((key) => DEPRECATED_MINIGAME_SCENE_KEYS.includes(key as never)).sort();
   if (deprecatedRegisteredKeys.length > 0) {
     issues.push(`[sceneRegistry] 제거된 미니게임 scene key가 registry에 남아 있습니다: ${deprecatedRegisteredKeys.join(", ")}`);
   }

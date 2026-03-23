@@ -17,7 +17,7 @@ import {
   LEGACY_SMILE_MAX_GAUGE,
   LEGACY_SMILE_THRESHOLD
 } from '@features/minigame/legacy/legacySmileConfig';
-import { SCREEN, PIXEL_FONT } from './utils';
+import { destroyDomElement, registerSceneCleanup, SCREEN, PIXEL_FONT } from './utils';
 
 const { W, H } = SCREEN;
 const MAX_GAUGE = LEGACY_SMILE_MAX_GAUGE;
@@ -152,8 +152,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
   }
 
   protected registerCleanup(): void {
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
-    this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanup, this);
+    registerSceneCleanup(this, () => this.cleanup());
   }
 
   protected async initFaceTracking(): Promise<void> {
@@ -367,7 +366,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
     this.stopTracking();
     this.resultGroup.forEach((item) => item.destroy());
     this.resultGroup = [];
-    this.domContainer?.destroy();
+    destroyDomElement(this.domContainer);
     this.domContainer = null;
     this.videoElement = null;
     this.canvasElement = null;
