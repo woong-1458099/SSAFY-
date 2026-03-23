@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { LEGACY_MINIGAME_CARDS } from "../../features/minigame/minigameCatalog";
 import {
+  DEPRECATED_MINIGAME_SCENE_KEYS,
   LEGACY_MINIGAME_FLOW_SCENE_KEYS,
   LEGACY_MINIGAME_MENU_SCENE_KEY,
   LEGACY_MINIGAME_PAUSE_SCENE_KEY,
@@ -100,6 +101,14 @@ export function assertSceneRegistryIntegrity(): void {
   const missingCatalogKeys = findMissingKeys(cardKeys, registeredKeySet);
   if (missingCatalogKeys.length > 0) {
     issues.push(`[sceneRegistry] 미니게임 catalog key 누락: ${missingCatalogKeys.join(", ")}`);
+  }
+
+  const deprecatedRegisteredKeys = findMissingKeys(
+    [...registeredKeySet].filter((key) => DEPRECATED_MINIGAME_SCENE_KEYS.includes(key as never)),
+    new Set<string>()
+  );
+  if (deprecatedRegisteredKeys.length > 0) {
+    issues.push(`[sceneRegistry] 제거된 미니게임 scene key가 registry에 남아 있습니다: ${deprecatedRegisteredKeys.join(", ")}`);
   }
 
   const uncataloguedLegacyKeys = findMissingKeys(LEGACY_MINIGAME_SCENE_KEYS, cardKeys);

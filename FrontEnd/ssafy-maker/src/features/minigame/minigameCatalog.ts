@@ -1,4 +1,7 @@
-import type { LegacyMinigameSceneKey } from "./minigameSceneKeys";
+import {
+  DEPRECATED_MINIGAME_SCENE_KEYS,
+  type LegacyMinigameSceneKey
+} from "./minigameSceneKeys";
 
 export type LegacyMinigameCard = {
   key: LegacyMinigameSceneKey;
@@ -144,3 +147,11 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x314c35
   }
 ];
+
+const deprecatedCardKeys = LEGACY_MINIGAME_CARDS
+  .map((card) => card.key)
+  .filter((key) => DEPRECATED_MINIGAME_SCENE_KEYS.includes(key as never));
+
+if (deprecatedCardKeys.length > 0) {
+  throw new Error(`[minigameCatalog] deprecated scene key가 카드 목록에 남아 있습니다: ${deprecatedCardKeys.join(", ")}`);
+}

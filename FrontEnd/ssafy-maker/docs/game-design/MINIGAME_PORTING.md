@@ -19,12 +19,13 @@
   - `CookingScene`
   - `LottoScene`
   - `DrinkingScene`
-- 비활성 레거시 미니게임
+- 제거된 레거시 미니게임
   - `DragScene`
 - 비활성 실험용 미니게임
-  - `MiniGameTypingScene`
   - `MiniGameReflexScene`
   - `MiniGameCenterScene`
+- 제거된 실험용 미니게임
+  - `MiniGameTypingScene`
 
 ## 배치 원칙
 
@@ -94,6 +95,7 @@ createButton(this, W / 2, 400, '시작', () => this.startGame(), {
 
 - 새 미니게임 씬을 추가하면 `src/app/registry/sceneRegistry.ts` 에 반드시 등록한다.
 - 미니게임 카드 메뉴에 노출할 씬이면 `src/features/minigame/minigameCatalog.ts` 와 `src/features/minigame/minigameSceneKeys.ts` 를 같이 수정한다.
+- 제거한 미니게임 키는 `DEPRECATED_MINIGAME_SCENE_KEYS` 에 유지하고, registry/catalog에 다시 들어오지 않도록 self-check를 통과해야 한다.
 - 이미지/오디오가 필요한 미니게임은 경로 문자열을 씬에 직접 박지 말고 `src/game/definitions/assets/minigameAssetCatalog.ts` 를 통해 관리한다.
 - 메인 게임과 결과를 연결할 때는 `MainScene`에 직접 로직을 넣기보다 `src/features/minigame/MinigameGateway.ts` 를 통해 연결한다.
 - 공통 UI 요소(배경, 버튼, 패널 등)는 `src/game/scenes/minigames/utils/` 유틸을 사용한다. 화면 크기, 색상, 폰트를 하드코딩하지 않는다.

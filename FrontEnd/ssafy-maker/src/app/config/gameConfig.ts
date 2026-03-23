@@ -15,6 +15,7 @@ export const GAME_CONFIG: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   dom: {
+    // BusinessSmileScene / DontSmileScene use Phaser DOMElement for the camera surface.
     createContainer: true
   }
 };
