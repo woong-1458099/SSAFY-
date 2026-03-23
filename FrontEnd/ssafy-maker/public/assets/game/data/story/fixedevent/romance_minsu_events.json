@@ -1,0 +1,1737 @@
+{
+  "dialogues": [
+    {
+      "id": "EVT_ROMANCE_MINSU_W1_D4_MORNING",
+      "label": "민수: 답답하지만 신경 쓰여",
+      "startNodeId": "m_w1d4_n1",
+      "nodes": {
+        "m_w1d4_n1": {
+          "id": "m_w1d4_n1",
+          "speaker": "SYSTEM",
+          "text": "관통 프로젝트 조 편성이 발표됐다. 나랑 같이 하는 사람은… '민수'. 깐깐한 인상이라 어쩐지 주눅들게 된다. 안 그래도 모르는 게 많은데 잘 할 수 있을까…?\n(30분 후…)",
+          "nextNodeId": "m_w1d4_n2"
+        },
+        "m_w1d4_n2": {
+          "id": "m_w1d4_n2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "“…”",
+          "nextNodeId": "m_w1d4_n3"
+        },
+        "m_w1d4_n3": {
+          "id": "m_w1d4_n3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "“…”",
+          "nextNodeId": "m_w1d4_n4"
+        },
+        "m_w1d4_n4": {
+          "id": "m_w1d4_n4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "ANNOYED",
+          "text": "“아니 그거 그렇게 하는 게 아니라…”",
+          "nextNodeId": "m_w1d4_n5"
+        },
+        "m_w1d4_n5": {
+          "id": "m_w1d4_n5",
+          "speaker": "SYSTEM",
+          "text": "(타자 속도부터 느린 나를 보고 답답해하는 듯 하다…결국 민수가 깊은 한숨을 쉬더니, 내 자리 쪽으로 의자를 바짝 당겨 앉는다. 갑자기 훅 가까워진 거리에 흠칫 놀랐지만, 그는 내 모니터만 뚫어져라 쳐다보고 있다.)",
+          "nextNodeId": "m_w1d4_n6"
+        },
+        "m_w1d4_n6": {
+          "id": "m_w1d4_n6",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SERIOUS",
+          "text": "“잠시만, 이대로 가면 오늘 안에 제출 못 해. 보니까 이번 주 강의 내용도 전부는 이해 못 하고 있는 거 같고, 지금은 같이 하면서 제가 알려줄 수 있는 건 최대한 알려줄 테니까. 하다가 막히는 부분 있으면 뭐든 다 물어 봐.”",
+          "nextNodeId": "m_w1d4_n7"
+        },
+        "m_w1d4_n7": {
+          "id": "m_w1d4_n7",
+          "speaker": "SYSTEM",
+          "text": "(말투는 딱딱하고 사무적이지만, 내용을 자세히 살펴보면 꽤 상냥하다.)",
+          "choices": [
+            {
+              "id": "m_w1d4_c1",
+              "text": "[기본] \"부족한 건 많겠지만 최대한 열심히 해볼게!\"",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": -10
+              },
+              "nextNodeId": "m_w1d4_c1_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 5
+              }
+            },
+            {
+              "id": "m_w1d4_c2",
+              "text": "🔒 [FE 50 / BE 50] \"잠깐, 여기 로직 보니까 객체들끼리 꼬리를 무는 순환 참조가 발생한 것 같은데? 이 부분 구조 좀 리팩토링해서 푸시할게.\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "fe",
+                  "min": 50,
+                  "label": "프론트엔드 50 이상"
+                },
+                {
+                  "stat": "be",
+                  "min": 50,
+                  "label": "백엔드 50 이상"
+                }
+              ],
+              "lockedReason": "리팩토링을 제안할 코딩 실력이 부족합니다.",
+              "nextNodeId": "m_w1d4_c2_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 15
+              }
+            },
+            {
+              "id": "m_w1d4_c3",
+              "text": "🔒 [사교 60] (서랍에서 젤리를 꺼내며) \"일단 당부터 충전하고 하자. 나 모르는 거 다 물어볼 건데, 젤리 먹고 화내지 않기다?\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 60,
+                  "label": "사교 60 이상"
+                }
+              ],
+              "lockedReason": "분위기를 풀 넉살이 부족합니다.",
+              "statChanges": {
+                "stress": -5
+              },
+              "nextNodeId": "m_w1d4_c3_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 15
+              }
+            },
+            {
+              "id": "m_w1d4_c4",
+              "text": "🤪 [광기] \"오, git 이거 한글 타자로 치면 '햣'인 거 알고 있었어?\"",
+              "actionType": "MADNESS",
+              "statChanges": {
+                "stress": -15
+              },
+              "nextNodeId": "m_w1d4_c4_res1"
+            }
+          ]
+        },
+        "m_w1d4_c1_res1": {
+          "id": "m_w1d4_c1_res1",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"말만 하지 말고 코드로 증명하셔야지.\"",
+          "nextNodeId": "m_w1d4_c1_res2"
+        },
+        "m_w1d4_c1_res2": {
+          "id": "m_w1d4_c1_res2",
+          "speaker": "SYSTEM",
+          "text": "(퉁명스럽게 답하지만, 열심히 해보려는 모습에 민수의 입꼬리가 살짝 올라갔다.)"
+        },
+        "m_w1d4_c2_res1": {
+          "id": "m_w1d4_c2_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"잠깐, 여기 로직 보니까 객체들끼리 꼬리를 무는 순환 참조(Circular Reference)가 발생한 것 같은데? 이 부분 구조 좀 리팩토링해서 푸시할게.\"",
+          "nextNodeId": "m_w1d4_c2_res2"
+        },
+        "m_w1d4_c2_res2": {
+          "id": "m_w1d4_c2_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SURPRISED",
+          "text": "\"어...? 진짜네, {playerName}...생각보다 기본기가 있잖아?\"",
+          "nextNodeId": "m_w1d4_c2_res3"
+        },
+        "m_w1d4_c2_res3": {
+          "id": "m_w1d4_c2_res3",
+          "speaker": "SYSTEM",
+          "text": "(민수가 나를 의외라는 듯 바라본다. 묘한 인정과 텐션이 생겼다.)"
+        },
+        "m_w1d4_c3_res1": {
+          "id": "m_w1d4_c3_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "(서랍에서 젤리를 꺼내 민수의 손에 쥐여주며) \"일단 당부터 충전하고 하자. 나 진짜 모르는 거 다 물어볼 건데, 젤리 먹고 화내지 않기다?\"",
+          "nextNodeId": "m_w1d4_c3_res2"
+        },
+        "m_w1d4_c3_res2": {
+          "id": "m_w1d4_c3_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"아니, 단 거 별로 안 먹... 하아, 알겠어. 대신 진짜 모르는 건 다 물어 봐. 나중에 사고 치지 말고.\"",
+          "nextNodeId": "m_w1d4_c3_res3"
+        },
+        "m_w1d4_c3_res3": {
+          "id": "m_w1d4_c3_res3",
+          "speaker": "SYSTEM",
+          "text": "(민수가 젤리를 빤히 보더니 조용히 입에 넣는다. 깐깐해 보이던 얼굴이 묘하게 부드러워졌다.)"
+        },
+        "m_w1d4_c4_res1": {
+          "id": "m_w1d4_c4_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"오, git 이거 한글 타자로 치면 '햣'인 거 알고 있었어? 햣햣햣햣햣햣햣햣햣햣햣햣햣햣햣햣햣햣\"",
+          "nextNodeId": "m_w1d4_c4_res2"
+        },
+        "m_w1d4_c4_res2": {
+          "id": "m_w1d4_c4_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "ANNOYED",
+          "text": "\"하아... 진짜 가지가지 하네. 그 '햣' 소리 한 번만 더 내면 진짜 키보드 선 뽑아버린다.\"",
+          "nextNodeId": "m_w1d4_c4_res3"
+        },
+        "m_w1d4_c4_res3": {
+          "id": "m_w1d4_c4_res3",
+          "speaker": "SYSTEM",
+          "text": "(민수의 살벌한 경고에 조용히 한/영 전환 키를 눌렀다. 햣허브의 꿈은 무너졌다.)"
+        }
+      }
+    },
+    {
+      "id": "EVT_ROMANCE_MINSU_W2_D2_AFTERNOON",
+      "label": "민수: 모니터 너머의 시선",
+      "startNodeId": "m_w2d2_n1",
+      "nodes": {
+        "m_w2d2_n1": {
+          "id": "m_w2d2_n1",
+          "speaker": "SYSTEM",
+          "text": "실습 과제는 산더미인데 도무지 에러가 잡히지 않는다. \"하아... 어떡하지...\" 모니터에 머리를 박고 푹푹 한숨만 쉬고 있는데, 우측 하단 MM 알림창이 조용히 깜빡인다.",
+          "nextNodeId": "m_w2d2_n2"
+        },
+        "m_w2d2_n2": {
+          "id": "m_w2d2_n2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "[MM] 땅 꺼지겠어. 한숨 쉰다고 안 돌아가는 코드가 돌아 가?",
+          "nextNodeId": "m_w2d2_n3"
+        },
+        "m_w2d2_n3": {
+          "id": "m_w2d2_n3",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "[MM] 혼자 삽질하면서 시간 낭비하지 말고, 모르는 거 있으면 캡처해서 보내. 기껏 관통 프로젝트 때 멱살 잡고 끌어올려 놨더니 다시 롤백하려고 하네.",
+          "nextNodeId": "m_w2d2_n4"
+        },
+        "m_w2d2_n4": {
+          "id": "m_w2d2_n4",
+          "speaker": "SYSTEM",
+          "text": "(고개를 들어 민수의 자리를 슬쩍 보니, 그는 여전히 자기 화면만 뚫어져라 쳐다보고 있다. 하지만 타이핑 소리는 멈춰 있다.)",
+          "choices": [
+            {
+              "id": "m_w2d2_c1",
+              "text": "[MM] 미안... 진짜 염치없지만 이것 좀 봐줄 수 있을까? ㅠㅠ (에러 화면을 캡처해서 보낸다)",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": -10
+              },
+              "nextNodeId": "m_w2d2_c1_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 5
+              }
+            },
+            {
+              "id": "m_w2d2_c2",
+              "text": "🔒 [사교 65] [MM] 뭐야, 아까부터 내 뒷모습 몰래 지켜보고 있었어? ㅋㅋㅋ 감동인데?",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 65,
+                  "label": "사교 65 이상"
+                }
+              ],
+              "lockedReason": "능글맞게 받아칠 눈치가 부족합니다.",
+              "nextNodeId": "m_w2d2_c2_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 15
+              }
+            },
+            {
+              "id": "m_w2d2_c3",
+              "text": "🔒 [FE 60 / BE 60] [MM] 데이터는 잘 넘어오는데, 렌더링 시점이랑 안 맞는 것 같아. 비동기 처리가 꼬인 건지 봐줄래?",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "fe",
+                  "min": 60,
+                  "label": "프론트엔드 60 이상"
+                },
+                {
+                  "stat": "be",
+                  "min": 60,
+                  "label": "백엔드 60 이상"
+                }
+              ],
+              "lockedReason": "문제의 핵심을 파악할 코딩 실력이 부족합니다.",
+              "statChanges": {
+                "fe": 5,
+                "be": 5
+              },
+              "nextNodeId": "m_w2d2_c3_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 20
+              }
+            },
+            {
+              "id": "m_w2d2_c4",
+              "text": "🤪 [광기] [MM] 이것은 한숨이 아니다! 모니터의 열기를 식히기 위한 나만의 쿨링 시스템이다!!",
+              "actionType": "MADNESS",
+              "statChanges": {
+                "stress": -15
+              },
+              "nextNodeId": "m_w2d2_c4_res1"
+            }
+          ]
+        },
+        "m_w2d2_c1_res1": {
+          "id": "m_w2d2_c1_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 미안... 진짜 염치없지만 이것 좀 봐줄 수 있을까? ㅠㅠ (에러 화면을 캡쳐해서 보낸다)\"",
+          "nextNodeId": "m_w2d2_c1_res2"
+        },
+        "m_w2d2_c1_res2": {
+          "id": "m_w2d2_c1_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"[MM] (1분 후) 코드 문제점이랑 해결책, 주석으로 써서 보냈어. 그리고 32번째 줄은 괄호 안 닫혀 있더라.\"",
+          "nextNodeId": "m_w2d2_c1_res3"
+        },
+        "m_w2d2_c1_res3": {
+          "id": "m_w2d2_c1_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 헐 대박! 진짜 고마워! 나 평생 이 은혜 잊지 않을게!\"",
+          "nextNodeId": "m_w2d2_c1_res4"
+        },
+        "m_w2d2_c1_res4": {
+          "id": "m_w2d2_c1_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"[MM] 평생까진 필요 없고, 이렇게 배워가면서 같은 실수 다시 안 하기만 하면 됐어.\"",
+          "nextNodeId": "m_w2d2_c1_res5"
+        },
+        "m_w2d2_c1_res5": {
+          "id": "m_w2d2_c1_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수 쪽을 슬쩍 보니, 모니터 뒤로 가려진 입꼬리가 희미하게 올라가 있다. 무심한 척하지만 내심 뿌듯한 모양이다.)"
+        },
+        "m_w2d2_c2_res1": {
+          "id": "m_w2d2_c2_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 뭐야, 아까부터 내 뒷모습 몰래 지켜보고 있었어? ㅋㅋㅋ 감동인데?\"",
+          "nextNodeId": "m_w2d2_c2_res2"
+        },
+        "m_w2d2_c2_res2": {
+          "id": "m_w2d2_c2_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"[MM] 한숨 소리가 하도 커서 신경 쓰인 것뿐이야. 착각하지 마.\"",
+          "nextNodeId": "m_w2d2_c2_res3"
+        },
+        "m_w2d2_c2_res3": {
+          "id": "m_w2d2_c2_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 에이~ 모니터만 보고 있었으면서 내 한숨 소리인 건 어떻게 알았대?\"",
+          "nextNodeId": "m_w2d2_c2_res4"
+        },
+        "m_w2d2_c2_res4": {
+          "id": "m_w2d2_c2_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "ANNOYED",
+          "text": "\"[MM] ...시끄러우니까 빨리 에러 로그나 보내. 진짜 안 도와준다.\"",
+          "nextNodeId": "m_w2d2_c2_res5"
+        },
+        "m_w2d2_c2_res5": {
+          "id": "m_w2d2_c2_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수의 자리에서 갑자기 타자 치는 소리가 엄청나게 빠르고 거칠어졌다. 뒷모습만 봐도 귀가 붉어진 게 뻔히 보인다.)"
+        },
+        "m_w2d2_c3_res1": {
+          "id": "m_w2d2_c3_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 사실 데이터는 잘 넘어오는데, 렌더링 시점이랑 안 맞는 것 같아. 혹시 비동기 처리가 꼬인 건지 봐줄 수 있어?\"",
+          "nextNodeId": "m_w2d2_c3_res2"
+        },
+        "m_w2d2_c3_res2": {
+          "id": "m_w2d2_c3_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SURPRISED",
+          "text": "\"[MM] 오. 거길 의심할 줄도 알고, 많이 성장했네.\"",
+          "nextNodeId": "m_w2d2_c3_res3"
+        },
+        "m_w2d2_c3_res3": {
+          "id": "m_w2d2_c3_res3",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"[MM] 맞아. 78번째 줄에 await 빼먹은 거 같은데 확인해 봐.\"",
+          "nextNodeId": "m_w2d2_c3_res4"
+        },
+        "m_w2d2_c3_res4": {
+          "id": "m_w2d2_c3_res4",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 헐 진짜네! 넌 천재야! 바로 해결됐어!\"",
+          "nextNodeId": "m_w2d2_c3_res5"
+        },
+        "m_w2d2_c3_res5": {
+          "id": "m_w2d2_c3_res5",
+          "speaker": "SYSTEM",
+          "text": "(정확한 핵심을 짚은 내 질문에 민수가 은근히 놀란 눈치다. 뿌듯함과 함께 코드의 버그가 말끔히 사라졌다.)"
+        },
+        "m_w2d2_c4_res1": {
+          "id": "m_w2d2_c4_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 이것은 한숨이 아니다! 모니터의 열기를 식히기 위한 나만의 쿨링 시스템이다!!\"",
+          "nextNodeId": "m_w2d2_c4_res2"
+        },
+        "m_w2d2_c4_res2": {
+          "id": "m_w2d2_c4_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "ANNOYED",
+          "text": "\"[MM] 네, 평생 그렇게 입으로 쿨링이나 하세요.\"",
+          "nextNodeId": "m_w2d2_c4_res3"
+        },
+        "m_w2d2_c4_res3": {
+          "id": "m_w2d2_c4_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 앗... 민수님 제발 한 번만 자비를 베풀어 주소서...\"",
+          "nextNodeId": "m_w2d2_c4_res4"
+        },
+        "m_w2d2_c4_res4": {
+          "id": "m_w2d2_c4_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "URGENT",
+          "text": "\"[MM] 나와 봐.\"",
+          "nextNodeId": "m_w2d2_c4_res5"
+        },
+        "m_w2d2_c4_res5": {
+          "id": "m_w2d2_c4_res5",
+          "speaker": "SYSTEM",
+          "text": "(읽음 표시가 사라지자마자, 답답함을 견디지 못한 민수가 내 자리로 뚜벅뚜벅 다가와 키보드를 뺏어 들었다. 시원한 섬유유연제 향이 훅 끼쳐왔다.)"
+        }
+      }
+    },
+    {
+      "id": "EVT_ROMANCE_MINSU_W3_D5_MORNING",
+      "label": "민수: 예외 처리된 카페인",
+      "startNodeId": "m_w3d5_n1",
+      "nodes": {
+        "m_w3d5_n1": {
+          "id": "m_w3d5_n1",
+          "speaker": "SYSTEM",
+          "text": "정처기 시험이 코앞이다. 두꺼운 수험서의 '소프트웨어 공학' 파트를 읽다가 도저히 졸음을 참지 못하고 책 위로 엎드려 기절했다.\n\n(탁!)\n\n뺨에 닿는 차가운 감각에 화들짝 놀라 고개를 들었다. 내 책상 위에 물방울이 맺힌 아이스 아메리카노가 놓여 있고, 방금 내 자리를 지나쳐가는 민수의 뒷모습이 보인다.",
+          "nextNodeId": "m_w3d5_n2"
+        },
+        "m_w3d5_n2": {
+          "id": "m_w3d5_n2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"정처기 준비 해? 그 상태로 책 본다고 머리에 들어갈 리가 없지.\"",
+          "nextNodeId": "m_w3d5_n3"
+        },
+        "m_w3d5_n3": {
+          "id": "m_w3d5_n3",
+          "speaker": "SYSTEM",
+          "text": "(민수가 자기 자리에 앉으며 무심하게 한마디 덧붙인다.)",
+          "nextNodeId": "m_w3d5_n4"
+        },
+        "m_w3d5_n4": {
+          "id": "m_w3d5_n4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"출근길에 아래층 카페에서 1+1 하길래 남아서..., 버리지 말고 마시고 정규 진도나 밀리지 마.\"",
+          "choices": [
+            {
+              "id": "m_w3d5_c1",
+              "text": "[기본] \"헐... 진짜 필요했는데! 민수야 너무 고마워. 잘 마시고 잠 깰게!\"",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": -15
+              },
+              "nextNodeId": "m_w3d5_c1_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 5
+              }
+            },
+            {
+              "id": "m_w3d5_c2",
+              "text": "🔒 [사교 65] (스티커를 보며) \"근데 이거 단품 결제인데? 너 나 주려고 일부러 사 온 거지?\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 65,
+                  "label": "사교 65 이상"
+                }
+              ],
+              "lockedReason": "날카롭게 정곡을 찌를 눈치가 부족합니다.",
+              "nextNodeId": "m_w3d5_c2_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 15
+              }
+            },
+            {
+              "id": "m_w3d5_c3",
+              "text": "🔒 [FE 50 / BE 50] \"이거 마시고 힘낼게! 근데 민수야, 정처기 '디자인 패턴' 쪽 팁 같은 거 없어?\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "fe",
+                  "min": 50,
+                  "label": "프론트엔드 50 이상"
+                },
+                {
+                  "stat": "be",
+                  "min": 50,
+                  "label": "백엔드 50 이상"
+                }
+              ],
+              "lockedReason": "구체적인 개념 질문을 할 지식이 부족합니다.",
+              "statChanges": {
+                "fe": 3,
+                "be": 2
+              },
+              "nextNodeId": "m_w3d5_c3_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 10
+              }
+            },
+            {
+              "id": "m_w3d5_c4",
+              "text": "🔒 [운빨 60] (민수가 흘린 영수증을 주우며) \"어? 이거 네가 떨어뜨린 영수증... \"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "luck",
+                  "min": 60,
+                  "label": "운빨 60 이상"
+                }
+              ],
+              "lockedReason": "영수증을 흘릴 만한 우연이 일어나지 않았습니다.",
+              "nextNodeId": "m_w3d5_c4_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 20
+              }
+            }
+          ]
+        },
+        "m_w3d5_c1_res1": {
+          "id": "m_w3d5_c1_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"헐... 안 그래도 졸려 죽을 뻔했는데 진짜 필요했어! 민수야 너무 고마워. 잘 마시고 잠 깰게!\"",
+          "nextNodeId": "m_w3d5_c1_res2"
+        },
+        "m_w3d5_c1_res2": {
+          "id": "m_w3d5_c1_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"고마우면 오늘 진도나 밀리지 마. 앞에서 머리 왔다갔다 꾸벅꾸벅 조는 거 은근 신경 쓰이니까.\"",
+          "nextNodeId": "m_w3d5_c1_res3"
+        },
+        "m_w3d5_c1_res3": {
+          "id": "m_w3d5_c1_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"알았어! 눈 크게 뜨고 수업 들을게. 진짜 고마워.\"",
+          "nextNodeId": "m_w3d5_c1_res4"
+        },
+        "m_w3d5_c1_res4": {
+          "id": "m_w3d5_c1_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"...커피 너무 급하게 마시진 말고. 빈속인데 체 해.\"",
+          "nextNodeId": "m_w3d5_c1_res5"
+        },
+        "m_w3d5_c1_res5": {
+          "id": "m_w3d5_c1_res5",
+          "speaker": "SYSTEM",
+          "text": "(퉁명스럽게 대꾸하지만, 챙겨주는 방식이 제법 다정하다. 오늘 하루 민수의 타자 치는 소리가 묘하게 경쾌해졌다.)"
+        },
+        "m_w3d5_c2_res1": {
+          "id": "m_w3d5_c2_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "(커피 컵에 붙은 영수증 스티커를 보며) \"근데 이거 스티커 보니까 1+1 결제가 아니라 단품 결제인데? 너 나 주려고 일부러 사 온 거지?\"",
+          "nextNodeId": "m_w3d5_c2_res2"
+        },
+        "m_w3d5_c2_res2": {
+          "id": "m_w3d5_c2_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"그, 그건 결제 어플에 쿠폰이 있어서 그, 그래! 쓸데없는 거 분석하지 말고 공부나 하지?\"",
+          "nextNodeId": "m_w3d5_c2_res3"
+        },
+        "m_w3d5_c2_res3": {
+          "id": "m_w3d5_c2_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"에이~ 그냥 나 걱정돼서 사 왔다고 솔직하게 말하면 덧나나? 진짜 귀여워.\"",
+          "nextNodeId": "m_w3d5_c2_res4"
+        },
+        "m_w3d5_c2_res4": {
+          "id": "m_w3d5_c2_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"귀, 귀엽긴 누가 귀여워!! 헛소리 그만하고 정처기 디자인 패턴이나 외워!!\"",
+          "nextNodeId": "m_w3d5_c2_res5"
+        },
+        "m_w3d5_c2_res5": {
+          "id": "m_w3d5_c2_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 모니터 뒤로 얼굴을 푹 숙이며 귀를 붉힌다. 그의 서투른 호의를 모른 척 넘어가 주기로 했다.)"
+        },
+        "m_w3d5_c3_res1": {
+          "id": "m_w3d5_c3_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"이거 마시고 힘낼게! 근데 민수야, 정처기 '디자인 패턴' 쪽이 너무 안 외워지는데 팁 같은 거 없어?\"",
+          "nextNodeId": "m_w3d5_c3_res2"
+        },
+        "m_w3d5_c3_res2": {
+          "id": "m_w3d5_c3_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "ANNOYED",
+          "text": "\"하아... 진짜 손 많이 가네. 시험이 며칠 남았는데 아직도 거길 헤매서 되겠어?\"",
+          "nextNodeId": "m_w3d5_c3_res3"
+        },
+        "m_w3d5_c3_res3": {
+          "id": "m_w3d5_c3_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"그러게... 나 이번에 떨어지면 어떡하지? ㅠㅠ\"",
+          "nextNodeId": "m_w3d5_c3_res4"
+        },
+        "m_w3d5_c3_res4": {
+          "id": "m_w3d5_c3_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SERIOUS",
+          "text": "\"떨어지긴 뭘 떨어져. 나중에 MM(사내 메신저) 확인 해. 내가 외우기 쉽게 요약해 둔 거 보낼테니까.\"",
+          "nextNodeId": "m_w3d5_c3_res5"
+        },
+        "m_w3d5_c3_res5": {
+          "id": "m_w3d5_c3_res5",
+          "speaker": "SYSTEM",
+          "text": "(무심한 척 챙겨주는 모습에 든든해진다. 1+1 커피보다 그가 보내준 요약본이 훨씬 달달하게 느껴진다.)"
+        },
+        "m_w3d5_c4_res1": {
+          "id": "m_w3d5_c4_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"(바닥에 떨어진 종이를 주우며) 어? 이거 네가 떨어뜨린 영수증... '아메리카노 1잔, 헤이즐넛 시럽 추가'? 1+1 아니잖아!\"",
+          "nextNodeId": "m_w3d5_c4_res2"
+        },
+        "m_w3d5_c4_res2": {
+          "id": "m_w3d5_c4_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"아, 앗! 그거 내놔! 남의 영수증을 왜 함부로 봐!\"",
+          "nextNodeId": "m_w3d5_c4_res3"
+        },
+        "m_w3d5_c4_res3": {
+          "id": "m_w3d5_c4_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"민수 너... 나 주려고 일부러 시럽까지 추가해서 사 온 거 맞지?\"",
+          "nextNodeId": "m_w3d5_c4_res4"
+        },
+        "m_w3d5_c4_res4": {
+          "id": "m_w3d5_c4_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"아니라니까!! 그냥... 카페 직원이 실수로 시럽을 넣은 거고...! 아씨, 진짜...\"",
+          "nextNodeId": "m_w3d5_c4_res5"
+        },
+        "m_w3d5_c4_res5": {
+          "id": "m_w3d5_c4_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 영수증을 휙 낚아채더니 모니터 뒤로 숨어버린다. 새빨개진 귀는 숨기지 못했다.)"
+        }
+      }
+    },
+    {
+      "id": "EVT_ROMANCE_MINSU_W3_D7_MORNING",
+      "label": "민수: 예외 처리(Exception)된 패션",
+      "startNodeId": "m_w3d7_n1",
+      "nodes": {
+        "m_w3d7_n1": {
+          "id": "m_w3d7_n1",
+          "speaker": "SYSTEM",
+          "text": "일어나서 [같이 공부할 사람]? 이라고 단톡에 보냈다. 다들 안 될 것 같은 뉘앙스의 답장이라 아무도 안 올 줄 알았는데...\n\n딸랑, 종소리와 함께 누군가 들어오는데... 어? 민수라고?\n매일 입던 칙칙한 후드티는 온데간데 없고, 깔끔한 셔츠에 댄디한 코트를 걸친 민수가 내 앞자리에 앉는다. 심지어 움직일 때마다 은은하고 세련된 향수 냄새까지 난다.",
+          "nextNodeId": "m_w3d7_n2"
+        },
+        "m_w3d7_n2": {
+          "id": "m_w3d7_n2",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "(너무 놀라 입을 떡 벌리고 쳐다본다.)",
+          "nextNodeId": "m_w3d7_n3"
+        },
+        "m_w3d7_n3": {
+          "id": "m_w3d7_n3",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"...뭘 그렇게 봐. 사람 얼굴에 버그라도 난 거 같아?\"",
+          "nextNodeId": "m_w3d7_n4"
+        },
+        "m_w3d7_n4": {
+          "id": "m_w3d7_n4",
+          "speaker": "SYSTEM",
+          "text": "(민수가 시선을 피하며 헛기침을 한다. 평소의 당당함과 달리 목이 살짝 붉다.)",
+          "nextNodeId": "m_w3d7_n5"
+        },
+        "m_w3d7_n5": {
+          "id": "m_w3d7_n5",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"오, 오해할까 봐 말하는데. 자취방 세탁기가 고장 나서 굴러다니는 거 아무거나 주워 입고 나온 거야. 잔말 말고 노트북이나 켜.\"",
+          "choices": [
+            {
+              "id": "m_w3d7_c1",
+              "text": "[기본] \"아니, 너무 멋있어서 놀랐지! 맨날 후드티만 보다가 셔츠 입은 거 보니까 진짜 새롭다.\"",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": -10
+              },
+              "nextNodeId": "m_w3d7_c1_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 10
+              }
+            },
+            {
+              "id": "m_w3d7_c2",
+              "text": "🔒 [사교 60] \"세탁기가 고장 났는데 향수까지 뿌렸어? 너 혹시 오늘 나랑 만난다고 엄청 꾸민 거 아니야?\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 60,
+                  "label": "사교 60 이상"
+                }
+              ],
+              "lockedReason": "능글맞게 팩트 폭격을 할 눈치가 부족합니다.",
+              "nextNodeId": "m_w3d7_c2_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 15
+              }
+            },
+            {
+              "id": "m_w3d7_c3",
+              "text": "🔒 [사교 50] \"와... 넌 그렇게 차려입고 왔는데 나만 너무 츄리닝 입고 온 거 아니야? 왠지 나만 민망하네.\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 50,
+                  "label": "사교 50 이상"
+                }
+              ],
+              "lockedReason": "민망함을 솔직하게 표현할 넉살이 부족합니다.",
+              "nextNodeId": "m_w3d7_c3_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 10
+              }
+            },
+            {
+              "id": "m_w3d7_c4",
+              "text": "🔒 [체력 50 이하] \"어제 밤새서 쓰러지기 직전이었는데, 네 얼굴 보니까 갑자기 체력이 싹 도네. 인간 포션이야?\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "hp",
+                  "max": 50,
+                  "label": "체력 50 이하"
+                }
+              ],
+              "lockedReason": "아직 피곤에 찌들지 않았습니다.",
+              "statChanges": {
+                "hp": 20
+              },
+              "nextNodeId": "m_w3d7_c4_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 25
+              }
+            }
+          ]
+        },
+        "m_w3d7_c1_res1": {
+          "id": "m_w3d7_c1_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"아니, 너무 멋있어서 놀랐지! 맨날 후드티만 보다가 셔츠 입은 거 보니까 진짜 새롭다. 완전 딴 사람 같아.\"",
+          "nextNodeId": "m_w3d7_c1_res2"
+        },
+        "m_w3d7_c1_res2": {
+          "id": "m_w3d7_c1_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"멋있긴 무슨... 칭찬할 시간에 코드나 한 줄 더 짜\"",
+          "nextNodeId": "m_w3d7_c1_res3"
+        },
+        "m_w3d7_c1_res3": {
+          "id": "m_w3d7_c1_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"에이~ 칭찬인데 왜 철벽을 쳐. 앞으로도 자주 좀 그렇게 입고 다녀라!\"",
+          "nextNodeId": "m_w3d7_c1_res4"
+        },
+        "m_w3d7_c1_res4": {
+          "id": "m_w3d7_c1_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"...뭐, 너가 원한다면 아주 가끔은... 아, 아니, 됐다. 빨리 책이나 펴.\"",
+          "nextNodeId": "m_w3d7_c1_res5"
+        },
+        "m_w3d7_c1_res5": {
+          "id": "m_w3d7_c1_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 헛기침을 하며 노트북 화면 뒤로 숨는다. 퉁명스럽게 대답하지만, 입꼬리가 주체할 수 없이 씰룩거린다.)"
+        },
+        "m_w3d7_c2_res1": {
+          "id": "m_w3d7_c2_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"세탁기가 고장 났는데 향수까지 뿌렸어? 너 혹시 오늘 나랑 만난다고 엄청 꾸민 거 아니야?\"",
+          "nextNodeId": "m_w3d7_c2_res2"
+        },
+        "m_w3d7_c2_res2": {
+          "id": "m_w3d7_c2_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"향, 향수 아니거든! 섬유유연제야! 진짜 사람 이상하게 몰아가는 데 뭐 있네!\"",
+          "nextNodeId": "m_w3d7_c2_res3"
+        },
+        "m_w3d7_c2_res3": {
+          "id": "m_w3d7_c2_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"섬유유연제에서 머스크 향이 이렇게 진하게 난다고? 향수병 쏟은 거 같은데? ㅋㅋㅋ\"",
+          "nextNodeId": "m_w3d7_c2_res4"
+        },
+        "m_w3d7_c2_res4": {
+          "id": "m_w3d7_c2_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "ANNOYED",
+          "text": "\"아 진짜...!! 그냥 좀 넘어가지? 왜 자꾸 팩트를... 아니, 아무튼 아니라고!!\"",
+          "nextNodeId": "m_w3d7_c2_res5"
+        },
+        "m_w3d7_c2_res5": {
+          "id": "m_w3d7_c2_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 당황해서 아메리카노를 벌컥벌컥 마신다. 그의 서투른 변명이 귀여워서 계속 놀리고 싶어진다.)"
+        },
+        "m_w3d7_c3_res1": {
+          "id": "m_w3d7_c3_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"와... 넌 그렇게 차려입고 왔는데 나만 너무 츄리닝 입고 온 거 아니야? 왠지 나만 민망하네.\"",
+          "nextNodeId": "m_w3d7_c3_res2"
+        },
+        "m_w3d7_c3_res2": {
+          "id": "m_w3d7_c3_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"뭐가 민망해. 공부하러 오는데 편하게 입는 게 당연하지.\"",
+          "nextNodeId": "m_w3d7_c3_res3"
+        },
+        "m_w3d7_c3_res3": {
+          "id": "m_w3d7_c3_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"그래도... 네가 너무 눈부시니까 내가 오징어 된 기분이잖아.\"",
+          "nextNodeId": "m_w3d7_c3_res4"
+        },
+        "m_w3d7_c3_res4": {
+          "id": "m_w3d7_c3_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"{playerName}...너는... 뭐, 후드티 입은 것도 편해 보이고 나쁘지 않아.\"",
+          "nextNodeId": "m_w3d7_c3_res5"
+        },
+        "m_w3d7_c3_res5": {
+          "id": "m_w3d7_c3_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 작은 목소리로 웅얼거리더니 애써 시선을 노트북으로 고정한다. 무심한 칭찬에 오히려 내가 더 민망해졌다.)"
+        },
+        "m_w3d7_c4_res1": {
+          "id": "m_w3d7_c4_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"나 어제 코딩하느라 밤새서 쓰러지기 직전이었는데, 네 얼굴 보니까 갑자기 체력이 싹 도네. 완전 인간 포션이야?\"",
+          "nextNodeId": "m_w3d7_c4_res2"
+        },
+        "m_w3d7_c4_res2": {
+          "id": "m_w3d7_c4_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"ㅁ, 뭐라는 거야. 아침부터! 피곤하면 엎드려서 잠이나 좀 더 자!!\"",
+          "nextNodeId": "m_w3d7_c4_res3"
+        },
+        "m_w3d7_c4_res3": {
+          "id": "m_w3d7_c4_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"안 자도 돼. 지금 눈이 번쩍 뜨였거든. 향수 냄새도 엄청 좋네.\"",
+          "nextNodeId": "m_w3d7_c4_res4"
+        },
+        "m_w3d7_c4_res4": {
+          "id": "m_w3d7_c4_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"...향수 아니라니까. 하아, 진짜 사람 명줄 줄이는 데 뭐 있네.\"",
+          "nextNodeId": "m_w3d7_c4_res5"
+        },
+        "m_w3d7_c4_res5": {
+          "id": "m_w3d7_c4_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 귀를 새빨갛게 붉힌 채 메뉴판으로 얼굴을 가린다. 피로가 정말로 싹 날아간 기분이다.)"
+        }
+      }
+    },
+    {
+      "id": "EVT_ROMANCE_MINSU_W4_D7_NIGHT",
+      "label": "민수: 새벽 2시의 알고리즘 비급",
+      "startNodeId": "m_w4d7_n1",
+      "nodes": {
+        "m_w4d7_n1": {
+          "id": "m_w4d7_n1",
+          "speaker": "SYSTEM",
+          "text": "새벽 2시. 내일 있을 알고리즘 역량 테스트의 압박감에 짓눌려 멘탈이 나가기 직전이다.\n그때, 화면 우측 하단에서 '민수'의 MM 알림이 조용히 올라온다.",
+          "nextNodeId": "m_w4d7_n2"
+        },
+        "m_w4d7_n2": {
+          "id": "m_w4d7_n2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "[MM] 아직도 안 자? MM 초록불 켜져 있길래 묻는 거야. 설마 지금 기본기 다진다고 쉬운 문제부터 다시 풀고 있는 건 아니겠지?",
+          "nextNodeId": "m_w4d7_n3"
+        },
+        "m_w4d7_n3": {
+          "id": "m_w4d7_n3",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "[MM] (Notion 링크 전송)",
+          "nextNodeId": "m_w4d7_n4"
+        },
+        "m_w4d7_n4": {
+          "id": "m_w4d7_n4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SERIOUS",
+          "text": "[MM] 내가 내일 시험 전에 보려고 정리해 둔 알고리즘 핵심 패턴이랑 자주 틀리는 예외 상황(Edge Case) 모음이야. 너는 특히 반복문 종료 조건 꼼꼼하게 잡는 거 약하니까, 그쪽 탭 위주로 보는 게 좋을 걸. 내일 시험 망쳐서 혼자 재시험 보지 말고.",
+          "nextNodeId": "m_w4d7_n5"
+        },
+        "m_w4d7_n5": {
+          "id": "m_w4d7_n5",
+          "speaker": "SYSTEM",
+          "text": "(링크를 열어보니, '내일 시험 전에 보려고' 정리했다기엔 내가 자주 실수하는 논리 오류를 짚어주는 친절한 주석들이 가득하다. 잠시 후 민수에게서 화면 공유 요청이 걸려온다.)",
+          "choices": [
+            {
+              "id": "m_w4d7_c1",
+              "text": "[기본] [MM] 와... 이거 진짜 나한테 딱 필요했던 정리본인데! 민수야 진짜 고마워!",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": -15
+              },
+              "nextNodeId": "m_w4d7_c1_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 5
+              }
+            },
+            {
+              "id": "m_w4d7_c2",
+              "text": "🔒 [사교 65] [MM] 이거 나 주려고 테스트 케이스 만든 거지? 더미 데이터에 내 이름 적혀 있는데...?",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 65,
+                  "label": "사교 65 이상"
+                }
+              ],
+              "lockedReason": "숨겨진 의도를 간파할 눈치가 부족합니다.",
+              "nextNodeId": "m_w4d7_c2_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 15
+              }
+            },
+            {
+              "id": "m_w4d7_c3",
+              "text": "🔒 [FE 55 / BE 55] \"어? 근데 민수야, 여기 변수 초기화를 이 위치에서 안 해주면 결괏값이 오답 처리되지 않아?\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "fe",
+                  "min": 55,
+                  "label": "프론트엔드 55 이상"
+                },
+                {
+                  "stat": "be",
+                  "min": 55,
+                  "label": "백엔드 55 이상"
+                }
+              ],
+              "lockedReason": "민수의 실수를 짚어낼 코딩 실력이 부족합니다.",
+              "statChanges": {
+                "fe": 8,
+                "be": 7
+              },
+              "nextNodeId": "m_w4d7_c3_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 10
+              }
+            },
+            {
+              "id": "m_w4d7_c4",
+              "text": "🔒 [체력 30 이하] [MM] 고마워 민수야... 근데 나 지금 체력이 0이라 키보드에 머리 박앗ㅇ...zzzz...",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "hp",
+                  "max": 30,
+                  "label": "체력 30 이하"
+                }
+              ],
+              "lockedReason": "아직 키보드에 머리를 박을 정도로 피곤하지 않습니다.",
+              "statChanges": {
+                "hp": 15
+              },
+              "nextNodeId": "m_w4d7_c4_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 25
+              }
+            }
+          ]
+        },
+        "m_w4d7_c1_res1": {
+          "id": "m_w4d7_c1_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 와... 이거 진짜 나한테 딱 필요했던 정리본인데! 민수야 진짜 고마워!\"",
+          "nextNodeId": "m_w4d7_c1_res2"
+        },
+        "m_w4d7_c1_res2": {
+          "id": "m_w4d7_c1_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"[MM] 마이크 켜 봐. 지금부터 딱 1시간 동안 핵심 로직만 풀리고 재울 거니까 집중하자.\"",
+          "nextNodeId": "m_w4d7_c1_res3"
+        },
+        "m_w4d7_c1_res3": {
+          "id": "m_w4d7_c1_res3",
+          "speaker": "SYSTEM",
+          "text": "(디스코드 마이크를 켜자, 낮고 차분한 민수의 목소리가 이어폰을 타고 흘러나온다.)",
+          "nextNodeId": "m_w4d7_c1_res4"
+        },
+        "m_w4d7_c1_res4": {
+          "id": "m_w4d7_c1_res4",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"나 너무 졸린데 네 목소리 들으니까 잠이 좀 깬다.\"",
+          "nextNodeId": "m_w4d7_c1_res5"
+        },
+        "m_w4d7_c1_res5": {
+          "id": "m_w4d7_c1_res5",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"쓸데없는 소리 말고 첫 번째 문제 조건이나 읽고 어떻게 짜야할 지 나한테 설명해 봐.\"",
+          "nextNodeId": "m_w4d7_c1_res6"
+        },
+        "m_w4d7_c1_res6": {
+          "id": "m_w4d7_c1_res6",
+          "speaker": "SYSTEM",
+          "text": "(무심하게 툭 내뱉지만, 새벽이라 그런지 그의 목소리가 평소보다 훨씬 부드럽게 들린다. 묘하게 든든하다.)"
+        },
+        "m_w4d7_c2_res1": {
+          "id": "m_w4d7_c2_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[MM] 너 사실 이거 나 주려고 방금까지 테스트 케이스 만든 거 아니야? 더미 데이터 이름에 내 이름 이니셜 적혀 있는데...?\"",
+          "nextNodeId": "m_w4d7_c2_res2"
+        },
+        "m_w4d7_c2_res2": {
+          "id": "m_w4d7_c2_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"[MM] 그, 그건 변수명 짓다가 오타 난 거야!! 쓸데없는 거 분석하지 말고 빨리 화면이나 띄우지?\"",
+          "nextNodeId": "m_w4d7_c2_res3"
+        },
+        "m_w4d7_c2_res3": {
+          "id": "m_w4d7_c2_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"(마이크를 켜며) 오타 치고는 너무 정확하게 내 이름 석 자 초성이 다 들어갔는데? 감동이다 진짜.\"",
+          "nextNodeId": "m_w4d7_c2_res4"
+        },
+        "m_w4d7_c2_res4": {
+          "id": "m_w4d7_c2_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"아, 쫌...!! 진짜 마이크 꺼버리기 전에 1번 문제부터 풀어 봐.\"",
+          "nextNodeId": "m_w4d7_c2_res5"
+        },
+        "m_w4d7_c2_res5": {
+          "id": "m_w4d7_c2_res5",
+          "speaker": "SYSTEM",
+          "text": "(이어폰 너머로 민수의 헛기침 소리와 함께 당황한 숨소리가 들려온다. 나를 위해 밤새 자료를 만들었을 그의 모습이 그려져 웃음이 났다.)"
+        },
+        "m_w4d7_c3_res1": {
+          "id": "m_w4d7_c3_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"(화면 공유 후) 어? 근데 민수야, 여기 반복문 돌 때 변수 초기화를 이 위치에서 안 해주면 결괏값이 계속 누적돼서 오답 처리되지 않아?\"",
+          "nextNodeId": "m_w4d7_c3_res2"
+        },
+        "m_w4d7_c3_res2": {
+          "id": "m_w4d7_c3_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SURPRISED",
+          "text": "\"...어? 잠시만요.\"",
+          "nextNodeId": "m_w4d7_c3_res3"
+        },
+        "m_w4d7_c3_res3": {
+          "id": "m_w4d7_c3_res3",
+          "speaker": "SYSTEM",
+          "text": "(마이크 너머로 빠르게 타자를 치는 소리가 들리더니, 이내 민수가 짧은 탄성을 내뱉는다.)",
+          "nextNodeId": "m_w4d7_c3_res4"
+        },
+        "m_w4d7_c3_res4": {
+          "id": "m_w4d7_c3_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"...진짜네요. 선배, 알고리즘 로직 많이 늘었네요. 인정합니다.\"",
+          "nextNodeId": "m_w4d7_c3_res5"
+        },
+        "m_w4d7_c3_res5": {
+          "id": "m_w4d7_c3_res5",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"히히, 내가 누구한테 배웠는데! 나 칭찬받은 거야?\"",
+          "nextNodeId": "m_w4d7_c3_res6"
+        },
+        "m_w4d7_c3_res6": {
+          "id": "m_w4d7_c3_res6",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"예, 뭐... 수제자라고 해 두죠. 잘했으니까 이 페이스대로 다음 문제도 풉니다.\"",
+          "nextNodeId": "m_w4d7_c3_res7"
+        },
+        "m_w4d7_c3_res7": {
+          "id": "m_w4d7_c3_res7",
+          "speaker": "SYSTEM",
+          "text": "(깐깐한 민수에게 듣는 직설적인 칭찬에 밤샘 피로가 싹 날아갔다.)"
+        },
+        "m_w4d7_c4_res1": {
+          "id": "m_w4d7_c4_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"[DM] 고마워 민수야... 근데 나 지금 체력이 0이라 키보드에 머리 박앗ㅇ...zzzz...\"",
+          "nextNodeId": "m_w4d7_c4_res2"
+        },
+        "m_w4d7_c4_res2": {
+          "id": "m_w4d7_c4_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "URGENT",
+          "text": "\"[MM] {playerName}? 뭐야, 자? 지금 자면 내일 100% 재시험이야. 여보세요?\"",
+          "nextNodeId": "m_w4d7_c4_res3"
+        },
+        "m_w4d7_c4_res3": {
+          "id": "m_w4d7_c4_res3",
+          "speaker": "SYSTEM",
+          "text": "(디스코드 연결음이 다시 요란하게 울린다. 잠시 깨서 전화를 받자 다급한 민수의 목소리가 들린다.)",
+          "nextNodeId": "m_w4d7_c4_res4"
+        },
+        "m_w4d7_c4_res4": {
+          "id": "m_w4d7_c4_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SERIOUS",
+          "text": "\"하아... 진짜 사람 걱정되게. 10분 줄 테니까 알람 맞추고 엎드려 자. 시간 되면 내가 깨울 테니까.\"",
+          "nextNodeId": "m_w4d7_c4_res5"
+        },
+        "m_w4d7_c4_res5": {
+          "id": "m_w4d7_c4_res5",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"(비몽사몽) 웅... 고마어... 민수 최고...\"",
+          "nextNodeId": "m_w4d7_c4_res6"
+        },
+        "m_w4d7_c4_res6": {
+          "id": "m_w4d7_c4_res6",
+          "speaker": "SYSTEM",
+          "text": "(민수의 작고 깊은 한숨 소리가 자장가처럼 들려왔다. 덕분에 방전됐던 체력이 조금 회복되었다.)"
+        }
+      }
+    },
+    {
+      "id": "EVT_ROMANCE_MINSU_W5_D5_AFTERNOON",
+      "label": "민수: 예외 처리된 관찰 일지",
+      "startNodeId": "m_w5d5_n1",
+      "nodes": {
+        "m_w5d5_n1": {
+          "id": "m_w5d5_n1",
+          "speaker": "SYSTEM",
+          "text": "어젯밤 실수로 민수의 'Spring Boot 딥다이브' 노트를 내 것인 줄 알고 챙겨갔다. 노트를 펴보니 깔끔한 ERD 다이어그램과 JPA 연관관계 매핑 정리 사이, 맨 뒷장에 이상한 페이지가 있다.\n\n[{playerName} 약점 보완 계획]\n1. 영속성 컨텍스트 개념 헷갈려함 -> 주말에 따로 도식화해서 보내줄 것.\n2. IntelliJ 단축키 까먹고 마우스 씀 -> 모니터 옆에 포스트잇 붙여둘 것.\n3. 커피 너무 많이 마심 -> 내일부터 탕비실 믹스커피 디카페인으로 바꿔치기할 것.\n\n어안이 벙벙해져 있는데, 뒤에서 훅 하고 익숙한 향수 냄새가 끼친다. 돌아보니 사색이 된 민수가 내 손에 들린 노트를 빤히 쳐다보고 있다.",
+          "nextNodeId": "m_w5d5_n2"
+        },
+        "m_w5d5_n2": {
+          "id": "m_w5d5_n2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"...너. 지금 그 노... 무슨... 몇 페이지, 펴고 있어.\"",
+          "choices": [
+            {
+              "id": "m_w5d5_c1",
+              "text": "[기본] \"어? 이거 네 노트였어? 표지가 똑같아서 몰랐네. (덮으며) 미안, 막 폈어!\"",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": -5
+              },
+              "nextNodeId": "m_w5d5_c1_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 5
+              }
+            },
+            {
+              "id": "m_w5d5_c2",
+              "text": "🔒 [사교 65] \"민수야, 나 오늘부터 커피 줄이려고. 누가 탕비실 커피를 다 디카페인으로 바꿔놨더라고? 완전 감동이야.\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 65,
+                  "label": "사교 65 이상"
+                }
+              ],
+              "lockedReason": "돌려 말하며 놀릴 넉살이 부족합니다.",
+              "nextNodeId": "m_w5d5_c2_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 15
+              }
+            },
+            {
+              "id": "m_w5d5_c3",
+              "text": "🔒 [사교 60] \"야아~ 우리 민수 선생님, 나 몰래 이런 귀여운 계획도 세우고 있었어? 나 진짜 열심히 할게!\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 60,
+                  "label": "사교 60 이상"
+                }
+              ],
+              "lockedReason": "직진으로 칭찬할 사교성이 부족합니다.",
+              "nextNodeId": "m_w5d5_c3_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 999
+              }
+            },
+            {
+              "id": "m_w5d5_c4",
+              "text": "🔒 [체력 60] \"노트를 품에 안고 튄다\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "hp",
+                  "min": 60,
+                  "label": "체력 60 이상"
+                }
+              ],
+              "lockedReason": "민수에게서 도망칠 체력이 없습니다.",
+              "statChanges": {
+                "hp": -10,
+                "stress": -10
+              },
+              "nextNodeId": "m_w5d5_c4_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 15
+              }
+            }
+          ]
+        },
+        "m_w5d5_c1_res1": {
+          "id": "m_w5d5_c1_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"어? 이거 네 노트였어? 표지가 똑같아서 몰랐네. (황급히 앞장으로 덮으며) 미안, 방금 막 폈어!\"",
+          "nextNodeId": "m_w5d5_c1_res2"
+        },
+        "m_w5d5_c1_res2": {
+          "id": "m_w5d5_c1_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "RELIEVED",
+          "text": "\"하아... 다행이네. 제발 남의 물건 함부로 가져가지 마.\"",
+          "nextNodeId": "m_w5d5_c1_res3"
+        },
+        "m_w5d5_c1_res3": {
+          "id": "m_w5d5_c1_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"응응 미안해! 근데 너 글씨 진짜 잘 쓴다. ERD 완전 자로 잰 줄 알았어.\"",
+          "nextNodeId": "m_w5d5_c1_res4"
+        },
+        "m_w5d5_c1_res4": {
+          "id": "m_w5d5_c1_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"...쓸데없는 소리 말고 여기 너 노트나 챙겨. JPA 과제 안 끝났잖아.\"",
+          "nextNodeId": "m_w5d5_c1_res5"
+        },
+        "m_w5d5_c1_res5": {
+          "id": "m_w5d5_c1_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 노트를 낚아채며 깊은 한숨을 쉰다. 안도하는 표정이지만 왠지 귀 끝이 새빨갛다.)"
+        },
+        "m_w5d5_c2_res1": {
+          "id": "m_w5d5_c2_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"민수야, 나 오늘부터 커피 줄이려고. 누가 탕비실 커피를 다 디카페인으로 바꿔놨더라고? 완전 감동이야.\"",
+          "nextNodeId": "m_w5d5_c2_res2"
+        },
+        "m_w5d5_c2_res2": {
+          "id": "m_w5d5_c2_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SURPRISED",
+          "text": "\"그, 그게 무슨 소리야! 난 모르는 일이야! 어서 노트 내놔!!\"",
+          "nextNodeId": "m_w5d5_c2_res3"
+        },
+        "m_w5d5_c2_res3": {
+          "id": "m_w5d5_c2_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"에이~ 모르는 일인데 왜 이렇게 당황해? 그리고 나 IntelliJ 단축키도 많이 외웠어! (Ctrl+Alt+L을 누르는 시늉을 하며)\"",
+          "nextNodeId": "m_w5d5_c2_res4"
+        },
+        "m_w5d5_c2_res4": {
+          "id": "m_w5d5_c2_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"아 진짜!! 남의 일기장 훔쳐보니까 좋아? 부끄럽게 진짜!\"",
+          "nextNodeId": "m_w5d5_c2_res5"
+        },
+        "m_w5d5_c2_res5": {
+          "id": "m_w5d5_c2_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 내 손에서 노트를 빼앗더니 뒤도 안 돌아보고 도망간다. 타건 소리만큼이나 빠른 도주였다.)"
+        },
+        "m_w5d5_c3_res1": {
+          "id": "m_w5d5_c3_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"야아~ 우리 민수 선생님, 나 몰래 이런 귀여운 계획도 세우고 있었어? 영속성 컨텍스트도 정리해 주고! 나 진짜 감동받았어!\"",
+          "nextNodeId": "m_w5d5_c3_res2"
+        },
+        "m_w5d5_c3_res2": {
+          "id": "m_w5d5_c3_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"다, 다 봤어?! 아... 진짜 미치겠네. 못 본 걸로 해! 당장 머릿속에서 초기화 시키라고!\"",
+          "nextNodeId": "m_w5d5_c3_res3"
+        },
+        "m_w5d5_c3_res3": {
+          "id": "m_w5d5_c3_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"이걸 어떻게 잊어! 나 진짜 탕비실 디카페인 마실 때마다 네 생각 하면서 마실 거야.\"",
+          "nextNodeId": "m_w5d5_c3_res4"
+        },
+        "m_w5d5_c3_res4": {
+          "id": "m_w5d5_c3_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"아아아... 제발 조용히 좀 해!! 누가 들으면 어쩌려고 그래!!\"",
+          "nextNodeId": "m_w5d5_c3_res5"
+        },
+        "m_w5d5_c3_res5": {
+          "id": "m_w5d5_c3_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 양손으로 얼굴을 완전히 덮어버렸다. 손가락 사이로 보이는 피부가 터질 듯이 붉다.)"
+        },
+        "m_w5d5_c4_res1": {
+          "id": "m_w5d5_c4_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"와, 완전 감동! 이 귀중한 사찰 일지는 내가 평생 보물로 간직하겠어! 뺏고 싶으면 잡아보시지!\" (노트를 품에 안고 튄다)",
+          "nextNodeId": "m_w5d5_c4_res2"
+        },
+        "m_w5d5_c4_res2": {
+          "id": "m_w5d5_c4_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "URGENT",
+          "text": "\"아니, {playerName}!! 거기 안 서?! 복도에서 뛰지 말라고!!\"",
+          "nextNodeId": "m_w5d5_c4_res3"
+        },
+        "m_w5d5_c4_res3": {
+          "id": "m_w5d5_c4_res3",
+          "speaker": "SYSTEM",
+          "text": "(다급해진 민수가 내 뒤를 쫓아 뛰기 시작했다. 로비 앞까지 추격전이 이어졌다.)",
+          "nextNodeId": "m_w5d5_c4_res4"
+        },
+        "m_w5d5_c4_res4": {
+          "id": "m_w5d5_c4_res4",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"잡히면 돌려줄게! 대신 내일 디카페인 커피는 네가 직접 타 줘!\"",
+          "nextNodeId": "m_w5d5_c4_res5"
+        },
+        "m_w5d5_c4_res5": {
+          "id": "m_w5d5_c4_res5",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"하아, 하아... 알았으니까 진짜 그만 좀 뛰어! 프로님들 다 봅니다!!\"",
+          "nextNodeId": "m_w5d5_c4_res6"
+        },
+        "m_w5d5_c4_res6": {
+          "id": "m_w5d5_c4_res6",
+          "speaker": "SYSTEM",
+          "text": "(가쁜 숨을 내쉬며 내 손목을 낚아챈 민수의 얼굴이 홍당무처럼 달아올라 있다. 달리기 때문인지, 부끄러움 때문인지는 모르겠다.)"
+        }
+      }
+    },
+    {
+      "id": "EVT_ROMANCE_MINSU_W6_D3_AFTERNOON",
+      "label": "민수: 처리되지 않은 예외(Exception)",
+      "startNodeId": "m_w6d3_n1",
+      "nodes": {
+        "m_w6d3_n1": {
+          "id": "m_w6d3_n1",
+          "speaker": "SYSTEM",
+          "text": "프로젝트 기능 구현 중 바람을 쐬러 잠시 로비로 나왔다. 다들 관통 프로젝트로 정신 없어 그런가, 아무도 없다. 그때, 민수가 갑자기 뛰어 들어온다. 평소 단정하던 머리는 헝클어져 있다.",
+          "nextNodeId": "m_w6d3_n2"
+        },
+        "m_w6d3_n2": {
+          "id": "m_w6d3_n2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "URGENT",
+          "text": "\"하아... 하아...\"",
+          "nextNodeId": "m_w6d3_n3"
+        },
+        "m_w6d3_n3": {
+          "id": "m_w6d3_n3",
+          "speaker": "SYSTEM",
+          "text": "(민수가 다짜고짜 다가와 내 어깨를 꽉 쥔다. 손끝이 미세하게 떨리고 있다.)",
+          "nextNodeId": "m_w6d3_n4"
+        },
+        "m_w6d3_n4": {
+          "id": "m_w6d3_n4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SAD",
+          "text": "\"퇴소한다면서. 왜... 왜 나한테 먼저 말 안 했지? 내가 다 도와주겠다고, 진도 못 따라오면 내가 밤을 새워서라도 끌고 가겠다고 했는데, 근데 왜 포기해?!\"",
+          "nextNodeId": "m_w6d3_n5"
+        },
+        "m_w6d3_n5": {
+          "id": "m_w6d3_n5",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"어...? 나 퇴소 안 하는데? 아까 1반 애들한테 '아~ 에러 안 잡혀서 진짜 짐 싸서 도망가고 싶다~'고 농담한 건데?\"",
+          "nextNodeId": "m_w6d3_n6"
+        },
+        "m_w6d3_n6": {
+          "id": "m_w6d3_n6",
+          "speaker": "SYSTEM",
+          "text": "(내 말에 민수의 눈이 커지더니, 이내 어깨를 잡았던 손에 스르륵 힘이 풀린다. 그가 깊은 안도의 한숨을 내쉬며 벽에 머리를 기댄다.)",
+          "choices": [
+            {
+              "id": "m_w6d3_c1",
+              "text": "[기본] \"나 진짜 안 가! 놀라게 해서 미안해. 네가 멱살 잡고 캐리해 주는데 내가 어딜 가.\"",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": -10
+              },
+              "nextNodeId": "m_w6d3_c1_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 10
+              }
+            },
+            {
+              "id": "m_w6d3_c2",
+              "text": "🔒 [사교 65] \"너 지금 나 진짜로 떠날까 봐 엄청 뛰어온 거야? 나 그렇게 걱정됐어?\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 65,
+                  "label": "사교 65 이상"
+                }
+              ],
+              "lockedReason": "당돌하게 속마음을 물어볼 사교성이 부족합니다.",
+              "nextNodeId": "m_w6d3_c2_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 20
+              }
+            },
+            {
+              "id": "m_w6d3_c3",
+              "text": "🔒 [사교 55] (떨리는 민수의 손을 마주 잡으며) \"걱정 마. 끝까지 붙어있을게.\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 55,
+                  "label": "사교 55 이상"
+                }
+              ],
+              "lockedReason": "먼저 손을 잡아줄 용기가 부족합니다.",
+              "nextNodeId": "m_w6d3_c3_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 999
+              }
+            },
+            {
+              "id": "m_w6d3_c4",
+              "text": "🔒 [BE 80] \"솔직히 말해봐, 나 없으면 안 되겠지?\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "be",
+                  "min": 80,
+                  "label": "백엔드 80 이상"
+                }
+              ],
+              "lockedReason": "여유롭게 도발할 실력이 부족합니다.",
+              "statChanges": {
+                "stress": -15
+              },
+              "nextNodeId": "m_w6d3_c4_res1",
+              "affectionChanges": {
+                "NPC_CLASSMATE_MINSU": 25
+              }
+            }
+          ]
+        },
+        "m_w6d3_c1_res1": {
+          "id": "m_w6d3_c1_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"나 진짜 안 가! 놀라게 해서 미안해. 네가 멱살 잡고 캐리해 주는데 내가 어딜 가.\"",
+          "nextNodeId": "m_w6d3_c1_res2"
+        },
+        "m_w6d3_c1_res2": {
+          "id": "m_w6d3_c1_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "RELIEVED",
+          "text": "\"...진짜 사람 명줄 줄이는 데 뭐 있네. 다행이다, 진짜...\"",
+          "nextNodeId": "m_w6d3_c1_res3"
+        },
+        "m_w6d3_c1_res3": {
+          "id": "m_w6d3_c1_res3",
+          "speaker": "SYSTEM",
+          "text": "(민수가 한참 동안 벽에 기대어 가쁜 숨을 고른다. 그의 시선이 내 얼굴을 집요하게 살핀다.)",
+          "nextNodeId": "m_w6d3_c1_res4"
+        },
+        "m_w6d3_c1_res4": {
+          "id": "m_w6d3_c1_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SERIOUS",
+          "text": "\"진짜 안 가는 거 맞지. 농담이라도 두 번 다시 그런 말 하지 마.\"",
+          "nextNodeId": "m_w6d3_c1_res5"
+        },
+        "m_w6d3_c1_res5": {
+          "id": "m_w6d3_c1_res5",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"응. 절대 안 가. 수료식 때까지 네 옆에 딱 붙어있을게.\"",
+          "nextNodeId": "m_w6d3_c1_res6"
+        },
+        "m_w6d3_c1_res6": {
+          "id": "m_w6d3_c1_res6",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "NORMAL",
+          "text": "\"...약속했다. 나중에 말 바꾸기 없어.\"",
+          "nextNodeId": "m_w6d3_c1_res7"
+        },
+        "m_w6d3_c1_res7": {
+          "id": "m_w6d3_c1_res7",
+          "speaker": "SYSTEM",
+          "text": "(민수가 헝클어진 머리를 쓸어 넘기며 작게 미소 지었다. 그의 눈빛이 한없이 부드럽다.)"
+        },
+        "m_w6d3_c2_res1": {
+          "id": "m_w6d3_c2_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"너 지금 나 진짜로 떠날까 봐 엄청 뛰어온 거야? 숨도 엄청 차 보이고, 눈가도 좀 붉어진 것 같은데... 나 그렇게 걱정됐어?\"",
+          "nextNodeId": "m_w6d3_c2_res2"
+        },
+        "m_w6d3_c2_res2": {
+          "id": "m_w6d3_c2_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"그, 그런 거 아니야! 기껏 다 알려줬는데 헛수고 한 걸까 봐...!! 하아, 진짜 짜증 나.\"",
+          "nextNodeId": "m_w6d3_c2_res3"
+        },
+        "m_w6d3_c2_res3": {
+          "id": "m_w6d3_c2_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"거짓말. 너 방금 손끝 엄청 떨렸어. 나 안 가니까 걱정 마.\"",
+          "nextNodeId": "m_w6d3_c2_res4"
+        },
+        "m_w6d3_c2_res4": {
+          "id": "m_w6d3_c2_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"...아 씨, 진짜. 남의 속도 모르고 속 편하게 웃기는.\"",
+          "nextNodeId": "m_w6d3_c2_res5"
+        },
+        "m_w6d3_c2_res5": {
+          "id": "m_w6d3_c2_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 두 손으로 마른 세수를 하더니 훅 다가와 내 어깨에 이마를 툭 기댄다. 그의 심장 뛰는 소리가 고스란히 전해져 왔다.)"
+        },
+        "m_w6d3_c3_res1": {
+          "id": "m_w6d3_c3_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "(미세하게 떨리는 민수의 손을 마주 꽉 잡으며) \"걱정 마. 네가 내 옆에 있는데 내가 포기를 왜 해. 끝까지 붙어있을게.\"",
+          "nextNodeId": "m_w6d3_c3_res2"
+        },
+        "m_w6d3_c3_res2": {
+          "id": "m_w6d3_c3_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SERIOUS",
+          "text": "\"...그 말, 책임져. 나중에 힘들다고 도망간다고 해도 안 놔줄 거니까.\"",
+          "nextNodeId": "m_w6d3_c3_res3"
+        },
+        "m_w6d3_c3_res3": {
+          "id": "m_w6d3_c3_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"응. 절대 도망 안 가. 약속할게.\"",
+          "nextNodeId": "m_w6d3_c3_res4"
+        },
+        "m_w6d3_c3_res4": {
+          "id": "m_w6d3_c3_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SAD",
+          "text": "\"다시는... 나 빼고 그런 결심 하지 마. 진짜 미치는 줄 알았으니까.\"",
+          "nextNodeId": "m_w6d3_c3_res5"
+        },
+        "m_w6d3_c3_res5": {
+          "id": "m_w6d3_c3_res5",
+          "speaker": "SYSTEM",
+          "text": "(민수가 내 손을 자신의 뺨에 가져다 댔다. 애타는 그의 진심이 손끝으로 고스란히 전해졌다.)"
+        },
+        "m_w6d3_c4_res1": {
+          "id": "m_w6d3_c4_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"뭐야, 내가 진짜 퇴소하면 너 엄청 슬퍼할 뻔했네? 솔직히 말해봐, 나 없으면 안 되겠지?\"",
+          "nextNodeId": "m_w6d3_c4_res2"
+        },
+        "m_w6d3_c4_res2": {
+          "id": "m_w6d3_c4_res2",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "FLUSTERED",
+          "text": "\"하아... 진짜 사람 놀리는 데 소질 있네.\"",
+          "nextNodeId": "m_w6d3_c4_res3"
+        },
+        "m_w6d3_c4_res3": {
+          "id": "m_w6d3_c4_res3",
+          "speaker": "SYSTEM",
+          "text": "(민수가 어이없다는 듯 헛웃음을 치더니, 이내 정색하고 나를 빤히 내려다본다.)",
+          "nextNodeId": "m_w6d3_c4_res4"
+        },
+        "m_w6d3_c4_res4": {
+          "id": "m_w6d3_c4_res4",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SERIOUS",
+          "text": "\"...그래. 그러니까 두 번 다시 그런 농담 하지 마. 진짜인 줄 알고 심장 떨어지는 줄 알았으니까.\"",
+          "nextNodeId": "m_w6d3_c4_res5"
+        },
+        "m_w6d3_c4_res5": {
+          "id": "m_w6d3_c4_res5",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"어... 진짜?\"",
+          "nextNodeId": "m_w6d3_c4_res6"
+        },
+        "m_w6d3_c4_res6": {
+          "id": "m_w6d3_c4_res6",
+          "speaker": "민수",
+          "speakerId": "NPC_CLASSMATE_MINSU",
+          "emotion": "SHY",
+          "text": "\"어. 너 없으면 진짜... 안 될 것 같으니까 가지 마.\"",
+          "nextNodeId": "m_w6d3_c4_res7"
+        },
+        "m_w6d3_c4_res7": {
+          "id": "m_w6d3_c4_res7",
+          "speaker": "SYSTEM",
+          "text": "(장난스럽게 던진 말에 민수가 평소답지 않게 직구로 진심을 부딪쳐 온다. 예상치 못한 심쿵에 내 얼굴이 확 달아올랐다.)"
+        }
+      }
+    }
+  ]
+}

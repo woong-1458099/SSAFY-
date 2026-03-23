@@ -73,6 +73,12 @@
         "action": {
           "type": "string",
           "minLength": 1
+        },
+        "affectionChanges": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
         }
       }
     },
@@ -95,7 +101,7 @@
         },
         "actionType": {
           "type": "string",
-          "enum": ["NORMAL", "LOCKED", "MADNESS"]
+          "enum": ["NORMAL", "LOCKED", "MADNESS", "ROMANCE_EVENT"]
         },
         "statChanges": {
           "type": "object",
@@ -109,6 +115,12 @@
             "$ref": "#/$defs/dialogueRequirement"
           }
         },
+        "affectionRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/affectionRequirement"
+          }
+        },
         "lockedReason": {
           "type": "string"
         },
@@ -118,6 +130,16 @@
         "action": {
           "type": "string",
           "minLength": 1
+        },
+        "setFlags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "affectionChanges": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
         }
       }
     },
@@ -128,7 +150,29 @@
       "properties": {
         "stat": {
           "type": "string",
-          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "gold", "money"]
+          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "gold", "money", "playerGender"]
+        },
+        "equals": {
+          "type": "string"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "affectionRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["npcId"],
+      "properties": {
+        "npcId": {
+          "type": "string"
         },
         "min": {
           "type": "number"
