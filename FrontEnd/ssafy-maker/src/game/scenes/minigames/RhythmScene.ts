@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_RHYTHM_DIFFICULTIES,
   LEGACY_RHYTHM_DIFFICULTY_SETTINGS,
@@ -20,6 +21,7 @@ export default class RhythmScene extends Phaser.Scene {
   private difficulty: LegacyRhythmDifficulty = 'Normal';
   private config = LEGACY_RHYTHM_DIFFICULTY_SETTINGS.Normal;
   private returnSceneKey = 'main';
+  private rewardEmitted = false;
 
   constructor() { super({ key: 'RhythmScene' }); }
 
@@ -35,6 +37,7 @@ export default class RhythmScene extends Phaser.Scene {
     // Initial State
     this.score = 0; this.combo = 0; this.maxCombo = 0; this.perfect = 0; this.good = 0; this.miss = 0; 
     this.noteObjects = []; this.startTime = null; this.gameOver = false; this.songNotes = [];
+    this.rewardEmitted = false;
 
     // Background
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);
@@ -208,7 +211,10 @@ export default class RhythmScene extends Phaser.Scene {
     this.add.text(W / 2 + 200, 270, result.grade, { fontSize: '60px', color: result.gradeColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.add.text(W / 2, 415, this.config.reward, { fontSize: '10px', color: '#aaddff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.createBtn(270, 490, 'RETRY', 0x001888, 0x4499ff, () => this.scene.restart());
-    this.createBtn(530, 490, 'EXIT', 0x440088, 0xcc55ff, () => returnToScene(this, this.returnSceneKey));
+    this.createBtn(530, 490, 'EXIT', 0x440088, 0xcc55ff, () => {
+      this.emitRewardIfNeeded();
+      returnToScene(this, this.returnSceneKey);
+    });
   }
 
   createBtn(x, y, label, bg, border, cb) {
@@ -217,5 +223,11 @@ export default class RhythmScene extends Phaser.Scene {
     this.add.text(x, y, label, { fontSize: '12px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border)); btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => { this.cameras.main.flash(150, 255, 255, 255, false); this.time.delayedCall(150, cb); });
+  }
+
+  emitRewardIfNeeded() {
+    if (this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'RhythmScene', rewardText: this.config.reward });
+    this.rewardEmitted = true;
   }
 }

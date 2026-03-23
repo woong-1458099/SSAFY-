@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { AreaTransitionId } from "../definitions/places/areaTransitionDefinitions";
+import { UI_DEPTH } from "../systems/uiDepth";
 
 export type RuntimeAreaTransitionTarget = {
   id: AreaTransitionId;
@@ -60,7 +61,7 @@ export class AreaTransitionOverlay {
   }
 
   private createView(target: RuntimeAreaTransitionTarget) {
-    const zone = this.scene.add.graphics().setDepth(9400);
+    const zone = this.scene.add.graphics().setDepth(UI_DEPTH.areaTransitionZone);
     const label = this.scene.add
       .text(target.centerX, target.zoneY + target.zoneHeight + 6, target.label, {
         fontSize: "12px",
@@ -68,7 +69,7 @@ export class AreaTransitionOverlay {
         backgroundColor: "#000000"
       })
       .setOrigin(0.5, 0)
-      .setDepth(9401);
+      .setDepth(UI_DEPTH.areaTransitionLabel);
 
     const view = { zone, label };
     this.views.set(target.id, view);

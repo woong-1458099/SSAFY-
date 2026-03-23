@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_TANK_ENDINGS,
   LEGACY_TANK_INITIAL_LIVES,
@@ -15,6 +16,8 @@ const { W, H } = SCREEN;
 
 export default class TankScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() {
     super({ key: 'TankScene' });
@@ -30,6 +33,8 @@ export default class TankScene extends Phaser.Scene {
 
     this.gameOver = false;
     this.started = false;
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
     this.playerLives = LEGACY_TANK_INITIAL_LIVES;
     this.enemyLives = LEGACY_TANK_INITIAL_LIVES;
     this.playerBullets = [];
@@ -375,12 +380,16 @@ export default class TankScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a1a);
 
     const ending = playerWon ? LEGACY_TANK_ENDINGS.victory : LEGACY_TANK_ENDINGS.defeat;
+    this.completedRewardText = ending.reward;
     this.add.text(W / 2, H / 2 - 80, ending.title, { fontSize: '42px', color: ending.titleColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.add.text(W / 2, H / 2 - 20, ending.subtitle, { fontSize: '16px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.add.text(W / 2, H / 2 + 30, ending.reward, { fontSize: '14px', color: ending.rewardColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 130, H / 2 + 100, '다시하기', 0x332200, 0x88ff00, () => this.scene.restart());
-    this.createBtn(W / 2 + 130, H / 2 + 100, '나가기', 0x222222, 0x666666, () => returnToScene(this, this.returnSceneKey));
+    this.createBtn(W / 2 + 130, H / 2 + 100, '나가기', 0x222222, 0x666666, () => {
+      this.emitCompletedReward();
+      returnToScene(this, this.returnSceneKey);
+    });
   }
 
   createBtn(x, y, label, bg, border, cb) {
@@ -410,5 +419,11 @@ export default class TankScene extends Phaser.Scene {
 
     this.playerBullets = [];
     this.enemyBullets = [];
+  }
+
+  emitCompletedReward() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'TankScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }

@@ -1,7 +1,7 @@
 import type { AreaId } from "../enums/area";
-import type { DialogueId } from "../enums/dialogue";
 import type { Facing } from "../enums/facing";
 import type { NpcId } from "../enums/npc";
+import type { DialogueScriptId } from "./dialogue";
 import type { SceneStateId } from "../../game/definitions/sceneStates/sceneStateIds";
 
 export type SceneStateNpc = {
@@ -9,7 +9,7 @@ export type SceneStateNpc = {
   x: number;
   y: number;
   facing?: Facing;
-  dialogueId: DialogueId;
+  dialogueId: DialogueScriptId;
 };
 
 export type SceneState = {

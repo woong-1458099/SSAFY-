@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_QUIZ_QUESTION_COUNT,
   LEGACY_QUIZ_QUESTIONS,
@@ -15,6 +16,8 @@ const { W, H } = SCREEN;
 
 export default class QuizScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() { super({ key: 'QuizScene' }); }
 
@@ -30,6 +33,8 @@ export default class QuizScene extends Phaser.Scene {
     this.score = 0;
     this.timeLeft = LEGACY_QUIZ_TOTAL_TIME;
     this.answered = false;
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
     this.questions = Phaser.Utils.Array.Shuffle([...LEGACY_QUIZ_QUESTIONS]).slice(0, LEGACY_QUIZ_QUESTION_COUNT);
 
     // 배경
@@ -225,6 +230,7 @@ export default class QuizScene extends Phaser.Scene {
 
     const total = this.questions.length;
     const result = resolveLegacyQuizResult(this.score, total);
+    this.completedRewardText = result.reward;
 
     this.add.text(W / 2, 220, `${this.score} / ${total}`, {
       fontSize: '48px', color: '#ffffff', fontFamily: PIXEL_FONT
@@ -239,7 +245,10 @@ export default class QuizScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 420, '다시하기', 0x2255aa, 0x4488ff, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 420, '나가기', 0x884400, 0xffaa44, () => returnToScene(this, this.returnSceneKey));
+    this.createBtn(W / 2 + 120, 420, '나가기', 0x884400, 0xffaa44, () => {
+      this.emitCompletedReward();
+      returnToScene(this, this.returnSceneKey);
+    });
   }
 
   createBtn(x, y, label, bg, border, callback) {
@@ -256,5 +265,11 @@ export default class QuizScene extends Phaser.Scene {
 
   shutdown() {
     if (this.timerEvent) this.timerEvent.remove();
+  }
+
+  emitCompletedReward() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'QuizScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }

@@ -1,3 +1,12 @@
+import Phaser from "phaser";
+import { SCENE_KEYS } from "../../common/enums/scene";
+import { LEGACY_MINIGAME_CARDS } from "../../features/minigame/minigameCatalog";
+import {
+  LEGACY_MINIGAME_FLOW_SCENE_KEYS,
+  LEGACY_MINIGAME_MENU_SCENE_KEY,
+  LEGACY_MINIGAME_PAUSE_SCENE_KEY,
+  LEGACY_MINIGAME_SCENE_KEYS
+} from "../../features/minigame/minigameSceneKeys";
 import { BootScene } from "../../game/scenes/BootScene";
 import { PreloadScene } from "../../game/scenes/PreloadScene";
 import { MainScene } from "../../game/scenes/MainScene";
@@ -18,24 +27,91 @@ import LegacyRunnerScene from "../../game/scenes/minigames/RunnerScene";
 import LegacyTankScene from "../../game/scenes/minigames/TankScene";
 import LegacyTypingScene from "../../game/scenes/minigames/TypingScene";
 
-export const SCENE_REGISTRY = [
-  BootScene,
-  PreloadScene,
-  MainScene,
-  LegacyMenuScene,
-  LegacyMinigamePauseScene,
-  LegacyQuizScene,
-  LegacyRhythmScene,
-  LegacyInterviewScene,
-  LegacyRunnerScene,
-  LegacyTankScene,
-  LegacyTypingScene,
-  LegacyBusinessSmileScene,
-  LegacyDontSmileScene,
-  LegacyGymScene,
-  LegacyCookingScene,
-  LegacyLottoScene,
-  LegacyDrinkingScene,
-  MiniGameCenterScene,
-  MiniGameReflexScene
+type SceneConstructor = new () => Phaser.Scene;
+
+type SceneRegistryEntry = {
+  key: string;
+  scene: SceneConstructor;
+};
+
+const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
+  { key: SCENE_KEYS.boot, scene: BootScene },
+  { key: SCENE_KEYS.preload, scene: PreloadScene },
+  { key: SCENE_KEYS.main, scene: MainScene },
+  { key: LEGACY_MINIGAME_MENU_SCENE_KEY, scene: LegacyMenuScene },
+  { key: LEGACY_MINIGAME_PAUSE_SCENE_KEY, scene: LegacyMinigamePauseScene },
+  { key: "QuizScene", scene: LegacyQuizScene },
+  { key: "RhythmScene", scene: LegacyRhythmScene },
+  { key: "InterviewScene", scene: LegacyInterviewScene },
+  { key: "RunnerScene", scene: LegacyRunnerScene },
+  { key: "TankScene", scene: LegacyTankScene },
+  { key: "TypingScene", scene: LegacyTypingScene },
+  { key: "BusinessSmileScene", scene: LegacyBusinessSmileScene },
+  { key: "DontSmileScene", scene: LegacyDontSmileScene },
+  { key: "GymScene", scene: LegacyGymScene },
+  { key: "CookingScene", scene: LegacyCookingScene },
+  { key: "LottoScene", scene: LegacyLottoScene },
+  { key: "DrinkingScene", scene: LegacyDrinkingScene },
+  { key: "MiniGameCenterScene", scene: MiniGameCenterScene },
+  { key: "MiniGameReflexScene", scene: MiniGameReflexScene }
 ];
+
+function findMissingKeys(requiredKeys: Iterable<string>, registeredKeySet: Set<string>): string[] {
+  return [...requiredKeys].filter((key) => !registeredKeySet.has(key)).sort();
+}
+
+function findDuplicateKeys(keys: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  keys.forEach((key) => {
+    if (seen.has(key)) {
+      duplicates.add(key);
+      return;
+    }
+
+    seen.add(key);
+  });
+
+  return [...duplicates].sort();
+}
+
+export function assertSceneRegistryIntegrity(): void {
+  const registeredKeys = SCENE_REGISTRY_ENTRIES.map((entry) => entry.key);
+  const registeredKeySet = new Set(registeredKeys);
+  const cardKeys = new Set(LEGACY_MINIGAME_CARDS.map((card) => card.key));
+  const issues: string[] = [];
+
+  const duplicateKeys = findDuplicateKeys(registeredKeys);
+  if (duplicateKeys.length > 0) {
+    issues.push(`[sceneRegistry] 중복 scene key: ${duplicateKeys.join(", ")}`);
+  }
+
+  const missingCoreKeys = findMissingKeys([SCENE_KEYS.boot, SCENE_KEYS.preload, SCENE_KEYS.main], registeredKeySet);
+  if (missingCoreKeys.length > 0) {
+    issues.push(`[sceneRegistry] 핵심 scene key 누락: ${missingCoreKeys.join(", ")}`);
+  }
+
+  const missingFlowKeys = findMissingKeys(LEGACY_MINIGAME_FLOW_SCENE_KEYS, registeredKeySet);
+  if (missingFlowKeys.length > 0) {
+    issues.push(`[sceneRegistry] 미니게임 flow scene key 누락: ${missingFlowKeys.join(", ")}`);
+  }
+
+  const missingCatalogKeys = findMissingKeys(cardKeys, registeredKeySet);
+  if (missingCatalogKeys.length > 0) {
+    issues.push(`[sceneRegistry] 미니게임 catalog key 누락: ${missingCatalogKeys.join(", ")}`);
+  }
+
+  const uncataloguedLegacyKeys = findMissingKeys(LEGACY_MINIGAME_SCENE_KEYS, cardKeys);
+  if (uncataloguedLegacyKeys.length > 0) {
+    issues.push(`[sceneRegistry] catalog에 없는 legacy scene key: ${uncataloguedLegacyKeys.join(", ")}`);
+  }
+
+  if (issues.length > 0) {
+    throw new Error(issues.join("\n"));
+  }
+}
+
+assertSceneRegistryIntegrity();
+
+export const SCENE_REGISTRY = SCENE_REGISTRY_ENTRIES.map((entry) => entry.scene);

@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_GYM_EXERCISES,
   LEGACY_GYM_MAX_REPS,
@@ -24,6 +25,8 @@ const { W, H } = SCREEN;
 
 export default class GymScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() { super({ key: 'GymScene' }); }
 
@@ -54,6 +57,8 @@ export default class GymScene extends Phaser.Scene {
     this.perfectCount = 0;
     this.goodCount = 0;
     this.missCount = 0;
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
 
     // 입력 디바운스
     this.lastPressTime = 0;
@@ -362,6 +367,7 @@ export default class GymScene extends Phaser.Scene {
     this.add.text(W / 2, 340, `보상: ${result.reward}`, {
       ...TEXT_STYLES.reward
     }).setOrigin(0.5);
+    this.completedRewardText = result.reward;
 
     // 버튼
     createButton(this, W / 2 - 120, 420, '다시하기', () => this.scene.restart(), {
@@ -369,7 +375,10 @@ export default class GymScene extends Phaser.Scene {
       hoverColor: COLORS.orange,
       borderColor: COLORS.orange
     });
-    createButton(this, W / 2 + 120, 420, '나가기', () => returnToScene(this, this.returnSceneKey), {
+    createButton(this, W / 2 + 120, 420, '나가기', () => {
+      this.emitRewardIfNeeded();
+      returnToScene(this, this.returnSceneKey);
+    }, {
       bgColor: 0x222244,
       hoverColor: COLORS.blue,
       borderColor: COLORS.blue
@@ -379,5 +388,11 @@ export default class GymScene extends Phaser.Scene {
   shutdown() {
     this.input.keyboard.off('keydown-SPACE', this.handlePress, this);
     if (this.timerEvent) this.timerEvent.remove();
+  }
+
+  emitRewardIfNeeded() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'GymScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }

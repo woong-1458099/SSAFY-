@@ -7,6 +7,7 @@ export type PlaceDefinition = {
   area: AreaId;
   label: string;
   zone: Rect;
+  interactionZone?: Rect;
   movable: boolean;
   destinationArea?: AreaId;
   dialogueId?: DialogueId;
@@ -34,6 +35,7 @@ export const PLACE_DEFINITIONS: Record<PlaceId, PlaceDefinition> = {
     area: "world",
     label: "집",
     zone: { x: 410, y: 365, width: 230, height: 180 },
+    interactionZone: { x: 356, y: 388, width: 106, height: 118 },
     movable: false,
     dialogueId: "home_locked"
   },

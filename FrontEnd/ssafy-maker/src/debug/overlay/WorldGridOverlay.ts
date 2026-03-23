@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import type { ParsedTmxMap, TmxRuntimeGrids } from "../../game/systems/tmxNavigation";
 import type { WorldRenderBounds } from "../../game/managers/WorldManager";
+import { UI_DEPTH } from "../../game/systems/uiDepth";
 
 export class WorldGridOverlay {
   private scene: Phaser.Scene;
@@ -12,9 +13,9 @@ export class WorldGridOverlay {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    this.walkableGraphics = scene.add.graphics().setDepth(8999);
-    this.blockedGraphics = scene.add.graphics().setDepth(9000);
-    this.interactionGraphics = scene.add.graphics().setDepth(9001);
+    this.walkableGraphics = scene.add.graphics().setDepth(UI_DEPTH.worldGridWalkable);
+    this.blockedGraphics = scene.add.graphics().setDepth(UI_DEPTH.worldGridBlocked);
+    this.interactionGraphics = scene.add.graphics().setDepth(UI_DEPTH.worldGridInteraction);
   }
 
   render(

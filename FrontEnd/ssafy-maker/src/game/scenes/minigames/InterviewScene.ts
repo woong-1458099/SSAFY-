@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { applyLegacyViewport } from './viewport';
 import { installMinigamePause } from './installMinigamePause';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_INTERVIEW_CATEGORY_COLORS,
   LEGACY_INTERVIEW_QUESTION_COUNT,
@@ -16,6 +17,8 @@ const { W, H } = SCREEN;
 
 export default class InterviewScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() { super({ key: 'InterviewScene' }); }
 
@@ -32,6 +35,8 @@ export default class InterviewScene extends Phaser.Scene {
     this.score = 0;
     this.timeLeft = LEGACY_INTERVIEW_TOTAL_TIME;
     this.answered = false;
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
 
     // 배경
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);
@@ -260,6 +265,7 @@ export default class InterviewScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const result = resolveLegacyInterviewResult(correct);
+    this.completedRewardText = result.reward;
 
     this.add.text(W / 2 + 160, 200, result.grade, {
       fontSize: '56px', color: result.gradeColor, fontFamily: PIXEL_FONT
@@ -278,7 +284,10 @@ export default class InterviewScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 440, '다시하기', 0x002266, 0x4499ff, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 440, '나가기', 0x440066, 0xcc55ff, () => returnToScene(this, this.returnSceneKey));
+    this.createBtn(W / 2 + 120, 440, '나가기', 0x440066, 0xcc55ff, () => {
+      this.emitCompletedReward();
+      returnToScene(this, this.returnSceneKey);
+    });
   }
 
   createBtn(x, y, label, bg, border, cb) {
@@ -295,5 +304,11 @@ export default class InterviewScene extends Phaser.Scene {
 
   shutdown() {
     if (this.timerEvent) this.timerEvent.remove();
+  }
+
+  emitCompletedReward() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'InterviewScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }

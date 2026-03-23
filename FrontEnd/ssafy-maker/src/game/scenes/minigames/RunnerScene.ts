@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_RUNNER_COUNTDOWN_DELAY_MS,
   LEGACY_RUNNER_INITIAL_OBSTACLE_DELAY_MS,
@@ -17,6 +18,8 @@ const { W, H } = SCREEN;
 
 export default class RunnerScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() { super({ key: 'RunnerScene' }); }
 
@@ -28,6 +31,8 @@ export default class RunnerScene extends Phaser.Scene {
     applyLegacyViewport(this);
     installMinigamePause(this, this.returnSceneKey);
     const W = 800, H = 600;
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
     this.score = 0; this.gameOver = false; this.speed = LEGACY_RUNNER_INITIAL_SPEED; this.jumpCount = 0; this.obstacles = []; this.grounds = [];
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);
     this.stars = [];
@@ -165,11 +170,15 @@ export default class RunnerScene extends Phaser.Scene {
     this.add.text(W / 2, 230, `${finalScore}`, { fontSize: '36px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.add.text(W / 2, 275, 'SCORE', { fontSize: '9px', color: '#888888', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     const result = resolveLegacyRunnerResult(finalScore);
+    this.completedRewardText = result.reward;
     this.add.text(W / 2 + 160, 240, result.grade, { fontSize: '60px', color: result.gradeColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.add.text(W / 2, 340, result.reward, { fontSize: '10px', color: '#aaddff', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.add.text(W / 2, 375, 'TIP: DOUBLE JUMP IS AVAILABLE!', { fontSize: '7px', color: '#445566', fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.createBtn(270, 440, 'RETRY', 0x001888, 0x4499ff, () => this.scene.restart());
-    this.createBtn(530, 440, 'EXIT', 0x440088, 0xcc55ff, () => returnToScene(this, this.returnSceneKey));
+    this.createBtn(530, 440, 'EXIT', 0x440088, 0xcc55ff, () => {
+      this.emitCompletedReward();
+      returnToScene(this, this.returnSceneKey);
+    });
   }
 
   createBtn(x, y, label, bg, border, cb) {
@@ -179,5 +188,11 @@ export default class RunnerScene extends Phaser.Scene {
     btn.on('pointerover', () => btn.setFillStyle(border));
     btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => { this.cameras.main.flash(150, 255, 255, 255, false); this.time.delayedCall(150, cb); });
+  }
+
+  emitCompletedReward() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'RunnerScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }

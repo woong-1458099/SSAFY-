@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_COOKING_ASSET_KEYS,
   LEGACY_COOKING_DISHES,
@@ -14,6 +15,8 @@ import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton
 const { W, H } = SCREEN;
 export default class CookingScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() { super({ key: 'CookingScene' }); }
 
@@ -35,6 +38,8 @@ export default class CookingScene extends Phaser.Scene {
     this.timeLeft = 25;
     this.gameOver = false;
     this.caughtItems = { '면': 0, '파': 0, '수프': 0, '차슈': 0, '계란': 0, '탄것': 0 };
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
 
     this.sound.stopAll();
     this.bgm = this.sound.add(LEGACY_COOKING_ASSET_KEYS.bgm, { loop: true, volume: 0.5 });
@@ -234,9 +239,13 @@ update() {
     this.add.text(W / 2, 400, `보상: ${dish.reward}`, {
       fontSize: '12px', color: '#FFD700', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
+    this.completedRewardText = dish.reward;
 
     this.createBtn(W / 2 - 120, 470, '다시하기', 0x442200, 0xff8822, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 470, '나가기', 0x222222, 0x666666, () => returnToScene(this, this.returnSceneKey));
+    this.createBtn(W / 2 + 120, 470, '나가기', 0x222222, 0x666666, () => {
+      this.emitRewardIfNeeded();
+      returnToScene(this, this.returnSceneKey);
+    });
   }
 
   createBtn(x, y, label, bg, border, cb) {
@@ -259,5 +268,11 @@ update() {
       this.cursors.right.destroy();
     }
     this.ingredients = [];
+  }
+
+  emitRewardIfNeeded() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'CookingScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }

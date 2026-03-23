@@ -8,7 +8,9 @@ import {
 } from './faceTracking';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
+import { LEGACY_MINIGAME_CARDS } from '@features/minigame/minigameCatalog';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_SMILE_CAMERA_HEIGHT,
   LEGACY_SMILE_CAMERA_WIDTH,
@@ -49,6 +51,8 @@ abstract class BaseSmileScene extends Phaser.Scene {
   protected gaugeState: GaugeState = { gauge: 0, ratio: 0, isSmiling: false };
   protected completed = false;
   protected returnSceneKey = 'main';
+  protected completedRewardText: string | null = null;
+  protected rewardEmitted = false;
 
   protected abstract readonly title: string;
   protected abstract readonly subtitle: string;
@@ -71,6 +75,8 @@ abstract class BaseSmileScene extends Phaser.Scene {
     installMinigamePause(this, this.returnSceneKey);
     this.completed = false;
     this.gaugeState = { gauge: 0, ratio: 0, isSmiling: false };
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
 
     this.drawShell();
     this.createCameraSurface();
@@ -292,6 +298,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
     }
 
     this.completed = true;
+    this.completedRewardText = outcome === 'success' ? this.getRewardText() : null;
     this.stopTracking();
     this.showResult(
       outcome === 'success' ? '성공' : '실패',
@@ -316,13 +323,16 @@ abstract class BaseSmileScene extends Phaser.Scene {
       align: 'center',
       wordWrap: { width: 420 },
     }).setOrigin(0.5).setDepth(32);
-    const rewardText = this.add.text(W / 2, 320, outcome === 'success' ? '미션 완료' : '다시 도전해 보세요', {
+    const rewardText = this.add.text(W / 2, 320, outcome === 'success' ? this.completedRewardText ?? '미션 완료' : '다시 도전해 보세요', {
       fontSize: '10px',
       color: '#9fd8ff',
       fontFamily: PIXEL_FONT,
     }).setOrigin(0.5).setDepth(32);
     const retryButton = this.createButton(W / 2 - 100, 356, '다시하기', () => this.scene.restart());
-    const menuButton = this.createButton(W / 2 + 100, 356, '나가기', () => returnToScene(this, this.returnSceneKey));
+    const menuButton = this.createButton(W / 2 + 100, 356, '나가기', () => {
+      this.emitCompletedReward();
+      returnToScene(this, this.returnSceneKey);
+    });
 
     this.resultGroup = [overlay, panel, titleText, subtitle, rewardText, ...retryButton, ...menuButton];
   }
@@ -362,6 +372,23 @@ abstract class BaseSmileScene extends Phaser.Scene {
     this.videoElement = null;
     this.canvasElement = null;
     this.canvasContext = null;
+  }
+
+  protected emitCompletedReward(): void {
+    if (!this.completedRewardText || this.rewardEmitted) {
+      return;
+    }
+
+    emitMinigameReward(this, {
+      sceneKey: this.scene.key,
+      rewardText: this.completedRewardText
+    });
+    this.rewardEmitted = true;
+  }
+
+  private getRewardText(): string | null {
+    const configured = LEGACY_MINIGAME_CARDS.find((card) => card.key === this.scene.key);
+    return configured?.reward ?? null;
   }
 }
 

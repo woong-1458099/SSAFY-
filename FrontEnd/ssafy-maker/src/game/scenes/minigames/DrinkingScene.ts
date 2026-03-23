@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { applyLegacyViewport } from './viewport';
 import { installMinigamePause } from './installMinigamePause';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_DRINKING_ASSET_KEYS,
   LEGACY_DRINKING_NPCS,
@@ -42,6 +43,7 @@ export default class DrinkingScene extends Phaser.Scene {
   private bubbleBg!: Phaser.GameObjects.Graphics;
 
   private returnSceneKey: string = 'MenuScene';
+  private rewardEmitted = false;
 
   constructor() {
     super({ key: 'DrinkingScene' });
@@ -66,6 +68,7 @@ export default class DrinkingScene extends Phaser.Scene {
     if (!this.sound.locked) this.bgm.play();
 
     this.round = 1; this.score = 0; this.success = 0; this.gameOver = false;
+    this.rewardEmitted = false;
   this.add.image(W / 2, H / 2, LEGACY_DRINKING_ASSET_KEYS.background).setDisplaySize(W, H).setDepth(1);
 
     this.add.image(W/2, H/2, LEGACY_DRINKING_ASSET_KEYS.tableBack).setDisplaySize(W, H-260).setDepth(2);
@@ -221,8 +224,15 @@ export default class DrinkingScene extends Phaser.Scene {
     this.add.text(W/2, H/2 + 30, `Score: ${this.score}`, { fontSize: '20px', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(101);
     this.add.text(W/2, H/2 + 110, '[ RETRY ]', { fontSize: '20px', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => this.scene.restart());
     this.add.text(W/2, H/2 + 160, '[ EXIT ]', { fontSize: '20px', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => {
+      this.emitRewardIfNeeded();
       this.sound.stopAll();
       returnToScene(this, this.returnSceneKey);
     });
+  }
+
+  emitRewardIfNeeded() {
+    if (this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'DrinkingScene', rewardText: 'STRESS -20 GP +10' });
+    this.rewardEmitted = true;
   }
 }
