@@ -17,6 +17,14 @@ import {
 import { BootScene } from "../../game/scenes/BootScene";
 import { PreloadScene } from "../../game/scenes/PreloadScene";
 import { MainScene } from "../../game/scenes/MainScene";
+import { LoginScene } from "../../scenes/LoginScene";
+import { StartScene } from "../../scenes/StartScene";
+import { IntroScene } from "../../scenes/IntroScene";
+import { NewCharacterScene } from "../../scenes/NewCharacterScene";
+import { CompletionScene } from "../../scenes/CompletionScene";
+import { FinalSummaryScene } from "../../scenes/FinalSummaryScene";
+import { EndingIntroScene } from "../../scenes/EndingIntroScene";
+import { EndingComicScene } from "../../scenes/EndingComicScene";
 import { MiniGameCenterScene } from "../../game/scenes/minigames/MiniGameCenterScene";
 import { MiniGameReflexScene } from "../../game/scenes/minigames/MiniGameReflexScene";
 import LegacyBusinessSmileScene from "../../game/scenes/minigames/BusinessSmileScene";
@@ -44,7 +52,15 @@ type SceneRegistryEntry = {
 const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: SCENE_KEYS.boot, scene: BootScene },
   { key: SCENE_KEYS.preload, scene: PreloadScene },
+  { key: SCENE_KEYS.login, scene: LoginScene },
+  { key: SCENE_KEYS.start, scene: StartScene },
+  { key: SCENE_KEYS.intro, scene: IntroScene },
+  { key: SCENE_KEYS.newCharacter, scene: NewCharacterScene },
   { key: SCENE_KEYS.main, scene: MainScene },
+  { key: SCENE_KEYS.completion, scene: CompletionScene },
+  { key: SCENE_KEYS.finalSummary, scene: FinalSummaryScene },
+  { key: SCENE_KEYS.endingIntro, scene: EndingIntroScene },
+  { key: SCENE_KEYS.endingComic, scene: EndingComicScene },
   { key: LEGACY_MINIGAME_MENU_SCENE_KEY, scene: LegacyMenuScene },
   { key: LEGACY_MINIGAME_PAUSE_SCENE_KEY, scene: LegacyMinigamePauseScene },
   { key: "QuizScene", scene: LegacyQuizScene },
@@ -83,12 +99,42 @@ function findDuplicateKeys(keys: readonly string[]): string[] {
   return [...duplicates].sort();
 }
 
+function resolveDeclaredSceneKey(sceneCtor: SceneConstructor): string {
+  const instance = new sceneCtor();
+  const declaredKey =
+    ((instance as Phaser.Scene & { sys?: { settings?: { key?: unknown } } }).sys?.settings?.key as string | undefined) ??
+    instance.scene.key;
+
+  if (typeof declaredKey !== "string" || declaredKey.trim().length === 0) {
+    throw new Error(`[sceneRegistry] ${sceneCtor.name} declared an empty scene key.`);
+  }
+
+  return declaredKey.trim();
+}
+
 export function assertSceneRegistryIntegrity(): void {
   assertMinigameSceneKeyIntegrity();
   assertMinigameCatalogIntegrity(LEGACY_MINIGAME_CARDS);
 
-  const coreSceneKeys = [SCENE_KEYS.boot, SCENE_KEYS.preload, SCENE_KEYS.main] as const;
+  const coreSceneKeys = [
+    SCENE_KEYS.boot,
+    SCENE_KEYS.preload,
+    SCENE_KEYS.login,
+    SCENE_KEYS.start,
+    SCENE_KEYS.intro,
+    SCENE_KEYS.newCharacter,
+    SCENE_KEYS.main,
+    SCENE_KEYS.completion,
+    SCENE_KEYS.finalSummary,
+    SCENE_KEYS.endingIntro,
+    SCENE_KEYS.endingComic
+  ] as const;
   const registeredKeys = SCENE_REGISTRY_ENTRIES.map((entry) => entry.key);
+  const declaredKeysByScene = SCENE_REGISTRY_ENTRIES.map((entry) => ({
+    registryKey: entry.key,
+    declaredKey: resolveDeclaredSceneKey(entry.scene),
+    sceneName: entry.scene.name
+  }));
   const registeredKeySet = new Set(registeredKeys);
   const registeredMinigameKeys = registeredKeys.filter((key) => !coreSceneKeys.includes(key as (typeof coreSceneKeys)[number]));
   const registeredMinigameKeySet = new Set(registeredMinigameKeys);
@@ -99,6 +145,18 @@ export function assertSceneRegistryIntegrity(): void {
   const duplicateKeys = findDuplicateKeys(registeredKeys);
   if (duplicateKeys.length > 0) {
     issues.push(`[sceneRegistry] 중복 scene key: ${duplicateKeys.join(", ")}`);
+  }
+
+  const duplicateDeclaredKeys = findDuplicateKeys(declaredKeysByScene.map((entry) => entry.declaredKey));
+  if (duplicateDeclaredKeys.length > 0) {
+    issues.push(`[sceneRegistry] Scene class 내부 declared key 중복: ${duplicateDeclaredKeys.join(", ")}`);
+  }
+
+  const sceneKeyMismatches = declaredKeysByScene
+    .filter((entry) => entry.registryKey !== entry.declaredKey)
+    .map((entry) => `${entry.sceneName}: registry=${entry.registryKey}, declared=${entry.declaredKey}`);
+  if (sceneKeyMismatches.length > 0) {
+    issues.push(`[sceneRegistry] registry key와 Scene class key 불일치: ${sceneKeyMismatches.join(" | ")}`);
   }
 
   const missingCoreKeys = findMissingKeys(coreSceneKeys, registeredKeySet);
@@ -142,14 +200,10 @@ export function assertSceneRegistryIntegrity(): void {
 }
 
 export const SCENE_REGISTRY = (() => {
-  try {
-    assertSceneRegistryIntegrity();
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      throw error;
-    }
+  assertSceneRegistryIntegrity();
 
-    console.error("[sceneRegistry] integrity validation failed during boot.", error);
+  if (import.meta.env.DEV) {
+    console.info("[sceneRegistry] registered scene keys:", SCENE_REGISTRY_ENTRIES.map((entry) => entry.key).join(", "));
   }
 
   return SCENE_REGISTRY_ENTRIES.map((entry) => entry.scene);
