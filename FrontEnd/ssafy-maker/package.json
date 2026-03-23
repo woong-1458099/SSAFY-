@@ -12,9 +12,10 @@
     "dev": "vite",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "validate:scene-registry": "node scripts/validate-scene-registry.mjs",
-    "build": "npm run typecheck && npm run validate:scene-registry && vite build",
+    "validate:minigame-structure": "node scripts/validate-minigame-structure.mjs",
+    "build": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && vite build",
     "preview": "vite preview",
-    "validate": "npm run typecheck && npm run validate:scene-registry && npm run validate:authored-story && npm run test:authored-story-validator",
+    "validate": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:authored-story && npm run test:authored-story-validator",
     "validate:authored-story": "node scripts/validate-authored-story.mjs",
     "test:authored-story-validator": "node scripts/test-authored-story-validator.mjs"
   },

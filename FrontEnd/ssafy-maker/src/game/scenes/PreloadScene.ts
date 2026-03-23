@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import { ASSET_KEYS, ASSET_PATHS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { getAuthBootstrapState } from "../../features/auth/AuthGateway";
 import { preloadInventoryUiAssets } from "../../features/inventory/inventoryAssets";
 import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "../../features/minigame/minigameSceneKeys";
 import { preloadPlaceBackgroundAssets } from "../../features/place/placeBackgrounds";
@@ -55,6 +56,6 @@ export class PreloadScene extends Phaser.Scene {
       return;
     }
 
-    this.scene.start(SCENE_KEYS.main);
+    this.scene.start(getAuthBootstrapState().authenticated ? SCENE_KEYS.start : SCENE_KEYS.login);
   }
 }

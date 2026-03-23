@@ -8,6 +8,7 @@ const projectRoot = path.resolve(__dirname, "..");
 
 const registryPath = path.join(projectRoot, "src/app/registry/sceneRegistry.ts");
 const sceneEnumPath = path.join(projectRoot, "src/common/enums/scene.ts");
+const sharedSceneKeyPath = path.join(projectRoot, "src/shared/enums/sceneKey.ts");
 const minigameKeysPath = path.join(projectRoot, "src/features/minigame/minigameSceneKeys.ts");
 const minigameCatalogPath = path.join(projectRoot, "src/features/minigame/minigameCatalog.ts");
 
@@ -46,6 +47,28 @@ function parseObjectStringConstants(content, objectName) {
     const entryMatch = line.match(/^(\w+):\s*(["'][^"']+["'])/u);
     if (entryMatch) {
       entries.set(entryMatch[1], unquote(entryMatch[2]));
+    }
+  }
+
+  return entries;
+}
+
+function parseResolvedObjectConstants(content, objectName, simpleConstants, objectConstants) {
+  const objectMatch = content.match(new RegExp(`export const ${objectName} = \\{([\\s\\S]*?)\\} as const;`));
+  if (!objectMatch) {
+    throw new Error(`[validate:scene-registry] ${objectName} object constant could not be parsed.`);
+  }
+
+  const entries = new Map();
+  for (const rawLine of objectMatch[1].split(/\r?\n/u)) {
+    const line = rawLine.replace(/\/\/.*$/u, "").trim();
+    if (!line) {
+      continue;
+    }
+
+    const entryMatch = line.match(/^(\w+):\s*([^,]+),?$/u);
+    if (entryMatch) {
+      entries.set(entryMatch[1], resolveExpression(entryMatch[2], simpleConstants, objectConstants));
     }
   }
 
@@ -115,7 +138,7 @@ function parseImportMap(content, baseFilePath) {
     const namedImports = match[1];
     const defaultImport = match[2];
     const sourcePath = match[3];
-    if (!sourcePath.includes("../../game/scenes")) {
+    if (!sourcePath.includes("../../game/scenes") && !sourcePath.includes("../../scenes")) {
       continue;
     }
 
@@ -187,6 +210,7 @@ function findDuplicates(values) {
 
 function main() {
   const sceneEnumContent = readFile(sceneEnumPath);
+  const sharedSceneKeyContent = readFile(sharedSceneKeyPath);
   const minigameKeysContent = readFile(minigameKeysPath);
   const registryContent = readFile(registryPath);
   const minigameCatalogContent = readFile(minigameCatalogPath);
@@ -196,6 +220,7 @@ function main() {
     ...parseSimpleStringConstants(minigameKeysContent)
   ]);
   const objectConstants = new Map([["SCENE_KEYS", parseObjectStringConstants(sceneEnumContent, "SCENE_KEYS")]]);
+  objectConstants.set("SceneKey", parseResolvedObjectConstants(sharedSceneKeyContent, "SceneKey", simpleConstants, objectConstants));
   const coreSceneKeys = [...objectConstants.get("SCENE_KEYS").values()];
   const importMap = parseImportMap(registryContent, registryPath);
   const registryEntries = parseRegistryEntries(registryContent, simpleConstants, objectConstants);

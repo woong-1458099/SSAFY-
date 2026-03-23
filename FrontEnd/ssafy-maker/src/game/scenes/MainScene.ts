@@ -18,6 +18,8 @@ import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { launchMinigame, openMinigameMenu } from "../../features/minigame/MinigameGateway";
 import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../features/progression/TimeService";
+import type { EndingFlowPayload } from "../../features/progression/types/ending";
+import { SceneKey } from "../../shared/enums/sceneKey";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
 import { GameHud } from "../../features/ui/components/GameHud";
@@ -210,7 +212,8 @@ export class MainScene extends Phaser.Scene {
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
       getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
-      onNotice: (message) => this.menuManager?.showNotice(message)
+      onNotice: (message) => this.menuManager?.showNotice(message),
+      onStartEndingFlow: () => this.startEndingFlow()
     });
     this.progressionManager.initialize();
     this.storyEventManager = new StoryEventManager({
@@ -918,6 +921,31 @@ update() {
       default:
         return "전체 지도";
     }
+  }
+
+  private buildEndingPayload(): EndingFlowPayload {
+    const hudState = this.statSystemManager?.getHudState() ?? this.statSystemManager!.getHudState();
+    const statsState = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
+
+    return {
+      fe: statsState.fe,
+      be: statsState.be,
+      teamwork: statsState.teamwork,
+      luck: statsState.luck,
+      hp: hudState.hp,
+      week: hudState.week,
+      dayLabel: hudState.dayLabel,
+      timeLabel: hudState.timeLabel
+    };
+  }
+
+  private startEndingFlow(): void {
+    if (!this.saveService) {
+      return;
+    }
+
+    this.saveService.saveSlot("auto", this.buildSavePayload());
+    this.scene.start(SceneKey.Completion, this.buildEndingPayload());
   }
 
   private buildDebugPanelState(): DebugPanelState {
