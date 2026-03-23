@@ -19,6 +19,8 @@ import { InventoryService } from "../../features/inventory/InventoryService";
 import { launchMinigame, openMinigameMenu } from "../../features/minigame/MinigameGateway";
 import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../features/progression/TimeService";
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
+import type { EndingId } from "../../features/progression/types/ending";
+import { resolveEnding } from "../../features/progression/services/endingResolver";
 import { SceneKey } from "../../shared/enums/sceneKey";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
@@ -146,6 +148,7 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager = new StatSystemManager();
     this.inventoryService = new InventoryService();
     this.saveService = new SaveService();
+    await this.saveService.hydrate(true);
     this.dialogueBox = new DialogueBox(this);
     this.hud = new GameHud(this);
     this.fixedEventNpcManager = new FixedEventNpcManager(this);
@@ -679,9 +682,16 @@ update() {
         }
         case "saveAuto":
           if (this.saveService) {
-            this.saveService.saveSlot("auto", this.buildSavePayload());
-            this.menuManager?.showNotice("오토 세이브 완료");
+            void this.saveAutoWithNotice();
           }
+          break;
+        case "startEndingFlow":
+          this.startDebugEndingFlow();
+          this.menuManager?.showNotice("디버그 엔딩 진입");
+          break;
+        case "startEndingFlowPreset":
+          this.startDebugEndingFlow(command.endingId);
+          this.menuManager?.showNotice(`디버그 엔딩 진입: ${command.endingId}`);
           break;
         default:
           this.assertNeverDebugCommand(command);
@@ -939,18 +949,69 @@ update() {
     };
   }
 
-  private startEndingFlow(): void {
+  private async startEndingFlow(): Promise<void> {
     if (!this.saveService) {
       return;
     }
 
-    this.saveService.saveSlot("auto", this.buildSavePayload());
+    try {
+      await this.saveService.saveSlot("auto", this.buildSavePayload());
+    } catch (error) {
+      console.error("[MainScene] ending auto save failed", error);
+      this.menuManager?.showNotice("엔딩 진입 전 오토 세이브에 실패했습니다.");
+    }
+
     this.scene.start(SceneKey.Completion, this.buildEndingPayload());
+  }
+
+  private async saveAutoWithNotice(): Promise<void> {
+    if (!this.saveService) {
+      return;
+    }
+
+    try {
+      await this.saveService.saveSlot("auto", this.buildSavePayload());
+      this.menuManager?.showNotice("오토 세이브 완료");
+    } catch (error) {
+      console.error("[MainScene] auto save failed", error);
+      this.menuManager?.showNotice("오토 세이브에 실패했습니다.");
+    }
+  }
+
+  private startDebugEndingFlow(endingId?: EndingId): void {
+    const payload = endingId ? this.buildEndingPresetPayload(endingId) : this.buildEndingPayload();
+    this.scene.start(SceneKey.Completion, payload);
+  }
+
+  private buildEndingPresetPayload(endingId: EndingId): EndingFlowPayload {
+    const base: Pick<EndingFlowPayload, "week" | "dayLabel" | "timeLabel"> = {
+      week: 6,
+      dayLabel: "금요일",
+      timeLabel: "밤"
+    };
+
+    switch (endingId) {
+      case "frontend-developer":
+        return { ...base, fe: 92, be: 36, teamwork: 58, luck: 28, hp: 62 };
+      case "backend-developer":
+        return { ...base, fe: 34, be: 92, teamwork: 56, luck: 30, hp: 60 };
+      case "team-player":
+        return { ...base, fe: 46, be: 40, teamwork: 91, luck: 36, hp: 63 };
+      case "stamina-survivor":
+        return { ...base, fe: 38, be: 36, teamwork: 44, luck: 30, hp: 95 };
+      case "lucky-break":
+        return { ...base, fe: 34, be: 32, teamwork: 42, luck: 96, hp: 58 };
+      case "frontend-leader":
+        return { ...base, fe: 88, be: 52, teamwork: 86, luck: 40, hp: 68 };
+      default:
+        return this.buildEndingPayload();
+    }
   }
 
   private buildDebugPanelState(): DebugPanelState {
     const hud = this.statSystemManager?.getHudState() ?? this.statSystemManager!.getHudState();
     const stats = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
+    const ending = resolveEnding(this.buildEndingPayload());
     const usedSlotCount = this.inventoryService?.getInventorySlots().filter((slot) => slot !== null).length ?? 0;
     const totalSlotCount = this.inventoryService?.getInventorySlots().length ?? 0;
     const storyWeeks = Array.from({ length: 6 }, (_, index) => {
@@ -970,6 +1031,15 @@ update() {
       fixedEventId: this.storyEventManager?.getCurrentFixedEventPresentation()?.eventId,
       hud,
       stats,
+      endingDebug: {
+        endingId: ending.endingId,
+        title: ending.title,
+        shortDescription: ending.shortDescription,
+        dominantLabels: ending.dominantLabels,
+        summaryStats: ending.summaryStats,
+        introLines: ending.introLines,
+        npcLine: ending.npcLine
+      },
       storyDebug: {
         currentWeek: hud.week,
         weeks: storyWeeks

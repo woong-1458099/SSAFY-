@@ -1,6 +1,7 @@
 // 디버그 입력과 실제 상태 변경을 분리하기 위한 명령 버스다.
 import type { SceneId } from "../../game/scripts/scenes/sceneIds";
 import type { PlayerStatKey } from "../../game/state/gameState";
+import type { EndingId } from "../../features/progression/types/ending";
 
 export type DebugCommand =
   | { type: "toggleDebugOverlay" }
@@ -21,7 +22,9 @@ export type DebugCommand =
   | { type: "runFixedEvent"; week: number; eventId: string; resetCompletion?: boolean }
   | { type: "resetFixedEventCompletion"; eventId: string }
   | { type: "resetFixedEventCompletionsForWeek"; week: number }
-  | { type: "saveAuto" };
+  | { type: "saveAuto" }
+  | { type: "startEndingFlow" }
+  | { type: "startEndingFlowPreset"; endingId: EndingId };
 
 type DebugCommandListener = (command: DebugCommand) => void;
 

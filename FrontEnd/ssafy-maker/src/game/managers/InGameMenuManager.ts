@@ -130,6 +130,7 @@ export class InGameMenuManager {
     setActiveMenuTab(this.frame.tabs, this.activeTab);
     this.refreshInventoryUi();
     this.refreshSaveUi();
+    void this.hydrateSaveSlots();
   }
 
   destroy(): void {
@@ -160,6 +161,7 @@ export class InGameMenuManager {
       this.refreshInventoryUi();
       this.refreshSaveUi();
       this.switchTab(this.activeTab);
+      void this.hydrateSaveSlots(this.activeTab === "save");
     }
   }
 
@@ -210,6 +212,16 @@ export class InGameMenuManager {
     });
   }
 
+  private async hydrateSaveSlots(force = false): Promise<void> {
+    await this.saveService.hydrate(force);
+    if (!this.frame) {
+      return;
+    }
+
+    this.rebuildSavePage();
+    this.refreshSaveUi();
+  }
+
   private switchTab(tab: MenuTabKey): void {
     this.activeTab = tab;
     MENU_TAB_ORDER.forEach((key) => {
@@ -225,6 +237,7 @@ export class InGameMenuManager {
     if (tab === "save") {
       this.rebuildSavePage();
       this.refreshSaveUi();
+      void this.hydrateSaveSlots(true);
     }
     this.updateNoticeVisibility();
   }
@@ -322,12 +335,7 @@ export class InGameMenuManager {
         this.refreshSaveUi();
       },
       onCreateNewSlot: () => {
-        this.selectedSaveSlotId = this.saveService.getNextManualSlotId();
-        this.manualSaveSlotPage = Math.floor(manualSlotIds.length / this.manualSaveSlotPageSize);
-        this.saveService.saveSlot(this.selectedSaveSlotId, this.buildSavePayload());
-        this.rebuildSavePage();
-        this.refreshSaveUi();
-        this.setNotice(`${getSaveSlotLabel(this.selectedSaveSlotId)} 생성 및 저장 완료`);
+        void this.handleCreateNewSlot();
       },
       onPrevPage: () => {
         this.manualSaveSlotPage = Math.max(0, this.manualSaveSlotPage - 1);
@@ -351,10 +359,7 @@ export class InGameMenuManager {
           body: `${getSaveSlotLabel(this.selectedSaveSlotId)}에 현재 진행 상황을 저장할까요?`,
           confirmText: "저장",
           onConfirm: () => {
-            this.saveService.saveSlot(this.selectedSaveSlotId, this.buildSavePayload());
-            this.rebuildSavePage();
-            this.refreshSaveUi();
-            this.setNotice(`${getSaveSlotLabel(this.selectedSaveSlotId)} 저장 완료`);
+            void this.handleSaveSelected();
           }
         });
       },
@@ -397,22 +402,7 @@ export class InGameMenuManager {
           body: `${getSaveSlotLabel(this.selectedSaveSlotId)}를 삭제할까요?\n삭제한 저장은 되돌릴 수 없습니다.`,
           confirmText: "삭제",
           onConfirm: () => {
-            const deleted = this.saveService.deleteSlot(this.selectedSaveSlotId);
-            if (!deleted) {
-              this.setNotice("삭제할 저장 슬롯이 없습니다.");
-              return;
-            }
-            const remainingManualSlots = this.saveService.getManualSlotIds();
-            this.selectedSaveSlotId =
-              remainingManualSlots[remainingManualSlots.length - 1] ?? this.saveService.getAutoSlotId();
-            const maxPageIndexAfterDelete = Math.max(
-              0,
-              Math.ceil(Math.max(remainingManualSlots.length, 1) / this.manualSaveSlotPageSize) - 1
-            );
-            this.manualSaveSlotPage = Math.min(this.manualSaveSlotPage, maxPageIndexAfterDelete);
-            this.rebuildSavePage();
-            this.refreshSaveUi();
-            this.setNotice("저장 슬롯을 삭제했습니다.");
+            void this.handleDeleteSelected();
           }
         });
       }
@@ -433,6 +423,58 @@ export class InGameMenuManager {
     savePage.setVisible(this.activeTab === "save");
     this.tabPages.save = savePage;
     this.frame?.pageRoot.add(savePage);
+  }
+
+  private async handleCreateNewSlot(): Promise<void> {
+    this.selectedSaveSlotId = this.saveService.getNextManualSlotId();
+    this.manualSaveSlotPage = Math.floor(this.saveService.getManualSlotIds().length / this.manualSaveSlotPageSize);
+
+    try {
+      await this.saveService.saveSlot(this.selectedSaveSlotId, this.buildSavePayload());
+      this.rebuildSavePage();
+      this.refreshSaveUi();
+      this.setNotice(`${getSaveSlotLabel(this.selectedSaveSlotId)} 생성 및 저장 완료`);
+    } catch (error) {
+      console.error("[InGameMenuManager] failed to create save slot", error);
+      this.setNotice("저장 슬롯 생성에 실패했습니다.");
+    }
+  }
+
+  private async handleSaveSelected(): Promise<void> {
+    try {
+      await this.saveService.saveSlot(this.selectedSaveSlotId, this.buildSavePayload());
+      this.rebuildSavePage();
+      this.refreshSaveUi();
+      this.setNotice(`${getSaveSlotLabel(this.selectedSaveSlotId)} 저장 완료`);
+    } catch (error) {
+      console.error("[InGameMenuManager] failed to save slot", error);
+      this.setNotice("저장에 실패했습니다.");
+    }
+  }
+
+  private async handleDeleteSelected(): Promise<void> {
+    try {
+      const deleted = await this.saveService.deleteSlot(this.selectedSaveSlotId);
+      if (!deleted) {
+        this.setNotice("삭제할 저장 슬롯이 없습니다.");
+        return;
+      }
+
+      const remainingManualSlots = this.saveService.getManualSlotIds();
+      this.selectedSaveSlotId =
+        remainingManualSlots[remainingManualSlots.length - 1] ?? this.saveService.getAutoSlotId();
+      const maxPageIndexAfterDelete = Math.max(
+        0,
+        Math.ceil(Math.max(remainingManualSlots.length, 1) / this.manualSaveSlotPageSize) - 1
+      );
+      this.manualSaveSlotPage = Math.min(this.manualSaveSlotPage, maxPageIndexAfterDelete);
+      this.rebuildSavePage();
+      this.refreshSaveUi();
+      this.setNotice("저장 슬롯을 삭제했습니다.");
+    } catch (error) {
+      console.error("[InGameMenuManager] failed to delete save slot", error);
+      this.setNotice("저장 삭제에 실패했습니다.");
+    }
   }
 
   private renderItem(view: SlotView, stack: InventoryItemStack | null): void {

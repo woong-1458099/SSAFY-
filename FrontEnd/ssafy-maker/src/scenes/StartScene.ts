@@ -38,6 +38,10 @@ export class StartScene extends Phaser.Scene {
   }
 
   create(): void {
+    void this.initializeScene();
+  }
+
+  private async initializeScene(): Promise<void> {
     this.input.enabled = true;
     this.startArmed = false;
     this.continueModalOpen = false;
@@ -47,6 +51,11 @@ export class StartScene extends Phaser.Scene {
     const storedSession = readStoredSession();
     if (!authToken && !storedSession) {
       void this.recoverSessionOrRedirect();
+      return;
+    }
+
+    await this.saveService.hydrate(true);
+    if (!this.sys.isActive()) {
       return;
     }
 
