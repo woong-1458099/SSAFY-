@@ -1,11 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 
+const defaultDataDir = path.resolve(__dirname, "..", "..", "..", "public", "assets", "game", "data", "story", "fixedevent");
 const inputArg = process.argv[2] ?? "fixed_week5.json";
 const eventIdArg = process.argv[3];
 const inputPath = path.isAbsolute(inputArg)
   ? inputArg
-  : path.resolve(__dirname, inputArg);
+  : path.resolve(defaultDataDir, inputArg);
 
 const rawData = JSON.parse(fs.readFileSync(inputPath, "utf8"));
 const events = Array.isArray(rawData) ? rawData : rawData.events;

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const DEFAULT_FIXED_EVENT_DIR = __dirname;
+const DEFAULT_FIXED_EVENT_DIR = path.resolve(__dirname, "..", "..", "..", "public", "assets", "game", "data", "story", "fixedevent");
 function resolveTargetDirectory(inputPath, fallbackPath) {
   const resolvedPath = inputPath
     ? path.resolve(process.cwd(), inputPath)
