@@ -1,3 +1,4 @@
+import type Phaser from "phaser";
 import { API_BASE_URL, fetchBackendSession, type BackendAuthSession, type UserProfile } from "@features/auth/api";
 
 export interface AuthSession {
@@ -8,6 +9,7 @@ export interface AuthSession {
 
 type AuthAction = "login" | "signup";
 const AUTH_REDIRECT_PENDING_KEY = "ssafy-maker.auth.redirect.pending";
+const AUTH_SESSION_STORAGE_KEY = "ssafy-maker.auth.session";
 
 function buildLogoutUrl(): string {
   return `${API_BASE_URL}/api/auth/logout`;
@@ -17,6 +19,11 @@ function cleanupCallbackUrl(): void {
   const url = new URL(window.location.href);
   url.searchParams.delete("auth");
   window.history.replaceState({}, document.title, url.toString());
+}
+
+function clearAuthClientState(): void {
+  clearPendingAuthRedirect();
+  clearStoredSession();
 }
 
 function readPendingRedirectState(): string | null {
@@ -51,11 +58,72 @@ function toAuthSession(session: BackendAuthSession): AuthSession | null {
   };
 }
 
+function isAuthSession(value: unknown): value is AuthSession {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<AuthSession>;
+  return candidate.authenticated === true &&
+    typeof candidate.expiresAt === "number" &&
+    typeof candidate.user?.id === "string" &&
+    typeof candidate.user?.email === "string";
+}
+
+function writeStoredSession(value: AuthSession | null): void {
+  try {
+    if (!value) {
+      window.sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+      return;
+    }
+
+    window.sessionStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    // Ignore storage failures so auth flow still works in restrictive browsers.
+  }
+}
+
+export function persistSession(session: AuthSession): AuthSession {
+  writeStoredSession(session);
+  return session;
+}
+
 export function readStoredSession(): AuthSession | null {
-  return null;
+  try {
+    const raw = window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isAuthSession(parsed) || parsed.expiresAt <= Date.now()) {
+      clearStoredSession();
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    clearStoredSession();
+    return null;
+  }
 }
 
 export function clearStoredSession(): void {
+  writeStoredSession(null);
+}
+
+export function applySessionToRegistry(registry: Phaser.Data.DataManager, session: AuthSession): void {
+  registry.set("authToken", "bff-session");
+  registry.set("authUser", {
+    id: session.user.id,
+    email: session.user.email,
+    nickname: session.user.email.split("@")[0]?.slice(0, 8) ?? "player"
+  });
+}
+
+export function clearAuthRegistry(registry: Phaser.Data.DataManager): void {
+  registry.remove("authToken");
+  registry.remove("authUser");
 }
 
 export function hasPendingAuthRedirect(): boolean {
@@ -120,23 +188,30 @@ export async function completeAuthIfPresent(): Promise<AuthSession | null> {
     authResult
   });
 
-  if (authResult !== "success") {
+  if (authResult == null) {
     return null;
+  }
+
+  if (authResult !== "success") {
+    cleanupCallbackUrl();
+    clearAuthClientState();
+    throw new Error(`Authentication callback failed: ${authResult}`);
   }
 
   const session = await fetchBackendSession();
   cleanupCallbackUrl();
   if (!session.authenticated || !session.user) {
+    clearAuthClientState();
     throw new Error("Authentication failed");
   }
 
   clearPendingAuthRedirect();
 
-  return {
+  return persistSession({
     authenticated: true,
     expiresAt: session.expiresAt,
     user: session.user
-  };
+  });
 }
 
 export async function fetchExistingSession(): Promise<AuthSession | null> {
@@ -144,9 +219,13 @@ export async function fetchExistingSession(): Promise<AuthSession | null> {
     const session = toAuthSession(await fetchBackendSession());
     if (session) {
       clearPendingAuthRedirect();
+      persistSession(session);
+    } else {
+      clearStoredSession();
     }
     return session;
   } catch {
+    clearStoredSession();
     return null;
   }
 }

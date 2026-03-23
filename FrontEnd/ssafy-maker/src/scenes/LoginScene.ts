@@ -1,11 +1,10 @@
 import Phaser from "phaser";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
+import { getAuthBootstrapState } from "@features/auth/AuthGateway";
 import {
   beginBackendAuth,
   clearPendingAuthRedirect,
   clearStoredSession,
-  completeAuthIfPresent,
-  fetchExistingSession,
   hasPendingAuthRedirect
 } from "@features/auth/authSession";
 import { SceneKey } from "@shared/enums/sceneKey";
@@ -199,43 +198,31 @@ export class LoginScene extends Phaser.Scene {
       setMessage("아직 연결되지 않은 화면입니다.", "info");
     };
 
-    const applySession = (user: { id: string; email: string }): void => {
-      const nickname = user.email.split("@")[0]?.slice(0, 8) ?? "player";
-      this.registry.set("authToken", "bff-session");
-      this.registry.set("authUser", {
-        id: user.id,
-        email: user.email,
-        nickname
-      });
-    };
-
-    const initializeSession = async (): Promise<void> => {
+    const initializeSession = (): void => {
       setSubmitting(true);
-      try {
-        const callbackSession = await completeAuthIfPresent();
-        if (callbackSession) {
-          applySession(callbackSession.user);
-          setMessage("인증이 완료되었습니다. 게임으로 이동합니다.", "success");
-          this.time.delayedCall(250, () => this.scene.start(SceneKey.Start));
-          return;
-        }
+      const authBootstrap = getAuthBootstrapState();
 
-        const existingSession = await fetchExistingSession();
-        if (existingSession) {
-          applySession(existingSession.user);
-          setMessage("기존 세션을 확인했습니다. 게임으로 이동합니다.", "success");
-          this.time.delayedCall(150, () => this.scene.start(SceneKey.Start));
-          return;
-        }
+      if (authBootstrap.authenticated && this.registry.get("authToken")) {
+        setMessage(
+          authBootstrap.source === "callback"
+            ? "인증이 완료되었습니다. 게임으로 이동합니다."
+            : "기존 세션을 확인했습니다. 게임으로 이동합니다.",
+          "success"
+        );
+        this.time.delayedCall(authBootstrap.source === "callback" ? 250 : 150, () => this.scene.start(SceneKey.Start));
+        return;
+      }
 
-        setMessage("로그인 후 게임을 계속할 수 있습니다.", "info");
-      } catch (error) {
+      if (authBootstrap.source === "error") {
         clearPendingAuthRedirect();
         clearStoredSession();
-        setMessage(error instanceof Error ? error.message : "인증 처리에 실패했습니다.", "error");
-      } finally {
+        setMessage(authBootstrap.error ?? "인증 처리에 실패했습니다.", "error");
         setSubmitting(false);
+        return;
       }
+
+      setMessage("로그인 후 게임을 계속할 수 있습니다.", "info");
+      setSubmitting(false);
     };
 
     const startAuth = async (action: "login" | "signup"): Promise<void> => {
@@ -285,7 +272,7 @@ export class LoginScene extends Phaser.Scene {
 
     this.submitHandler = onSubmitClick;
     renderView("login");
-    void initializeSession();
+    initializeSession();
 
     const onPageShow = (): void => {
       restoreAuthUiAfterNavigation();

@@ -1,14 +1,9 @@
 import Phaser from "phaser";
-import { GAME_CONSTANTS } from "@core/constants/gameConstants";
-import { createPanelOuterBorder } from "@features/ui/components/uiPrimitives";
 
-type BodyStyleFn = (
-  sizePx: number,
-  color?: string,
-  fontStyle?: "normal" | "bold"
-) => Phaser.Types.GameObjects.Text.TextStyle;
+const FONT_FAMILY =
+  "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 
-type ActionButtonFn = (options: {
+type ButtonFactory = (params: {
   x: number;
   y: number;
   width: number;
@@ -17,84 +12,72 @@ type ActionButtonFn = (options: {
   onClick: () => void;
 }) => Phaser.GameObjects.Container;
 
-export function createPlaceActionModal(params: {
-  scene: Phaser.Scene;
-  width: number;
-  height: number;
+export function createPlaceActionModal(scene: Phaser.Scene, options: {
   title: string;
   description: string;
   actionText: string;
   showCloseButton?: boolean;
-  backgroundImage: Phaser.GameObjects.Image | null;
-  getBodyStyle: BodyStyleFn;
-  createActionButton: ActionButtonFn;
-  uiPanelInnerBorderColor: number;
-  uiPanelOuterBorderColor: number;
+  backgroundImage?: Phaser.GameObjects.Image | null;
+  createButton: ButtonFactory;
   onAction: () => void;
   onClose: () => void;
 }): Phaser.GameObjects.Container {
-  const {
-    scene,
-    width,
-    height,
-    title,
-    description,
-    actionText,
-    showCloseButton = true,
-    backgroundImage,
-    getBodyStyle,
-    createActionButton,
-    uiPanelInnerBorderColor,
-    uiPanelOuterBorderColor,
-    onAction,
-    onClose,
-  } = params;
-
-  const centerX = Math.round(GAME_CONSTANTS.WIDTH / 2);
-  const centerY = Math.round(GAME_CONSTANTS.HEIGHT / 2);
+  const centerX = Math.round(scene.scale.width / 2);
+  const centerY = Math.round(scene.scale.height / 2);
   const overlay = scene.add.rectangle(
     centerX,
     centerY,
-    GAME_CONSTANTS.WIDTH,
-    GAME_CONSTANTS.HEIGHT,
-    0x000000,
-    backgroundImage ? 0.42 : 0.36
+    scene.scale.width,
+    scene.scale.height,
+    0x04101d,
+    options.backgroundImage ? 0.24 : 0.58
   );
-  const panelOuter = createPanelOuterBorder(scene, centerX, centerY, width, height);
-  panelOuter.setStrokeStyle(3, uiPanelOuterBorderColor, 1);
-  const panel = scene.add.rectangle(centerX, centerY, width, height, 0x1a375c, 0.95);
-  panel.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
-  const titleText = scene.add.text(centerX, centerY - 90, title, getBodyStyle(34, "#e6f3ff", "bold"));
-  titleText.setOrigin(0.5);
-  const descText = scene.add.text(centerX, centerY - 12, description, getBodyStyle(21, "#b6d6fb"));
-  descText.setOrigin(0.5);
-  descText.setAlign("center");
-  descText.setLineSpacing(8);
+  const panel = scene.add.rectangle(centerX, centerY, 560, 300, 0x14314f, options.backgroundImage ? 0.88 : 0.98);
+  panel.setStrokeStyle(3, 0x8ed2ff, 1);
+  const title = scene.add.text(centerX, centerY - 88, options.title, {
+    fontFamily: FONT_FAMILY,
+    fontSize: "32px",
+    fontStyle: "bold",
+    color: "#eef7ff",
+    resolution: 2
+  }).setOrigin(0.5);
+  const body = scene.add.text(centerX, centerY - 6, options.description, {
+    fontFamily: FONT_FAMILY,
+    fontSize: "20px",
+    color: "#b8d8f7",
+    resolution: 2,
+    align: "center",
+    lineSpacing: 8
+  }).setOrigin(0.5);
+  body.setAlign("center");
 
-  const actionBtn = createActionButton({
-    x: showCloseButton ? centerX - 96 : centerX,
+  const actionButton = options.createButton({
+    x: options.showCloseButton === false ? centerX : centerX - 96,
     y: centerY + 92,
-    width: 170,
-    height: 52,
-    text: actionText,
-    onClick: onAction,
+    width: 176,
+    height: 54,
+    text: options.actionText,
+    onClick: options.onAction
   });
 
-  const objects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, titleText, descText, actionBtn];
-  if (showCloseButton) {
-    const closeBtn = createActionButton({
-      x: centerX + 96,
-      y: centerY + 92,
-      width: 170,
-      height: 52,
-      text: "닫기",
-      onClick: onClose,
-    });
-    objects.push(closeBtn);
+  const objects: Phaser.GameObjects.GameObject[] = [overlay, panel, title, body, actionButton];
+
+  if (options.showCloseButton !== false) {
+    objects.push(
+      options.createButton({
+        x: centerX + 96,
+        y: centerY + 92,
+        width: 176,
+        height: 54,
+        text: "닫기",
+        onClick: options.onClose
+      })
+    );
   }
 
-  if (backgroundImage) {
-    objects.unshift(backgroundImage);
+  if (options.backgroundImage) {
+    options.backgroundImage.setAlpha(0.98);
+    objects.unshift(options.backgroundImage);
   }
 
   return scene.add.container(0, 0, objects);

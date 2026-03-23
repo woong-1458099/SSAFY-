@@ -1,18 +1,24 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
-import { SaveManager, type SaveSlotData } from "@core/managers/SaveManager";
 import { beginLogout, clearStoredSession, fetchExistingSession, readStoredSession } from "@features/auth/authSession";
+import { SaveService, type SaveSlotData, type SaveSlotId, getSaveSlotMetaText, getSaveSlotLabel } from "@features/save/SaveService";
+import {
+  preloadStartSceneAssets,
+  START_SCENE_ASSET_KEYS,
+  START_SCENE_FONT_FAMILY
+} from "@features/start/startSceneAssets";
+import { START_SCENE_CONTINUE_MODAL } from "@features/start/startSceneUiConfig";
 
 
 type ContinueSlotView = {
-  slotId: string;
+  slotId: SaveSlotId;
   data: SaveSlotData;
 };
 
 export class StartScene extends Phaser.Scene {
   private readonly audioManager = new AudioManager();
-  private readonly saveManager = new SaveManager(6);
+  private readonly saveService = new SaveService();
   private enterKey?: Phaser.Input.Keyboard.Key;
   private startArmed = false;
   private bgm?: Phaser.Sound.BaseSound;
@@ -28,15 +34,14 @@ export class StartScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image("start-bg", "assets/game/backgrounds/title_background.png");
-    this.load.image("start-logo", "assets/game/ui/logo.png");
-    this.load.image("start-btn-new", "assets/game/ui/new_game.png");
-    this.load.image("start-btn-old", "assets/game/ui/old_game.png");
-    this.load.audio("start-bgm", "assets/game/audio/BGM/MainTheme.mp3");
-    this.load.audio("start-click", "assets/game/audio/SoundEffect/click.wav");
+    preloadStartSceneAssets(this);
   }
 
   create(): void {
+    void this.initializeScene();
+  }
+
+  private async initializeScene(): Promise<void> {
     this.input.enabled = true;
     this.startArmed = false;
     this.continueModalOpen = false;
@@ -49,20 +54,25 @@ export class StartScene extends Phaser.Scene {
       return;
     }
 
+    await this.saveService.hydrate(true);
+    if (!this.sys.isActive()) {
+      return;
+    }
+
     const { width, height } = this.scale;
 
-    const bg = this.add.image(width / 2, height / 2, "start-bg");
+    const bg = this.add.image(width / 2, height / 2, START_SCENE_ASSET_KEYS.background);
     bg.setDisplaySize(width, height);
 
-    const logo = this.add.image(width / 2, 190, "start-logo");
+    const logo = this.add.image(width / 2, 190, START_SCENE_ASSET_KEYS.logo);
     logo.setScale(0.72);
 
     this.playBackgroundMusic();
     this.createLogoutButton(width);
     this.continueSlots = this.getAvailableContinueSlots();
 
-    this.createImageButton(width / 2, 430, "start-btn-new", () => this.startIntro());
-    this.continueButton = this.createImageButton(width / 2, 550, "start-btn-old", () => this.openContinueModal(), this.continueSlots.length > 0);
+    this.createImageButton(width / 2, 430, START_SCENE_ASSET_KEYS.newButton, () => this.startIntro());
+    this.continueButton = this.createImageButton(width / 2, 550, START_SCENE_ASSET_KEYS.continueButton, () => this.openContinueModal(), this.continueSlots.length > 0);
 
 
 
@@ -114,7 +124,7 @@ export class StartScene extends Phaser.Scene {
     button.on("pointerover", () => button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04));
     button.on("pointerout", () => button.setDisplaySize(baseWidth, baseHeight));
     button.on("pointerdown", () => {
-      this.audioManager.play(this, "start-click", "sfx");
+      this.audioManager.play(this, START_SCENE_ASSET_KEYS.click, "sfx");
       button.setDisplaySize(baseWidth * 0.98, baseHeight * 0.98);
       onClick();
     });
@@ -124,7 +134,7 @@ export class StartScene extends Phaser.Scene {
 
   private createLogoutButton(width: number): void {
     const label = this.add.text(width - 64, 48, "로그아웃", {
-      fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
+      fontFamily: START_SCENE_FONT_FAMILY,
       fontSize: "20px",
       color: "#f4fbff",
       backgroundColor: "#143149",
@@ -141,7 +151,7 @@ export class StartScene extends Phaser.Scene {
     label.on("pointerover", () => label.setStyle({ backgroundColor: "#1b496d" }));
     label.on("pointerout", () => label.setStyle({ backgroundColor: "#143149" }));
     label.on("pointerdown", () => {
-      this.audioManager.play(this, "start-click", "sfx");
+      this.audioManager.play(this, START_SCENE_ASSET_KEYS.click, "sfx");
       void this.handleLogout();
     });
 
@@ -185,8 +195,8 @@ export class StartScene extends Phaser.Scene {
   }
 
   private getAvailableContinueSlots(): ContinueSlotView[] {
-    const slots = this.saveManager.loadSlots();
-    return this.saveManager
+    const slots = this.saveService.loadSlots();
+    return this.saveService
       .getSlotIds()
       .map((slotId) => {
         const data = slots[slotId];
@@ -201,60 +211,63 @@ export class StartScene extends Phaser.Scene {
     }
 
     this.continueModalOpen = true;
-    this.audioManager.play(this, "start-click", "sfx");
+    this.audioManager.play(this, START_SCENE_ASSET_KEYS.click, "sfx");
 
     const { width, height } = this.scale;
-    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.62);
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const modal = START_SCENE_CONTINUE_MODAL;
+
+    const overlay = this.add.rectangle(centerX, centerY, width, height, modal.overlayColor, modal.overlayAlpha);
     overlay.setInteractive();
     overlay.on("pointerdown", () => this.closeContinueModal());
 
-    const panel = this.add.rectangle(width / 2, height / 2, 720, 430, 0x11263d, 0.96);
-    panel.setStrokeStyle(3, 0x7dc9ff, 1);
+    const panel = this.add.rectangle(centerX, centerY, modal.panelWidth, modal.panelHeight, modal.panelColor, modal.panelAlpha);
+    panel.setStrokeStyle(3, modal.panelBorderColor, 1);
 
-    const title = this.add.text(width / 2, height / 2 - 160, "Continue", {
-      fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-      fontSize: "34px",
-      color: "#f4fbff"
+    const title = this.add.text(centerX, centerY + modal.titleOffsetY, modal.title, {
+      fontFamily: START_SCENE_FONT_FAMILY,
+      fontSize: `${modal.titleFontSize}px`,
+      color: modal.titleColor
     }).setOrigin(0.5);
 
-    const subtitle = this.add.text(width / 2, height / 2 - 122, "저장된 슬롯을 선택하세요", {
-      fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-      fontSize: "18px",
-      color: "#b9d6f6"
+    const subtitle = this.add.text(centerX, centerY + modal.subtitleOffsetY, modal.subtitle, {
+      fontFamily: START_SCENE_FONT_FAMILY,
+      fontSize: `${modal.subtitleFontSize}px`,
+      color: modal.subtitleColor
     }).setOrigin(0.5);
 
-    const closeLabel = this.add.text(width / 2 + 304, height / 2 - 180, "X", {
-      fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-      fontSize: "24px",
-      color: "#f4fbff",
-      backgroundColor: "#1a4467",
-      padding: { left: 10, right: 10, top: 6, bottom: 6 }
+    const closeLabel = this.add.text(centerX + modal.closeOffsetX, centerY + modal.closeOffsetY, modal.closeLabel, {
+      fontFamily: START_SCENE_FONT_FAMILY,
+      fontSize: `${modal.closeFontSize}px`,
+      color: modal.closeColor,
+      backgroundColor: modal.closeBackgroundColor,
+      padding: modal.closePadding
     }).setOrigin(0.5);
     closeLabel.setInteractive({ useHandCursor: true });
     closeLabel.on("pointerdown", () => this.closeContinueModal());
 
     const slotNodes: Phaser.GameObjects.GameObject[] = [];
-    const startY = height / 2 - 62;
-    const rowHeight = 72;
+    const startY = centerY + modal.rowStartOffsetY;
     this.continueSlots.slice(0, 5).forEach((slot, index) => {
-      const y = startY + index * rowHeight;
-      const row = this.add.rectangle(width / 2, y, 620, 56, 0x1c3f64, 0.96);
-      row.setStrokeStyle(2, 0x4f98df, 1);
+      const y = startY + index * modal.rowSpacing;
+      const row = this.add.rectangle(centerX, y, modal.rowWidth, modal.rowHeight, modal.rowColor, modal.rowAlpha);
+      row.setStrokeStyle(2, modal.rowBorderColor, 1);
       row.setInteractive({ useHandCursor: true });
-      row.on("pointerover", () => row.setFillStyle(0x28547f, 1));
-      row.on("pointerout", () => row.setFillStyle(0x1c3f64, 0.96));
+      row.on("pointerover", () => row.setFillStyle(modal.rowHoverColor, 1));
+      row.on("pointerout", () => row.setFillStyle(modal.rowColor, modal.rowAlpha));
       row.on("pointerdown", () => this.continueFromSlot(slot.slotId));
 
-      const slotLabel = this.add.text(width / 2 - 284, y - 14, this.getSaveSlotLabel(slot.slotId), {
-        fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "22px",
-        color: "#f4fbff"
+      const slotLabel = this.add.text(centerX + modal.rowTextOffsetX, y + modal.rowPrimaryTextOffsetY, this.getSaveSlotLabel(slot.slotId), {
+        fontFamily: START_SCENE_FONT_FAMILY,
+        fontSize: `${modal.rowPrimaryFontSize}px`,
+        color: modal.rowPrimaryColor
       });
 
-      const metaLabel = this.add.text(width / 2 - 284, y + 10, this.getSaveSlotMetaText(slot.data), {
-        fontFamily: "PFStardustBold, Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif",
-        fontSize: "14px",
-        color: "#b9d6f6"
+      const metaLabel = this.add.text(centerX + modal.rowTextOffsetX, y + modal.rowSecondaryTextOffsetY, this.getSaveSlotMetaText(slot.data), {
+        fontFamily: START_SCENE_FONT_FAMILY,
+        fontSize: `${modal.rowSecondaryFontSize}px`,
+        color: modal.rowSecondaryColor
       });
 
       slotNodes.push(row, slotLabel, metaLabel);
@@ -279,50 +292,30 @@ export class StartScene extends Phaser.Scene {
       return;
     }
 
+    const saveSlot = this.saveService.loadSlot(slotId as SaveSlotData["slotId"]);
+    if (!saveSlot) {
+      return;
+    }
+
     this.closeContinueModal();
     this.startArmed = false;
     this.input.enabled = false;
     this.cameras.main.fadeOut(280, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start(SceneKey.Main, { saveSlotId: slotId });
+      this.registry.set("pendingRestorePayload", saveSlot.payload);
+      if (saveSlot.payload.world?.sceneId) {
+        this.registry.set("startSceneId", saveSlot.payload.world.sceneId);
+      }
+      this.scene.start(SceneKey.Main);
     });
   }
 
-  private getSaveSlotLabel(slotId: string): string {
-    if (slotId === "auto") {
-      return "auto";
-    }
-
-    const index = Number(slotId.replace("slot-", ""));
-    return Number.isFinite(index) ? `저장 슬롯 ${index}` : slotId;
+  private getSaveSlotLabel(slotId: SaveSlotId): string {
+    return getSaveSlotLabel(slotId);
   }
 
   private getSaveSlotMetaText(slotData: SaveSlotData): string {
-    const payload = slotData.payload as {
-      hudState?: { week?: number; dayLabel?: string; timeLabel?: string; locationLabel?: string };
-    };
-    const hud = payload.hudState;
-    const weekText = typeof hud?.week === "number" ? `${hud.week}주차` : "";
-    const dayText = typeof hud?.dayLabel === "string" ? hud.dayLabel : "";
-    const timeText = typeof hud?.timeLabel === "string" ? hud.timeLabel : "";
-    const locationText = typeof hud?.locationLabel === "string" ? hud.locationLabel : "";
-    const summary = [weekText, dayText, timeText].filter((entry) => entry.length > 0).join(" ");
-    const savedAt = this.formatSaveTime(slotData.savedAt);
-    return [summary, locationText, savedAt].filter((entry) => entry.length > 0).join(" | ");
-  }
-
-  private formatSaveTime(iso: string): string {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) {
-      return "저장 데이터";
-    }
-
-    return date.toLocaleString("ko-KR", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    return getSaveSlotMetaText(slotData);
   }
 
   private startIntro(): void {
@@ -334,16 +327,18 @@ export class StartScene extends Phaser.Scene {
     this.input.enabled = false;
     this.cameras.main.fadeOut(280, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.registry.remove("pendingRestorePayload");
+      this.registry.remove("startSceneId");
       this.scene.start(SceneKey.Intro);
     });
   }
 
   private playBackgroundMusic(): void {
-    if (!this.cache.audio.exists("start-bgm")) {
+    if (!this.cache.audio.exists(START_SCENE_ASSET_KEYS.bgm)) {
       return;
     }
 
-    this.bgm = this.audioManager.add(this, "start-bgm", "bgm", { loop: true, volume: 0.45 }) ?? undefined;
+    this.bgm = this.audioManager.add(this, START_SCENE_ASSET_KEYS.bgm, "bgm", { loop: true, volume: 0.45 }) ?? undefined;
     if (!this.bgm) {
       return;
     }

@@ -1,3 +1,5 @@
+import { APP_ENV } from "@app/config/env";
+
 export interface ApiResponse<T> {
   code: string;
   message: string;
@@ -17,7 +19,7 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "");
+export const API_BASE_URL = APP_ENV.apiBaseUrl;
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   console.log("[auth-api] request", {

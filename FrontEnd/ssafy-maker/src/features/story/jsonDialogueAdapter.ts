@@ -1,12 +1,13 @@
-﻿import type {
-  DialogueChoice,
-  DialogueChoiceActionType,
-  DialogueNode,
-  DialogueRequirement,
-  NpcDialogueId,
-  NpcDialogueScript,
-  DialogueAction,
-} from "./npcDialogueScripts";
+import {
+  createRuntimeDialogueId,
+  isRuntimeDialogueId,
+  type DialogueAction,
+  type DialogueChoice,
+  type DialogueChoiceActionType,
+  type DialogueNode,
+  type DialogueRequirement,
+  type DialogueScript
+} from "../../common/types/dialogue";
 import { matchesFixedEventLocation, normalizeFixedEventLocationToken } from "./fixedEventLocation";
 
 export type FixedEventDialogueEntry = {
@@ -20,6 +21,7 @@ export type FixedEventChoiceCondition = {
   social?: number;
   code?: number;
   gold?: number;
+  money?: number;
   luck?: number;
   hp?: number;
   stress?: number;
@@ -27,11 +29,11 @@ export type FixedEventChoiceCondition = {
   trait?: string;
 };
 
-export type FixedEventConditionKey = keyof FixedEventChoiceCondition;
 export type FixedEventStatChangeKey =
   | "social"
   | "code"
   | "gold"
+  | "money"
   | "hp"
   | "stress"
   | "luck"
@@ -86,9 +88,9 @@ type BuildDialogueOptions = {
 };
 
 const SPEAKER_LABEL_BY_ID: Record<string, string> = {
-  SYSTEM: "\uC2DC\uC2A4\uD15C",
-  PLAYER: "\uD50C\uB808\uC774\uC5B4",
-  NPC_UNKNOWN: "\uB3D9\uAE30",
+  SYSTEM: "시스템",
+  PLAYER: "플레이어",
+  NPC_UNKNOWN: "동기"
 };
 
 function normalizeText(value: unknown, fallback: string): string {
@@ -116,7 +118,12 @@ function normalizeActionType(value: unknown): DialogueChoiceActionType {
   return "NORMAL";
 }
 
-function normalizeChoiceText(value: unknown, fallback: string, playerName: string, actionType: DialogueChoiceActionType): string {
+function normalizeChoiceText(
+  value: unknown,
+  fallback: string,
+  playerName: string,
+  actionType: DialogueChoiceActionType
+): string {
   const text = normalizeTextWithPlayerName(value, fallback, playerName).trim();
   let startIndex = 0;
 
@@ -125,8 +132,8 @@ function normalizeChoiceText(value: unknown, fallback: string, playerName: strin
     const code = text.charCodeAt(startIndex);
     const isAsciiLetter = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
     const isKorean = code >= 0xac00 && code <= 0xd7a3;
-    const isQuote = char === '"' || char === "'";
-    const isBracket = char === '[';
+    const isQuote = char === "\"" || char === "'";
+    const isBracket = char === "[";
     if (isAsciiLetter || isKorean || isQuote || isBracket) {
       break;
     }
@@ -138,8 +145,8 @@ function normalizeChoiceText(value: unknown, fallback: string, playerName: strin
     return normalized;
   }
 
-  const closingBracketIndex = normalized.indexOf(']');
-  if (normalized.startsWith('[') && closingBracketIndex > -1) {
+  const closingBracketIndex = normalized.indexOf("]");
+  if (normalized.startsWith("[") && closingBracketIndex > -1) {
     normalized = normalized.slice(closingBracketIndex + 1).trimStart();
   }
 
@@ -162,44 +169,30 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
   if (!condition || typeof condition !== "object") return [];
 
   const requirements: DialogueRequirement[] = [];
-  const unsupportedKeys = Object.keys(condition).filter(
-    (key) =>
-      key !== "social" &&
-      key !== "code" &&
-      key !== "gold" &&
-      key !== "luck" &&
-      key !== "hp" &&
-      key !== "stress" &&
-      key !== "stress_max" &&
-      key !== "trait"
-  );
-
-  if (unsupportedKeys.length > 0) {
-    console.warn("[fixed-event] unsupported choice condition keys", unsupportedKeys);
-  }
 
   if (typeof condition.social === "number") {
-    requirements.push({ stat: "teamwork", min: Math.round(condition.social), label: `\uD611\uC5C5 ${Math.round(condition.social)} \uC774\uC0C1` });
+    requirements.push({ stat: "teamwork", min: Math.round(condition.social), label: `협업 ${Math.round(condition.social)} 이상` });
   }
   if (typeof condition.code === "number") {
     const value = Math.round(condition.code);
-    requirements.push({ stat: "fe", min: value, label: `\uCF54\uB529 ${value} \uC774\uC0C1` });
-    requirements.push({ stat: "be", min: value, label: `\uCF54\uB529 ${value} \uC774\uC0C1` });
+    requirements.push({ stat: "fe", min: value, label: `코딩 ${value} 이상` });
+    requirements.push({ stat: "be", min: value, label: `코딩 ${value} 이상` });
   }
-  if (typeof condition.gold === "number") {
-    requirements.push({ stat: "gold", min: Math.round(condition.gold), label: `\uC7AC\uD654 ${Math.round(condition.gold)}` });
+  const currencyRequirement = typeof condition.gold === "number" ? condition.gold : condition.money;
+  if (typeof currencyRequirement === "number") {
+    requirements.push({ stat: "gold", min: Math.round(currencyRequirement), label: `재화 ${Math.round(currencyRequirement)}` });
   }
   if (typeof condition.luck === "number") {
-    requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `\uC6B4 ${Math.round(condition.luck)} \uC774\uC0C1` });
+    requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `운 ${Math.round(condition.luck)} 이상` });
   }
   if (typeof condition.hp === "number") {
-    requirements.push({ stat: "hp", min: Math.round(condition.hp), label: `HP ${Math.round(condition.hp)} \uC774\uC0C1` });
+    requirements.push({ stat: "hp", min: Math.round(condition.hp), label: `HP ${Math.round(condition.hp)} 이상` });
   }
   if (typeof condition.stress === "number") {
-    requirements.push({ stat: "stress", max: Math.round(condition.stress), label: `\uC2A4\uD2B8\uB808\uC2A4 ${Math.round(condition.stress)} \uC774\uD558` });
+    requirements.push({ stat: "stress", max: Math.round(condition.stress), label: `스트레스 ${Math.round(condition.stress)} 이하` });
   }
   if (typeof condition.stress_max === "number") {
-    requirements.push({ stat: "stress", max: Math.round(condition.stress_max), label: `\uC2A4\uD2B8\uB808\uC2A4 ${Math.round(condition.stress_max)} \uC774\uD558` });
+    requirements.push({ stat: "stress", max: Math.round(condition.stress_max), label: `스트레스 ${Math.round(condition.stress_max)} 이하` });
   }
 
   return requirements;
@@ -209,7 +202,6 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
   if (!changes || typeof changes !== "object") return undefined;
 
   const mapped: NonNullable<DialogueChoice["statChanges"]> = {};
-  const unsupportedKeys: string[] = [];
 
   Object.entries(changes).forEach(([rawKey, rawValue]) => {
     if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
@@ -217,8 +209,6 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
 
     switch (rawKey) {
       case "social":
-        mapped.teamwork = (mapped.teamwork ?? 0) + value;
-        break;
       case "favor_pro":
         mapped.teamwork = (mapped.teamwork ?? 0) + value;
         break;
@@ -233,6 +223,7 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
         mapped.stress = (mapped.stress ?? 0) + value;
         break;
       case "gold":
+      case "money":
         mapped.gold = (mapped.gold ?? 0) + value;
         break;
       case "hp":
@@ -246,16 +237,55 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
         mapped[rawKey] = (mapped[rawKey] ?? 0) + value;
         break;
       default:
-        unsupportedKeys.push(rawKey);
         break;
     }
   });
 
-  if (unsupportedKeys.length > 0) {
-    console.warn("[fixed-event] unsupported stat change keys", unsupportedKeys);
+  return Object.keys(mapped).length > 0 ? mapped : undefined;
+}
+
+function validateDialogueScript(script: DialogueScript): DialogueScript {
+  if (!isRuntimeDialogueId(script.id)) {
+    throw new Error(`Runtime dialogue id is invalid: ${script.id}`);
   }
 
-  return Object.keys(mapped).length > 0 ? mapped : undefined;
+  if (!script.startNodeId || !script.nodes[script.startNodeId]) {
+    throw new Error(`Dialogue start node is missing: ${script.id}`);
+  }
+
+  const nodeEntries = Object.entries(script.nodes);
+  if (nodeEntries.length === 0) {
+    throw new Error(`Dialogue nodes are empty: ${script.id}`);
+  }
+
+  const referencedNodeIds = new Set<string>();
+
+  nodeEntries.forEach(([nodeId, node]) => {
+    if (node.id !== nodeId) {
+      throw new Error(`Dialogue node id mismatch: ${script.id}:${nodeId}`);
+    }
+
+    if (node.nextNodeId) {
+      referencedNodeIds.add(node.nextNodeId);
+    }
+
+    node.choices?.forEach((choice, choiceIndex) => {
+      if (!choice.id.trim()) {
+        throw new Error(`Dialogue choice id is empty: ${script.id}:${nodeId}:${choiceIndex}`);
+      }
+      if (choice.nextNodeId) {
+        referencedNodeIds.add(choice.nextNodeId);
+      }
+    });
+  });
+
+  referencedNodeIds.forEach((nodeId) => {
+    if (!script.nodes[nodeId]) {
+      throw new Error(`Dialogue references missing node: ${script.id}:${nodeId}`);
+    }
+  });
+
+  return script;
 }
 
 export function getFixedEventEntries(rawData: unknown): FixedEventEntry[] {
@@ -300,12 +330,13 @@ export function findMatchingFixedEvent(
 }
 
 export function buildDialogueScriptFromFixedEventEntry(
-  dialogueId: NpcDialogueId,
+  dialogueId: string,
   event: FixedEventEntry,
-  options: BuildDialogueOptions | string
-): NpcDialogueScript | null {
-  const fallbackNpcLabel = typeof options === "string" ? options : options.fallbackNpcLabel;
-  const playerName = typeof options === "string" ? "?뚮젅?댁뼱" : options.playerName ?? "?뚮젅?댁뼱";
+  options: BuildDialogueOptions
+): DialogueScript | null {
+  const runtimeDialogueId = createRuntimeDialogueId(dialogueId);
+  const fallbackNpcLabel = options.fallbackNpcLabel;
+  const playerName = options.playerName ?? "플레이어";
   const dialogues = Array.isArray(event.dialogues) ? event.dialogues : [];
   const choices = Array.isArray(event.choices) ? event.choices : [];
   if (dialogues.length === 0) {
@@ -327,7 +358,7 @@ export function buildDialogueScriptFromFixedEventEntry(
       speakerId: typeof entry.speakerId === "string" ? entry.speakerId : undefined,
       emotion: typeof entry.emotion === "string" ? entry.emotion : undefined,
       text: normalizeTextWithPlayerName(entry.text, "...", playerName),
-      nextNodeId,
+      nextNodeId
     };
   });
 
@@ -342,23 +373,22 @@ export function buildDialogueScriptFromFixedEventEntry(
       const feedbackStartNodeId = feedbackDialogues.length > 0 ? `json_choice_feedback_${choiceId}_1` : undefined;
       const lockedReason =
         typeof choice.condition?.trait === "string" && choice.condition.trait.trim().length > 0
-          ? `${choice.condition.trait} 議곌굔? ?꾩쭅 ?뱀꽦 ?쒖뒪???곌껐 ?꾩엯?덈떎`
+          ? `${choice.condition.trait} 조건은 아직 특성 시스템에 연결되지 않았습니다`
           : undefined;
 
       return {
         id: `json_choice_${choiceId}`,
-        text: normalizeChoiceText(choice.text, `??? ${index + 1}`, playerName, actionType),
+        text: normalizeChoiceText(choice.text, `선택지 ${index + 1}`, playerName, actionType),
         nextNodeId: feedbackStartNodeId,
         actionType,
         action: choice.action,
-
         requirements,
         lockedReason,
         statChanges: mapStatChanges(choice.result?.statChanges),
         feedbackText:
           feedbackDialogues.length === 0
             ? normalizeTextWithPlayerName(choice.result?.feedbackText, "", playerName)
-            : undefined,
+            : undefined
       };
     });
 
@@ -377,26 +407,26 @@ export function buildDialogueScriptFromFixedEventEntry(
           speakerId: typeof entry.speakerId === "string" ? entry.speakerId : undefined,
           emotion: typeof entry.emotion === "string" ? entry.emotion : undefined,
           text: normalizeTextWithPlayerName(entry.text, "...", playerName),
-          nextNodeId,
+          nextNodeId
         };
       });
     });
   }
 
-  return {
-    npcId: dialogueId,
-    npcLabel,
+  return validateDialogueScript({
+    id: runtimeDialogueId,
+    label: event.eventName ?? fallbackNpcLabel,
     startNodeId: "json_dialogue_1",
-    nodes,
-  };
+    nodes
+  });
 }
 
 export function buildDialogueScriptFromFixedEventJson(
-  dialogueId: NpcDialogueId,
+  dialogueId: string,
   rawData: unknown,
   fallbackNpcLabel: string,
-  playerName = "?뚮젅?댁뼱"
-): NpcDialogueScript | null {
+  playerName = "플레이어"
+): DialogueScript | null {
   const firstEvent = getFixedEventEntries(rawData)[0];
   if (!firstEvent) {
     return null;
@@ -404,9 +434,8 @@ export function buildDialogueScriptFromFixedEventJson(
 
   return buildDialogueScriptFromFixedEventEntry(dialogueId, firstEvent, {
     fallbackNpcLabel,
-    playerName,
+    playerName
   });
 }
 
 export { normalizeFixedEventLocationToken };
-

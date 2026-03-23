@@ -1,12 +1,12 @@
-﻿export const TIME_CYCLE = ["\uC624\uC804", "\uC624\uD6C4", "\uC800\uB141", "\uBC24"] as const;
+export const TIME_CYCLE = ["오전", "오후", "저녁", "밤"] as const;
 export const DAY_CYCLE = [
-  "\uC6D4\uC694\uC77C",
-  "\uD654\uC694\uC77C",
-  "\uC218\uC694\uC77C",
-  "\uBAA9\uC694\uC77C",
-  "\uAE08\uC694\uC77C",
-  "\uD1A0\uC694\uC77C",
-  "\uC77C\uC694\uC77C",
+  "월요일",
+  "화요일",
+  "수요일",
+  "목요일",
+  "금요일",
+  "토요일",
+  "일요일",
 ] as const;
 
 const MORNING_TIME_INDEX = 0;
