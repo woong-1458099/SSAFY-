@@ -1,7 +1,6 @@
 import { SCENE_KEYS } from "../../common/enums/scene";
 import {
   EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY,
-  EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY,
   LEGACY_TYPING_SCENE_KEY
 } from "../../features/minigame/minigameSceneKeys";
 
@@ -18,8 +17,7 @@ export const SceneKey = {
   EndingIntro: SCENE_KEYS.endingIntro,
   EndingComic: SCENE_KEYS.endingComic,
   MiniGameCenter: EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY,
-  MiniGameTyping: LEGACY_TYPING_SCENE_KEY,
-  MiniGameReflex: EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY
+  MiniGameTyping: LEGACY_TYPING_SCENE_KEY
 } as const;
 
 export type SceneKey = (typeof SceneKey)[keyof typeof SceneKey];
