@@ -8,6 +8,7 @@ import {
 } from "@features/minigame/legacy/legacyLottoConfig";
 import { LOTTO_COMPLETED_EVENT, rollLottoOutcome } from "@features/minigame/lottoOutcome";
 import { returnToScene } from "@features/minigame/minigameLauncher";
+import { LEGACY_LOTTO_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
 import { applyLegacyViewport } from "./viewport";
 import { SCREEN, PIXEL_FONT, COLORS, createBackground, createButton } from './utils';
 
@@ -28,7 +29,7 @@ export default class LottoScene extends Phaser.Scene {
   private completedOutcomeEmitted = false;
 
   constructor() {
-    super({ key: "LottoScene" });
+    super({ key: LEGACY_LOTTO_SCENE_KEY });
   }
 
   init(data) {

@@ -4,6 +4,7 @@ import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { LEGACY_COOKING_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 import {
   LEGACY_COOKING_ASSET_KEYS,
   LEGACY_COOKING_DISHES,
@@ -18,7 +19,7 @@ export default class CookingScene extends Phaser.Scene {
   private completedRewardText = null;
   private rewardEmitted = false;
 
-  constructor() { super({ key: 'CookingScene' }); }
+  constructor() { super({ key: LEGACY_COOKING_SCENE_KEY }); }
 
   private bgm!: Phaser.Sound.BaseSound;
 
@@ -272,7 +273,7 @@ update() {
 
   emitRewardIfNeeded() {
     if (!this.completedRewardText || this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'CookingScene', rewardText: this.completedRewardText });
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: this.completedRewardText });
     this.rewardEmitted = true;
   }
 }

@@ -1,20 +1,24 @@
 // @ts-nocheck
 import Phaser from 'phaser';
 import { applyLegacyViewport } from './viewport';
+import {
+  LEGACY_MINIGAME_MENU_SCENE_KEY,
+  LEGACY_MINIGAME_PAUSE_SCENE_KEY
+} from '@features/minigame/minigameSceneKeys';
 
 const PF = '"Press Start 2P"';
 
 export default class MinigamePauseScene extends Phaser.Scene {
-  private targetSceneKey = 'MenuScene';
-  private returnSceneKey = 'MenuScene';
+  private targetSceneKey = LEGACY_MINIGAME_MENU_SCENE_KEY;
+  private returnSceneKey = LEGACY_MINIGAME_MENU_SCENE_KEY;
 
   constructor() {
-    super({ key: 'MinigamePauseScene' });
+    super({ key: LEGACY_MINIGAME_PAUSE_SCENE_KEY });
   }
 
   init(data) {
     this.targetSceneKey = data.targetSceneKey;
-    this.returnSceneKey = data.returnSceneKey ?? 'MenuScene';
+    this.returnSceneKey = data.returnSceneKey ?? LEGACY_MINIGAME_MENU_SCENE_KEY;
   }
 
   create() {

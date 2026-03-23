@@ -4,6 +4,7 @@ import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { LEGACY_RUNNER_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 import {
   LEGACY_RUNNER_COUNTDOWN_DELAY_MS,
   LEGACY_RUNNER_INITIAL_OBSTACLE_DELAY_MS,
@@ -27,7 +28,7 @@ export default class RunnerScene extends Phaser.Scene {
   private completedRewardText = null;
   private rewardEmitted = false;
 
-  constructor() { super({ key: 'RunnerScene' }); }
+  constructor() { super({ key: LEGACY_RUNNER_SCENE_KEY }); }
 
   init(data) {
     this.returnSceneKey = data?.returnSceneKey || 'main';
@@ -255,7 +256,7 @@ export default class RunnerScene extends Phaser.Scene {
 
   emitCompletedReward() {
     if (!this.completedRewardText || this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: 'RunnerScene', rewardText: this.completedRewardText });
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: this.completedRewardText });
     this.rewardEmitted = true;
   }
 }

@@ -11,6 +11,7 @@ import type {
   DialogueScript,
   DialogueStatKey
 } from "../../common/types/dialogue";
+import { createRuntimeDialogueId } from "../../common/types/dialogue";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import {
   SCENE_STATE_IDS,
@@ -74,7 +75,7 @@ type SceneStateNpcJson = {
 const AREA_ID_SET = new Set<AreaId>(["world", "downtown", "campus"]);
 const REQUIRED_DIALOGUE_IDS = new Set<string>(Object.values(DIALOGUE_IDS));
 const REQUIRED_SCENE_STATE_IDS = new Set<SceneStateId>(Object.values(SCENE_STATE_IDS));
-export const AUTHORED_DIALOGUE_FALLBACK_ID = "authored_dialogue_missing";
+export const AUTHORED_DIALOGUE_FALLBACK_ID = createRuntimeDialogueId("authored_dialogue_missing");
 const SCENE_STATE_NPC_DIALOGUE_ID_PATTERN = /^npc_[a-z0-9_]+$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

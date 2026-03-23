@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import { ASSET_KEYS, ASSET_PATHS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { getAuthBootstrapState } from "../../features/auth/AuthGateway";
 import { preloadInventoryUiAssets } from "../../features/inventory/inventoryAssets";
 import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "../../features/minigame/minigameSceneKeys";
 import { preloadPlaceBackgroundAssets } from "../../features/place/placeBackgrounds";
@@ -17,18 +18,18 @@ export class PreloadScene extends Phaser.Scene {
 
   preload() {
     // 실제 파일명 변경에 맞춰 tileset 이미지 경로를 수정한다.
-    this.load.image(ASSET_KEYS.map.tilesetImage, "assets/game/map/FullAsset.png");
+    this.load.image(ASSET_KEYS.map.tilesetImage, ASSET_PATHS.map.tilesetImage);
     // 캠퍼스 TMX가 참조하는 external TSX를 텍스트로 로드한다.
-    this.load.text(ASSET_KEYS.map.tilesetTsx, "assets/game/map/FullTileSet.tsx");
-    this.load.spritesheet(ASSET_KEYS.ui.buttons, "assets/game/ui/buttons.png", {
+    this.load.text(ASSET_KEYS.map.tilesetTsx, ASSET_PATHS.map.tilesetTsx);
+    this.load.spritesheet(ASSET_KEYS.ui.buttons, ASSET_PATHS.ui.buttons, {
       frameWidth: AREA_TRANSITION_MARKER_SPRITE.frameWidth,
       frameHeight: AREA_TRANSITION_MARKER_SPRITE.frameHeight
     });
 
     // 각 영역 TMX를 텍스트로 로드한다.
-    this.load.text(ASSET_KEYS.map.worldTmx, "assets/game/map/mainMap.tmx");
-    this.load.text(ASSET_KEYS.map.downtownTmx, "assets/game/map/city.tmx");
-    this.load.text(ASSET_KEYS.map.campusTmx, "assets/game/map/inSSAFY.tmx");
+    this.load.text(ASSET_KEYS.map.worldTmx, ASSET_PATHS.map.worldTmx);
+    this.load.text(ASSET_KEYS.map.downtownTmx, ASSET_PATHS.map.downtownTmx);
+    this.load.text(ASSET_KEYS.map.campusTmx, ASSET_PATHS.map.campusTmx);
     this.load.json(ASSET_KEYS.story.authoredDialogues, ASSET_PATHS.story.authoredDialogues);
     this.load.json(ASSET_KEYS.story.authoredSceneStates, ASSET_PATHS.story.authoredSceneStates);
 
@@ -55,6 +56,6 @@ export class PreloadScene extends Phaser.Scene {
       return;
     }
 
-    this.scene.start(SCENE_KEYS.main);
+    this.scene.start(getAuthBootstrapState().authenticated ? SCENE_KEYS.start : SCENE_KEYS.login);
   }
 }

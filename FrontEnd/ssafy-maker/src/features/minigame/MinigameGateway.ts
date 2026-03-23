@@ -4,12 +4,11 @@ import {
   LEGACY_MINIGAME_MENU_SCENE_KEY,
   isDeprecatedMinigameSceneKey,
   isSupportedMinigameSceneKey,
-  type LegacyMinigameFlowSceneKey,
-  type LegacyMinigameSceneKey
+  type SupportedMinigameSceneKey
 } from "./minigameSceneKeys";
 import { openLegacyMinigameMenu } from "./minigameLauncher";
 
-export type MinigameLaunchKey = LegacyMinigameSceneKey | LegacyMinigameFlowSceneKey;
+export type MinigameLaunchKey = SupportedMinigameSceneKey;
 
 type ReturnSceneResolution = {
   requestedKey: string;
