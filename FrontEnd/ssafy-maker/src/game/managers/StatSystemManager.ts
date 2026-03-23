@@ -1,4 +1,5 @@
 import type { GameHud } from "../../features/ui/components/GameHud";
+import { normalizeAffectionNpcId } from "../../common/enums/npc";
 import {
   clampHudState,
   clampStatsState,
@@ -17,6 +18,7 @@ export class StatSystemManager {
 
   constructor(initialState: RuntimeGameState = createDefaultGameState()) {
     this.state = cloneGameState(initialState);
+    this.state.affection = this.normalizeAffectionState(this.state.affection);
   }
 
   attachHud(hud: GameHud): void {
@@ -41,13 +43,29 @@ export class StatSystemManager {
   }
 
   getAffection(npcId: string): number {
-    return this.state.affection[npcId] ?? 0;
+    const normalizedNpcId = normalizeAffectionNpcId(npcId);
+    if (!normalizedNpcId) {
+      this.warnUnknownAffectionKey(npcId, "get");
+      return 0;
+    }
+
+    return this.state.affection[normalizedNpcId] ?? 0;
   }
 
   applyAffectionDelta(changes: Record<string, number>): void {
     Object.entries(changes).forEach(([npcId, delta]) => {
-      const current = this.state.affection[npcId] ?? 0;
-      this.state.affection[npcId] = current + delta;
+      if (typeof delta !== "number" || !Number.isFinite(delta) || delta === 0) {
+        return;
+      }
+
+      const normalizedNpcId = normalizeAffectionNpcId(npcId);
+      if (!normalizedNpcId) {
+        this.warnUnknownAffectionKey(npcId, "apply");
+        return;
+      }
+
+      const current = this.state.affection[normalizedNpcId] ?? 0;
+      this.state.affection[normalizedNpcId] = current + delta;
     });
   }
 
@@ -71,7 +89,7 @@ export class StatSystemManager {
     this.state = {
       hud: clampHudState({ ...nextState.hud }),
       stats: clampStatsState({ ...nextState.stats }),
-      affection: { ...(nextState.affection || {}) },
+      affection: this.normalizeAffectionState(nextState.affection || {}),
       flags: [...(nextState.flags || [])]
     };
 
@@ -133,5 +151,29 @@ export class StatSystemManager {
     if (statsChanged) {
       this.onStatsChanged?.({ ...this.state.stats });
     }
+  }
+
+  private normalizeAffectionState(affection: Record<string, number>): Record<string, number> {
+    const normalized: Record<string, number> = {};
+
+    Object.entries(affection).forEach(([npcId, value]) => {
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        return;
+      }
+
+      const normalizedNpcId = normalizeAffectionNpcId(npcId);
+      if (!normalizedNpcId) {
+        this.warnUnknownAffectionKey(npcId, "restore");
+        return;
+      }
+
+      normalized[normalizedNpcId] = (normalized[normalizedNpcId] ?? 0) + value;
+    });
+
+    return normalized;
+  }
+
+  private warnUnknownAffectionKey(npcId: string, source: "get" | "apply" | "restore"): void {
+    console.warn(`[stats] Ignoring unknown affection key "${npcId}" during ${source}.`);
   }
 }

@@ -9,6 +9,7 @@ import {
   type DialogueRequirement,
   type DialogueScript
 } from "../../common/types/dialogue";
+import { normalizeAffectionNpcId } from "../../common/enums/npc";
 import { matchesFixedEventLocation, normalizeFixedEventLocationToken } from "./fixedEventLocation";
 
 export type FixedEventDialogueEntry = {
@@ -38,7 +39,11 @@ export type FixedEventStatChangeKey =
   | "hp"
   | "stress"
   | "luck"
+  | "favor_minsu"
+  | "favor_hyo"
+  | "favor_hyoryeon"
   | "favor_pro"
+  | "favor_sunmi"
   | "madness"
   | "fe"
   | "be"
@@ -211,9 +216,10 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
     if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
     const value = Math.round(rawValue);
 
+    if (rawKey.startsWith("favor_")) return;
+
     switch (rawKey) {
       case "social":
-      case "favor_pro":
         mapped.teamwork = (mapped.teamwork ?? 0) + value;
         break;
       case "code": {
@@ -246,6 +252,69 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
   });
 
   return Object.keys(mapped).length > 0 ? mapped : undefined;
+}
+
+function normalizeAffectionChanges(
+  changes: Record<string, number> | undefined,
+  contextLabel: string
+): DialogueChoice["affectionChanges"] {
+  if (!changes || typeof changes !== "object") return undefined;
+
+  const normalized: NonNullable<DialogueChoice["affectionChanges"]> = {};
+
+  Object.entries(changes).forEach(([rawNpcId, rawValue]) => {
+    if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
+
+    const npcId = normalizeAffectionNpcId(rawNpcId);
+    if (!npcId) {
+      console.warn(`[story] Ignoring unknown affectionChanges key "${rawNpcId}" in ${contextLabel}.`);
+      return;
+    }
+
+    normalized[npcId] = (normalized[npcId] ?? 0) + Math.round(rawValue);
+  });
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function extractLegacyAffectionChanges(
+  changes: Partial<Record<FixedEventStatChangeKey, number>> | undefined,
+  contextLabel: string
+): DialogueChoice["affectionChanges"] {
+  if (!changes || typeof changes !== "object") return undefined;
+
+  const normalized: NonNullable<DialogueChoice["affectionChanges"]> = {};
+
+  Object.entries(changes).forEach(([rawKey, rawValue]) => {
+    if (!rawKey.startsWith("favor_") || typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
+
+    const npcId = normalizeAffectionNpcId(rawKey);
+    if (!npcId) {
+      console.warn(`[story] Ignoring unknown legacy affection key "${rawKey}" in ${contextLabel}.`);
+      return;
+    }
+
+    normalized[npcId] = (normalized[npcId] ?? 0) + Math.round(rawValue);
+  });
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function mergeAffectionChanges(
+  primary: DialogueChoice["affectionChanges"],
+  fallback: DialogueChoice["affectionChanges"]
+): DialogueChoice["affectionChanges"] {
+  if (!primary) return fallback;
+  if (!fallback) return primary;
+
+  const merged = { ...primary };
+  Object.entries(fallback).forEach(([npcId, value]) => {
+    if (!(npcId in merged)) {
+      merged[npcId] = value;
+    }
+  });
+
+  return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
 function validateDialogueScript(script: DialogueScript): DialogueScript {
@@ -371,10 +440,15 @@ export function buildDialogueScriptFromFixedEventEntry(
     finalDialogueNode.nextNodeId = undefined;
     finalDialogueNode.choices = choices.map((choice, index): DialogueChoice => {
       const choiceId = choice.choiceId ?? index + 1;
+      const choiceContextLabel = `${event.eventId ?? dialogueId}:choice:${choiceId}`;
       const actionType = normalizeActionType(choice.actionType);
       const requirements = mapConditionToRequirements(choice.condition);
       const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : [];
       const feedbackStartNodeId = feedbackDialogues.length > 0 ? `json_choice_feedback_${choiceId}_1` : undefined;
+      const affectionChanges = mergeAffectionChanges(
+        normalizeAffectionChanges(choice.result?.affectionChanges, choiceContextLabel),
+        extractLegacyAffectionChanges(choice.result?.statChanges, choiceContextLabel)
+      );
       const lockedReason =
         typeof choice.condition?.trait === "string" && choice.condition.trait.trim().length > 0
           ? `${choice.condition.trait} 조건은 아직 특성 시스템에 연결되지 않았습니다`
@@ -390,7 +464,7 @@ export function buildDialogueScriptFromFixedEventEntry(
         affectionRequirements: Array.isArray(choice.affectionRequirements) ? choice.affectionRequirements : undefined,
         lockedReason,
         statChanges: mapStatChanges(choice.result?.statChanges),
-        affectionChanges: choice.result?.affectionChanges,
+        affectionChanges,
         setFlags: Array.isArray(choice.result?.setFlags) ? choice.result?.setFlags : undefined,
         feedbackText:
           feedbackDialogues.length === 0
