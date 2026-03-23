@@ -14,13 +14,7 @@ export function openMinigameMenu(scene: Phaser.Scene, returnSceneKey: string) {
   return openLegacyMinigameMenu(scene, returnSceneKey);
 }
 
-export function launchMinigame(scene: Phaser.Scene, sceneKey: string, returnSceneKey: string) {
-  if (!isSupportedMinigameSceneKey(sceneKey)) {
-    const reason = isDeprecatedMinigameSceneKey(sceneKey) ? "deprecated" : "unknown";
-    console.warn(`[minigame] ${reason} scene key requested: ${sceneKey}. Falling back to the minigame menu.`);
-    return openLegacyMinigameMenu(scene, returnSceneKey);
-  }
-
+export function launchMinigame(scene: Phaser.Scene, sceneKey: MinigameLaunchKey, returnSceneKey: string) {
   if (scene.scene.isActive(sceneKey)) {
     return false;
   }
@@ -32,4 +26,14 @@ export function launchMinigame(scene: Phaser.Scene, sceneKey: string, returnScen
   scene.scene.pause(returnSceneKey);
   scene.scene.launch(sceneKey, { returnSceneKey });
   return true;
+}
+
+export function launchMinigameByKey(scene: Phaser.Scene, sceneKey: string, returnSceneKey: string) {
+  if (!isSupportedMinigameSceneKey(sceneKey)) {
+    const reason = isDeprecatedMinigameSceneKey(sceneKey) ? "deprecated" : "unknown";
+    console.warn(`[minigame] ${reason} scene key requested: ${sceneKey}. Falling back to the minigame menu.`);
+    return openLegacyMinigameMenu(scene, returnSceneKey);
+  }
+
+  return launchMinigame(scene, sceneKey, returnSceneKey);
 }

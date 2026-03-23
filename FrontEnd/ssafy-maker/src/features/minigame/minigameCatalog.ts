@@ -14,7 +14,31 @@ export type LegacyMinigameCard = {
   glowColor: number;
 };
 
-export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
+function reportCatalogIntegrityIssue(message: string): void {
+  if (import.meta.env.DEV) {
+    throw new Error(message);
+  }
+
+  console.error(message);
+}
+
+function sanitizeLegacyMinigameCards(cards: readonly LegacyMinigameCard[]): readonly LegacyMinigameCard[] {
+  const deprecatedCardKeys = cards
+    .map((card) => card.key)
+    .filter((key) => DEPRECATED_MINIGAME_SCENE_KEYS.includes(key as never));
+
+  if (deprecatedCardKeys.length === 0) {
+    return cards;
+  }
+
+  reportCatalogIntegrityIssue(
+    `[minigameCatalog] deprecated scene key가 카드 목록에 남아 있습니다: ${deprecatedCardKeys.join(", ")}`
+  );
+
+  return cards.filter((card) => !DEPRECATED_MINIGAME_SCENE_KEYS.includes(card.key as never));
+}
+
+export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = sanitizeLegacyMinigameCards([
   {
     key: "QuizScene",
     title: "퀴즈",
@@ -146,12 +170,4 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     borderColor: 0xa6f07d,
     glowColor: 0x314c35
   }
-];
-
-const deprecatedCardKeys = LEGACY_MINIGAME_CARDS
-  .map((card) => card.key)
-  .filter((key) => DEPRECATED_MINIGAME_SCENE_KEYS.includes(key as never));
-
-if (deprecatedCardKeys.length > 0) {
-  throw new Error(`[minigameCatalog] deprecated scene key가 카드 목록에 남아 있습니다: ${deprecatedCardKeys.join(", ")}`);
-}
+]);

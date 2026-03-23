@@ -15,7 +15,8 @@ export const GAME_CONFIG: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   dom: {
-    // BusinessSmileScene / DontSmileScene use Phaser DOMElement for the camera surface.
+    // Smile minigames use Phaser DOMElement for the camera surface.
+    // This enables a single global container, so the scene cleanup path must destroy DOM nodes on shutdown.
     createContainer: true
   }
 };
