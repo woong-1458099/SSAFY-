@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_TYPING_INITIAL_LIVES,
   LEGACY_TYPING_INITIAL_SPAWN_INTERVAL_MS,
@@ -18,6 +19,8 @@ const H = 600;
 
 export default class TypingScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() {
     super({ key: 'TypingScene' });
@@ -31,6 +34,8 @@ export default class TypingScene extends Phaser.Scene {
     applyLegacyViewport(this);
     installMinigamePause(this, this.returnSceneKey);
 
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
     this.score = 0;
     this.lives = LEGACY_TYPING_INITIAL_LIVES;
     this.gameOver = false;
@@ -361,6 +366,7 @@ export default class TypingScene extends Phaser.Scene {
 
     // 등급 계산
     const result = resolveLegacyTypingResult(this.score);
+    this.completedRewardText = result.reward;
 
     this.add.text(W / 2 + 100, 220, result.grade, {
       fontSize: '48px', color: result.gradeColor, fontFamily: PF
@@ -375,7 +381,10 @@ export default class TypingScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createBtn(W / 2 - 120, 420, '다시하기', 0x004422, 0x44ff88, () => this.scene.restart());
-    this.createBtn(W / 2 + 120, 420, '나가기', 0x222244, 0x6666aa, () => returnToScene(this, this.returnSceneKey));
+    this.createBtn(W / 2 + 120, 420, '나가기', 0x222244, 0x6666aa, () => {
+      this.emitCompletedReward();
+      returnToScene(this, this.returnSceneKey);
+    });
   }
 
   createBtn(x, y, label, bg, border, cb) {
@@ -394,5 +403,11 @@ export default class TypingScene extends Phaser.Scene {
     this.input.keyboard.off('keydown', this.handleKey, this);
     if (this.spawnEvent) this.spawnEvent.remove();
     this.fallingWords = [];
+  }
+
+  emitCompletedReward() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'TypingScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }

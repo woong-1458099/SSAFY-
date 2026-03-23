@@ -5,6 +5,7 @@ import {
 } from "../../features/minigame/minigameCatalog";
 import { launchMinigame, openMinigameMenu } from "../../features/minigame/MinigameGateway";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { UI_DEPTH } from "../../game/systems/uiDepth";
 
 const CARD_COLUMNS = 5;
 const CARD_WIDTH = 180;
@@ -75,7 +76,7 @@ export class DebugMinigameHud {
       ...this.cards,
       footer
     ]);
-    this.root.setDepth(9800);
+    this.root.setDepth(UI_DEPTH.debugMinigameHud);
     this.root.setScrollFactor(0);
     this.root.setVisible(false);
   }

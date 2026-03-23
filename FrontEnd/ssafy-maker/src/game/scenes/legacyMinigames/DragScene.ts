@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
+import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_DRAG_CHALLENGES,
   LEGACY_DRAG_FAILURE,
@@ -14,6 +15,8 @@ const PF = '"Press Start 2P"';
 
 export default class DragScene extends Phaser.Scene {
   private returnSceneKey = 'main';
+  private completedRewardText = null;
+  private rewardEmitted = false;
 
   constructor() { super({ key: 'DragScene' }); }
 
@@ -25,6 +28,8 @@ export default class DragScene extends Phaser.Scene {
     applyLegacyViewport(this);
     installMinigamePause(this, this.returnSceneKey);
     const W = 800, H = 600;
+    this.completedRewardText = null;
+    this.rewardEmitted = false;
     this.answered = false; this.timeLeft = LEGACY_DRAG_TOTAL_TIME; this.blocks = []; this.challenge = Phaser.Math.RND.pick(LEGACY_DRAG_CHALLENGES); this.correctOrder = [...this.challenge.lines]; this.shuffled = Phaser.Utils.Array.Shuffle([...this.challenge.lines]);
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1f);
     for (let x = 0; x < W; x += 40) this.add.rectangle(x, H / 2, 1, H, 0x112233, 0.4);
@@ -117,8 +122,9 @@ export default class DragScene extends Phaser.Scene {
         this.blocks[i].handle.setY(targetY); this.blocks[i].numBox.setY(targetY); this.blocks[i].numTxt.setY(targetY);
       });
     }
+    this.completedRewardText = stat;
     this.resultTxt.setColor(color).setText(msg); this.statTxt.setText(stat);
-    this.time.delayedCall(400, () => { this.createBtn(270, 572, 'RETRY', 0x440088, 0xcc55ff, () => this.scene.restart()); this.createBtn(530, 572, 'EXIT', 0x001888, 0x4499ff, () => returnToScene(this, this.returnSceneKey)); });
+    this.time.delayedCall(400, () => { this.createBtn(270, 572, 'RETRY', 0x440088, 0xcc55ff, () => this.scene.restart()); this.createBtn(530, 572, 'EXIT', 0x001888, 0x4499ff, () => { this.emitCompletedReward(); returnToScene(this, this.returnSceneKey); }); });
   }
 
   createBtn(x, y, label, bg, border, cb) {
@@ -127,5 +133,11 @@ export default class DragScene extends Phaser.Scene {
     this.add.text(x, y, label, { fontSize: '11px', color: '#ffffff', fontFamily: PF }).setOrigin(0.5);
     btn.on('pointerover', () => btn.setFillStyle(border)); btn.on('pointerout', () => btn.setFillStyle(bg));
     btn.on('pointerdown', () => { this.cameras.main.flash(150, 255, 255, 255, false); this.time.delayedCall(150, cb); });
+  }
+
+  emitCompletedReward() {
+    if (!this.completedRewardText || this.rewardEmitted) return;
+    emitMinigameReward(this, { sceneKey: 'DragScene', rewardText: this.completedRewardText });
+    this.rewardEmitted = true;
   }
 }

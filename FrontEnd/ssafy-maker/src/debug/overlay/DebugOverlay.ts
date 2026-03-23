@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import type { DebugEventLogger } from "../services/DebugEventLogger";
 import type { NpcManager } from "../../game/managers/NpcManager";
+import { UI_DEPTH } from "../../game/systems/uiDepth";
 
 export class DebugOverlay {
   private text: Phaser.GameObjects.Text;
@@ -17,14 +18,14 @@ export class DebugOverlay {
       fontSize: "14px",
       color: "#00ff9c",
       backgroundColor: "#000000"
-    }).setDepth(9999).setScrollFactor(0);
+    }).setDepth(UI_DEPTH.debugOverlay).setScrollFactor(0);
 
     this.helpText = scene.add.text(0, 16, "", {
       fontSize: "14px",
       color: "#ffe082",
       backgroundColor: "#000000",
       align: "right"
-    }).setDepth(9999).setScrollFactor(0).setOrigin(1, 0);
+    }).setDepth(UI_DEPTH.debugOverlay).setScrollFactor(0).setOrigin(1, 0);
   }
 
   render() {
@@ -64,6 +65,7 @@ export class DebugOverlay {
       `[DEBUG KEYS]`,
       `F1 디버그 모드 ON/OFF`,
       `F2 히트박스 ON/OFF`,
+      `F3 디버그 패널`,
       `T 마우스 위치로 순간이동`,
       `M 미니게임 HUD`,
       `1 전체지도 이동`,

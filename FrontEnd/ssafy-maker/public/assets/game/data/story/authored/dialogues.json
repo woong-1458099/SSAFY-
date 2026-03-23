@@ -1,0 +1,286 @@
+{
+  "dialogues": [
+    {
+      "id": "home_locked",
+      "label": "집 안내",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "안내",
+          "text": "집에서는 쉬거나 공부하거나 게임을 할 수 있습니다."
+        }
+      }
+    },
+    {
+      "id": "store_notice",
+      "label": "편의점 안내",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "안내",
+          "text": "편의점 상호작용은 상점 모달과 연결되어 있습니다."
+        }
+      }
+    },
+    {
+      "id": "cafe_notice",
+      "label": "카페 안내",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "안내",
+          "text": "카페에서는 휴식 행동을 수행할 수 있습니다."
+        }
+      }
+    },
+    {
+      "id": "gym_notice",
+      "label": "헬스장 안내",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "안내",
+          "text": "헬스장에서는 운동 행동과 미니게임이 연결됩니다."
+        }
+      }
+    },
+    {
+      "id": "ramen_notice",
+      "label": "라멘띵스 안내",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "안내",
+          "text": "라멘집에서는 회복 행동과 미니게임이 연결됩니다."
+        }
+      }
+    },
+    {
+      "id": "lotto_notice",
+      "label": "복권 판매점 안내",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "안내",
+          "text": "복권 판매점에서는 복권 구매 미니게임이 연결됩니다."
+        }
+      }
+    },
+    {
+      "id": "karaoke_notice",
+      "label": "노래방 안내",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "안내",
+          "text": "노래방에서는 협업과 스트레스 변화 행동이 연결됩니다."
+        }
+      }
+    },
+    {
+      "id": "beer_notice",
+      "label": "호프 안내",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "안내",
+          "text": "호프집에서는 저녁 이후 행동과 음주 미니게임이 연결됩니다."
+        }
+      }
+    },
+    {
+      "id": "minsu_intro",
+      "label": "민수 인트로",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "모르는 건 바로 묻는 게 빠르다. 혼자 끌어안지 말고."
+        }
+      }
+    },
+    {
+      "id": "npc_hyewon",
+      "label": "혜원 인사",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "혜원",
+          "text": "오늘도 너무 무리하지 말고, 막히는 건 같이 보자."
+        }
+      }
+    },
+    {
+      "id": "npc_myungjin",
+      "label": "명진",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "명진",
+          "text": "오늘도 팀 일은 차분하게 정리하면 돼.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "알겠어, 고마워."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_yeonwoong",
+      "label": "연웅",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "연웅",
+          "text": "문제 하나씩 끝까지 밀어붙이면 늘 실력이 잘 올라요.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "조언 고마워!"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_hyoryeon",
+      "label": "효련",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "효련",
+          "text": "누적되면 지치니까 티타임이라도 아끼지 마.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "어, 잠깐 쉬어갈게."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_jiwoo",
+      "label": "지우",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "지우",
+          "text": "팀 프로젝트는 결국 소통이 절반이야. 말을 많이 맞춰보자.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "응, 같이 맞춰보자."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_jongmin",
+      "label": "종민",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "종민",
+          "text": "체력도 실력이야. 오래 버티려면 페이스 조절이 중요해.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "오늘은 무리하지 않을게."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_minsu",
+      "label": "민수",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "민수",
+          "text": "모르는 건 바로 묻는 게 빠르다. 혼자 끌어안지 말고.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "그럴게, 고마워."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_sunmi",
+      "label": "조선미 프로",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "조선미 프로",
+          "text": "기본기를 차근차근 쌓으면 되니 너무 조급해하지 마세요.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "네, 명심할게요."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_doyeon",
+      "label": "김도연 프로",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "김도연 프로",
+          "text": "흐름을 이해하면 세부 문법은 따라옵니다. 검색하는 습관도 실력이에요.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "알겠습니다!"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_hyunseok",
+      "label": "이현석 컨설턴트",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "이현석 컨설턴트",
+          "text": "요즘 프로젝트 진행은 어떤가요? 문제가 있으면 빨리 공유하세요.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "네, 확인해볼게요."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
