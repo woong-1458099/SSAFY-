@@ -82,5 +82,12 @@ export const NPC_DEFINITIONS: Record<NpcId, NpcDefinition> = {
     visualAssetId: "sunmi",
     defaultFacing: "down",
     moveSpeed: 140
+  },
+  minseok: {
+    id: "minseok",
+    label: "민석",
+    visualAssetId: "minseok",
+    defaultFacing: "down",
+    moveSpeed: 140
   }
 };

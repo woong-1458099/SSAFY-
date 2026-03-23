@@ -26,7 +26,7 @@ type SceneSwitchKeys = {
 
 // 디버그 입력은 명령만 발행하고 실제 상태 변경은 각 책임자에게 위임한다.
 export class DebugInputController {
-  private readonly keyboard?: Phaser.Input.Keyboard.KeyboardPlugin;
+  private readonly keyboard: Phaser.Input.Keyboard.KeyboardPlugin | null;
   private bindings: DebugBinding[] = [];
   private sceneSwitchKeys: SceneSwitchKeys = {};
   private bound = false;

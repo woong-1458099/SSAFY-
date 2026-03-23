@@ -336,8 +336,7 @@ export class WorldManager {
     }
   }
 
-  private resolvePixelPerfectScale(fitScaleX: number, fitScaleY: number) {
-    // 한 줄 한글 설명: 픽셀 아트 타일이 찌그러지지 않도록 정수 배율만 사용합니다.
-    return Math.max(1, Math.floor(Math.min(fitScaleX, fitScaleY)));
-  }
+private resolvePixelPerfectScale(fitScaleX: number, fitScaleY: number) {
+  return fitScaleX;
+}
 }

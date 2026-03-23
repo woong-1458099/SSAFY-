@@ -1,5 +1,9 @@
 import Phaser from "phaser";
-import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "../../../features/minigame/minigameSceneKeys";
+import {
+  EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY,
+  EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY,
+  LEGACY_MINIGAME_MENU_SCENE_KEY
+} from "../../../features/minigame/minigameSceneKeys";
 
 type CenterSceneData = {
   returnSceneKey?: string;
@@ -13,7 +17,7 @@ export class MiniGameCenterScene extends Phaser.Scene {
   private returnSceneKey = "main";
 
   constructor() {
-    super("MiniGameCenterScene");
+    super(EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY);
   }
 
   create(data: CenterSceneData = {}): void {
@@ -34,8 +38,7 @@ export class MiniGameCenterScene extends Phaser.Scene {
       fontSize: "22px"
     }).setOrigin(0.5);
 
-    this.createActionButton(430, 302, "타이핑 훈련", () => this.openMiniGame("MiniGameTypingScene"));
-    this.createActionButton(730, 302, "순발력 훈련", () => this.openMiniGame("MiniGameReflexScene"));
+    this.createActionButton(580, 302, "순발력 훈련", () => this.openMiniGame(EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY));
     this.createActionButton(580, 380, "레거시 메뉴", () => this.openMiniGame(LEGACY_MINIGAME_MENU_SCENE_KEY));
     this.createActionButton(580, 458, "돌아가기", () => this.closeCenter());
 
@@ -63,12 +66,12 @@ export class MiniGameCenterScene extends Phaser.Scene {
   }
 
   private openMiniGame(sceneKey: string): void {
-    this.scene.stop("MiniGameCenterScene");
+    this.scene.stop(EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY);
     this.scene.launch(sceneKey, { returnSceneKey: this.returnSceneKey });
   }
 
   private closeCenter(): void {
-    this.scene.stop("MiniGameCenterScene");
+    this.scene.stop(EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY);
     if (this.scene.isPaused(this.returnSceneKey)) {
       this.scene.resume(this.returnSceneKey);
       return;

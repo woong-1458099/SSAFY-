@@ -17,13 +17,16 @@ let loadPromise: Promise<void> | null = null;
 type AuthoredStoryLoadStage = "fetch" | "hydrate" | "preflight";
 
 class AuthoredStoryLoadError extends Error {
+  readonly cause?: unknown;
+
   constructor(
     readonly stage: AuthoredStoryLoadStage,
     readonly issues: string[],
     cause?: unknown
   ) {
-    super(`[AuthoredStory:${stage}] ${issues.join("\n")}`, cause ? { cause } : undefined);
+    super(`[AuthoredStory:${stage}] ${issues.join("\n")}`);
     this.name = "AuthoredStoryLoadError";
+    this.cause = cause;
   }
 }
 

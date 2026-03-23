@@ -18,6 +18,10 @@ import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { launchMinigame, openMinigameMenu } from "../../features/minigame/MinigameGateway";
 import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../features/progression/TimeService";
+import type { EndingFlowPayload } from "../../features/progression/types/ending";
+import type { EndingId } from "../../features/progression/types/ending";
+import { resolveEnding } from "../../features/progression/services/endingResolver";
+import { SceneKey } from "../../shared/enums/sceneKey";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
 import { GameHud } from "../../features/ui/components/GameHud";
@@ -48,6 +52,7 @@ import { StatSystemManager } from "../managers/StatSystemManager";
 import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
 import type { SceneId } from "../scripts/scenes/sceneIds";
+import { playPlaceBgm, playWorldBgm, createSkyBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
 import {
   DEFAULT_START_SCENE_ID,
   getDefaultSceneIdForArea,
@@ -95,7 +100,9 @@ export class MainScene extends Phaser.Scene {
   private currentSceneId?: SceneId;
   private currentSceneState?: SceneState;
   private runtimeDialogueScripts: Record<string, DialogueScript> = {};
-
+  private destroySkyBackground?: () => void;
+  private currentTimeOfDay?: TimeOfDay;
+  private wasPlacePopupOpen = false;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -112,6 +119,8 @@ export class MainScene extends Phaser.Scene {
       const placePopupOpen = this.placeActionManager?.isOpen() === true;
       const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
       const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+
+      
 
       if (
         command.type === "toggleDebugOverlay" ||
@@ -139,6 +148,7 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager = new StatSystemManager();
     this.inventoryService = new InventoryService();
     this.saveService = new SaveService();
+    await this.saveService.hydrate(true);
     this.dialogueBox = new DialogueBox(this);
     this.hud = new GameHud(this);
     this.fixedEventNpcManager = new FixedEventNpcManager(this);
@@ -188,6 +198,7 @@ export class MainScene extends Phaser.Scene {
             return;
         }
       }
+      
     });
     this.menuManager = new InGameMenuManager({
       scene: this,
@@ -207,7 +218,8 @@ export class MainScene extends Phaser.Scene {
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
       getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
-      onNotice: (message) => this.menuManager?.showNotice(message)
+      onNotice: (message) => this.menuManager?.showNotice(message),
+      onStartEndingFlow: () => this.startEndingFlow()
     });
     this.progressionManager.initialize();
     this.storyEventManager = new StoryEventManager({
@@ -373,17 +385,44 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
+      this.destroySkyBackground?.();
+      this.destroySkyBackground = undefined;
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupSceneResources);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupSceneResources);
 
     this.initialized = true;
-
-    await director.run(runtimeSceneScript);
+await director.run(runtimeSceneScript);
     this.applyPendingDebugFixedEvent();
+
+    const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
+    const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+    const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+    const mapPixelWidth = renderBounds && parsedMap
+      ? parsedMap.width * renderBounds.tileWidth * renderBounds.scale
+      : undefined;
+    const mapPixelHeight = renderBounds && parsedMap
+      ? parsedMap.height * renderBounds.tileHeight * renderBounds.scale
+      : undefined;
+
+    if (currentArea === "world") {
+      playWorldBgm(this, timeOfDay);
+      this.destroySkyBackground?.();
+      this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
+    } else if (currentArea === "downtown") {
+      playPlaceBgm(this, currentArea as any);
+      this.destroySkyBackground?.();
+      this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
+    } else {
+      playPlaceBgm(this, currentArea as any);
+    }
+
+    
   }
 
-  update() {
+  
+update() {
     if (!this.initialized) {
       return;
     }
@@ -404,6 +443,20 @@ export class MainScene extends Phaser.Scene {
     const debugPanelVisible = this.debugPanel?.isVisible() === true;
     const menuOpen = this.menuManager?.isOpen() === true;
     const placePopupOpen = this.placeActionManager?.isOpen() === true;
+
+    if (this.wasPlacePopupOpen && !placePopupOpen) {
+      const area = this.worldManager?.getCurrentAreaId() ?? "world";
+      const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+      const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+      if (area === "world") {
+        playWorldBgm(this, timeOfDay);
+      } else {
+        playPlaceBgm(this, area as any);
+      }
+    }
+    this.wasPlacePopupOpen = placePopupOpen;
+
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
 
@@ -480,6 +533,28 @@ export class MainScene extends Phaser.Scene {
         `${Math.round(player.x)}, ${Math.round(player.y)}`,
         `${player.tileX}, ${player.tileY}`
       );
+    }
+
+    const currentArea = this.worldManager.getCurrentAreaId();
+    if (currentArea === "world" || currentArea === "downtown") {
+      const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+      const newTimeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+      if (newTimeOfDay !== this.currentTimeOfDay) {
+        this.currentTimeOfDay = newTimeOfDay;
+
+        const rb = this.worldManager.getCurrentRenderBounds();
+        const pm = this.worldManager.getCurrentParsedTmxMap();
+        const mapPixelWidth = rb && pm ? pm.width * rb.tileWidth * rb.scale : undefined;
+        const mapPixelHeight = rb && pm ? pm.height * rb.tileHeight * rb.scale : undefined;
+
+        this.destroySkyBackground?.();
+        this.destroySkyBackground = createSkyBackground(this, newTimeOfDay, mapPixelWidth, mapPixelHeight);
+
+        if (currentArea === "world") {
+          playWorldBgm(this, newTimeOfDay);
+        }
+      }
     }
 
     this.debugOverlay?.render();
@@ -610,9 +685,16 @@ export class MainScene extends Phaser.Scene {
         }
         case "saveAuto":
           if (this.saveService) {
-            this.saveService.saveSlot("auto", this.buildSavePayload());
-            this.menuManager?.showNotice("오토 세이브 완료");
+            void this.saveAutoWithNotice();
           }
+          break;
+        case "startEndingFlow":
+          this.startDebugEndingFlow();
+          this.menuManager?.showNotice("디버그 엔딩 진입");
+          break;
+        case "startEndingFlowPreset":
+          this.startDebugEndingFlow(command.endingId);
+          this.menuManager?.showNotice(`디버그 엔딩 진입: ${command.endingId}`);
           break;
         default:
           this.assertNeverDebugCommand(command);
@@ -854,9 +936,85 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private buildEndingPayload(): EndingFlowPayload {
+    const hudState = this.statSystemManager?.getHudState() ?? this.statSystemManager!.getHudState();
+    const statsState = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
+
+    return {
+      fe: statsState.fe,
+      be: statsState.be,
+      teamwork: statsState.teamwork,
+      luck: statsState.luck,
+      hp: hudState.hp,
+      week: hudState.week,
+      dayLabel: hudState.dayLabel,
+      timeLabel: hudState.timeLabel
+    };
+  }
+
+  private async startEndingFlow(): Promise<void> {
+    if (!this.saveService) {
+      return;
+    }
+
+    try {
+      await this.saveService.saveSlot("auto", this.buildSavePayload());
+    } catch (error) {
+      console.error("[MainScene] ending auto save failed", error);
+      this.menuManager?.showNotice("엔딩 진입 전 오토 세이브에 실패했습니다.");
+    }
+
+    this.scene.start(SceneKey.Completion, this.buildEndingPayload());
+  }
+
+  private async saveAutoWithNotice(): Promise<void> {
+    if (!this.saveService) {
+      return;
+    }
+
+    try {
+      await this.saveService.saveSlot("auto", this.buildSavePayload());
+      this.menuManager?.showNotice("오토 세이브 완료");
+    } catch (error) {
+      console.error("[MainScene] auto save failed", error);
+      this.menuManager?.showNotice("오토 세이브에 실패했습니다.");
+    }
+  }
+
+  private startDebugEndingFlow(endingId?: EndingId): void {
+    const payload = endingId ? this.buildEndingPresetPayload(endingId) : this.buildEndingPayload();
+    this.scene.start(SceneKey.Completion, payload);
+  }
+
+  private buildEndingPresetPayload(endingId: EndingId): EndingFlowPayload {
+    const base: Pick<EndingFlowPayload, "week" | "dayLabel" | "timeLabel"> = {
+      week: 6,
+      dayLabel: "금요일",
+      timeLabel: "밤"
+    };
+
+    switch (endingId) {
+      case "frontend-developer":
+        return { ...base, fe: 92, be: 36, teamwork: 58, luck: 28, hp: 62 };
+      case "backend-developer":
+        return { ...base, fe: 34, be: 92, teamwork: 56, luck: 30, hp: 60 };
+      case "team-player":
+        return { ...base, fe: 46, be: 40, teamwork: 91, luck: 36, hp: 63 };
+      case "stamina-survivor":
+        return { ...base, fe: 38, be: 36, teamwork: 44, luck: 30, hp: 95 };
+      case "lucky-break":
+        return { ...base, fe: 34, be: 32, teamwork: 42, luck: 96, hp: 58 };
+      case "frontend-leader":
+        return { ...base, fe: 88, be: 52, teamwork: 86, luck: 40, hp: 68 };
+      default:
+        return this.buildEndingPayload();
+    }
+  }
+
   private buildDebugPanelState(): DebugPanelState {
     const hud = this.statSystemManager?.getHudState() ?? this.statSystemManager!.getHudState();
     const stats = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
+    const ending = resolveEnding(this.buildEndingPayload());
     const usedSlotCount = this.inventoryService?.getInventorySlots().filter((slot) => slot !== null).length ?? 0;
     const totalSlotCount = this.inventoryService?.getInventorySlots().length ?? 0;
     const storyWeeks = Array.from({ length: 6 }, (_, index) => {
@@ -876,6 +1034,15 @@ export class MainScene extends Phaser.Scene {
       fixedEventId: this.storyEventManager?.getCurrentFixedEventPresentation()?.eventId,
       hud,
       stats,
+      endingDebug: {
+        endingId: ending.endingId,
+        title: ending.title,
+        shortDescription: ending.shortDescription,
+        dominantLabels: ending.dominantLabels,
+        summaryStats: ending.summaryStats,
+        introLines: ending.introLines,
+        npcLine: ending.npcLine
+      },
       storyDebug: {
         currentWeek: hud.week,
         weeks: storyWeeks

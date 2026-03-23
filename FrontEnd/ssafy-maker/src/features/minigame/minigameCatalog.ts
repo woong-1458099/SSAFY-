@@ -1,4 +1,20 @@
-import type { LegacyMinigameSceneKey } from "./minigameSceneKeys";
+import {
+  EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY,
+  LEGACY_BUSINESS_SMILE_SCENE_KEY,
+  LEGACY_COOKING_SCENE_KEY,
+  LEGACY_DONT_SMILE_SCENE_KEY,
+  LEGACY_DRINKING_SCENE_KEY,
+  LEGACY_GYM_SCENE_KEY,
+  LEGACY_INTERVIEW_SCENE_KEY,
+  LEGACY_LOTTO_SCENE_KEY,
+  LEGACY_QUIZ_SCENE_KEY,
+  LEGACY_RHYTHM_SCENE_KEY,
+  LEGACY_RUNNER_SCENE_KEY,
+  LEGACY_TANK_SCENE_KEY,
+  LEGACY_TYPING_SCENE_KEY,
+  isDeprecatedMinigameSceneKey,
+  type LegacyMinigameSceneKey
+} from "./minigameSceneKeys";
 
 export type LegacyMinigameCard = {
   key: LegacyMinigameSceneKey;
@@ -11,9 +27,23 @@ export type LegacyMinigameCard = {
   glowColor: number;
 };
 
+export function collectDeprecatedCardKeys(cards: readonly LegacyMinigameCard[]): LegacyMinigameSceneKey[] {
+  return cards
+    .map((card) => card.key)
+    .filter((key) => isDeprecatedMinigameSceneKey(key));
+}
+
+export function assertMinigameCatalogIntegrity(cards: readonly LegacyMinigameCard[]): void {
+  const deprecatedCardKeys = collectDeprecatedCardKeys(cards);
+
+  if (deprecatedCardKeys.length > 0) {
+    throw new Error(`[minigameCatalog] deprecated scene key가 카드 목록에 남아 있습니다: ${deprecatedCardKeys.join(", ")}`);
+  }
+}
+
 export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
   {
-    key: "QuizScene",
+    key: LEGACY_QUIZ_SCENE_KEY,
     title: "퀴즈",
     sub: "알고리즘 / CS 문제",
     desc: "15초 / 5문제",
@@ -23,7 +53,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x0033cc
   },
   {
-    key: "RhythmScene",
+    key: LEGACY_RHYTHM_SCENE_KEY,
     title: "리듬",
     sub: "키보드 리듬 입력",
     desc: "A W J I",
@@ -33,7 +63,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x007722
   },
   {
-    key: "TankScene",
+    key: LEGACY_TANK_SCENE_KEY,
     title: "탱크 워",
     sub: "적 탱크 파괴",
     desc: "생존 및 섬멸",
@@ -43,18 +73,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x443300
   },
   {
-    key: "DragScene",
-    title: "코드 정렬",
-    sub: "드래그 앤 드롭",
-    desc: "60초 / 순서 맞추기",
-    reward: "지능 +10, 골드 +30",
-    bgColor: 0x440088,
-    borderColor: 0xcc55ff,
-    glowColor: 0x6600aa
-  },
-
-  {
-    key: "RunnerScene",
+    key: LEGACY_RUNNER_SCENE_KEY,
     title: "러너",
     sub: "장애물 점프",
     desc: "생존전",
@@ -65,7 +84,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
   },
 
   {
-    key: "TypingScene",
+    key: LEGACY_TYPING_SCENE_KEY,
     title: "타이핑",
     sub: "코드 타이핑",
     desc: "20초 / 입력",
@@ -75,7 +94,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x116633
   },
   {
-    key: "BusinessSmileScene",
+    key: LEGACY_BUSINESS_SMILE_SCENE_KEY,
     title: "비즈니스 미소",
     sub: "미소 게이지 채우기",
     desc: "표정 인식",
@@ -85,7 +104,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x0d5c84
   },
   {
-    key: "DontSmileScene",
+    key: LEGACY_DONT_SMILE_SCENE_KEY,
     title: "웃음 참기",
     sub: "표정 제어 챌린지",
     desc: "끝까지 버티기",
@@ -95,7 +114,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x6d1830
   },
   {
-    key: "GymScene",
+    key: LEGACY_GYM_SCENE_KEY,
     title: "헬스장",
     sub: "스페이스 연타",
     desc: "15렙 / 30초",
@@ -105,7 +124,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x332200
   },
   {
-    key: "CookingScene",
+    key: LEGACY_COOKING_SCENE_KEY,
     title: "라면 장인",
     sub: "재료 받기",
     desc: "30초 / 캐치",
@@ -115,7 +134,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x663311
   },
   {
-    key: "LottoScene",
+    key: LEGACY_LOTTO_SCENE_KEY,
     title: "SSAFY 로또",
     sub: "일확천금 가챠",
     desc: "운빨 테스트",
@@ -125,7 +144,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x002244
   },
   {
-    key: 'InterviewScene',
+    key: LEGACY_INTERVIEW_SCENE_KEY,
     title: 'TECH INTERVIEW',
     sub: '기술 면접 대비',
     desc: '15SEC / 5 QUESTIONS',
@@ -135,7 +154,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x330066,
   },
   {
-    key: 'DrinkingScene',
+    key: LEGACY_DRINKING_SCENE_KEY,
     title: '할맥 부어라 마시기',
     sub: '거품 조절 챌린지',
     desc: '5 ROUNDS / BEER',
@@ -145,17 +164,7 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     glowColor: 0x442200,
   },
   {
-    key: "MiniGameTypingScene",
-    title: "타이핑 훈련",
-    sub: "실험형 단어 입력",
-    desc: "30초 / 6단어",
-    reward: "실험용",
-    bgColor: 0x16324b,
-    borderColor: 0x7df0ff,
-    glowColor: 0x214e75
-  },
-  {
-    key: "MiniGameReflexScene",
+    key: EXPERIMENTAL_MINIGAME_REFLEX_SCENE_KEY,
     title: "순발력 훈련",
     sub: "실험형 클릭 반응",
     desc: "25초 / 10타겟",
