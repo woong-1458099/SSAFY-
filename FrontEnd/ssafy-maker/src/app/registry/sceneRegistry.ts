@@ -141,6 +141,7 @@ export function assertSceneRegistryIntegrity(): void {
   }
 }
 
-assertSceneRegistryIntegrity();
-
-export const SCENE_REGISTRY = SCENE_REGISTRY_ENTRIES.map((entry) => entry.scene);
+export const SCENE_REGISTRY = (() => {
+  assertSceneRegistryIntegrity();
+  return SCENE_REGISTRY_ENTRIES.map((entry) => entry.scene);
+})();
