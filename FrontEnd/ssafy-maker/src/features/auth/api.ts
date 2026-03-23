@@ -1,5 +1,3 @@
-import { APP_ENV } from "@app/config/env";
-
 export interface ApiResponse<T> {
   code: string;
   message: string;
@@ -19,20 +17,20 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-export const API_BASE_URL = APP_ENV.apiBaseUrl;
+export const API_PREFIX = "/api";
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   console.log("[auth-api] request", {
-    url: `${API_BASE_URL}${path}`,
+    url: `${API_PREFIX}${path}`,
     method: init.method ?? "GET"
   });
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_PREFIX}${path}`, {
     credentials: "include",
     ...init
   });
   const raw = await response.text();
   console.log("[auth-api] response", {
-    url: `${API_BASE_URL}${path}`,
+    url: `${API_PREFIX}${path}`,
     status: response.status,
     ok: response.ok,
     raw
@@ -60,21 +58,21 @@ export interface BackendAuthSession {
 
 export function bootstrapCurrentUser(): Promise<UserProfile> {
   console.log("[auth-api] bootstrapCurrentUser");
-  return request<UserProfile>("/api/users/me/bootstrap", {
+  return request<UserProfile>("/users/me/bootstrap", {
     method: "POST"
   });
 }
 
 export function fetchCurrentUser(): Promise<UserProfile> {
   console.log("[auth-api] fetchCurrentUser");
-  return request<UserProfile>("/api/users/me", {
+  return request<UserProfile>("/users/me", {
     method: "GET"
   });
 }
 
 export function fetchBackendSession(): Promise<BackendAuthSession> {
   console.log("[auth-api] fetchBackendSession");
-  return request<BackendAuthSession>("/api/auth/session", {
+  return request<BackendAuthSession>("/auth/session", {
     method: "GET"
   });
 }
