@@ -76,6 +76,9 @@
         },
         "affectionChanges": {
           "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon", "sunmi"]
+          },
           "additionalProperties": {
             "type": "number"
           }
@@ -105,6 +108,9 @@
         },
         "statChanges": {
           "type": "object",
+          "propertyNames": {
+            "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "gold", "money"]
+          },
           "additionalProperties": {
             "type": "number"
           }
@@ -137,6 +143,9 @@
         },
         "affectionChanges": {
           "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon", "sunmi"]
+          },
           "additionalProperties": {
             "type": "number"
           }
@@ -172,7 +181,8 @@
       "required": ["npcId"],
       "properties": {
         "npcId": {
-          "type": "string"
+          "type": "string",
+          "enum": ["minsu", "hyoryeon", "sunmi"]
         },
         "min": {
           "type": "number"

@@ -1,6 +1,18 @@
-const { readFileSync } = require('fs');
-const content = readFileSync('C:/Users/SSAFY/Desktop/S14P21E206/FrontEnd/ssafy-maker/public/assets/game/data/story/fixedevent/fixed_week1.json', 'utf8');
+const { readFileSync } = require("fs");
+const path = require("path");
+
+const inputArg = process.argv[2] ?? "fixed_week1.json";
+const inputPath = path.isAbsolute(inputArg)
+  ? inputArg
+  : path.resolve(__dirname, inputArg);
+
+const content = readFileSync(inputPath, "utf8");
 const data = JSON.parse(content);
-const timing = data[0].triggerTiming;
-console.log(timing);
-console.log(data[0].eventId);
+const firstEvent = Array.isArray(data) ? data[0] : data.events?.[0];
+
+if (!firstEvent) {
+  throw new Error(`No fixed event found in ${inputPath}`);
+}
+
+console.log(firstEvent.triggerTiming);
+console.log(firstEvent.eventId);

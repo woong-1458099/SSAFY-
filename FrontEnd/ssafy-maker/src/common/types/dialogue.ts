@@ -1,9 +1,23 @@
 // 대화 스크립트와 대화 매니저가 함께 사용하는 공통 대화 타입 정의
 import type { DialogueId } from "../enums/dialogue";
 
-export type DialogueBaseStatKey = "fe" | "be" | "teamwork" | "luck" | "stress" | "playerGender";
-export type DialogueCurrencyStatKey = "gold" | "money";
-export type DialogueStatKey = DialogueBaseStatKey | "hp" | DialogueCurrencyStatKey;
+export const DIALOGUE_METRIC_KEYS = ["fe", "be", "teamwork", "luck", "stress", "hp", "gold", "money"] as const;
+export const DIALOGUE_REQUIREMENT_STAT_KEYS = [
+  "fe",
+  "be",
+  "teamwork",
+  "luck",
+  "stress",
+  "hp",
+  "gold",
+  "money",
+  "playerGender"
+] as const;
+
+export type DialogueMetricKey = (typeof DIALOGUE_METRIC_KEYS)[number];
+export type DialogueRequirementStatKey = (typeof DIALOGUE_REQUIREMENT_STAT_KEYS)[number];
+export type DialogueCurrencyStatKey = Extract<DialogueMetricKey, "gold" | "money">;
+export type DialogueStatKey = DialogueMetricKey;
 export type StaticDialogueId = string & { readonly __staticDialogueId: unique symbol };
 export type RuntimeDialogueId = string & { readonly __runtimeDialogueId: unique symbol };
 export type DialogueScriptId = DialogueId | StaticDialogueId | RuntimeDialogueId;
@@ -20,7 +34,7 @@ export const DIALOGUE_ACTIONS = [
 export type DialogueAction = (typeof DIALOGUE_ACTIONS)[number];
 
 export type DialogueRequirement = {
-  stat: DialogueStatKey;
+  stat: DialogueRequirementStatKey;
   equals?: string;
   min?: number;
   max?: number;

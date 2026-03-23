@@ -5,6 +5,7 @@ import type {
   DialogueChoice,
   DialogueNode,
   DialogueRequirement,
+  DialogueRequirementStatKey,
   DialogueScript,
   DialogueStatKey
 } from "../../common/types/dialogue";
@@ -18,7 +19,7 @@ import type { HudState, PlayerStatKey } from "../state/gameState";
 import { resolveRegisteredDialogue } from "../scripts/dialogues/dialogueRegistry";
 
 type DialogueRuntimeHooks = {
-  getMetricValue?: (stat: DialogueStatKey) => number;
+  getMetricValue?: (stat: DialogueRequirementStatKey) => number | string;
   getAffectionValue?: (npcId: string) => number;
   applyStatDelta?: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   applyAffectionDelta?: (changes: Record<string, number>) => void;
@@ -287,6 +288,12 @@ export class DialogueManager {
     const requirements = choice.requirements ?? [];
     const statReqMet = requirements.every((req) => {
       const value = this.getMetricValue?.(req.stat) ?? 0;
+      if (typeof req.equals === "string") {
+        return String(value).toUpperCase() === req.equals.trim().toUpperCase();
+      }
+      if (typeof value !== "number") {
+        return false;
+      }
       if (typeof req.min === "number" && value < req.min) {
         return false;
       }
@@ -333,7 +340,9 @@ export class DialogueManager {
     const label =
       req.stat === "hp"
         ? "HP"
-        : isDialogueCurrencyStatKey(req.stat)
+        : req.stat === "playerGender"
+          ? "성별"
+          : req.stat === "gold" || req.stat === "money"
           ? "재화"
           : req.stat === "fe"
             ? "FE"
@@ -345,6 +354,9 @@ export class DialogueManager {
                   ? "운"
                   : "스트레스";
 
+    if (typeof req.equals === "string") {
+      return `${label} ${req.equals}`;
+    }
     if (typeof req.min === "number" && typeof req.max === "number") {
       return `${label} ${req.min}~${req.max}`;
     }
@@ -369,7 +381,7 @@ export class DialogueManager {
         }
 
         if (key === "hp") {
-          const currentHp = this.getMetricValue?.("hp") ?? 0;
+          const currentHp = Number(this.getMetricValue?.("hp") ?? 0);
           hudPatch.hp = currentHp + value;
           summary.push(`HP ${value > 0 ? "+" : ""}${value}`);
           return;
@@ -377,7 +389,7 @@ export class DialogueManager {
 
         if (isDialogueCurrencyStatKey(key)) {
           const hudCurrencyKey = toDialogueCurrencyHudKey(key);
-          const currentMoney = this.getMetricValue?.(key) ?? 0;
+          const currentMoney = Number(this.getMetricValue?.(key) ?? 0);
           hudPatch[hudCurrencyKey] = Math.max(0, currentMoney + value);
           summary.push(`재화 ${value > 0 ? "+" : ""}${value}`);
           return;

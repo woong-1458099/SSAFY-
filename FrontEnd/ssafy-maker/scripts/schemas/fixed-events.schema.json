@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["events"],
+  "properties": {
+    "meta": {
+      "type": "object"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fixedEvent"
+      }
+    }
+  },
+  "$defs": {
+    "dialogueEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speakerId": { "type": "string", "minLength": 1 },
+        "speakerName": { "type": "string", "minLength": 1 },
+        "emotion": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "choiceCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "social": { "type": "number" },
+        "code": { "type": "number" },
+        "nunchi": { "type": "number" },
+        "gold": { "type": "number" },
+        "money": { "type": "number" },
+        "luck": { "type": "number" },
+        "hp": { "type": "number" },
+        "stress": { "type": "number" },
+        "stress_max": { "type": "number" },
+        "trait": { "type": "string", "minLength": 1 },
+        "playerGender": { "type": "string", "enum": ["MALE", "FEMALE"] }
+      }
+    },
+    "dialogueRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stat"],
+      "properties": {
+        "stat": {
+          "type": "string",
+          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "gold", "money", "playerGender"]
+        },
+        "equals": { "type": "string" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "label": { "type": "string" }
+      }
+    },
+    "affectionRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["npcId"],
+      "properties": {
+        "npcId": {
+          "type": "string",
+          "enum": ["minsu", "hyoryeon", "sunmi"]
+        },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "label": { "type": "string" }
+      }
+    },
+    "choiceResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "statChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "social",
+              "code",
+              "nunchi",
+              "gold",
+              "money",
+              "hp",
+              "stress",
+              "luck",
+              "favor_minsu",
+              "favor_hyo",
+              "favor_hyoryeon",
+              "favor_pro",
+              "favor_sunmi",
+              "madness",
+              "fe",
+              "be",
+              "teamwork"
+            ]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "affectionChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon", "sunmi"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "feedbackText": { "type": "string" },
+        "triggerMiniGame": { "type": "string", "minLength": 1 },
+        "feedbackDialogues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueEntry"
+          }
+        },
+        "setFlags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "choiceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "choiceId": { "type": "number" },
+        "actionType": {
+          "type": "string",
+          "enum": ["NORMAL", "LOCKED", "MADNESS", "ROMANCE_EVENT"]
+        },
+        "condition": {
+          "anyOf": [
+            { "$ref": "#/$defs/choiceCondition" },
+            { "type": "null" }
+          ]
+        },
+        "affectionRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/affectionRequirement"
+          }
+        },
+        "text": { "type": "string", "minLength": 1 },
+        "result": { "$ref": "#/$defs/choiceResult" },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "fixedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventId": { "type": "string", "minLength": 1 },
+        "eventName": { "type": "string", "minLength": 1 },
+        "eventType": { "type": "string", "minLength": 1 },
+        "triggerTiming": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "week": { "type": "number" },
+            "day": { "type": "number" },
+            "timeOfDay": { "type": "string", "minLength": 1 }
+          }
+        },
+        "location": { "type": "string", "minLength": 1 },
+        "isRepeatable": { "type": "boolean" },
+        "dialogues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueEntry"
+          }
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/choiceEntry"
+          }
+        }
+      }
+    }
+  }
+}

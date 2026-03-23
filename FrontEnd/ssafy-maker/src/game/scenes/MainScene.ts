@@ -157,12 +157,15 @@ export class MainScene extends Phaser.Scene {
       getMetricValue: (stat) => {
         const hudState = this.statSystemManager!.getHudState();
         const statsState = this.statSystemManager!.getStatsState();
+        const playerData = this.registry.get("playerData") as { gender?: string } | undefined;
         switch (stat) {
           case "hp":
             return hudState.hp;
           case "gold":
           case "money":
             return hudState.money;
+          case "playerGender":
+            return typeof playerData?.gender === "string" ? playerData.gender.toUpperCase() : "";
           default:
             return statsState[stat];
         }

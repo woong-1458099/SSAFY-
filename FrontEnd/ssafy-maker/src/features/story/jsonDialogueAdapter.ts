@@ -19,9 +19,12 @@ export type FixedEventDialogueEntry = {
   text?: string;
 };
 
+export const FIXED_EVENT_CONDITION_GENDER_VALUES = ["MALE", "FEMALE"] as const;
+
 export type FixedEventChoiceCondition = {
   social?: number;
   code?: number;
+  nunchi?: number;
   gold?: number;
   money?: number;
   luck?: number;
@@ -29,25 +32,30 @@ export type FixedEventChoiceCondition = {
   stress?: number;
   stress_max?: number;
   trait?: string;
+  playerGender?: (typeof FIXED_EVENT_CONDITION_GENDER_VALUES)[number];
 };
 
-export type FixedEventStatChangeKey =
-  | "social"
-  | "code"
-  | "gold"
-  | "money"
-  | "hp"
-  | "stress"
-  | "luck"
-  | "favor_minsu"
-  | "favor_hyo"
-  | "favor_hyoryeon"
-  | "favor_pro"
-  | "favor_sunmi"
-  | "madness"
-  | "fe"
-  | "be"
-  | "teamwork";
+export const FIXED_EVENT_STAT_CHANGE_KEYS = [
+  "social",
+  "code",
+  "nunchi",
+  "gold",
+  "money",
+  "hp",
+  "stress",
+  "luck",
+  "favor_minsu",
+  "favor_hyo",
+  "favor_hyoryeon",
+  "favor_pro",
+  "favor_sunmi",
+  "madness",
+  "fe",
+  "be",
+  "teamwork"
+] as const;
+
+export type FixedEventStatChangeKey = (typeof FIXED_EVENT_STAT_CHANGE_KEYS)[number];
 
 export type FixedEventChoiceResult = {
   statChanges?: Partial<Record<FixedEventStatChangeKey, number>>;
@@ -187,6 +195,9 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
     requirements.push({ stat: "fe", min: value, label: `코딩 ${value} 이상` });
     requirements.push({ stat: "be", min: value, label: `코딩 ${value} 이상` });
   }
+  if (typeof condition.nunchi === "number") {
+    requirements.push({ stat: "luck", min: Math.round(condition.nunchi), label: `눈치 ${Math.round(condition.nunchi)} 이상` });
+  }
   const currencyRequirement = typeof condition.gold === "number" ? condition.gold : condition.money;
   if (typeof currencyRequirement === "number") {
     requirements.push({ stat: "gold", min: Math.round(currencyRequirement), label: `재화 ${Math.round(currencyRequirement)}` });
@@ -221,6 +232,9 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
     switch (rawKey) {
       case "social":
         mapped.teamwork = (mapped.teamwork ?? 0) + value;
+        break;
+      case "nunchi":
+        mapped.luck = (mapped.luck ?? 0) + value;
         break;
       case "code": {
         const feDelta = value >= 0 ? Math.ceil(value / 2) : Math.floor(value / 2);
