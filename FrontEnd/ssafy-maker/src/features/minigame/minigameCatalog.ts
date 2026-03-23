@@ -1,5 +1,5 @@
 import {
-  DEPRECATED_MINIGAME_SCENE_KEYS,
+  isDeprecatedMinigameSceneKey,
   type LegacyMinigameSceneKey
 } from "./minigameSceneKeys";
 
@@ -17,7 +17,7 @@ export type LegacyMinigameCard = {
 export function collectDeprecatedCardKeys(cards: readonly LegacyMinigameCard[]): LegacyMinigameSceneKey[] {
   return cards
     .map((card) => card.key)
-    .filter((key) => DEPRECATED_MINIGAME_SCENE_KEYS.includes(key as never));
+    .filter((key) => isDeprecatedMinigameSceneKey(key));
 }
 
 export function assertMinigameCatalogIntegrity(cards: readonly LegacyMinigameCard[]): void {

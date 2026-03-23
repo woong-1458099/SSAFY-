@@ -5,6 +5,7 @@ export const DEPRECATED_MINIGAME_SCENE_KEYS = [
   "DragScene",
   "MiniGameTypingScene"
 ] as const;
+export const DEPRECATED_MINIGAME_SCENE_KEY_SET = new Set<string>(DEPRECATED_MINIGAME_SCENE_KEYS);
 
 export const LEGACY_MINIGAME_SCENE_KEYS = [
   "QuizScene",
@@ -37,17 +38,18 @@ export const LEGACY_MINIGAME_FLOW_SCENE_KEYS = [
 export const SUPPORTED_MINIGAME_SCENE_KEYS = [
   ...LEGACY_MINIGAME_FLOW_SCENE_KEYS
 ] as const;
+export const SUPPORTED_MINIGAME_SCENE_KEY_SET = new Set<string>(SUPPORTED_MINIGAME_SCENE_KEYS);
 
 export type DeprecatedMinigameSceneKey = (typeof DEPRECATED_MINIGAME_SCENE_KEYS)[number];
 export type LegacyMinigameSceneKey = (typeof LEGACY_MINIGAME_SCENE_KEYS)[number];
 export type LegacyMinigameFlowSceneKey = (typeof LEGACY_MINIGAME_FLOW_SCENE_KEYS)[number];
 
 export function isDeprecatedMinigameSceneKey(sceneKey: string): sceneKey is DeprecatedMinigameSceneKey {
-  return DEPRECATED_MINIGAME_SCENE_KEYS.includes(sceneKey as DeprecatedMinigameSceneKey);
+  return DEPRECATED_MINIGAME_SCENE_KEY_SET.has(sceneKey);
 }
 
 export function isSupportedMinigameSceneKey(sceneKey: string): sceneKey is LegacyMinigameFlowSceneKey {
-  return SUPPORTED_MINIGAME_SCENE_KEYS.includes(sceneKey as LegacyMinigameFlowSceneKey);
+  return SUPPORTED_MINIGAME_SCENE_KEY_SET.has(sceneKey);
 }
 
 export function assertMinigameSceneKeyIntegrity(): void {
@@ -58,5 +60,3 @@ export function assertMinigameSceneKeyIntegrity(): void {
     throw new Error(`[minigameSceneKeys] deprecated key가 활성 목록에 남아 있습니다: ${overlappingDeprecatedKeys.join(", ")}`);
   }
 }
-
-assertMinigameSceneKeyIntegrity();
