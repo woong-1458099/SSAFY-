@@ -215,25 +215,34 @@ export class StoryEventManager {
 
   refreshCurrentWeekLoadState(): void {
     const normalizedWeek = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
-    this.retryWeekLoadIfNeeded(normalizedWeek);
+    this.requestWeekLoadIfNeeded(normalizedWeek);
   }
 
   resolveTimeAdvanceBlockedMessage(): string | null {
     const week = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
-    this.retryWeekLoadIfNeeded(week);
+    this.requestWeekLoadIfNeeded(week, { ignoreRetryCooldown: true });
     return this.getTimeAdvanceBlockedMessage();
   }
 
   getTimeAdvanceBlockedMessage(): string | null {
     const week = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
     if (!this.weekData.has(week)) {
+      if (this.weekLoads.has(week)) {
+        return "고정 이벤트 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.";
+      }
+
       const loadError = this.weekLoadErrors.get(week);
       if (loadError) {
-        return `${loadError} 잠시 후 다시 시도해 주세요.`;
+        const retryAvailableAt = this.weekLoadRetryAvailableAt.get(week) ?? 0;
+        const remainingMs = Math.max(0, retryAvailableAt - Date.now());
+        if (remainingMs > 0) {
+          const remainingSeconds = Math.ceil(remainingMs / 1000);
+          return `${loadError} ${remainingSeconds}초 후 다시 확인합니다.`;
+        }
+        return `${loadError} 다시 불러오는 중입니다. 잠시 후 다시 시도해 주세요.`;
       }
-      return this.weekLoads.has(week)
-        ? "고정 이벤트 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요."
-        : "고정 이벤트 정보를 준비하는 중입니다. 잠시 후 다시 시도해 주세요.";
+
+      return "고정 이벤트 정보를 준비하는 중입니다. 잠시 후 다시 시도해 주세요.";
     }
 
     const event = this.findPendingFixedEventForCurrentTime();
@@ -258,6 +267,12 @@ export class StoryEventManager {
     if (!this.pendingTriggerLocations.includes(normalizedLocation)) {
       this.pendingTriggerLocations.push(normalizedLocation);
     }
+  }
+
+  requestFixedEventTrigger(location: string): void {
+    this.queueFixedEventTrigger(location);
+    const normalizedWeek = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
+    this.requestWeekLoadIfNeeded(normalizedWeek, { ignoreRetryCooldown: true });
   }
 
   tryStartQueuedOrCurrentFixedEvent(): boolean {
@@ -310,6 +325,8 @@ export class StoryEventManager {
       await existing;
       return;
     }
+
+    this.weekLoadErrors.delete(normalizedWeek);
 
     const request = loadFixedEventWeek(normalizedWeek)
       .then((rawData) => {
@@ -466,7 +483,7 @@ export class StoryEventManager {
   private tryStartQueuedFixedEvent(): boolean {
     const week = this.getHudState().week;
     if (!this.weekData.has(week)) {
-      this.retryWeekLoadIfNeeded(week);
+      this.requestWeekLoadIfNeeded(week);
       return false;
     }
 
@@ -485,13 +502,18 @@ export class StoryEventManager {
     return false;
   }
 
-  private retryWeekLoadIfNeeded(week: number): void {
+  private requestWeekLoadIfNeeded(
+    week: number,
+    options?: {
+      ignoreRetryCooldown?: boolean;
+    }
+  ): void {
     if (this.weekData.has(week) || this.weekLoads.has(week)) {
       return;
     }
 
     const retryAvailableAt = this.weekLoadRetryAvailableAt.get(week) ?? 0;
-    if (Date.now() < retryAvailableAt) {
+    if (!options?.ignoreRetryCooldown && Date.now() < retryAvailableAt) {
       return;
     }
 

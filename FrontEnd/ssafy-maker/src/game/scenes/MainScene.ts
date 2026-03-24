@@ -257,7 +257,7 @@ export class MainScene extends Phaser.Scene {
       getActionPoint: () => this.progressionManager!.getActionPoint(),
       getMaxActionPoint: () => this.progressionManager!.getMaxActionPoint(),
       tryConsumeActionPoint: () => this.progressionManager!.tryConsumeActionPoint({ notifyOnFailure: false }),
-      onHomeTimeAdvanced: () => this.storyEventManager?.queueFixedEventTrigger("home")
+      onHomeTimeAdvanced: () => this.storyEventManager?.requestFixedEventTrigger("home")
     });
     this.interactionManager = new InteractionManager(
       this,
