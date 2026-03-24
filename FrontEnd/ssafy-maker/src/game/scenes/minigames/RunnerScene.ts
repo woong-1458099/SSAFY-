@@ -18,9 +18,9 @@ const { W, H } = SCREEN;
 
 // Runner 에셋 경로
 const RUNNER_ASSETS = {
-  background: 'assets/game/minigame/runner/back_city.png',
-  player: 'assets/game/minigame/runner/BunnyRun.png',
-  obstacles: 'assets/game/minigame/runner/obstacles.png'
+  background: '/assets/game/minigame/runner/back_city.png',
+  player: '/assets/game/minigame/runner/BunnyRun.png',
+  obstacles: '/assets/game/minigame/runner/obstacles.png'
 };
 
 export default class RunnerScene extends Phaser.Scene {

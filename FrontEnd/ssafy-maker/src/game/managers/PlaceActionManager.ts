@@ -19,6 +19,10 @@ import { getPlacePopupContent, resolvePlaceEffect } from "../../features/place/p
 import { createShopModal } from "../../features/shop/ShopModal";
 import type { HudState, PlayerStatKey } from "../state/gameState";
 import { UI_DEPTH } from "../systems/uiDepth";
+import {
+  getConsumeActionPointFailurePresentation,
+  type ConsumeActionPointResult
+} from "./ProgressionManager";
 
 type PlaceActionManagerOptions = {
   scene: Phaser.Scene;
@@ -29,7 +33,8 @@ type PlaceActionManagerOptions = {
   getTimeCycleIndex: () => number;
   getActionPoint: () => number;
   getMaxActionPoint: () => number;
-  consumeActionPoint: () => boolean;
+  tryConsumeActionPoint: () => ConsumeActionPointResult;
+  onHomeTimeAdvanced?: () => void;
 };
 
 const FONT_FAMILY =
@@ -44,9 +49,11 @@ export class PlaceActionManager {
   private readonly getTimeCycleIndex: () => number;
   private readonly getActionPoint: () => number;
   private readonly getMaxActionPoint: () => number;
-  private readonly consumeActionPoint: () => boolean;
+  private readonly tryConsumeActionPoint: () => ConsumeActionPointResult;
+  private readonly onHomeTimeAdvanced?: () => void;
   private popupRoot?: Phaser.GameObjects.Container;
   private popupRequestId = 0;
+  private homeTimeAdvanceScheduled = false;
 
   constructor(options: PlaceActionManagerOptions) {
     this.scene = options.scene;
@@ -57,12 +64,14 @@ export class PlaceActionManager {
     this.getTimeCycleIndex = options.getTimeCycleIndex;
     this.getActionPoint = options.getActionPoint;
     this.getMaxActionPoint = options.getMaxActionPoint;
-    this.consumeActionPoint = options.consumeActionPoint;
+    this.tryConsumeActionPoint = options.tryConsumeActionPoint;
+    this.onHomeTimeAdvanced = options.onHomeTimeAdvanced;
     this.scene.game.events.on(LOTTO_COMPLETED_EVENT, this.handleLottoCompleted, this);
   }
 
   destroy(): void {
     this.scene.game.events.off(LOTTO_COMPLETED_EVENT, this.handleLottoCompleted, this);
+    this.homeTimeAdvanceScheduled = false;
     this.close();
   }
 
@@ -180,8 +189,9 @@ export class PlaceActionManager {
   }
 
   private useHomeAction(action: HomeActionId): void {
-    if (!this.consumeActionPoint()) {
-      this.openInfoModal("행동력 부족", "행동력이 부족해서 집 행동을 수행할 수 없습니다.", "home");
+    const consumeResult = this.tryConsumeActionPoint();
+    if (!consumeResult.ok) {
+      this.openConsumeFailureModal(consumeResult, "home");
       return;
     }
 
@@ -193,6 +203,13 @@ export class PlaceActionManager {
       stress: Phaser.Math.Clamp(hudState.stress + result.stressDelta, 0, 100)
     });
     this.close();
+    if (!this.homeTimeAdvanceScheduled) {
+      this.homeTimeAdvanceScheduled = true;
+      this.scene.time.delayedCall(0, () => {
+        this.homeTimeAdvanceScheduled = false;
+        this.onHomeTimeAdvanced?.();
+      });
+    }
   }
 
   private usePlace(placeId: Exclude<PlaceId, "campus" | "downtown" | "home" | "store">): void {
@@ -209,8 +226,9 @@ export class PlaceActionManager {
       return;
     }
 
-    if (!this.consumeActionPoint()) {
-      this.openInfoModal("행동력 부족", "행동력이 부족해서 이용할 수 없습니다.", placeId);
+    const consumeResult = this.tryConsumeActionPoint();
+    if (!consumeResult.ok) {
+      this.openConsumeFailureModal(consumeResult, placeId);
       return;
     }
 
@@ -260,6 +278,11 @@ export class PlaceActionManager {
         onClose: () => this.close()
       })
     );
+  }
+
+  private openConsumeFailureModal(result: Exclude<ConsumeActionPointResult, { ok: true }>, placeId: PlaceId): void {
+    const presentation = getConsumeActionPointFailurePresentation(result);
+    this.openInfoModal(presentation.modalTitle, presentation.modalDescription, placeId);
   }
 
   private getUnavailableMessage(placeId: PlaceId): { title: string; description: string } | null {

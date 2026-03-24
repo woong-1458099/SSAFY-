@@ -215,6 +215,7 @@ export class MainScene extends Phaser.Scene {
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
       getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
+      resolveTimeAdvanceBlockedMessage: () => this.storyEventManager?.resolveTimeAdvanceBlockedMessage() ?? null,
       onNotice: (message) => this.menuManager?.showNotice(message),
       onStartEndingFlow: () => this.startEndingFlow()
     });
@@ -255,7 +256,8 @@ export class MainScene extends Phaser.Scene {
       getTimeCycleIndex: () => this.progressionManager!.getTimeCycleIndex(),
       getActionPoint: () => this.progressionManager!.getActionPoint(),
       getMaxActionPoint: () => this.progressionManager!.getMaxActionPoint(),
-      consumeActionPoint: () => this.progressionManager!.consumeActionPoint()
+      tryConsumeActionPoint: () => this.progressionManager!.tryConsumeActionPoint({ notifyOnFailure: false }),
+      onHomeTimeAdvanced: () => this.storyEventManager?.requestFixedEventTrigger("home")
     });
     this.interactionManager = new InteractionManager(
       this,
@@ -491,16 +493,8 @@ update() {
       this.progressionManager?.togglePlanner();
     }
 
-    const automaticProgressionFlowOpened = this.progressionManager?.processAutomaticFlow() === true;
-    this.fixedEventNpcManager?.render({
-      presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
-      areaId: this.worldManager.getCurrentAreaId() ?? "world",
-      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !dialoguePlaying
-    });
-    this.debugPanel?.render(this.buildDebugPanelState());
-
+    let fixedEventStarted = false;
     if (
-      !automaticProgressionFlowOpened &&
       !menuOpen &&
       !placePopupOpen &&
       !plannerOpen &&
@@ -508,9 +502,18 @@ update() {
       !debugPanelVisible &&
       !dialoguePlaying
     ) {
-      this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
-      this.storyEventManager?.tryStartCurrentFixedEvent();
+      this.storyEventManager?.refreshCurrentWeekLoadState();
+      fixedEventStarted = this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() === true;
     }
+
+    const automaticProgressionFlowOpened =
+      !fixedEventStarted && this.progressionManager?.processAutomaticFlow() === true;
+    this.fixedEventNpcManager?.render({
+      presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
+      areaId: this.worldManager.getCurrentAreaId() ?? "world",
+      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !dialoguePlaying
+    });
+    this.debugPanel?.render(this.buildDebugPanelState());
 
     this.playerManager.update(runtimeGrids, parsedMap);
     this.interactionManager.update();
@@ -655,7 +658,7 @@ update() {
         }
         case "triggerCurrentFixedEvent":
           this.menuManager?.showNotice(
-            this.storyEventManager?.tryStartCurrentFixedEvent() ? "고정 이벤트 실행" : "실행 가능한 고정 이벤트가 없습니다"
+            this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() ? "고정 이벤트 실행" : "실행 가능한 고정 이벤트가 없습니다"
           );
           break;
         case "jumpToFixedEvent":
