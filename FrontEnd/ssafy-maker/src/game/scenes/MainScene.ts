@@ -257,7 +257,6 @@ export class MainScene extends Phaser.Scene {
       getTimeCycleIndex: () => this.progressionManager!.getTimeCycleIndex(),
       getActionPoint: () => this.progressionManager!.getActionPoint(),
       getMaxActionPoint: () => this.progressionManager!.getMaxActionPoint(),
-      getActionPointBlockMessage: () => this.progressionManager?.getActionPointBlockMessage() ?? null,
       consumeActionPoint: () => this.progressionManager!.consumeActionPoint(),
       onHomeTimeAdvanced: () => this.storyEventManager?.queueFixedEventTrigger("home")
     });

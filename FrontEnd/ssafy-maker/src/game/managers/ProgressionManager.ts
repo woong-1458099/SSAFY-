@@ -127,6 +127,7 @@ export class ProgressionManager {
       return false;
     }
     if (!options?.ignoreTimeAdvanceBlock) {
+      // User-initiated time advancement retries week loading before enforcing the block.
       this.refreshTimeAdvanceBlockedState?.();
       const blockedMessage = this.getTimeAdvanceBlockedMessage?.() ?? null;
       if (blockedMessage) {
@@ -148,10 +149,6 @@ export class ProgressionManager {
       this.requestEndingFlow();
     }
     return true;
-  }
-
-  getActionPointBlockMessage(): string | null {
-    return this.getTimeAdvanceBlockedMessage?.() ?? null;
   }
 
   debugAdvanceTime(): void {
