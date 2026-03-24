@@ -13,6 +13,8 @@ export type StatRowView = {
 export type SettingsPageState = {
   bgmVolume: number;
   bgmEnabled: boolean;
+  sfxVolume: number;
+  sfxEnabled: boolean;
   brightness: number;
 };
 
@@ -47,7 +49,7 @@ export function createStatsPage(
     color: "#edf7ff",
     resolution: 2
   });
-  const subtitle = scene.add.text(bounds.x + 24, bounds.y + 54, "shard 기준 기본 스탯 구조를 이식한 화면입니다.", {
+  const subtitle = scene.add.text(bounds.x + 24, bounds.y + 54, "shard 기준 기본 스탯 구조를 확인할 수 있습니다.", {
     fontFamily: FONT_FAMILY,
     fontSize: "14px",
     color: "#9ac6f3",
@@ -105,6 +107,8 @@ export function createSettingsPage(
     getState: () => SettingsPageState;
     onAdjustBgmVolume: (delta: number) => void;
     onToggleBgm: () => void;
+    onAdjustSfxVolume: (delta: number) => void;
+    onToggleSfx: () => void;
     onAdjustBrightness: (delta: number) => void;
     createActionButton: (args: {
       x: number;
@@ -119,41 +123,31 @@ export function createSettingsPage(
 ): SettingsPageView {
   const container = scene.add.container(0, 0).setScrollFactor(0);
   const interactiveRoots: Phaser.GameObjects.GameObject[] = [];
-  const settingsPanelLeft = bounds.x + 14;
-  const settingsPanelRight = bounds.right - 14;
-  const controlColumnStartX = settingsPanelLeft + 380;
-  const rowStartY = bounds.y + 102;
-  const rowGap = 70;
-  const rowGuideOffsetY = 26;
-  const bottomPanelY = bounds.y + 336;
-  const layout = {
-    titleX: bounds.x + 24,
-    bodyX: bounds.x + 24,
-    leftLabelX: settingsPanelLeft + 20,
-    settingsPanelCenterX: bounds.centerX,
-    settingsPanelCenterY: bounds.y + 186,
-    settingsPanelWidth: bounds.width - 28,
-    settingsPanelHeight: 214,
-    controlMinusX: controlColumnStartX + 20,
-    controlValueX: controlColumnStartX + 100,
-    controlPlusX: controlColumnStartX + 180,
-    controlToggleX: controlColumnStartX + 220,
-    bottomPanelCenterX: bounds.centerX,
-    bottomPanelY,
-    bottomPanelWidth: bounds.width - 28,
-    bottomGuideX: bounds.x + 24,
-    bottomLogoutGuideX: settingsPanelLeft + 378,
-    bottomLogoutButtonX: controlColumnStartX + 220,
-    logoutGuideWidth: settingsPanelRight - (settingsPanelLeft + 378) - 150
-  } as const;
-  const title = scene.add.text(layout.titleX, bounds.y + 18, "설정", {
+
+  const paddingX = 20;
+  const topPadding = 18;
+  const bottomPadding = 18;
+  const sectionGap = 14;
+  const headerHeight = 66;
+  const footerHeight = 84;
+  const headerTop = bounds.y + topPadding;
+  const headerBottom = headerTop + headerHeight;
+  const footerTop = bounds.bottom - bottomPadding - footerHeight;
+  const footerBottom = footerTop + footerHeight;
+  const contentTop = headerBottom + sectionGap;
+  const contentHeight = footerTop - contentTop - sectionGap;
+  const contentLeft = bounds.x + paddingX;
+  const contentWidth = bounds.width - paddingX * 2;
+  const contentRight = contentLeft + contentWidth;
+
+  const title = scene.add.text(bounds.x + 24, headerTop, "설정", {
     fontFamily: FONT_FAMILY,
     fontSize: "24px",
     fontStyle: "bold",
     color: "#edf7ff",
     resolution: 2
   });
-  const body = scene.add.text(layout.bodyX, bounds.y + 58, "배경음악, 화면 밝기, 로그아웃을 이 페이지에서 바로 조절할 수 있습니다.", {
+  const body = scene.add.text(bounds.x + 24, headerTop + 36, "배경음, 효과음, 화면 밝기와 로그아웃을 여기서 바로 조절할 수 있습니다.", {
     fontFamily: FONT_FAMILY,
     fontSize: "15px",
     color: "#cfe6ff",
@@ -161,82 +155,80 @@ export function createSettingsPage(
     wordWrap: { width: bounds.width - 48 }
   });
 
-const settingsPanel = scene.add.rectangle(
-    layout.settingsPanelCenterX,
-    layout.settingsPanelCenterY,
-    layout.settingsPanelWidth,
-    layout.settingsPanelHeight,
-    0x14314f,
-    0.9
-  )
-    .setScrollFactor(0);
-  settingsPanel.setStrokeStyle(2, 0x4f98df, 1);
+  const contentPanel = scene.add.rectangle(bounds.centerX, contentTop + contentHeight / 2, contentWidth, contentHeight, 0x14314f, 0.9).setScrollFactor(0);
+  contentPanel.setStrokeStyle(2, 0x4f98df, 1);
 
-  const bgmLabel = scene.add.text(layout.leftLabelX, rowStartY, "배경음악 볼륨", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "18px",
-    fontStyle: "bold",
-    color: "#edf7ff",
-    resolution: 2
-  });
-  const bgmGuide = scene.add.text(layout.leftLabelX, rowStartY + rowGuideOffsetY, "메인 필드에서 재생되는 BGM 음량을 조절합니다.", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "14px",
-    color: "#9ac6f3",
-    resolution: 2
-  });
+  const footerPanel = scene.add.rectangle(bounds.centerX, footerTop + footerHeight / 2, contentWidth, footerHeight, 0x102842, 0.92).setScrollFactor(0);
+  footerPanel.setStrokeStyle(2, 0x4f98df, 1);
 
-  const musicLabel = scene.add.text(layout.leftLabelX, rowStartY + rowGap, "음악 재생", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "18px",
-    fontStyle: "bold",
-    color: "#edf7ff",
-    resolution: 2
-  });
-  const musicGuide = scene.add.text(layout.leftLabelX, rowStartY + rowGap + rowGuideOffsetY, "배경음악을 즉시 켜거나 꺼서 조용히 플레이할 수 있습니다.", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "14px",
-    color: "#9ac6f3",
-    resolution: 2
-  });
+  const contentMaskShape = scene.add.graphics().setScrollFactor(0);
+  contentMaskShape.fillStyle(0xffffff, 1);
+  contentMaskShape.fillRect(contentLeft, contentTop, contentWidth, contentHeight);
+  contentMaskShape.setVisible(false);
+  const contentMask = contentMaskShape.createGeometryMask();
 
-  const brightnessLabel = scene.add.text(layout.leftLabelX, rowStartY + rowGap * 2, "화면 밝기", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "18px",
-    fontStyle: "bold",
-    color: "#edf7ff",
-    resolution: 2
-  });
-  const brightnessGuide = scene.add.text(layout.leftLabelX, rowStartY + rowGap * 2 + rowGuideOffsetY, "필드 화면을 조금 더 밝거나 어둡게 맞춥니다.", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "14px",
-    color: "#9ac6f3",
-    resolution: 2
-  });
+  const contentRoot = scene.add.container(0, 0).setScrollFactor(0);
+  contentRoot.setMask(contentMask);
 
-  const bgmValue = scene.add.text(layout.controlValueX, rowStartY + 10, "", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "24px",
-    fontStyle: "bold",
-    color: "#ffe27a",
-    resolution: 2
-  }).setOrigin(0.5, 0.5);
+  const rows: Array<{
+    title: string;
+    description: string;
+    kind: "slider" | "toggle";
+    getValueText: (state: SettingsPageState) => string;
+    getValueColor?: (state: SettingsPageState) => string;
+    onMinus?: () => void;
+    onPlus?: () => void;
+    onToggle?: () => void;
+  }> = [
+    {
+      title: "배경음 볼륨",
+      description: "월드와 장소에서 재생되는 BGM 볼륨을 조절합니다.",
+      kind: "slider",
+      getValueText: (state) => `${Math.round(state.bgmVolume * 100)}%`,
+      onMinus: () => options.onAdjustBgmVolume(-0.1),
+      onPlus: () => options.onAdjustBgmVolume(0.1)
+    },
+    {
+      title: "배경음 재생",
+      description: "배경음을 즉시 끄거나 켤 수 있습니다.",
+      kind: "toggle",
+      getValueText: (state) => (state.bgmEnabled ? "켜짐" : "꺼짐"),
+      getValueColor: (state) => (state.bgmEnabled ? "#8ff5b2" : "#ffb4c2"),
+      onToggle: () => options.onToggleBgm()
+    },
+    {
+      title: "효과음 볼륨",
+      description: "대화, 클릭, 상호작용 효과음 볼륨을 조절합니다.",
+      kind: "slider",
+      getValueText: (state) => `${Math.round(state.sfxVolume * 100)}%`,
+      onMinus: () => options.onAdjustSfxVolume(-0.1),
+      onPlus: () => options.onAdjustSfxVolume(0.1)
+    },
+    {
+      title: "효과음 재생",
+      description: "효과음을 즉시 끄거나 켤 수 있습니다.",
+      kind: "toggle",
+      getValueText: (state) => (state.sfxEnabled ? "켜짐" : "꺼짐"),
+      getValueColor: (state) => (state.sfxEnabled ? "#8ff5b2" : "#ffb4c2"),
+      onToggle: () => options.onToggleSfx()
+    },
+    {
+      title: "화면 밝기",
+      description: "인게임 화면을 조금 더 밝거나 어둡게 맞춥니다.",
+      kind: "slider",
+      getValueText: (state) => `${Math.round(state.brightness * 100)}%`,
+      onMinus: () => options.onAdjustBrightness(-0.1),
+      onPlus: () => options.onAdjustBrightness(0.1)
+    }
+  ];
 
-  const musicValue = scene.add.text(layout.controlValueX, rowStartY + rowGap + 10, "", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "24px",
-    fontStyle: "bold",
-    color: "#ffe27a",
-    resolution: 2
-  }).setOrigin(0.5, 0.5);
-
-  const brightnessValue = scene.add.text(layout.controlValueX, rowStartY + rowGap * 2 + 10, "", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "24px",
-    fontStyle: "bold",
-    color: "#ffe27a",
-    resolution: 2
-  }).setOrigin(0.5, 0.5);
+  const rowHeight = 86;
+  const rowGap = 14;
+  const valueViews: Array<{
+    valueText: Phaser.GameObjects.Text;
+    getText: (state: SettingsPageState) => string;
+    getColor?: (state: SettingsPageState) => string;
+  }> = [];
 
   const makeMiniButton = (
     x: number,
@@ -263,66 +255,118 @@ const settingsPanel = scene.add.rectangle(
     return [bg, label] as const;
   };
 
-  const refresh = () => {
-    const state = options.getState();
-    bgmValue.setText(`${Math.round(state.bgmVolume * 100)}%`);
-    musicValue.setText(state.bgmEnabled ? "켜짐" : "꺼짐");
-    musicValue.setColor(state.bgmEnabled ? "#8ff5b2" : "#ffb4c2");
-    brightnessValue.setText(`${Math.round(state.brightness * 100)}%`);
-  };
+  rows.forEach((row, index) => {
+    const rowTop = contentTop + 14 + index * (rowHeight + rowGap);
+    const rowCenterY = rowTop + rowHeight / 2;
+    const rowBg = scene.add.rectangle(bounds.centerX, rowCenterY, contentWidth - 18, rowHeight, 0x102842, 0.84).setScrollFactor(0);
+    rowBg.setStrokeStyle(1, 0x3f78a7, 1);
 
-  const [bgmMinusBg, bgmMinusLabel] = makeMiniButton(layout.controlMinusX, rowStartY + 10, "-", () => {
-    options.onAdjustBgmVolume(-0.1);
-    refresh();
-  });
-  const [bgmPlusBg, bgmPlusLabel] = makeMiniButton(layout.controlPlusX, rowStartY + 10, "+", () => {
-    options.onAdjustBgmVolume(0.1);
-    refresh();
-  });
-  const [brightnessMinusBg, brightnessMinusLabel] = makeMiniButton(layout.controlMinusX, rowStartY + rowGap * 2 + 10, "-", () => {
-    options.onAdjustBrightness(-0.1);
-    refresh();
-  });
-  const [brightnessPlusBg, brightnessPlusLabel] = makeMiniButton(layout.controlPlusX, rowStartY + rowGap * 2 + 10, "+", () => {
-    options.onAdjustBrightness(0.1);
-    refresh();
-  });
+    const titleText = scene.add.text(contentLeft + 18, rowTop + 12, row.title, {
+      fontFamily: FONT_FAMILY,
+      fontSize: "18px",
+      fontStyle: "bold",
+      color: "#edf7ff",
+      resolution: 2
+    });
+    const descText = scene.add.text(contentLeft + 18, rowTop + 40, row.description, {
+      fontFamily: FONT_FAMILY,
+      fontSize: "14px",
+      color: "#9ac6f3",
+      resolution: 2,
+      wordWrap: { width: 470 }
+    });
 
-  const musicToggleButton = options.createActionButton({
-    x: layout.controlToggleX,
-    y: rowStartY + rowGap + 10,
-    width: 128,
-    height: 42,
-    text: "켜기/끄기",
-    onClick: () => {
-      options.onToggleBgm();
-      refresh();
+    const valueText = scene.add.text(contentRight - 230, rowTop + 28, "", {
+      fontFamily: FONT_FAMILY,
+      fontSize: "24px",
+      fontStyle: "bold",
+      color: "#ffe27a",
+      resolution: 2
+    }).setOrigin(0.5, 0.5);
+
+    valueViews.push({
+      valueText,
+      getText: row.getValueText,
+      getColor: row.getValueColor
+    });
+
+    contentRoot.add([rowBg, titleText, descText, valueText]);
+
+    if (row.kind === "slider" && row.onMinus && row.onPlus) {
+      const [minusBg, minusLabel] = makeMiniButton(contentRight - 120, rowTop + 28, "-", () => {
+        row.onMinus?.();
+        refresh();
+      });
+      const [plusBg, plusLabel] = makeMiniButton(contentRight - 52, rowTop + 28, "+", () => {
+        row.onPlus?.();
+        refresh();
+      });
+      contentRoot.add([minusBg, minusLabel, plusBg, plusLabel]);
+    }
+
+    if (row.kind === "toggle" && row.onToggle) {
+      const toggleButton = options.createActionButton({
+        x: contentRight - 86,
+        y: rowTop + 28,
+        width: 128,
+        height: 42,
+        text: "켜기/끄기",
+        onClick: () => {
+          row.onToggle?.();
+          refresh();
+        }
+      });
+      interactiveRoots.push(toggleButton);
+      contentRoot.add(toggleButton);
     }
   });
-  interactiveRoots.push(musicToggleButton);
-  const bottomPanel = scene.add.rectangle(layout.bottomPanelCenterX, layout.bottomPanelY, layout.bottomPanelWidth, 70, 0x102842, 0.92)
-    .setScrollFactor(0);
-  bottomPanel.setStrokeStyle(2, 0x4f98df, 1);
 
-  const keyGuide = scene.add.text(layout.bottomGuideX, bounds.y + 316, "ESC: 메뉴 열기/닫기\nP: 주간 계획표   SPACE: 상호작용", {
+  const totalContentHeight = 14 + rows.length * rowHeight + Math.max(0, rows.length - 1) * rowGap + 14;
+  let scrollOffset = 0;
+  const maxScroll = Math.max(0, totalContentHeight - contentHeight);
+
+  const applyScroll = () => {
+    contentRoot.y = -scrollOffset;
+  };
+
+  const refresh = () => {
+    const state = options.getState();
+    valueViews.forEach((view) => {
+      view.valueText.setText(view.getText(state));
+      view.valueText.setColor(view.getColor?.(state) ?? "#ffe27a");
+    });
+  };
+
+  const wheelHandler = (
+    pointer: Phaser.Input.Pointer,
+    _gameObjects: Phaser.GameObjects.GameObject[],
+    _deltaX: number,
+    deltaY: number
+  ) => {
+    if (!Phaser.Geom.Rectangle.Contains(new Phaser.Geom.Rectangle(contentLeft, contentTop, contentWidth, contentHeight), pointer.x, pointer.y)) {
+      return;
+    }
+    if (maxScroll <= 0) {
+      return;
+    }
+
+    scrollOffset = Phaser.Math.Clamp(scrollOffset + deltaY * 0.35, 0, maxScroll);
+    applyScroll();
+  };
+
+  scene.input.on("wheel", wheelHandler);
+
+  const shortcutText = scene.add.text(bounds.x + 24, footerBottom - 14, "ESC: 메뉴 열기/닫기\nP: 주간 계획표  SPACE: 상호작용", {
     fontFamily: FONT_FAMILY,
     fontSize: "14px",
     color: "#cfe6ff",
     resolution: 2,
     lineSpacing: 6
-  });
-
-  const logoutGuide = scene.add.text(layout.bottomLogoutGuideX, bounds.y + 316, "현재 세션을 종료하고 로그인 화면으로 돌아갑니다.", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "14px",
-    color: "#a9d0f4",
-    resolution: 2,
-    wordWrap: { width: layout.logoutGuideWidth }
-  });
+  }).setOrigin(0, 1);
 
   const logoutButton = options.createActionButton({
-    x: layout.bottomLogoutButtonX,
-    y: layout.bottomPanelY,
+    x: bounds.right - 92,
+    y: footerBottom - 24,
     width: 138,
     height: 42,
     text: "로그아웃",
@@ -333,32 +377,15 @@ const settingsPanel = scene.add.rectangle(
   container.add([
     title,
     body,
-    settingsPanel,
-    bgmLabel,
-    bgmGuide,
-    musicLabel,
-    musicGuide,
-    brightnessLabel,
-    brightnessGuide,
-    bgmMinusBg,
-    bgmMinusLabel,
-    bgmValue,
-    bgmPlusBg,
-    bgmPlusLabel,
-    musicValue,
-    musicToggleButton,
-    brightnessMinusBg,
-    brightnessMinusLabel,
-    brightnessValue,
-    brightnessPlusBg,
-    brightnessPlusLabel,
-    bottomPanel,
-    keyGuide,
-    logoutGuide,
+    contentPanel,
+    contentRoot,
+    footerPanel,
+    shortcutText,
     logoutButton
   ]);
 
   refresh();
+  applyScroll();
 
   const destroyInteractiveTree = (object: Phaser.GameObjects.GameObject): void => {
     if ("removeAllListeners" in object && typeof object.removeAllListeners === "function") {
@@ -377,6 +404,9 @@ const settingsPanel = scene.add.rectangle(
   };
 
   const destroy = () => {
+    scene.input.off("wheel", wheelHandler);
+    contentRoot.clearMask(true);
+    contentMaskShape.destroy();
     interactiveRoots.forEach((root) => destroyInteractiveTree(root));
   };
 

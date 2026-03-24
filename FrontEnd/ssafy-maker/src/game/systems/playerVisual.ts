@@ -21,6 +21,10 @@ export type PlayerVisual = {
   asset: PlayerVisualAssetDefinition;
 };
 
+function resolveSafeFrame(texture: Phaser.Textures.Texture, preferredFrame: number) {
+  return texture.has(String(preferredFrame)) ? preferredFrame : 0;
+}
+
 export function preloadPlayerVisualAssets(scene: Phaser.Scene) {
   const defaultAppearance = getDefaultPlayerAppearanceDefinition();
   const genders = Object.keys(PLAYER_APPEARANCE_LIMITS) as Array<keyof typeof PLAYER_APPEARANCE_LIMITS>;
@@ -108,22 +112,34 @@ export function updatePlayerVisualFrame(
   const hairTextureKey = isMoving
     ? visual.asset.hairLayer.walkTextureKey
     : visual.asset.hairLayer.idleTextureKey;
+  const baseFrame = resolveSafeFrame(
+    visual.base.scene.textures.get(baseTextureKey),
+    frame
+  );
+  const clothesFrame = resolveSafeFrame(
+    visual.clothes.scene.textures.get(clothesTextureKey),
+    frame
+  );
+  const hairFrame = resolveSafeFrame(
+    visual.hair.scene.textures.get(hairTextureKey),
+    frame
+  );
 
   if (visual.base.texture.key !== baseTextureKey) {
-    visual.base.setTexture(baseTextureKey, frame);
+    visual.base.setTexture(baseTextureKey, baseFrame);
   } else {
-    visual.base.setFrame(frame);
+    visual.base.setFrame(baseFrame);
   }
 
   if (visual.clothes.texture.key !== clothesTextureKey) {
-    visual.clothes.setTexture(clothesTextureKey, frame);
+    visual.clothes.setTexture(clothesTextureKey, clothesFrame);
   } else {
-    visual.clothes.setFrame(frame);
+    visual.clothes.setFrame(clothesFrame);
   }
 
   if (visual.hair.texture.key !== hairTextureKey) {
-    visual.hair.setTexture(hairTextureKey, frame);
+    visual.hair.setTexture(hairTextureKey, hairFrame);
   } else {
-    visual.hair.setFrame(frame);
+    visual.hair.setFrame(hairFrame);
   }
 }

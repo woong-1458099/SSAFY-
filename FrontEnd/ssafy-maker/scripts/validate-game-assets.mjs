@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { XMLParser } from "fast-xml-parser";
 import ts from "typescript";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,6 +11,7 @@ const srcRoot = path.join(projectRoot, "src");
 const publicRoot = path.join(projectRoot, "public");
 const assetRoot = path.join(publicRoot, "assets", "game");
 const assetKeysPath = path.join(projectRoot, "src", "common", "assets", "assetKeys.ts");
+const areaDefinitionsPath = path.join(projectRoot, "src", "game", "definitions", "areas", "areaDefinitions.ts");
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 const MODULE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
@@ -25,6 +27,11 @@ const PATH_ALIASES = {
 };
 
 const exportedConstantCache = new Map();
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "",
+  allowBooleanAttributes: true
+});
 
 function walkFiles(dirPath) {
   if (!fs.existsSync(dirPath)) {
@@ -533,6 +540,172 @@ function collectAssetReferences(filePath) {
   return { references, issues, assetKeyReferences, assetPathReferences };
 }
 
+function resolveArrayLiteral(expression) {
+  const unwrapped = unwrapExpression(expression);
+  if (!ts.isArrayLiteralExpression(unwrapped)) {
+    return null;
+  }
+
+  const values = [];
+  for (const element of unwrapped.elements) {
+    const resolved = resolveExpression(element, new Map());
+    if (!resolved || resolved.length !== 1) {
+      return null;
+    }
+    values.push(resolved[0]);
+  }
+
+  return values;
+}
+
+function collectExportedStringArrayObject(filePath, exportName) {
+  const sourceFile = readSourceFile(filePath);
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) {
+      continue;
+    }
+
+    const isExported = statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
+    if (!isExported) {
+      continue;
+    }
+
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportName || !declaration.initializer) {
+        continue;
+      }
+
+      const initializer = unwrapExpression(declaration.initializer);
+      if (!ts.isObjectLiteralExpression(initializer)) {
+        return null;
+      }
+
+      const result = {};
+      for (const property of initializer.properties) {
+        if (!ts.isPropertyAssignment(property)) {
+          continue;
+        }
+
+        const propertyName = getPropertyNameText(property.name);
+        if (!propertyName) {
+          continue;
+        }
+
+        const resolvedArray = resolveArrayLiteral(property.initializer);
+        if (!resolvedArray) {
+          return null;
+        }
+
+        result[propertyName] = resolvedArray;
+      }
+
+      return result;
+    }
+  }
+
+  return null;
+}
+
+function buildRequiredTmxLayers() {
+  const worldLayers = collectExportedStringArrayObject(areaDefinitionsPath, "WORLD_TMX_LAYER_NAMES");
+  const downtownLayers = collectExportedStringArrayObject(areaDefinitionsPath, "DOWNTOWN_TMX_LAYER_NAMES");
+
+  if (!worldLayers || !downtownLayers) {
+    throw new Error("Failed to read TMX layer name exports from areaDefinitions.ts");
+  }
+
+  return [
+    {
+      assetPath: "/assets/game/map/mainMap.tmx",
+      groups: worldLayers
+    },
+    {
+      assetPath: "/assets/game/map/city.tmx",
+      groups: downtownLayers
+    }
+  ];
+}
+
+function toArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return value ? [value] : [];
+}
+
+function collectNamedTmxNodes(nodes) {
+  return toArray(nodes)
+    .map((node) => (node && typeof node === "object" ? node.name : undefined))
+    .filter((name) => typeof name === "string" && name.trim().length > 0);
+}
+
+function readTmxLayerNames(filePath) {
+  const rawTmx = fs.readFileSync(filePath, "utf8");
+
+  let parsed;
+  try {
+    parsed = xmlParser.parse(rawTmx);
+  } catch (error) {
+    throw new Error(`Failed to parse TMX XML: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const mapNode = parsed?.map;
+  if (!mapNode || typeof mapNode !== "object") {
+    throw new Error("TMX map node is missing");
+  }
+
+  return [
+    ...collectNamedTmxNodes(mapNode.layer),
+    ...collectNamedTmxNodes(mapNode.objectgroup)
+  ];
+}
+
+function validateRequiredTmxLayers(issues) {
+  let requiredTmxLayers = [];
+  try {
+    requiredTmxLayers = buildRequiredTmxLayers();
+  } catch (error) {
+    issues.push(
+      `[validate:game-assets] Failed to load TMX layer definitions: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return;
+  }
+
+  requiredTmxLayers.forEach(({ assetPath, groups }) => {
+    const absolutePath = path.join(publicRoot, ...assetPath.replace(/^\//, "").split("/"));
+    if (!fs.existsSync(absolutePath)) {
+      issues.push(`[validate:game-assets] Missing TMX file for layer validation: ${assetPath}`);
+      return;
+    }
+
+    let layerNames;
+    try {
+      layerNames = readTmxLayerNames(absolutePath);
+    } catch (error) {
+      issues.push(
+        `[validate:game-assets] Failed to parse ${assetPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return;
+    }
+
+    const availableLayerSet = new Set(layerNames.map((name) => name.trim().toLowerCase()));
+
+    Object.entries(groups).forEach(([groupName, requiredNames]) => {
+      const missingNames = requiredNames.filter((name) => !availableLayerSet.has(name.trim().toLowerCase()));
+      if (missingNames.length === 0) {
+        return;
+      }
+
+      const candidateNames = layerNames.filter((name) => name.toLowerCase().includes(groupName.toLowerCase()));
+      issues.push(
+        `[validate:game-assets] Missing ${groupName} layer(s) in ${assetPath}: ${missingNames.join(", ")}. Candidates: ${candidateNames.length > 0 ? candidateNames.join(", ") : "none"}. Available layers: ${layerNames.join(", ")}`
+      );
+    });
+  });
+}
+
 function main() {
   const sourceFiles = walkFiles(srcRoot);
   const allReferences = [];
@@ -613,6 +786,8 @@ function main() {
     .map((entry) => entry.chain)
     .filter((chain) => !referencedAssetPaths.has(chain))
     .sort();
+
+  validateRequiredTmxLayers(issues);
 
   if (issues.length > 0) {
     console.error("[validate:game-assets] failed");

@@ -33,6 +33,7 @@ import {
 } from "../../features/save/SaveService";
 import { createSaveConfirmDialog } from "../../features/save/components/saveConfirmDialog";
 import type { HudState, PlayerStatsState, PlayerStatKey } from "../state/gameState";
+import { UI_DEPTH } from "../systems/uiDepth";
 
 type InGameMenuManagerOptions = {
   scene: Phaser.Scene;
@@ -47,6 +48,8 @@ type InGameMenuManagerOptions = {
   getSettingsState: () => SettingsPageState;
   onAdjustBgmVolume: (delta: number) => void;
   onToggleBgm: () => void;
+  onAdjustSfxVolume: (delta: number) => void;
+  onToggleSfx: () => void;
   onAdjustBrightness: (delta: number) => void;
   onLogout: () => void;
 };
@@ -72,6 +75,8 @@ export class InGameMenuManager {
   private readonly getSettingsState: () => SettingsPageState;
   private readonly onAdjustBgmVolume: (delta: number) => void;
   private readonly onToggleBgm: () => void;
+  private readonly onAdjustSfxVolume: (delta: number) => void;
+  private readonly onToggleSfx: () => void;
   private readonly onAdjustBrightness: (delta: number) => void;
   private readonly onLogout: () => void;
 
@@ -89,6 +94,7 @@ export class InGameMenuManager {
   private inventoryInfoTitle?: Phaser.GameObjects.Text;
   private inventoryInfoBody?: Phaser.GameObjects.Text;
   private noticeText?: Phaser.GameObjects.Text;
+  private noticeHideTimer?: Phaser.Time.TimerEvent;
   private saveConfirmDialog?: Phaser.GameObjects.Container;
   private settingsPageView?: SettingsPageView;
 
@@ -105,6 +111,8 @@ export class InGameMenuManager {
     this.getSettingsState = options.getSettingsState;
     this.onAdjustBgmVolume = options.onAdjustBgmVolume;
     this.onToggleBgm = options.onToggleBgm;
+    this.onAdjustSfxVolume = options.onAdjustSfxVolume;
+    this.onToggleSfx = options.onToggleSfx;
     this.onAdjustBrightness = options.onAdjustBrightness;
     this.onLogout = options.onLogout;
   }
@@ -114,6 +122,7 @@ export class InGameMenuManager {
       return;
     }
 
+    this.ensureNoticeText();
     this.frame = createMenuFrame(this.scene, (tab) => this.switchTab(tab));
     const bounds = this.frame.contentBounds;
 
@@ -125,18 +134,13 @@ export class InGameMenuManager {
       getState: () => this.getSettingsState(),
       onAdjustBgmVolume: (delta) => this.onAdjustBgmVolume(delta),
       onToggleBgm: () => this.onToggleBgm(),
+      onAdjustSfxVolume: (delta) => this.onAdjustSfxVolume(delta),
+      onToggleSfx: () => this.onToggleSfx(),
       onAdjustBrightness: (delta) => this.onAdjustBrightness(delta),
       createActionButton: ({ x, y, width, height, text, onClick }) =>
         this.createActionButton(x, y, width, height, text, onClick),
       onLogout: () => this.onLogout()
     });
-    this.noticeText = this.scene.add.text(bounds.x + 24, bounds.bottom + 10, "", {
-      fontFamily: FONT_FAMILY,
-      fontSize: "13px",
-      color: "#9ac6f3",
-      resolution: 2
-    }).setOrigin(0, 0.5).setScrollFactor(0).setVisible(false);
-
     this.tabPages = {
       inventory: inventoryPage,
       stats: statsPage.container,
@@ -152,7 +156,6 @@ export class InGameMenuManager {
       page.setVisible(tab === this.activeTab);
       this.frame?.pageRoot.add(page);
     });
-    this.frame.root.add(this.noticeText);
 
     setActiveMenuTab(this.frame.tabs, this.activeTab);
     this.refreshInventoryUi();
@@ -163,6 +166,9 @@ export class InGameMenuManager {
   destroy(): void {
     this.settingsPageView?.destroy();
     this.frame?.root.destroy(true);
+    this.noticeHideTimer?.remove(false);
+    this.noticeHideTimer = undefined;
+    this.noticeText?.destroy();
     this.frame = undefined;
     this.tabPages = {};
     this.statViews = undefined;
@@ -204,7 +210,6 @@ export class InGameMenuManager {
     this.menuOpen = false;
     this.frame?.root.setVisible(false);
     this.hideSaveConfirmDialog();
-    this.noticeText?.setVisible(false);
   }
 
   showNotice(message: string): void {
@@ -635,10 +640,58 @@ export class InGameMenuManager {
     return container;
   }
 
+  private ensureNoticeText(): void {
+    if (this.noticeText) {
+      this.repositionNoticeText();
+      return;
+    }
+
+    this.noticeText = this.scene.add.text(0, 0, "", {
+      fontFamily: FONT_FAMILY,
+      fontSize: "16px",
+      fontStyle: "bold",
+      color: "#eef7ff",
+      backgroundColor: "rgba(8, 22, 36, 0.9)",
+      align: "center",
+      resolution: 2,
+      padding: { left: 16, right: 16, top: 10, bottom: 10 },
+      wordWrap: { width: Math.max(320, this.scene.scale.width - 160), useAdvancedWrap: true }
+    })
+      .setDepth(UI_DEPTH.dialogue + 1)
+      .setScrollFactor(0)
+      .setOrigin(0.5)
+      .setVisible(false);
+
+    this.noticeText.setStroke("#0b1724", 4);
+    this.repositionNoticeText();
+  }
+
+  private repositionNoticeText(): void {
+    if (!this.noticeText) {
+      return;
+    }
+
+    this.noticeText.setPosition(this.scene.scale.width / 2, this.scene.scale.height - 88);
+    this.noticeText.setWordWrapWidth(Math.max(320, this.scene.scale.width - 160), true);
+  }
+
   private setNotice(message: string): void {
-    this.noticeText?.setText(message);
-    this.noticeText?.setVisible(message.trim().length > 0);
+    const trimmedMessage = message.trim();
+    this.ensureNoticeText();
+    this.noticeHideTimer?.remove(false);
+    this.noticeHideTimer = undefined;
+
+    this.noticeText?.setText(trimmedMessage);
+    this.repositionNoticeText();
+    this.noticeText?.setVisible(trimmedMessage.length > 0);
     this.updateNoticeVisibility();
+
+    if (trimmedMessage.length > 0) {
+      this.noticeHideTimer = this.scene.time.delayedCall(2400, () => {
+        this.noticeText?.setVisible(false);
+        this.noticeHideTimer = undefined;
+      });
+    }
   }
 
   private openSaveConfirmDialog(options: {
@@ -673,7 +726,7 @@ export class InGameMenuManager {
 
   private updateNoticeVisibility(): void {
     const hasText = Boolean(this.noticeText?.text && this.noticeText.text.trim().length > 0);
-    const shouldShow = this.menuOpen && this.activeTab !== "stats" && hasText;
+    const shouldShow = hasText;
     this.noticeText?.setVisible(shouldShow);
   }
 }
