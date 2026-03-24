@@ -565,6 +565,12 @@ function toArray(value) {
   return value ? [value] : [];
 }
 
+function collectNamedTmxNodes(nodes) {
+  return toArray(nodes)
+    .map((node) => (node && typeof node === "object" ? node.name : undefined))
+    .filter((name) => typeof name === "string" && name.trim().length > 0);
+}
+
 function readTmxLayerNames(filePath) {
   const rawTmx = fs.readFileSync(filePath, "utf8");
 
@@ -580,9 +586,10 @@ function readTmxLayerNames(filePath) {
     throw new Error("TMX map node is missing");
   }
 
-  return toArray(mapNode.layer)
-    .map((layerNode) => (layerNode && typeof layerNode === "object" ? layerNode.name : undefined))
-    .filter((name) => typeof name === "string" && name.trim().length > 0);
+  return [
+    ...collectNamedTmxNodes(mapNode.layer),
+    ...collectNamedTmxNodes(mapNode.objectgroup)
+  ];
 }
 
 function validateRequiredTmxLayers(issues) {
