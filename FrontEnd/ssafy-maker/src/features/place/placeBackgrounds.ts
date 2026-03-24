@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { buildGameAssetPath } from "../../common/assets/gameAssetPath";
 import type { AreaId, PlaceId } from "../../common/enums/area";
+import { AudioManager } from "../../core/managers/AudioManager";
 
 export type TimeOfDay = "오전" | "오후" | "저녁" | "밤";
 
@@ -119,6 +120,8 @@ const WORLD_BGM_KEY_BY_TIME: Record<TimeOfDay, string> = {
   밤: PLACE_BGM_KEYS.world_밤,
 };
 
+const audioManager = new AudioManager();
+
 function getSkyBackgroundKey(timeOfDay: TimeOfDay): string {
   switch (timeOfDay) {
     case "오전":
@@ -172,11 +175,23 @@ export async function playPlaceBgm(
   }
 
   const existing = scene.sound.get(bgmKey);
-  if (existing?.isPlaying) return;
+  if (existing) {
+    audioManager.registerManagedSound(existing, "bgm", 0.5);
+    audioManager.updateManagedSoundVolume(existing, "bgm", 0.5);
+    if (existing.isPlaying) {
+      return;
+    }
+  }
 
   await resumeAudioContext(scene);
   scene.sound.stopAll();
-  scene.sound.play(bgmKey, { loop: true, volume: 0.5 });
+  if (existing) {
+    existing.play();
+    return;
+  }
+
+  const bgm = audioManager.add(scene, bgmKey, "bgm", { loop: true, volume: 0.5 });
+  bgm?.play();
 }
 
 export async function playWorldBgm(
@@ -191,11 +206,23 @@ export async function playWorldBgm(
   }
 
   const existing = scene.sound.get(bgmKey);
-  if (existing?.isPlaying) return;
+  if (existing) {
+    audioManager.registerManagedSound(existing, "bgm", 0.5);
+    audioManager.updateManagedSoundVolume(existing, "bgm", 0.5);
+    if (existing.isPlaying) {
+      return;
+    }
+  }
 
   await resumeAudioContext(scene);
   scene.sound.stopAll();
-  scene.sound.play(bgmKey, { loop: true, volume: 0.5 });
+  if (existing) {
+    existing.play();
+    return;
+  }
+
+  const bgm = audioManager.add(scene, bgmKey, "bgm", { loop: true, volume: 0.5 });
+  bgm?.play();
 }
 
 export function getPlaceBackgroundTextureKey(placeId: PlaceId): string | null {

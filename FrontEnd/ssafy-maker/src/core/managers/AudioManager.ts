@@ -8,6 +8,10 @@ type VolumeState = {
   ambience: number;
 };
 
+type AudioSettingsStore = VolumeState & {
+  bgmEnabled: boolean;
+};
+
 type ManagedSound = {
   sound: Phaser.Sound.BaseSound;
   category: AudioCategory;
@@ -21,11 +25,20 @@ export class AudioManager {
     sfx: 0.8,
     ambience: 0.6
   };
+  private static bgmEnabled = AudioManager.loadBgmEnabled();
   private static volumes: VolumeState = AudioManager.loadVolumes();
   private static managedSounds = new Set<ManagedSound>();
 
   setBgmVolume(value: number): void {
     AudioManager.setVolume("bgm", value);
+  }
+
+  setBgmEnabled(enabled: boolean): void {
+    AudioManager.setBgmEnabled(enabled);
+  }
+
+  isBgmEnabled(): boolean {
+    return AudioManager.bgmEnabled;
   }
 
   setSfxVolume(value: number): void {
@@ -72,13 +85,13 @@ export class AudioManager {
       volume: AudioManager.getEffectiveVolumeFor(category, baseVolume)
     });
 
-    const managedSound: ManagedSound = { sound, category, baseVolume };
-    AudioManager.managedSounds.add(managedSound);
-    sound.once("destroy", () => {
-      AudioManager.managedSounds.delete(managedSound);
-    });
+    AudioManager.registerManagedSound(sound, category, baseVolume);
 
     return sound;
+  }
+
+  registerManagedSound(sound: Phaser.Sound.BaseSound, category: AudioCategory, baseVolume = 1): void {
+    AudioManager.registerManagedSound(sound, category, baseVolume);
   }
 
   updateManagedSoundVolume(sound: Phaser.Sound.BaseSound, category: AudioCategory, baseVolume = 1): void {
@@ -87,12 +100,36 @@ export class AudioManager {
 
   private static setVolume(category: AudioCategory, value: number): void {
     AudioManager.volumes[category] = AudioManager.clamp(value);
-    AudioManager.persistVolumes();
+    AudioManager.persistSettings();
+    AudioManager.refreshManagedSounds();
+  }
+
+  private static setBgmEnabled(enabled: boolean): void {
+    AudioManager.bgmEnabled = enabled;
+    AudioManager.persistSettings();
     AudioManager.refreshManagedSounds();
   }
 
   private static getEffectiveVolumeFor(category: AudioCategory, baseVolume: number): number {
+    if (category === "bgm" && !AudioManager.bgmEnabled) {
+      return 0;
+    }
     return AudioManager.clamp(baseVolume) * AudioManager.volumes[category];
+  }
+
+  private static registerManagedSound(sound: Phaser.Sound.BaseSound, category: AudioCategory, baseVolume: number): void {
+    const existingEntry = Array.from(AudioManager.managedSounds).find((entry) => entry.sound === sound);
+    if (existingEntry) {
+      existingEntry.category = category;
+      existingEntry.baseVolume = baseVolume;
+      return;
+    }
+
+    const managedSound: ManagedSound = { sound, category, baseVolume };
+    AudioManager.managedSounds.add(managedSound);
+    sound.once("destroy", () => {
+      AudioManager.managedSounds.delete(managedSound);
+    });
   }
 
   private static refreshManagedSounds(): void {
@@ -120,7 +157,7 @@ export class AudioManager {
         return { ...AudioManager.defaultVolumes };
       }
 
-      const parsed = JSON.parse(raw) as Partial<VolumeState>;
+      const parsed = JSON.parse(raw) as Partial<AudioSettingsStore>;
       return {
         bgm: AudioManager.clamp(parsed.bgm ?? AudioManager.defaultVolumes.bgm),
         sfx: AudioManager.clamp(parsed.sfx ?? AudioManager.defaultVolumes.sfx),
@@ -131,11 +168,35 @@ export class AudioManager {
     }
   }
 
-  private static persistVolumes(): void {
+  private static loadBgmEnabled(): boolean {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(AudioManager.storageKey);
+      if (!raw) {
+        return true;
+      }
+
+      const parsed = JSON.parse(raw) as Partial<AudioSettingsStore>;
+      return parsed.bgmEnabled ?? true;
+    } catch {
+      return true;
+    }
+  }
+
+  private static persistSettings(): void {
     if (typeof window === "undefined") {
       return;
     }
 
-    window.localStorage.setItem(AudioManager.storageKey, JSON.stringify(AudioManager.volumes));
+    window.localStorage.setItem(
+      AudioManager.storageKey,
+      JSON.stringify({
+        ...AudioManager.volumes,
+        bgmEnabled: AudioManager.bgmEnabled
+      } satisfies AudioSettingsStore)
+    );
   }
 }

@@ -2,6 +2,8 @@
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { DIALOGUE_IDS } from "../../common/enums/dialogue";
+import { AudioManager } from "../../core/managers/AudioManager";
+import { DisplaySettingsManager } from "../../core/managers/DisplaySettingsManager";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
 import { DebugPanel } from "../../debug/overlay/DebugPanel";
 import { DebugMinigameHud } from "../../debug/overlay/DebugMinigameHud";
@@ -65,11 +67,14 @@ import {
   AreaTransitionOverlay,
   type RuntimeAreaTransitionTarget
 } from "../view/AreaTransitionOverlay";
+import { UI_DEPTH } from "../systems/uiDepth";
 
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
   private static readonly PENDING_RESTORE_PAYLOAD_KEY = "pendingRestorePayload";
   private static readonly PENDING_DEBUG_FIXED_EVENT_KEY = "pendingDebugFixedEvent";
+  private readonly audioManager = new AudioManager();
+  private readonly displaySettingsManager = new DisplaySettingsManager();
   private initialized = false;
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
@@ -105,6 +110,7 @@ export class MainScene extends Phaser.Scene {
   private destroySkyBackground?: () => void;
   private currentTimeOfDay?: TimeOfDay;
   private wasPlacePopupOpen = false;
+  private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -210,6 +216,14 @@ export class MainScene extends Phaser.Scene {
       saveService: this.saveService,
       buildSavePayload: () => this.buildSavePayload(),
       restoreSavePayload: (payload) => this.restoreSavePayload(payload),
+      getSettingsState: () => ({
+        bgmVolume: this.audioManager.getVolumes().bgm,
+        bgmEnabled: this.audioManager.isBgmEnabled(),
+        brightness: this.displaySettingsManager.getBrightness()
+      }),
+      onAdjustBgmVolume: (delta) => this.adjustBgmVolume(delta),
+      onToggleBgm: () => this.toggleBgmEnabled(),
+      onAdjustBrightness: (delta) => this.adjustBrightness(delta),
       onLogout: () => {
         void this.handleLogout();
       }
@@ -363,6 +377,9 @@ export class MainScene extends Phaser.Scene {
 
     this.areaTransitionOverlay = new AreaTransitionOverlay(this);
     this.areaTransitionOverlay.render(transitionTargets);
+    this.ensureBrightnessOverlay();
+    this.applyBrightnessOverlay();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     this.bindDebugControls();
     this.debugInputController.bind();
@@ -388,6 +405,9 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+      this.brightnessOverlay?.destroy();
+      this.brightnessOverlay = undefined;
       this.destroySkyBackground?.();
       this.destroySkyBackground = undefined;
     };
@@ -444,6 +464,74 @@ await director.run(runtimeSceneScript);
       this.registry.remove("startSceneId");
       this.scene.start(SceneKey.Login);
     }
+  }
+
+  private handleResize(): void {
+    this.layoutBrightnessOverlay();
+  }
+
+  private ensureBrightnessOverlay(): void {
+    if (this.brightnessOverlay) {
+      return;
+    }
+
+    this.brightnessOverlay = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 1)
+      .setScrollFactor(0)
+      .setDepth(UI_DEPTH.hud - 1);
+    this.layoutBrightnessOverlay();
+  }
+
+  private layoutBrightnessOverlay(): void {
+    if (!this.brightnessOverlay) {
+      return;
+    }
+
+    this.brightnessOverlay.setPosition(this.scale.width / 2, this.scale.height / 2);
+    this.brightnessOverlay.setSize(this.scale.width, this.scale.height);
+    this.brightnessOverlay.setDisplaySize(this.scale.width, this.scale.height);
+  }
+
+  private applyBrightnessOverlay(): void {
+    this.ensureBrightnessOverlay();
+    if (!this.brightnessOverlay) {
+      return;
+    }
+
+    const brightness = this.displaySettingsManager.getBrightness();
+    const overlayAlpha = Phaser.Math.Clamp(1 - brightness, 0, 0.45);
+    this.brightnessOverlay.setAlpha(overlayAlpha);
+    this.brightnessOverlay.setVisible(overlayAlpha > 0.001);
+  }
+
+  private adjustBgmVolume(delta: number): void {
+    const current = this.audioManager.getVolumes().bgm;
+    this.audioManager.setBgmVolume(current + delta);
+    this.refreshCurrentAreaBgm();
+  }
+
+  private toggleBgmEnabled(): void {
+    this.audioManager.setBgmEnabled(!this.audioManager.isBgmEnabled());
+    this.refreshCurrentAreaBgm();
+  }
+
+  private adjustBrightness(delta: number): void {
+    const current = this.displaySettingsManager.getBrightness();
+    this.displaySettingsManager.setBrightness(current + delta);
+    this.applyBrightnessOverlay();
+  }
+
+  private refreshCurrentAreaBgm(): void {
+    const currentArea = this.worldManager?.getCurrentAreaId() ?? "world";
+    const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+    const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+    if (currentArea === "world") {
+      void playWorldBgm(this, timeOfDay);
+      return;
+    }
+
+    void playPlaceBgm(this, currentArea as any);
   }
 
   update() {

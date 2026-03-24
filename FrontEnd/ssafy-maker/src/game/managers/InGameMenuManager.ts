@@ -19,6 +19,8 @@ import {
   createSettingsPage,
   createStatsPage,
   refreshStatsPage,
+  type SettingsPageState,
+  type SettingsPageView,
   type StatRowView
 } from "../../features/menu/components/tabPages";
 import { createSavePage, type SaveSlotView } from "../../features/save/components/saveMenu";
@@ -42,6 +44,10 @@ type InGameMenuManagerOptions = {
   saveService: SaveService;
   buildSavePayload: () => SavePayload;
   restoreSavePayload: (payload: SavePayload) => boolean;
+  getSettingsState: () => SettingsPageState;
+  onAdjustBgmVolume: (delta: number) => void;
+  onToggleBgm: () => void;
+  onAdjustBrightness: (delta: number) => void;
   onLogout: () => void;
 };
 
@@ -63,6 +69,10 @@ export class InGameMenuManager {
   private readonly saveService: SaveService;
   private readonly buildSavePayload: () => SavePayload;
   private readonly restoreSavePayload: (payload: SavePayload) => boolean;
+  private readonly getSettingsState: () => SettingsPageState;
+  private readonly onAdjustBgmVolume: (delta: number) => void;
+  private readonly onToggleBgm: () => void;
+  private readonly onAdjustBrightness: (delta: number) => void;
   private readonly onLogout: () => void;
 
   private frame?: MenuFrameView;
@@ -80,6 +90,7 @@ export class InGameMenuManager {
   private inventoryInfoBody?: Phaser.GameObjects.Text;
   private noticeText?: Phaser.GameObjects.Text;
   private saveConfirmDialog?: Phaser.GameObjects.Container;
+  private settingsPageView?: SettingsPageView;
 
   constructor(options: InGameMenuManagerOptions) {
     this.scene = options.scene;
@@ -91,6 +102,10 @@ export class InGameMenuManager {
     this.saveService = options.saveService;
     this.buildSavePayload = options.buildSavePayload;
     this.restoreSavePayload = options.restoreSavePayload;
+    this.getSettingsState = options.getSettingsState;
+    this.onAdjustBgmVolume = options.onAdjustBgmVolume;
+    this.onToggleBgm = options.onToggleBgm;
+    this.onAdjustBrightness = options.onAdjustBrightness;
     this.onLogout = options.onLogout;
   }
 
@@ -106,6 +121,15 @@ export class InGameMenuManager {
     this.statViews = statsPage.statViews;
     const inventoryPage = this.buildInventoryPage(bounds);
     const savePage = this.buildSavePage(bounds);
+    this.settingsPageView = createSettingsPage(this.scene, bounds, {
+      getState: () => this.getSettingsState(),
+      onAdjustBgmVolume: (delta) => this.onAdjustBgmVolume(delta),
+      onToggleBgm: () => this.onToggleBgm(),
+      onAdjustBrightness: (delta) => this.onAdjustBrightness(delta),
+      createActionButton: ({ x, y, width, height, text, onClick }) =>
+        this.createActionButton(x, y, width, height, text, onClick),
+      onLogout: () => this.onLogout()
+    });
     this.noticeText = this.scene.add.text(bounds.x + 24, bounds.bottom + 10, "", {
       fontFamily: FONT_FAMILY,
       fontSize: "13px",
@@ -116,11 +140,7 @@ export class InGameMenuManager {
     this.tabPages = {
       inventory: inventoryPage,
       stats: statsPage.container,
-      settings: createSettingsPage(this.scene, bounds, {
-        createActionButton: ({ x, y, width, height, text, onClick }) =>
-          this.createActionButton(x, y, width, height, text, onClick),
-        onLogout: () => this.onLogout()
-      }),
+      settings: this.settingsPageView.container,
       save: savePage
     };
 
@@ -152,6 +172,7 @@ export class InGameMenuManager {
     this.inventoryInfoBody = undefined;
     this.noticeText = undefined;
     this.saveConfirmDialog = undefined;
+    this.settingsPageView = undefined;
     this.menuOpen = false;
   }
 
@@ -167,6 +188,7 @@ export class InGameMenuManager {
       this.refreshStatsUi();
       this.refreshInventoryUi();
       this.refreshSaveUi();
+      this.settingsPageView?.refresh();
       this.switchTab(this.activeTab);
       void this.hydrateSaveSlots(this.activeTab === "save");
     }
@@ -245,6 +267,9 @@ export class InGameMenuManager {
       this.rebuildSavePage();
       this.refreshSaveUi();
       void this.hydrateSaveSlots(true);
+    }
+    if (tab === "settings") {
+      this.settingsPageView?.refresh();
     }
     this.updateNoticeVisibility();
   }
