@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "ajv": "^8.18.0",
+    "fast-xml-parser": "^5.5.9",
     "typescript": "^5.8.2",
     "vite": "^7.3.1"
   }

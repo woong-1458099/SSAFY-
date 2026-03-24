@@ -17,6 +17,12 @@ export class WorldGridOverlay {
   private visible = true;
   private destroyed = false;
   private lifecycleBound = false;
+  private readonly handleSceneShutdown = () => {
+    this.destroy();
+  };
+  private readonly handleSceneDestroy = () => {
+    this.destroy();
+  };
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -36,16 +42,11 @@ export class WorldGridOverlay {
     player: PlayerSnapshot | undefined,
     staticPlaceTargets: RuntimeStaticPlaceTarget[]
   ) {
-    if (this.destroyed) {
+    if (this.destroyed || !this.areGraphicsActive()) {
       return;
     }
 
-    this.walkableGraphics.clear();
-    this.blockedGraphics.clear();
-    this.manualBlockedGraphics.clear();
-    this.interactionGraphics.clear();
-    this.placePromptGraphics.clear();
-    this.playerProbeGraphics.clear();
+    this.clearGraphics();
 
     if (!this.visible || !runtimeGrids || !parsedMap) {
       return;
@@ -113,19 +114,14 @@ export class WorldGridOverlay {
   }
 
   setVisible(visible: boolean) {
-    if (this.destroyed) {
+    if (this.destroyed || !this.areGraphicsActive()) {
       return;
     }
 
     this.visible = visible;
 
     if (!visible) {
-      this.walkableGraphics.clear();
-      this.blockedGraphics.clear();
-      this.manualBlockedGraphics.clear();
-      this.interactionGraphics.clear();
-      this.placePromptGraphics.clear();
-      this.playerProbeGraphics.clear();
+      this.clearGraphics();
     }
   }
 
@@ -139,6 +135,13 @@ export class WorldGridOverlay {
     }
 
     this.destroyed = true;
+    if (this.lifecycleBound) {
+      this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneShutdown);
+      this.scene.events.off(Phaser.Scenes.Events.DESTROY, this.handleSceneDestroy);
+      this.lifecycleBound = false;
+    }
+
+    this.clearGraphics();
     this.walkableGraphics.destroy();
     this.blockedGraphics.destroy();
     this.manualBlockedGraphics.destroy();
@@ -153,11 +156,27 @@ export class WorldGridOverlay {
     }
 
     this.lifecycleBound = true;
-    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.destroy();
-    });
-    this.scene.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      this.destroy();
-    });
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneShutdown);
+    this.scene.events.once(Phaser.Scenes.Events.DESTROY, this.handleSceneDestroy);
+  }
+
+  private clearGraphics(): void {
+    this.walkableGraphics.clear();
+    this.blockedGraphics.clear();
+    this.manualBlockedGraphics.clear();
+    this.interactionGraphics.clear();
+    this.placePromptGraphics.clear();
+    this.playerProbeGraphics.clear();
+  }
+
+  private areGraphicsActive(): boolean {
+    return [
+      this.walkableGraphics,
+      this.blockedGraphics,
+      this.manualBlockedGraphics,
+      this.interactionGraphics,
+      this.placePromptGraphics,
+      this.playerProbeGraphics
+    ].every((graphics) => graphics.active);
   }
 }

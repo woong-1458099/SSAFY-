@@ -78,6 +78,10 @@ export class AudioManager {
   }
 
   play(scene: Phaser.Scene, key: string, category: AudioCategory, config: Phaser.Types.Sound.SoundConfig = {}): boolean {
+    if (!AudioManager.isCategoryEnabled(category)) {
+      return false;
+    }
+
     if (!scene.cache.audio.exists(key)) {
       return false;
     }
@@ -95,6 +99,10 @@ export class AudioManager {
     category: AudioCategory,
     config: Phaser.Types.Sound.SoundConfig = {}
   ): Phaser.Sound.BaseSound | null {
+    if (!AudioManager.isCategoryEnabled(category)) {
+      return null;
+    }
+
     if (!scene.cache.audio.exists(key)) {
       return null;
     }
@@ -157,6 +165,18 @@ export class AudioManager {
       return 0;
     }
     return AudioManager.clamp(baseVolume) * AudioManager.volumes[category];
+  }
+
+  private static isCategoryEnabled(category: AudioCategory): boolean {
+    if (category === "bgm") {
+      return AudioManager.bgmEnabled;
+    }
+
+    if (category === "sfx") {
+      return AudioManager.sfxEnabled;
+    }
+
+    return true;
   }
 
   private static registerManagedSound(sound: Phaser.Sound.BaseSound, category: AudioCategory, baseVolume: number): void {

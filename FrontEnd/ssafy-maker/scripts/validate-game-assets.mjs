@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { XMLParser } from "fast-xml-parser";
 import ts from "typescript";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,6 +44,11 @@ const PATH_ALIASES = {
 };
 
 const exportedConstantCache = new Map();
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "",
+  allowBooleanAttributes: true
+});
 
 function walkFiles(dirPath) {
   if (!fs.existsSync(dirPath)) {
@@ -551,9 +557,32 @@ function collectAssetReferences(filePath) {
   return { references, issues, assetKeyReferences, assetPathReferences };
 }
 
+function toArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return value ? [value] : [];
+}
+
 function readTmxLayerNames(filePath) {
   const rawTmx = fs.readFileSync(filePath, "utf8");
-  return [...rawTmx.matchAll(/<layer\b[^>]*\bname="([^"]+)"/g)].map((match) => match[1]);
+
+  let parsed;
+  try {
+    parsed = xmlParser.parse(rawTmx);
+  } catch (error) {
+    throw new Error(`Failed to parse TMX XML: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const mapNode = parsed?.map;
+  if (!mapNode || typeof mapNode !== "object") {
+    throw new Error("TMX map node is missing");
+  }
+
+  return toArray(mapNode.layer)
+    .map((layerNode) => (layerNode && typeof layerNode === "object" ? layerNode.name : undefined))
+    .filter((name) => typeof name === "string" && name.trim().length > 0);
 }
 
 function validateRequiredTmxLayers(issues) {
@@ -564,7 +593,16 @@ function validateRequiredTmxLayers(issues) {
       return;
     }
 
-    const layerNames = readTmxLayerNames(absolutePath);
+    let layerNames;
+    try {
+      layerNames = readTmxLayerNames(absolutePath);
+    } catch (error) {
+      issues.push(
+        `[validate:game-assets] Failed to parse ${assetPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return;
+    }
+
     const availableLayerSet = new Set(layerNames.map((name) => name.trim().toLowerCase()));
 
     Object.entries(groups).forEach(([groupName, requiredNames]) => {
