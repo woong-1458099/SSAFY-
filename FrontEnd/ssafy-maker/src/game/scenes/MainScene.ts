@@ -342,20 +342,7 @@ export class MainScene extends Phaser.Scene {
     this.interactionManager.setTransitionTargets(transitionTargets);
     this.interactionManager.setStaticPlaceTargets(staticPlaceTargets);
 
-    const mapSize = parsedMap
-      ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`
-      : undefined;
-
-    this.debugLogger.setArea(
-      runtimeSceneScript.area,
-      tmxConfig?.tmxKey,
-      mapSize,
-      resolvedLayers?.collisionLayers.length,
-      resolvedLayers?.interactionLayers.length,
-      resolvedLayers?.foregroundLayers.length,
-      runtimeGrids ? countTrueCells(runtimeGrids.blockedGrid) : 0,
-      runtimeGrids ? countTrueCells(runtimeGrids.interactionGrid) : 0
-    );
+    this.syncDebugWorldState();
 
     if (parsedMap && runtimeGrids && this.playerManager) {
       const startTile = this.resolvePlayerStartTile(runtimeSceneScript.area, parsedMap, runtimeGrids);
@@ -621,6 +608,7 @@ await director.run(runtimeSceneScript);
 
     const automaticProgressionFlowOpened =
       !fixedEventStarted && this.progressionManager?.processAutomaticFlow() === true;
+    this.syncDebugWorldState();
     this.fixedEventNpcManager?.render({
       presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
       areaId: this.worldManager.getCurrentAreaId() ?? "world",
@@ -671,6 +659,32 @@ await director.run(runtimeSceneScript);
     }
 
     this.debugOverlay?.render();
+  }
+
+  private syncDebugWorldState(): void {
+    if (!this.debugLogger || !this.worldManager) {
+      return;
+    }
+
+    const currentAreaId = this.worldManager.getCurrentAreaId() ?? this.currentSceneState?.area ?? "world";
+    const tmxConfig = this.worldManager.getCurrentTmxConfig();
+    const parsedMap = this.worldManager.getCurrentParsedTmxMap();
+    const resolvedLayers = this.worldManager.getCurrentResolvedTmxLayers();
+    const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
+    const mapSize = parsedMap
+      ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`
+      : undefined;
+
+    this.debugLogger.setArea(
+      currentAreaId,
+      tmxConfig?.tmxKey,
+      mapSize,
+      resolvedLayers?.collisionLayers.length,
+      resolvedLayers?.interactionLayers.length,
+      resolvedLayers?.foregroundLayers.length,
+      runtimeGrids ? countTrueCells(runtimeGrids.blockedGrid) : 0,
+      runtimeGrids ? countTrueCells(runtimeGrids.interactionGrid) : 0
+    );
   }
 
   private bindDebugControls() {
