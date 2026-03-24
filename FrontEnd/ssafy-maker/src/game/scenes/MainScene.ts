@@ -477,6 +477,30 @@ update() {
 
   this.debugOverlay?.render();
 }
+
+  private async handleLogout(): Promise<void> {
+    if (this.logoutInProgress) {
+      return;
+    }
+
+    this.logoutInProgress = true;
+    this.input.enabled = false;
+    this.menuManager?.close();
+    this.sound.stopAll();
+    clearAuthRegistry(this.registry);
+    clearStoredSession();
+
+    try {
+      await beginLogout();
+    } catch (error) {
+      console.error("[MainScene] logout failed, falling back to local logout", error);
+      this.registry.remove(MainScene.PENDING_RESTORE_PAYLOAD_KEY);
+      this.registry.remove(MainScene.PENDING_START_TILE_KEY);
+      this.registry.remove("startSceneId");
+      this.scene.start(SceneKey.Login);
+    }
+  }
+
   private bindDebugControls() {
     this.unsubscribeDebugCommandBus?.();
     this.unsubscribeDebugCommandBus = this.debugCommandBus?.subscribe((command) => {

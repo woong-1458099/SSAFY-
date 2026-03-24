@@ -275,14 +275,16 @@ export class DialogueBox {
   private updateLayout(): void {
     const metrics = this.getLayoutMetrics();
     this.overlay.setSize(this.scene.scale.width, this.scene.scale.height);
-    this.panel.setPosition(panelX, panelY);
-    this.panel.setSize(panelWidth, panelHeight);
-    this.panel.setDisplaySize(panelWidth, panelHeight);
-    this.speakerBadge.setPosition(panelX + 30, panelY + 30);
-    this.speakerText.setPosition(panelX + 45, panelY + 30); // 뱃지 중앙 정렬을 위해 약간 조정
-    this.bodyText.setPosition(panelX + 32, panelY + 64);
-    this.bodyText.setWordWrapWidth(panelWidth - 64);
-    this.hintText.setPosition(panelX + panelWidth - 28, panelY + panelHeight - 20);
+    this.panel.setPosition(metrics.panelX, metrics.panelY);
+    this.panel.setSize(metrics.panelWidth, metrics.panelHeight);
+    this.panel.setDisplaySize(metrics.panelWidth, metrics.panelHeight);
+    this.speakerBadge.setPosition(metrics.innerX, metrics.headerY + metrics.headerHeight / 2);
+    this.speakerBadge.setSize(metrics.speakerBadgeWidth, metrics.headerHeight);
+    this.speakerBadge.setDisplaySize(metrics.speakerBadgeWidth, metrics.headerHeight);
+    this.speakerText.setPosition(metrics.innerX + 18, metrics.headerY + metrics.headerHeight / 2);
+    this.bodyText.setPosition(metrics.innerX, metrics.bodyY);
+    this.bodyText.setWordWrapWidth(metrics.innerWidth);
+    this.hintText.setPosition(metrics.hintX, metrics.hintY);
 
     let currentChoiceY = metrics.choiceY;
     this.choiceViews.forEach((view, index) => {
