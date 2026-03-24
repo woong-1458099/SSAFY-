@@ -215,8 +215,7 @@ export class MainScene extends Phaser.Scene {
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
       getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
-      refreshTimeAdvanceBlockedState: () => this.storyEventManager?.refreshCurrentWeekLoadState(),
-      getTimeAdvanceBlockedMessage: () => this.storyEventManager?.getTimeAdvanceBlockedMessage() ?? null,
+      resolveTimeAdvanceBlockedMessage: () => this.storyEventManager?.resolveTimeAdvanceBlockedMessage() ?? null,
       onNotice: (message) => this.menuManager?.showNotice(message),
       onStartEndingFlow: () => this.startEndingFlow()
     });

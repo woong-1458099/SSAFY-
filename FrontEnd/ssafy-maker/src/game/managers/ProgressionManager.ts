@@ -33,8 +33,7 @@ type ProgressionManagerOptions = {
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
-  refreshTimeAdvanceBlockedState?: () => void;
-  getTimeAdvanceBlockedMessage?: () => string | null;
+  resolveTimeAdvanceBlockedMessage?: () => string | null;
   onNotice?: (message: string) => void;
   onStartEndingFlow?: () => void;
 };
@@ -55,8 +54,7 @@ export class ProgressionManager {
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   private readonly getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
-  private readonly refreshTimeAdvanceBlockedState?: () => void;
-  private readonly getTimeAdvanceBlockedMessage?: () => string | null;
+  private readonly resolveTimeAdvanceBlockedMessage?: () => string | null;
   private readonly onNotice?: (message: string) => void;
   private readonly onStartEndingFlow?: () => void;
 
@@ -75,8 +73,7 @@ export class ProgressionManager {
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
     this.getFixedEventSlots = options.getFixedEventSlots;
-    this.refreshTimeAdvanceBlockedState = options.refreshTimeAdvanceBlockedState;
-    this.getTimeAdvanceBlockedMessage = options.getTimeAdvanceBlockedMessage;
+    this.resolveTimeAdvanceBlockedMessage = options.resolveTimeAdvanceBlockedMessage;
     this.onNotice = options.onNotice;
     this.onStartEndingFlow = options.onStartEndingFlow;
   }
@@ -157,9 +154,7 @@ export class ProgressionManager {
       };
     }
     if (!options?.ignoreTimeAdvanceBlock) {
-      // User-initiated time advancement retries week loading before enforcing the block.
-      this.refreshTimeAdvanceBlockedState?.();
-      const blockedMessage = this.getTimeAdvanceBlockedMessage?.() ?? null;
+      const blockedMessage = this.resolveTimeAdvanceBlockedMessage?.() ?? null;
       if (blockedMessage) {
         if (options?.notifyOnFailure !== false) {
           this.onNotice?.(blockedMessage);

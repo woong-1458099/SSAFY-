@@ -55,7 +55,7 @@ export class StoryEventManager {
   private readonly weekLoadRetryAvailableAt = new Map<number, number>();
   private completedFixedEventIds: string[] = [];
   private activeFixedEventId: string | null = null;
-  private pendingTriggerLocation: string | null = null;
+  private pendingTriggerLocations: string[] = [];
   private starting = false;
 
   constructor(options: StoryEventManagerOptions) {
@@ -77,7 +77,7 @@ export class StoryEventManager {
 
   destroy(): void {
     this.activeFixedEventId = null;
-    this.pendingTriggerLocation = null;
+    this.pendingTriggerLocations = [];
     this.starting = false;
     this.removeRuntimeDialogueScript(StoryEventManager.FIXED_EVENT_DIALOGUE_ID);
   }
@@ -218,6 +218,12 @@ export class StoryEventManager {
     this.retryWeekLoadIfNeeded(normalizedWeek);
   }
 
+  resolveTimeAdvanceBlockedMessage(): string | null {
+    const week = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
+    this.retryWeekLoadIfNeeded(week);
+    return this.getTimeAdvanceBlockedMessage();
+  }
+
   getTimeAdvanceBlockedMessage(): string | null {
     const week = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
     if (!this.weekData.has(week)) {
@@ -249,7 +255,9 @@ export class StoryEventManager {
       return;
     }
 
-    this.pendingTriggerLocation = normalizedLocation;
+    if (!this.pendingTriggerLocations.includes(normalizedLocation)) {
+      this.pendingTriggerLocations.push(normalizedLocation);
+    }
   }
 
   tryStartQueuedOrCurrentFixedEvent(): boolean {
@@ -456,24 +464,25 @@ export class StoryEventManager {
   }
 
   private tryStartQueuedFixedEvent(): boolean {
-    const queuedLocation = this.pendingTriggerLocation?.trim();
-    if (!queuedLocation) {
-      this.pendingTriggerLocation = null;
-      return false;
-    }
-
     const week = this.getHudState().week;
     if (!this.weekData.has(week)) {
-      this.syncWeek(week);
+      this.retryWeekLoadIfNeeded(week);
       return false;
     }
 
-    const started = this.tryStartFixedEventForLocation(queuedLocation);
-    if (started || this.weekData.has(week)) {
-      this.pendingTriggerLocation = null;
+    while (this.pendingTriggerLocations.length > 0) {
+      const queuedLocation = this.pendingTriggerLocations.shift()?.trim() ?? "";
+      if (!queuedLocation) {
+        continue;
+      }
+
+      const started = this.tryStartFixedEventForLocation(queuedLocation);
+      if (started) {
+        return true;
+      }
     }
 
-    return started;
+    return false;
   }
 
   private retryWeekLoadIfNeeded(week: number): void {
