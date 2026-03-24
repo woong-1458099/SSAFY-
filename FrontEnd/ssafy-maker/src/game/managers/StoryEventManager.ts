@@ -26,6 +26,7 @@ type StoryEventManagerOptions = {
   getHudState: () => HudState;
   getCurrentArea: () => AreaId;
   getCurrentLocation: () => string;
+  getPlayerGender: () => string;
   getPlayerName: () => string;
   setRuntimeDialogueScript: (script: DialogueScript) => void;
   removeRuntimeDialogueScript: (dialogueId: string) => void;
@@ -41,6 +42,7 @@ export class StoryEventManager {
   private readonly getHudState: () => HudState;
   private readonly getCurrentArea: () => AreaId;
   private readonly getCurrentLocation: () => string;
+  private readonly getPlayerGender: () => string;
   private readonly getPlayerName: () => string;
   private readonly setRuntimeDialogueScript: (script: DialogueScript) => void;
   private readonly removeRuntimeDialogueScript: (dialogueId: string) => void;
@@ -59,6 +61,7 @@ export class StoryEventManager {
     this.getHudState = options.getHudState;
     this.getCurrentArea = options.getCurrentArea;
     this.getCurrentLocation = options.getCurrentLocation;
+    this.getPlayerGender = options.getPlayerGender;
     this.getPlayerName = options.getPlayerName;
     this.setRuntimeDialogueScript = options.setRuntimeDialogueScript;
     this.removeRuntimeDialogueScript = options.removeRuntimeDialogueScript;
@@ -112,7 +115,16 @@ export class StoryEventManager {
     }
 
     return getFixedEventEntries(rawData)
-      .filter((event) => event.eventType === "FIXED" || event.eventType === "ROMANCE")
+      .filter((event) => {
+        if (event.eventType !== "FIXED" && event.eventType !== "ROMANCE") return false;
+        if (event.eventType === "ROMANCE") {
+          const eventId = String((event.id ?? event.eventId) || "");
+          const gender = this.getPlayerGender();
+          if (gender === "MALE" && eventId.includes("_MINSU_")) return false;
+          if (gender === "FEMALE" && eventId.includes("_HYO_")) return false;
+        }
+        return true;
+      })
       .map((event) =>
         buildFixedEventDebugEntry(event, {
           completedEventIds: this.completedFixedEventIds
@@ -165,6 +177,13 @@ export class StoryEventManager {
       const timing = event.triggerTiming;
       if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) {
         return;
+      }
+
+      if (event.eventType === "ROMANCE") {
+        const eventId = String((event.id ?? event.eventId) || "");
+        const gender = this.getPlayerGender();
+        if (gender === "MALE" && eventId.includes("_MINSU_")) return;
+        if (gender === "FEMALE" && eventId.includes("_HYO_")) return;
       }
 
       const sameWeek = Math.round(timing.week ?? -1) === week;
@@ -291,6 +310,14 @@ export class StoryEventManager {
     return (
       getFixedEventEntries(rawData).find((event) => {
         const rawEventId = event.id ?? event.eventId;
+        const eventIdStr = typeof rawEventId === "string" ? rawEventId : "";
+        
+        if (event.eventType === "ROMANCE") {
+          const gender = this.getPlayerGender();
+          if (gender === "MALE" && eventIdStr.includes("_MINSU_")) return false;
+          if (gender === "FEMALE" && eventIdStr.includes("_HYO_")) return false;
+        }
+
         return (event.eventType === "FIXED" || event.eventType === "ROMANCE") && typeof rawEventId === "string" && rawEventId.trim() === normalizedEventId;
       }) ?? null
     );
@@ -312,7 +339,8 @@ export class StoryEventManager {
         week,
         day: this.resolveDayIndex(hudState.dayLabel) + 1,
         timeOfDay: hudState.timeLabel,
-        location
+        location,
+        playerGender: this.getPlayerGender()
       },
       this.completedFixedEventIds
     );
@@ -330,12 +358,19 @@ export class StoryEventManager {
     return (
       getFixedEventEntries(rawData).find((event) => {
         const timing = event.triggerTiming;
-        if (!timing || event.eventType !== "FIXED") {
+        if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) {
           return false;
         }
 
         const rawEventId = event.id ?? event.eventId;
         const eventId = typeof rawEventId === "string" ? rawEventId : "";
+        
+        if (event.eventType === "ROMANCE") {
+          const gender = this.getPlayerGender();
+          if (gender === "MALE" && eventId.includes("_MINSU_")) return false;
+          if (gender === "FEMALE" && eventId.includes("_HYO_")) return false;
+        }
+
         if (event.isRepeatable !== true && eventId && this.completedFixedEventIds.includes(eventId)) {
           return false;
         }

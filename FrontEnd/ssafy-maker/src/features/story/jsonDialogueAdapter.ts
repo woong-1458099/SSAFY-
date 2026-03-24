@@ -87,6 +87,7 @@ type FixedEventMatchContext = {
   day: number;
   timeOfDay: string;
   location: string;
+  playerGender?: string;
 };
 
 type BuildDialogueOptions = {
@@ -411,7 +412,15 @@ export function findMatchingFixedEvent(
       const sameDay = Math.round(timing.day ?? -1) === context.day;
       const sameTime = normalizeToken(timing.timeOfDay) === targetTime;
       const sameLocation = matchesFixedEventLocation(event.location, context.location);
-      return sameWeek && sameDay && sameTime && sameLocation;
+      
+      if (sameWeek && sameDay && sameTime && sameLocation) {
+        if (event.eventType === "ROMANCE" && context.playerGender) {
+          if (context.playerGender === "MALE" && eventId.includes("_MINSU_")) return false;
+          if (context.playerGender === "FEMALE" && eventId.includes("_HYO_")) return false;
+        }
+        return true;
+      }
+      return false;
     }) ?? null
   );
 }

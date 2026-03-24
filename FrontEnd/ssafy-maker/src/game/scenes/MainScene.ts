@@ -229,6 +229,10 @@ export class MainScene extends Phaser.Scene {
       getHudState: () => this.statSystemManager!.getHudState(),
       getCurrentArea: () => this.worldManager?.getCurrentAreaId() ?? "world",
       getCurrentLocation: () => this.statSystemManager!.getHudState().locationLabel,
+      getPlayerGender: () => {
+        const raw = this.registry.get("playerData") as { gender?: string } | undefined;
+        return typeof raw?.gender === "string" ? raw.gender.toUpperCase() : "MALE";
+      },
       getPlayerName: () => {
         const raw = this.registry.get("playerData") as { name?: string } | undefined;
         const name = typeof raw?.name === "string" ? raw.name.trim() : "";
