@@ -234,7 +234,7 @@ export class MainScene extends Phaser.Scene {
       removeRuntimeDialogueScript: (dialogueId) => this.removeRuntimeDialogueScript(dialogueId),
       playDialogue: (dialogueId) => this.dialogueManager!.play(dialogueId),
       advanceTimeAfterFixedEvent: () => {
-        if (this.progressionManager?.consumeActionPoint({ ignoreTimeAdvanceBlock: true })) {
+        if (this.progressionManager?.consumeActionPoint()) {
           this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
         }
       },

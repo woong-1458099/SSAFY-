@@ -59,6 +59,7 @@ export class StoryEventManager {
   private activeFixedEventId: string | null = null;
   private pendingTriggerLocations: string[] = [];
   private starting = false;
+  private loadGeneration = 0;
 
   constructor(options: StoryEventManagerOptions) {
     this.scene = options.scene;
@@ -78,9 +79,14 @@ export class StoryEventManager {
   }
 
   destroy(): void {
+    this.loadGeneration += 1;
     this.activeFixedEventId = null;
     this.pendingTriggerLocations = [];
     this.starting = false;
+    this.weekData.clear();
+    this.weekLoads.clear();
+    this.weekLoadErrors.clear();
+    this.weekLoadRetryAvailableAt.clear();
     this.weekLastForcedLoadRequestedAt.clear();
     this.removeRuntimeDialogueScript(StoryEventManager.FIXED_EVENT_DIALOGUE_ID);
   }
@@ -305,14 +311,13 @@ export class StoryEventManager {
       if (eventId && !this.completedFixedEventIds.includes(eventId)) {
         this.completedFixedEventIds.push(eventId);
       }
+      this.clearActiveFixedEvent(runtimeScript.id);
       this.advanceTimeAfterFixedEvent();
     } catch (error) {
       const message = error instanceof Error ? error.message : "고정 이벤트 실행 중 오류가 발생했습니다";
       this.onNotice?.(message);
     } finally {
-      this.activeFixedEventId = null;
-      this.starting = false;
-      this.removeRuntimeDialogueScript(runtimeScript.id);
+      this.clearActiveFixedEvent(runtimeScript.id);
       this.syncWeek(this.getHudState().week);
     }
   }
@@ -330,16 +335,22 @@ export class StoryEventManager {
     }
 
     this.clearWeekLoadFailureState(normalizedWeek);
+    const loadGeneration = this.loadGeneration;
 
     const request = loadFixedEventWeek(normalizedWeek)
       .then((rawData) => {
+        if (loadGeneration !== this.loadGeneration) {
+          return rawData;
+        }
         this.weekData.set(normalizedWeek, rawData);
         this.clearWeekLoadFailureState(normalizedWeek);
         this.weekLoads.delete(normalizedWeek);
         return rawData;
       })
       .catch((error) => {
-        this.weekLoads.delete(normalizedWeek);
+        if (loadGeneration === this.loadGeneration) {
+          this.weekLoads.delete(normalizedWeek);
+        }
         throw error;
       });
 
@@ -348,6 +359,9 @@ export class StoryEventManager {
     try {
       await request;
     } catch (error) {
+      if (loadGeneration !== this.loadGeneration) {
+        return;
+      }
       const message = error instanceof Error ? error.message : "고정 이벤트 데이터를 불러오지 못했습니다";
       this.weekLoadErrors.set(normalizedWeek, message);
       this.weekLoadRetryAvailableAt.set(
@@ -534,6 +548,12 @@ export class StoryEventManager {
   private clearWeekLoadFailureState(week: number): void {
     this.weekLoadErrors.delete(week);
     this.weekLoadRetryAvailableAt.delete(week);
+  }
+
+  private clearActiveFixedEvent(dialogueId: string): void {
+    this.activeFixedEventId = null;
+    this.starting = false;
+    this.removeRuntimeDialogueScript(dialogueId);
   }
 
   private resolveDayIndex(dayLabel: string): number {

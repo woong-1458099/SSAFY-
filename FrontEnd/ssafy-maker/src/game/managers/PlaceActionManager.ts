@@ -53,6 +53,7 @@ export class PlaceActionManager {
   private readonly onHomeTimeAdvanced?: () => void;
   private popupRoot?: Phaser.GameObjects.Container;
   private popupRequestId = 0;
+  private homeTimeAdvanceScheduled = false;
 
   constructor(options: PlaceActionManagerOptions) {
     this.scene = options.scene;
@@ -70,6 +71,7 @@ export class PlaceActionManager {
 
   destroy(): void {
     this.scene.game.events.off(LOTTO_COMPLETED_EVENT, this.handleLottoCompleted, this);
+    this.homeTimeAdvanceScheduled = false;
     this.close();
   }
 
@@ -201,7 +203,13 @@ export class PlaceActionManager {
       stress: Phaser.Math.Clamp(hudState.stress + result.stressDelta, 0, 100)
     });
     this.close();
-    this.onHomeTimeAdvanced?.();
+    if (!this.homeTimeAdvanceScheduled) {
+      this.homeTimeAdvanceScheduled = true;
+      this.scene.time.delayedCall(0, () => {
+        this.homeTimeAdvanceScheduled = false;
+        this.onHomeTimeAdvanced?.();
+      });
+    }
   }
 
   private usePlace(placeId: Exclude<PlaceId, "campus" | "downtown" | "home" | "store">): void {
