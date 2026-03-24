@@ -55,7 +55,7 @@ import { StatSystemManager } from "../managers/StatSystemManager";
 import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
 import type { SceneId } from "../scripts/scenes/sceneIds";
-import { playPlaceBgm, playWorldBgm, createSkyBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
+import { playPlaceBgm, playWorldBgm, createSkyBackground, createCampusBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
 import {
   DEFAULT_START_SCENE_ID,
   getDefaultSceneIdForArea,
@@ -417,14 +417,16 @@ await director.run(runtimeSceneScript);
       ? parsedMap.height * renderBounds.tileHeight * renderBounds.scale
       : undefined;
 
+    this.destroySkyBackground?.();
     if (currentArea === "world") {
       void playWorldBgm(this, timeOfDay, this.audioManager);
-      this.destroySkyBackground?.();
       this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
     } else if (currentArea === "downtown") {
-      void playPlaceBgm(this, currentArea as any, this.audioManager);
-      this.destroySkyBackground?.();
+      void playPlaceBgm(this, "downtown" as any, this.audioManager);
       this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
+    } else if (currentArea === "campus") {
+      void playPlaceBgm(this, "campus" as any, this.audioManager);
+      this.destroySkyBackground = createCampusBackground(this, -10);
     } else {
       void playPlaceBgm(this, currentArea as any, this.audioManager);
     }
@@ -638,7 +640,7 @@ await director.run(runtimeSceneScript);
     }
 
     const currentArea = this.worldManager.getCurrentAreaId();
-    if (currentArea === "world" || currentArea === "downtown") {
+    if (currentArea === "world" || currentArea === "downtown" || currentArea === "campus") {
       const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
       const newTimeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
 
@@ -651,7 +653,11 @@ await director.run(runtimeSceneScript);
         const mapPixelHeight = rb && pm ? pm.height * rb.tileHeight * rb.scale : undefined;
 
         this.destroySkyBackground?.();
-        this.destroySkyBackground = createSkyBackground(this, newTimeOfDay, mapPixelWidth, mapPixelHeight);
+        if (currentArea === "world" || currentArea === "downtown") {
+          this.destroySkyBackground = createSkyBackground(this, newTimeOfDay, mapPixelWidth, mapPixelHeight);
+        } else if (currentArea === "campus") {
+          this.destroySkyBackground = createCampusBackground(this, -10);
+        }
 
         if (currentArea === "world") {
           void playWorldBgm(this, newTimeOfDay, this.audioManager);

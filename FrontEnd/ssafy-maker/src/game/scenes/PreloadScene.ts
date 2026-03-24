@@ -26,6 +26,9 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: AREA_TRANSITION_MARKER_SPRITE.frameHeight
     });
 
+    this.load.audio("male_voice", "assets/game/audio/SoundEffect/voice_male.wav");
+    this.load.audio("female_voice", "assets/game/audio/SoundEffect/voice_female.wav");
+
     // 각 영역 TMX를 텍스트로 로드한다.
     this.load.text(ASSET_KEYS.map.worldTmx, ASSET_PATHS.map.worldTmx);
     this.load.text(ASSET_KEYS.map.downtownTmx, ASSET_PATHS.map.downtownTmx);
