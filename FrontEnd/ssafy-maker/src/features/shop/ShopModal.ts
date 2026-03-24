@@ -250,13 +250,8 @@ export function createShopModal(scene: Phaser.Scene, options: {
       }).setOrigin(0.5);
       const buyButton = scene.add.rectangle(0, 122, 132, 30, 0x2b5a8c, 1);
       buyButton.setStrokeStyle(1, 0x8ed2ff, 1);
-      const buyHint = scene.add.text(0, 122, "클릭 구매", {
-        fontFamily: FONT_FAMILY,
-        fontSize: "12px",
-        color: "#dceeff",
-        resolution: 2
-      }).setOrigin(0.5);
-      cardRoot.add([card, iconPlate, iconImage, iconLabel, typeText, nameText, priceText, buyButton, buyHint]);
+      ;
+      cardRoot.add([card, iconPlate, iconImage, iconLabel, typeText, nameText, priceText, buyButton]);
 
       card.setInteractive({ useHandCursor: true });
       card.on("pointerover", (pointer: Phaser.Input.Pointer) => {
