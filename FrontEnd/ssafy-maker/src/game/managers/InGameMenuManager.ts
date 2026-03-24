@@ -47,6 +47,8 @@ type InGameMenuManagerOptions = {
   getSettingsState: () => SettingsPageState;
   onAdjustBgmVolume: (delta: number) => void;
   onToggleBgm: () => void;
+  onAdjustSfxVolume: (delta: number) => void;
+  onToggleSfx: () => void;
   onAdjustBrightness: (delta: number) => void;
   onLogout: () => void;
 };
@@ -72,6 +74,8 @@ export class InGameMenuManager {
   private readonly getSettingsState: () => SettingsPageState;
   private readonly onAdjustBgmVolume: (delta: number) => void;
   private readonly onToggleBgm: () => void;
+  private readonly onAdjustSfxVolume: (delta: number) => void;
+  private readonly onToggleSfx: () => void;
   private readonly onAdjustBrightness: (delta: number) => void;
   private readonly onLogout: () => void;
 
@@ -105,6 +109,8 @@ export class InGameMenuManager {
     this.getSettingsState = options.getSettingsState;
     this.onAdjustBgmVolume = options.onAdjustBgmVolume;
     this.onToggleBgm = options.onToggleBgm;
+    this.onAdjustSfxVolume = options.onAdjustSfxVolume;
+    this.onToggleSfx = options.onToggleSfx;
     this.onAdjustBrightness = options.onAdjustBrightness;
     this.onLogout = options.onLogout;
   }
@@ -125,6 +131,8 @@ export class InGameMenuManager {
       getState: () => this.getSettingsState(),
       onAdjustBgmVolume: (delta) => this.onAdjustBgmVolume(delta),
       onToggleBgm: () => this.onToggleBgm(),
+      onAdjustSfxVolume: (delta) => this.onAdjustSfxVolume(delta),
+      onToggleSfx: () => this.onToggleSfx(),
       onAdjustBrightness: (delta) => this.onAdjustBrightness(delta),
       createActionButton: ({ x, y, width, height, text, onClick }) =>
         this.createActionButton(x, y, width, height, text, onClick),

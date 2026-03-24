@@ -10,6 +10,7 @@ type VolumeState = {
 
 type AudioSettingsStore = VolumeState & {
   bgmEnabled: boolean;
+  sfxEnabled: boolean;
 };
 
 type ManagedSound = {
@@ -26,6 +27,7 @@ export class AudioManager {
     ambience: 0.6
   };
   private static bgmEnabled = AudioManager.loadBgmEnabled();
+  private static sfxEnabled = AudioManager.loadSfxEnabled();
   private static volumes: VolumeState = AudioManager.loadVolumes();
   private static managedSounds = new Set<ManagedSound>();
 
@@ -43,6 +45,14 @@ export class AudioManager {
 
   setSfxVolume(value: number): void {
     AudioManager.setVolume("sfx", value);
+  }
+
+  setSfxEnabled(enabled: boolean): void {
+    AudioManager.setSfxEnabled(enabled);
+  }
+
+  isSfxEnabled(): boolean {
+    return AudioManager.sfxEnabled;
   }
 
   setAmbienceVolume(value: number): void {
@@ -120,8 +130,17 @@ export class AudioManager {
     AudioManager.refreshManagedSounds();
   }
 
+  private static setSfxEnabled(enabled: boolean): void {
+    AudioManager.sfxEnabled = enabled;
+    AudioManager.persistSettings();
+    AudioManager.refreshManagedSounds();
+  }
+
   private static getEffectiveVolumeFor(category: AudioCategory, baseVolume: number): number {
     if (category === "bgm" && !AudioManager.bgmEnabled) {
+      return 0;
+    }
+    if (category === "sfx" && !AudioManager.sfxEnabled) {
       return 0;
     }
     return AudioManager.clamp(baseVolume) * AudioManager.volumes[category];
@@ -216,6 +235,9 @@ export class AudioManager {
       if (typeof parsed.bgmEnabled === "boolean") {
         legacyOrCurrentSettings.bgmEnabled = parsed.bgmEnabled;
       }
+      if (typeof parsed.sfxEnabled === "boolean") {
+        legacyOrCurrentSettings.sfxEnabled = parsed.sfxEnabled;
+      }
 
       return legacyOrCurrentSettings;
     } catch {
@@ -237,6 +259,11 @@ export class AudioManager {
     return parsed?.bgmEnabled ?? true;
   }
 
+  private static loadSfxEnabled(): boolean {
+    const parsed = AudioManager.readStoredSettings();
+    return parsed?.sfxEnabled ?? true;
+  }
+
   private static persistSettings(): void {
     if (typeof window === "undefined") {
       return;
@@ -247,7 +274,8 @@ export class AudioManager {
         AudioManager.storageKey,
         JSON.stringify({
           ...AudioManager.volumes,
-          bgmEnabled: AudioManager.bgmEnabled
+          bgmEnabled: AudioManager.bgmEnabled,
+          sfxEnabled: AudioManager.sfxEnabled
         } satisfies AudioSettingsStore)
       );
     } catch (error) {

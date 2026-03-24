@@ -231,10 +231,14 @@ export class MainScene extends Phaser.Scene {
       getSettingsState: () => ({
         bgmVolume: this.audioManager.getVolumes().bgm,
         bgmEnabled: this.audioManager.isBgmEnabled(),
+        sfxVolume: this.audioManager.getVolumes().sfx,
+        sfxEnabled: this.audioManager.isSfxEnabled(),
         brightness: this.displaySettingsManager.getBrightness()
       }),
       onAdjustBgmVolume: (delta) => this.adjustBgmVolume(delta),
       onToggleBgm: () => this.toggleBgmEnabled(),
+      onAdjustSfxVolume: (delta) => this.adjustSfxVolume(delta),
+      onToggleSfx: () => this.toggleSfxEnabled(),
       onAdjustBrightness: (delta) => this.adjustBrightness(delta),
       onLogout: () => {
         void this.handleLogout();
@@ -532,6 +536,15 @@ await director.run(runtimeSceneScript);
   private toggleBgmEnabled(): void {
     this.audioManager.setBgmEnabled(!this.audioManager.isBgmEnabled());
     this.refreshCurrentAreaBgm();
+  }
+
+  private adjustSfxVolume(delta: number): void {
+    const current = this.audioManager.getVolumes().sfx;
+    this.audioManager.setSfxVolume(current + delta);
+  }
+
+  private toggleSfxEnabled(): void {
+    this.audioManager.setSfxEnabled(!this.audioManager.isSfxEnabled());
   }
 
   private adjustBrightness(delta: number): void {

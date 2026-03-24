@@ -40,7 +40,6 @@ export class WorldManager {
   private scene: Phaser.Scene;
   private currentAreaId?: AreaId;
   private background?: Phaser.GameObjects.Rectangle;
-  private areaLabel?: Phaser.GameObjects.Text;
   private currentParsedTmxMap?: ParsedTmxMap;
   private currentParsedTsxTileset?: ParsedTsxTileset;
   private currentResolvedTmxLayers?: ResolvedTmxLayers;
@@ -62,18 +61,9 @@ export class WorldManager {
       this.background = this.scene.add.rectangle(640, 360, 1280, 720, 0x31473a);
     }
 
-    if (!this.areaLabel) {
-      this.areaLabel = this.scene.add.text(24, 24, "", {
-        fontSize: "28px",
-        color: "#ffffff"
-      });
-    }
-
     // 타일 렌더가 실패할 때만 기본 배경이 보이게 한다.
     this.background.setFillStyle(this.resolveBackgroundColor(areaId));
     this.background.setVisible(true);
-    this.areaLabel.setText(area.label);
-
     this.currentParsedTmxMap = this.parseCurrentAreaTmx(area);
     this.currentParsedTsxTileset = this.parseCurrentAreaTsx();
     this.currentResolvedTmxLayers = this.resolveCurrentAreaLayers();
