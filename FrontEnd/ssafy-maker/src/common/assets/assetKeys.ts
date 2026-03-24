@@ -30,18 +30,18 @@ export const ASSET_KEYS = {
 
 export const ASSET_PATHS = {
   ui: {
-    buttons: "assets/game/ui/buttons.png"
+    buttons: "/assets/game/ui/buttons.png"
   },
   map: {
-    tilesetImage: "assets/game/map/FullAsset.png",
-    tilesetTsx: "assets/game/map/FullTileSet.tsx",
-    worldTmx: "assets/game/map/mainMap.tmx",
-    downtownTmx: "assets/game/map/city.tmx",
-    campusTmx: "assets/game/map/inSSAFY.tmx"
+    tilesetImage: "/assets/game/map/FullAsset.png",
+    tilesetTsx: "/assets/game/map/FullTileSet.tsx",
+    worldTmx: "/assets/game/map/mainMap.tmx",
+    downtownTmx: "/assets/game/map/city.tmx",
+    campusTmx: "/assets/game/map/inSSAFY.tmx"
   },
   story: {
-    authoredDialogues: "assets/game/data/story/authored/dialogues.json",
-    authoredSceneStates: "assets/game/data/story/authored/scene_states.json"
+    authoredDialogues: "/assets/game/data/story/authored/dialogues.json",
+    authoredSceneStates: "/assets/game/data/story/authored/scene_states.json"
   }
 } as const;
 
