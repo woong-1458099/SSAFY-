@@ -11,7 +11,6 @@ const DEBUG_CAPTURE_KEY_CODES = [
   Phaser.Input.Keyboard.KeyCodes.F1,
   Phaser.Input.Keyboard.KeyCodes.F2,
   Phaser.Input.Keyboard.KeyCodes.F3,
-  Phaser.Input.Keyboard.KeyCodes.F4,
   Phaser.Input.Keyboard.KeyCodes.T,
   Phaser.Input.Keyboard.KeyCodes.M
 ];
@@ -63,6 +62,9 @@ export class DebugInputController {
         this.emitIfAllowed({ type: "toggleDebugPanel" }, event);
       }),
       this.register("keydown-F4", (event) => {
+        if (!event.shiftKey) {
+          return;
+        }
         this.emitIfAllowed({ type: "toggleWorldTileEditor" }, event);
       }),
       this.register("keydown-T", (event) => {

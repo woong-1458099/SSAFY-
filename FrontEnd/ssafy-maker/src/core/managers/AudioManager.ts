@@ -133,6 +133,9 @@ export class AudioManager {
   private static setSfxEnabled(enabled: boolean): void {
     AudioManager.sfxEnabled = enabled;
     AudioManager.persistSettings();
+    if (!enabled) {
+      AudioManager.stopManagedSounds("sfx", {});
+    }
     AudioManager.refreshManagedSounds();
   }
 

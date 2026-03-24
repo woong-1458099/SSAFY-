@@ -177,10 +177,27 @@ export function getLayersByNames(parsedMap: ParsedTmxMap, layerNames: string[]) 
     .filter((layer): layer is ParsedTmxLayer => Boolean(layer));
 }
 
+function warnMissingLayerNames(parsedMap: ParsedTmxMap, layerNames: string[], groupLabel: string): void {
+  const missingLayerNames = layerNames.filter((layerName) => !getLayerByName(parsedMap, layerName));
+  if (missingLayerNames.length === 0) {
+    return;
+  }
+
+  console.warn(
+    `[TMX] Missing ${groupLabel} layers: ${missingLayerNames.join(", ")}. Available layers: ${parsedMap.layers
+      .map((layer) => layer.name)
+      .join(", ")}`
+  );
+}
+
 export function resolveTmxLayers(
   parsedMap: ParsedTmxMap,
   areaConfig: TmxAreaConfig
 ): ResolvedTmxLayers {
+  warnMissingLayerNames(parsedMap, areaConfig.collisionLayerNames, "collision");
+  warnMissingLayerNames(parsedMap, areaConfig.interactionLayerNames, "interaction");
+  warnMissingLayerNames(parsedMap, areaConfig.foregroundLayerNames, "foreground");
+
   return {
     collisionLayers: getLayersByNames(parsedMap, areaConfig.collisionLayerNames),
     interactionLayers: getLayersByNames(parsedMap, areaConfig.interactionLayerNames),
