@@ -16,6 +16,7 @@ export const UI_DEPTH = {
   planner: SCREEN_UI_BASE + 1000,
   salary: SCREEN_UI_BASE + 1050,
   placeModal: SCREEN_UI_BASE + 1100,
+  tutorial: SCREEN_UI_BASE + 1150,
   dialogue: SCREEN_UI_BASE + 1200,
   debugMinigameHud: SCREEN_UI_BASE + 1300,
   debugOverlay: SCREEN_UI_BASE + 1400,

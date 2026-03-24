@@ -15,6 +15,8 @@ import {
   type LegacyRhythmDifficulty
 } from '@features/minigame/legacy/legacyRhythmConfig';
 import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton } from './utils';
+import { showMinigameTutorial } from './utils/minigameTutorial';
+import { getMinigameCard } from '@features/minigame/minigameCatalog';
 
 const { W, H } = SCREEN;
 
@@ -23,6 +25,7 @@ export default class RhythmScene extends Phaser.Scene {
   private config = LEGACY_RHYTHM_DIFFICULTY_SETTINGS.Normal;
   private returnSceneKey = 'main';
   private rewardEmitted = false;
+  private tutorialContainer = null;
 
   constructor() { super({ key: LEGACY_RHYTHM_SCENE_KEY }); }
 
@@ -33,10 +36,33 @@ export default class RhythmScene extends Phaser.Scene {
   create() {
     applyLegacyViewport(this);
     installMinigamePause(this, this.returnSceneKey);
+
+    // 튜토리얼 표시
+    const catalogData = getMinigameCard(this.scene.key);
+    if (catalogData?.howToPlay) {
+      this.tutorialContainer = showMinigameTutorial(this, {
+        title: catalogData.title,
+        howToPlay: catalogData.howToPlay,
+        reward: catalogData.reward,
+        onStart: () => {
+          this.tutorialContainer?.destroy();
+          this.tutorialContainer = null;
+          this.initGame();
+        },
+        onBack: () => {
+          returnToScene(this, this.returnSceneKey);
+        }
+      });
+    } else {
+      this.initGame();
+    }
+  }
+
+  initGame() {
     const W = 800, H = 600;
-    
+
     // Initial State
-    this.score = 0; this.combo = 0; this.maxCombo = 0; this.perfect = 0; this.good = 0; this.miss = 0; 
+    this.score = 0; this.combo = 0; this.maxCombo = 0; this.perfect = 0; this.good = 0; this.miss = 0;
     this.noteObjects = []; this.startTime = null; this.gameOver = false; this.songNotes = [];
     this.rewardEmitted = false;
 

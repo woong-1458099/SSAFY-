@@ -25,6 +25,11 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: AREA_TRANSITION_MARKER_SPRITE.frameWidth,
       frameHeight: AREA_TRANSITION_MARKER_SPRITE.frameHeight
     });
+    // NPC 머리 위 감정 말풍선 (320×32, 10프레임 각 32×32)
+    this.load.spritesheet(ASSET_KEYS.ui.emotion, ASSET_PATHS.ui.emotion, {
+      frameWidth: 32,
+      frameHeight: 32
+    });
 
     // 각 영역 TMX를 텍스트로 로드한다.
     this.load.text(ASSET_KEYS.map.worldTmx, ASSET_PATHS.map.worldTmx);

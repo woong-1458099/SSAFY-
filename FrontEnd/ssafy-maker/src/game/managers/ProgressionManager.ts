@@ -238,6 +238,9 @@ export class ProgressionManager {
       return;
     }
 
+    // Emit tutorial event for planner opened
+    this.scene.events.emit("tutorial:plannerOpened");
+
     this.closePlanner();
     this.plannerRoot = createWeeklyPlannerModal(this.scene, {
       week: this.timeState.week,
@@ -264,8 +267,11 @@ export class ProgressionManager {
   }
 
   private closePlanner(): void {
-    this.plannerRoot?.destroy(true);
-    this.plannerRoot = undefined;
+    if (this.plannerRoot) {
+      this.plannerRoot.destroy(true);
+      this.plannerRoot = undefined;
+      this.scene.events.emit("tutorial:plannerClosed");
+    }
   }
 
   private openSalaryModal(): void {

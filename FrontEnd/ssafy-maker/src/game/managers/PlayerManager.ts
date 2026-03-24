@@ -162,6 +162,9 @@ export class PlayerManager {
         }
         this.isMoving = false;
 
+        // Emit tutorial event for player movement
+        this.scene.events.emit("tutorial:playerMoved");
+
         // 한 줄 한글 설명: 입력이 유지되면 idle로 떨어지지 않고 다음 타일 이동을 바로 이어서 시작한다.
         if (this.tryStartMoveFromInput(this.scene.time.now, true)) {
           return;

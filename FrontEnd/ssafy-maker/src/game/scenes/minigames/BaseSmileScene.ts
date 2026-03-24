@@ -8,7 +8,7 @@ import {
 } from './faceTracking';
 import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
-import { LEGACY_MINIGAME_CARDS } from '@features/minigame/minigameCatalog';
+import { LEGACY_MINIGAME_CARDS, getMinigameCard } from '@features/minigame/minigameCatalog';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
@@ -18,6 +18,7 @@ import {
   LEGACY_SMILE_THRESHOLD
 } from '@features/minigame/legacy/legacySmileConfig';
 import { destroyDomElement, registerSceneCleanup, SCREEN, PIXEL_FONT } from './utils';
+import { showMinigameTutorial } from './utils/minigameTutorial';
 
 const { W, H } = SCREEN;
 const MAX_GAUGE = LEGACY_SMILE_MAX_GAUGE;
@@ -53,6 +54,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
   protected returnSceneKey = 'main';
   protected completedRewardText: string | null = null;
   protected rewardEmitted = false;
+  protected tutorialContainer: Phaser.GameObjects.Container | null = null;
 
   protected abstract readonly title: string;
   protected abstract readonly subtitle: string;
@@ -73,6 +75,29 @@ abstract class BaseSmileScene extends Phaser.Scene {
   create(): void {
     applyLegacyViewport(this);
     installMinigamePause(this, this.returnSceneKey);
+
+    // 튜토리얼 표시
+    const catalogData = getMinigameCard(this.scene.key);
+    if (catalogData?.howToPlay) {
+      this.tutorialContainer = showMinigameTutorial(this, {
+        title: catalogData.title,
+        howToPlay: catalogData.howToPlay,
+        reward: catalogData.reward,
+        onStart: () => {
+          this.tutorialContainer?.destroy();
+          this.tutorialContainer = null;
+          this.startGame();
+        },
+        onBack: () => {
+          returnToScene(this, this.returnSceneKey);
+        }
+      });
+    } else {
+      this.startGame();
+    }
+  }
+
+  protected startGame(): void {
     this.completed = false;
     this.gaugeState = { gauge: 0, ratio: 0, isSmiling: false };
     this.completedRewardText = null;
@@ -360,6 +385,11 @@ abstract class BaseSmileScene extends Phaser.Scene {
     this.faceMeshInstance?.close();
     this.cameraInstance = null;
     this.faceMeshInstance = null;
+    
+    // 게임 종료 시 카메라 DOM 요소 숨기기 (Phaser 결과창UI 위를 덮고 있어 버튼 클릭을 방해하는 것 방지)
+    if (this.domContainer) {
+      this.domContainer.setVisible(false);
+    }
   }
 
   protected cleanup(): void {

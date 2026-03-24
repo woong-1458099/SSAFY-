@@ -102,7 +102,54 @@ export function createSettingsPage(scene: Phaser.Scene, bounds: Phaser.Geom.Rect
     resolution: 2,
     lineSpacing: 8
   });
-  container.add([title, body]);
+
+  // 볼륨 조절 UI
+  const volumeLabel = scene.add.text(bounds.x + 24, bounds.y + 180, "전체 볼륨 조절", {
+    fontFamily: FONT_FAMILY,
+    fontSize: "19px",
+    color: "#d7ecff",
+    resolution: 2
+  });
+
+  const btnDown = scene.add.text(bounds.x + 180, bounds.y + 178, "[-]", {
+    fontFamily: FONT_FAMILY,
+    fontSize: "22px",
+    color: "#ffffff"
+  }).setInteractive({ useHandCursor: true });
+
+  // 초기 볼륨 표시
+  const initialVolume = Math.round(scene.sound.volume * 100);
+  const volumeValueText = scene.add.text(bounds.x + 230, bounds.y + 180, `${initialVolume}%`, {
+    fontFamily: FONT_FAMILY,
+    fontSize: "19px",
+    color: "#f4fbff",
+    resolution: 2
+  });
+
+  const btnUp = scene.add.text(bounds.x + 300, bounds.y + 178, "[+]", {
+    fontFamily: FONT_FAMILY,
+    fontSize: "22px",
+    color: "#ffffff"
+  }).setInteractive({ useHandCursor: true });
+
+  const updateVolume = (delta: number) => {
+    let nextVolume = scene.sound.volume + delta * 0.1;
+    // 부동소수점 오차 보정 및 범위 제한
+    nextVolume = Number(Phaser.Math.Clamp(nextVolume, 0, 1).toFixed(1));
+    scene.sound.volume = nextVolume;
+    volumeValueText.setText(`${Math.round(nextVolume * 100)}%`);
+  };
+
+  btnDown.on("pointerdown", () => updateVolume(-1));
+  btnUp.on("pointerdown", () => updateVolume(1));
+
+  btnDown.on("pointerover", () => btnDown.setColor("#ffd700"));
+  btnDown.on("pointerout", () => btnDown.setColor("#ffffff"));
+  
+  btnUp.on("pointerover", () => btnUp.setColor("#ffd700"));
+  btnUp.on("pointerout", () => btnUp.setColor("#ffffff"));
+
+  container.add([title, body, volumeLabel, btnDown, volumeValueText, btnUp]);
   return container;
 }
 

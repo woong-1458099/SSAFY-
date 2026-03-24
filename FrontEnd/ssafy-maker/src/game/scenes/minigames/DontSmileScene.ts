@@ -18,9 +18,9 @@ export default class DontSmileScene extends BaseSmileScene {
     super(LEGACY_DONT_SMILE_SCENE_KEY);
   }
 
-  create(): void {
+  protected startGame(): void {
     this.remainingTicks = LEGACY_DONT_SMILE_SURVIVAL_TICKS;
-    super.create();
+    super.startGame();
   }
 
   protected getInitialStatus(): string {

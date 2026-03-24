@@ -13,7 +13,8 @@ export const ASSET_KEYS = {
     campus: "bg-campus"
   },
   ui: {
-    buttons: "ui-buttons"
+    buttons: "ui-buttons",
+    emotion: "ui-emotion"
   },
   map: {
     tilesetImage: "map_tiles_full_asset",
@@ -30,7 +31,8 @@ export const ASSET_KEYS = {
 
 export const ASSET_PATHS = {
   ui: {
-    buttons: "/assets/game/ui/buttons.png"
+    buttons: "/assets/game/ui/buttons.png",
+    emotion: "/assets/game/ui/emotion.png"
   },
   map: {
     tilesetImage: "/assets/game/map/FullAsset.png",

@@ -49,6 +49,7 @@ export class DialogueBox {
   private readonly choiceRoot: Phaser.GameObjects.Container;
   private readonly depth = UI_DEPTH.dialogue;
   private choiceViews: ChoiceView[] = [];
+  private currentBadgeWidth = 170;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -119,6 +120,10 @@ export class DialogueBox {
     this.show();
     this.speakerText.setText(this.formatSpeakerTitle(node));
     this.speakerText.setColor(this.getSpeakerColor(node));
+    // 이름 길이에 따라 배지 너비 동적 조정 (최소 170, 좌우 padding 14px씩)
+    this.currentBadgeWidth = Math.max(170, this.speakerText.width + 28);
+    this.speakerBadge.setSize(this.currentBadgeWidth, 38);
+    this.speakerBadge.setDisplaySize(this.currentBadgeWidth, 38);
     this.bodyText.setText(node.text);
 
     if (node.choices && node.choices.length > 0) {
@@ -184,7 +189,7 @@ export class DialogueBox {
     this.panel.setSize(panelWidth, panelHeight);
     this.panel.setDisplaySize(panelWidth, panelHeight);
     this.speakerBadge.setPosition(panelX + 30, panelY + 30);
-    this.speakerText.setPosition(panelX + 20, panelY + 30);
+    this.speakerText.setPosition(panelX + 30 + 14, panelY + 30);
     this.bodyText.setPosition(panelX + 32, panelY + 64);
     this.bodyText.setWordWrapWidth(panelWidth - 64);
     this.hintText.setPosition(panelX + panelWidth - 28, panelY + panelHeight - 20);
