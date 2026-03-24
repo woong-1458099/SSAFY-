@@ -179,9 +179,10 @@ export class StoryEventManager {
       }
 
       const slotIndex = getWeeklyPlanSlotIndex(day - 1, timeIndex);
+      const rawEventName = event.label ?? event.eventName;
       const eventName =
-        typeof event.eventName === "string" && event.eventName.trim().length > 0
-          ? event.eventName.trim()
+        typeof rawEventName === "string" && rawEventName.trim().length > 0
+          ? rawEventName.trim()
           : "고정 이벤트";
       slots.set(slotIndex, eventName);
     });
@@ -284,7 +285,8 @@ export class StoryEventManager {
 
     return (
       getFixedEventEntries(rawData).find((event) => {
-        return event.eventType === "FIXED" && typeof event.eventId === "string" && event.eventId.trim() === normalizedEventId;
+        const rawEventId = event.id ?? event.eventId;
+        return event.eventType === "FIXED" && typeof rawEventId === "string" && rawEventId.trim() === normalizedEventId;
       }) ?? null
     );
   }
@@ -327,7 +329,8 @@ export class StoryEventManager {
           return false;
         }
 
-        const eventId = typeof event.eventId === "string" ? event.eventId : "";
+        const rawEventId = event.id ?? event.eventId;
+        const eventId = typeof rawEventId === "string" ? rawEventId : "";
         if (event.isRepeatable !== true && eventId && this.completedFixedEventIds.includes(eventId)) {
           return false;
         }
@@ -346,9 +349,11 @@ export class StoryEventManager {
   }
 
   private startFixedEvent(event: FixedEventEntry): boolean {
-    const eventId = typeof event.eventId === "string" ? event.eventId : null;
+    const rawEventId = event.id ?? event.eventId;
+    const eventId = typeof rawEventId === "string" ? rawEventId : null;
+    const rawEventName = event.label ?? event.eventName;
     const runtimeScript = buildDialogueScriptFromFixedEventEntry(StoryEventManager.FIXED_EVENT_DIALOGUE_ID, event, {
-      fallbackNpcLabel: typeof event.eventName === "string" ? event.eventName : "이벤트",
+      fallbackNpcLabel: typeof rawEventName === "string" ? rawEventName : "이벤트",
       playerName: this.getPlayerName()
     });
 

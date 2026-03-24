@@ -43,6 +43,18 @@ function normalizeText(value: unknown): string {
 }
 
 function summarizePreview(event: FixedEventEntry): string {
+  if (event.nodes && event.startNodeId) {
+    const nodes = Object.values(event.nodes);
+    const preview = nodes
+      .map((node) => normalizeText(node.text))
+      .filter((text) => text.length > 0)
+      .slice(0, 2)
+      .join(" / ");
+      
+    if (!preview) return "대사 미리보기가 없습니다.";
+    return preview.length > 180 ? `${preview.slice(0, 177)}...` : preview;
+  }
+
   const dialogues = Array.isArray(event.dialogues) ? event.dialogues : [];
   const preview = dialogues
     .map((entry) => normalizeText(entry.text))
@@ -70,9 +82,7 @@ function formatRequirementCondition(condition: FixedEventChoiceCondition | null 
   if (typeof condition.code === "number") {
     labels.push(`코딩 ${Math.round(condition.code)} 이상`);
   }
-  if (typeof condition.gold === "number") {
-    labels.push(`재화 ${Math.round(condition.gold)} 이상`);
-  } else if (typeof condition.money === "number") {
+  if (typeof condition.money === "number") {
     labels.push(`재화 ${Math.round(condition.money)} 이상`);
   }
   if (typeof condition.luck === "number") {
@@ -103,13 +113,10 @@ function formatStatChangeLabels(result: FixedEventChoiceResult | undefined): str
   const statLabels: Partial<Record<FixedEventStatChangeKey, string>> = {
     social: "사교",
     code: "코딩",
-    gold: "재화",
     money: "재화",
     hp: "HP",
     stress: "스트레스",
     luck: "운",
-    favor_pro: "호감",
-    madness: "광기",
     fe: "FE",
     be: "BE",
     teamwork: "협업"
@@ -164,9 +171,23 @@ export function buildFixedEventDebugEntry(
     completedEventIds?: string[];
   }
 ): FixedEventDebugEntry {
-  const choiceSummaries = (Array.isArray(event.choices) ? event.choices : []).map(buildChoiceSummary);
+  let choiceSummaries: FixedEventDebugChoiceSummary[] = [];
+  
+  if (event.nodes && event.startNodeId) {
+    const rawChoices = Object.values(event.nodes).flatMap(node => node.choices || []);
+    choiceSummaries = rawChoices.map((choice, index) => buildChoiceSummary(choice as any, index));
+  } else {
+    choiceSummaries = (Array.isArray(event.choices) ? event.choices : []).map(buildChoiceSummary);
+  }
+  
   const completedSet = new Set(options?.completedEventIds ?? []);
-  const eventId = typeof event.eventId === "string" && event.eventId.trim().length > 0 ? event.eventId.trim() : "unknown_event";
+  
+  const rawId = event.id ?? event.eventId;
+  const eventId = typeof rawId === "string" && rawId.trim().length > 0 ? rawId.trim() : "unknown_event";
+  
+  const rawTargetName = event.label ?? event.eventName;
+  const eventName = typeof rawTargetName === "string" && rawTargetName.trim().length > 0 ? rawTargetName.trim() : "고정 이벤트";
+  
   const week = Math.max(1, Math.round(event.triggerTiming?.week ?? 1));
   const day = Math.max(1, Math.min(DAY_CYCLE.length, Math.round(event.triggerTiming?.day ?? 1)));
   const locationLabel =
@@ -175,7 +196,7 @@ export function buildFixedEventDebugEntry(
 
   return {
     eventId,
-    eventName: typeof event.eventName === "string" && event.eventName.trim().length > 0 ? event.eventName.trim() : "고정 이벤트",
+    eventName,
     week,
     day,
     dayLabel: DAY_CYCLE[day - 1],

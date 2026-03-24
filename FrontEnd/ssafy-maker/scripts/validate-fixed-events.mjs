@@ -251,7 +251,7 @@ async function main() {
     allErrors: true,
     strict: false
   });
-  const validateFixedEvents = ajv.compile(fixedEventsSchema);
+  const validateFixedEvents = ajv.compile(authoredDialoguesSchema);
   const filesToValidate = [storySamplePath, ...fixedEventJsonPaths];
 
   for (const filePath of filesToValidate) {

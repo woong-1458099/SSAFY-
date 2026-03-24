@@ -18,8 +18,7 @@ const NPC_ID_SET = new Set<string>(Object.values(NPC_IDS));
 
 export const AFFECTION_NPC_IDS = {
   minsu: NPC_IDS.minsu,
-  hyoryeon: NPC_IDS.hyoryeon,
-  sunmi: NPC_IDS.sunmi
+  hyoryeon: NPC_IDS.hyoryeon
 } as const;
 
 export type AffectionNpcId = (typeof AFFECTION_NPC_IDS)[keyof typeof AFFECTION_NPC_IDS];
@@ -27,9 +26,6 @@ export type AffectionNpcId = (typeof AFFECTION_NPC_IDS)[keyof typeof AFFECTION_N
 const AFFECTION_NPC_ALIAS_MAP: Record<string, AffectionNpcId> = {
   minsu: AFFECTION_NPC_IDS.minsu,
   hyoryeon: AFFECTION_NPC_IDS.hyoryeon,
-  hyo: AFFECTION_NPC_IDS.hyoryeon,
-  sunmi: AFFECTION_NPC_IDS.sunmi,
-  pro: AFFECTION_NPC_IDS.sunmi
 };
 
 function normalizeAffectionToken(value: string): string {

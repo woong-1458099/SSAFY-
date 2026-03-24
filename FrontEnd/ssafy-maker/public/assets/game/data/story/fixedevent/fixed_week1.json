@@ -35,39 +35,75 @@
               "id": "intro_c1",
               "text": "\"다들 스펙이 엄청나시네요…, 저는 비전공자라 모든 게 처음이지만 열심히 하겠습니다...\"",
               "actionType": "NORMAL",
-              "statChanges": { "stress": 10, "teamwork": 3 },
+              "statChanges": {
+                "stress": 10,
+                "teamwork": 3
+              },
               "feedbackText": "(평범하고 소극적인 첫인상. 존재감이 흐려졌다.)"
             },
             {
               "id": "intro_c2",
               "text": "🔒 [사교 15 / 사교형 캐릭터 선택 시] \"모르는 건 커피 바치며 배울 테니 많이 도와주세요!\"",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "teamwork", "min": 15, "label": "사교(teamwork) 15 이상" }],
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 15,
+                  "label": "사교(teamwork) 15 이상"
+                }
+              ],
               "lockedReason": "사교 능력이 부족합니다.",
-              "statChanges": { "teamwork": 5 },
+              "statChanges": {
+                "teamwork": 5
+              },
               "feedbackText": "(솔직한 어필이 오히려 호감으로 받아들여진 것 같다)"
             },
             {
               "id": "intro_c3",
               "text": "🔒 [재화 3000] \"(사실 아까 일찍 와서 주변에 마이쮸를 돌려놨었지) 잘 부탁드립니다\"",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "gold", "min": 3000, "label": "재화 3000 이상" }],
+              "requirements": [
+                {
+                  "stat": "money",
+                  "min": 3000,
+                  "label": "재화 3000 이상"
+                }
+              ],
               "lockedReason": "보유 재화가 부족합니다.",
-              "statChanges": { "gold": -3000, "teamwork": 7 },
+              "statChanges": {
+                "money": -3000,
+                "teamwork": 7
+              },
               "feedbackText": "(역시 먹는 거 준다는데 싫다는 사람은 없다. 마이쮸를 나눔 받은 사람들이 호응해줬다.)"
             },
             {
               "id": "intro_c4",
               "text": "🔒 [운빨 15 / 운빨형 캐릭터 선택 시] \"어... 저는...\" 긴장해서 머릿속이 하얘졌는데, 마침 내가 잡은 마이크의 배터리가 나가며 '삐익-' 굉음이 울렸다!",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "luck", "min": 15, "label": "운빨 15 이상" }],
+              "requirements": [
+                {
+                  "stat": "luck",
+                  "min": 15,
+                  "label": "운빨 15 이상"
+                }
+              ],
               "lockedReason": "운이 부족합니다.",
-              "statChanges": { "stress": -10, "teamwork": -3 },
+              "statChanges": {
+                "stress": -10,
+                "teamwork": -3
+              },
               "feedbackText": "(앰프 고장으로 자기소개가 강제로 스킵되었다! 압박감에서 해방되었다.)"
             }
           ]
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 1,
+        "day": 1,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     },
     {
       "id": "EVT_MAIN_W1_D2_AFTERNOON_ROBO",
@@ -91,32 +127,55 @@
               "id": "robo_c1",
               "text": "\"오... 대박. 코딩 진짜 빠르시네요.\" (기계적인 리액션을 하며 팀원이 찾는 레고 부품만 셔틀해 준다)",
               "actionType": "NORMAL",
-              "statChanges": { "hp": -10 },
+              "statChanges": {
+                "hp": -10
+              },
               "nextNodeId": "robo_c1_res1"
             },
             {
               "id": "robo_c2",
               "text": "🔒 [사교 25] \"코딩은 능력자분들께 전적으로 맡기겠습니다! 저는 하드웨어 조립 퀄리티를 높이고, 주행 트랙 세팅이랑 타임키퍼를 전담하죠!\"",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "teamwork", "min": 25, "label": "사교 25 이상" }],
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 25,
+                  "label": "사교 25 이상"
+                }
+              ],
               "lockedReason": "팀을 조율할 사교 능력이 부족합니다.",
-              "statChanges": { "teamwork": 8 },
+              "statChanges": {
+                "teamwork": 8
+              },
               "feedbackText": "(나의 약점을 인정하고 효율적인 분업을 제시하며, 자연스럽게 팀의 사령탑 역할을 잘 해냈다!)"
             },
             {
               "id": "robo_c3",
               "text": "🔒 [운빨 25] \"어? 모터 속도가 안 맞으면, 바퀴에 고무줄을 감아서 마찰력을 늘려볼까요?\" (아무 생각 없이 감았는데 기적의 코너링을 보여주며 주행 성공)",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "luck", "min": 25, "label": "운빨 25 이상" }],
+              "requirements": [
+                {
+                  "stat": "luck",
+                  "min": 25,
+                  "label": "운빨 25 이상"
+                }
+              ],
               "lockedReason": "기적을 바랄 운이 부족합니다.",
-              "statChanges": { "be": 5, "fe": 5, "teamwork": 5 },
+              "statChanges": {
+                "be": 5,
+                "fe": 5,
+                "teamwork": 5
+              },
               "nextNodeId": "robo_c3_res1"
             },
             {
               "id": "robo_c4",
               "text": "🤪 [광기] \"센서 로직이 꼬였다고요? 걱정 마십쇼. 제가 트랙에 엎드려서 입으로 자동차를 밀겠습니다. 부릉부릉!!\"",
               "actionType": "MADNESS",
-              "statChanges": { "hp": -10, "teamwork": -10 },
+              "statChanges": {
+                "hp": -10,
+                "teamwork": -10
+              },
               "nextNodeId": "robo_c4_res1"
             }
           ]
@@ -167,7 +226,14 @@
           "speaker": "SYSTEM",
           "text": "(팀원들의 경멸 어린 시선 획득. 자동차 대신 내 사회적 체면이 자율주행으로 박살 났다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 1,
+        "day": 2,
+        "timeOfDay": "오후"
+      },
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     },
     {
       "id": "EVT_MAIN_W1_D5_MORNING_ALGO",
@@ -183,7 +249,11 @@
               "id": "algo_c1",
               "text": "3중 for문을 손가락으로 짚어가며 노가다로 친다.",
               "actionType": "NORMAL",
-              "statChanges": { "hp": -20, "be": 5, "fe": 5 },
+              "statChanges": {
+                "hp": -20,
+                "be": 5,
+                "fe": 5
+              },
               "feedbackText": "(무식하지만 끈기 있게 완성했다. 지저분한 코드지만 일단 돌아가긴 한다.)"
             },
             {
@@ -191,27 +261,53 @@
               "text": "🔒 [FE 40 / BE 40] \"아, 딱 보니 규칙이 있네.\" 수학적 사고로 푼다.",
               "actionType": "LOCKED",
               "requirements": [
-                { "stat": "be", "min": 40, "label": "백엔드(BE) 40 이상" },
-                { "stat": "fe", "min": 40, "label": "프론트엔드(FE) 40 이상" }
+                {
+                  "stat": "be",
+                  "min": 40,
+                  "label": "백엔드(BE) 40 이상"
+                },
+                {
+                  "stat": "fe",
+                  "min": 40,
+                  "label": "프론트엔드(FE) 40 이상"
+                }
               ],
               "lockedReason": "전반적인 코딩 능력(FE/BE)이 부족합니다.",
-              "statChanges": { "be": 15, "fe": 15, "stress": -10 },
+              "statChanges": {
+                "be": 15,
+                "fe": 15,
+                "stress": -10
+              },
               "feedbackText": "(나 어쩌면… 알고리즘에 재능이 있을지도? 문제를 빠르게 풀면서 자신감이 생긴다.)"
             },
             {
               "id": "algo_c3",
               "text": "🔒 [사교 45] 짝꿍에게 i, j 도는 법을 다시 묻는다.",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "teamwork", "min": 45, "label": "사교 45 이상" }],
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 45,
+                  "label": "사교 45 이상"
+                }
+              ],
               "lockedReason": "도움을 요청할 친화력이 부족합니다.",
-              "statChanges": { "teamwork": 5, "be": 5, "fe": 5 },
+              "statChanges": {
+                "teamwork": 5,
+                "be": 5,
+                "fe": 5
+              },
               "nextNodeId": "algo_c3_res1"
             },
             {
               "id": "algo_c4",
               "text": "🤪 [광기] \"반복문은 나약한 자들이나 쓰는 거다.\" 테스트 케이스의 출력 결과물을 보고 print(\" * \"), print(\" *** \") 50줄을 전부 수작업으로 타이핑(하드코딩)한다.",
               "actionType": "MADNESS",
-              "statChanges": { "hp": -30, "be": -10, "fe": -10 },
+              "statChanges": {
+                "hp": -30,
+                "be": -10,
+                "fe": -10
+              },
               "nextNodeId": "algo_c4_res1"
             }
           ]
@@ -242,7 +338,14 @@
           "speaker": "SYSTEM",
           "text": "(테스트는 무식하게 통과했지만, 코드를 확인한 코치님이 뒷목을 잡으셨다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 1,
+        "day": 5,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     }
   ]
 }

@@ -68,9 +68,7 @@
                 }
               ],
               "lockedReason": "운명적인 타이밍이 부족합니다.",
-              "setFlags": [
-                "HYO_ROMANCE_FLAG_ON"
-              ],
+              "setFlags": ["HYO_ROMANCE_FLAG_ON"],
               "nextNodeId": "w1d4_c3_res1",
               "affectionChanges": {
                 "NPC_CLASSMATE_HYORYEON": 999
@@ -184,7 +182,14 @@
           "speaker": "SYSTEM",
           "text": "(효련이가 화면을 보며 내심 놀란 표정을 짓는다. 묘하게 뿌듯하다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 1,
+        "day": 4,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_HYO_W2_D2_AFTERNOON",
@@ -375,7 +380,14 @@
           "speaker": "SYSTEM",
           "text": "(결국 효련이가 내 자리로 뛰어와서 코드를 뺏었다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 2,
+        "day": 2,
+        "timeOfDay": "오후"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_HYO_W3_D5_MORNING",
@@ -557,7 +569,14 @@
           "speaker": "SYSTEM",
           "text": "(효련이가 화들짝 놀라 손을 뺐지만, 내치지는 않는다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 3,
+        "day": 5,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_HYO_W3_D7_MORNING",
@@ -604,7 +623,7 @@
               "actionType": "NORMAL",
               "statChanges": {
                 "stress": -10,
-                "gold": -5000
+                "money": -5000
               },
               "nextNodeId": "w3d7_c1_res1",
               "affectionChanges": {
@@ -727,7 +746,14 @@
           "emotion": "ANGRY",
           "text": "\"아오 진짜!! 사람 빡치게 하네!! 노트북 내놔, 오늘 너 죽고 나 죽자!\""
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 3,
+        "day": 7,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_HYO_W4_D7_NIGHT",
@@ -860,7 +886,14 @@
           "emotion": "ANNOYED",
           "text": "\"아... 진짜 피곤하게 사네. 자, 문제 나간다!\""
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 4,
+        "day": 7,
+        "timeOfDay": "저녁"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_HYO_W5_D5_MORNING",
@@ -998,7 +1031,14 @@
           "emotion": "URGENT",
           "text": "\"야 이 미친 거북목아!! 거기 안 서?! 잡히면 진짜 뼈도 못 추릴 줄 알아!!\""
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 5,
+        "day": 5,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_HYO_W6_D3_MORNING",
@@ -1172,7 +1212,14 @@
           "emotion": "ANNOYED",
           "text": "\"하... 진짜 너 같은 코딩 씹덕을 걱정한 내가 미쳤지. 사람 무안하게 진짜.\""
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 6,
+        "day": 3,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     }
   ]
 }

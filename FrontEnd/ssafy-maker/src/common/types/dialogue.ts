@@ -1,7 +1,7 @@
 // 대화 스크립트와 대화 매니저가 함께 사용하는 공통 대화 타입 정의
 import type { DialogueId } from "../enums/dialogue";
 
-export const DIALOGUE_METRIC_KEYS = ["fe", "be", "teamwork", "luck", "stress", "hp", "gold", "money"] as const;
+export const DIALOGUE_METRIC_KEYS = ["fe", "be", "teamwork", "luck", "stress", "hp", "money"] as const;
 export const DIALOGUE_REQUIREMENT_STAT_KEYS = [
   "fe",
   "be",
@@ -9,14 +9,13 @@ export const DIALOGUE_REQUIREMENT_STAT_KEYS = [
   "luck",
   "stress",
   "hp",
-  "gold",
   "money",
   "playerGender"
 ] as const;
 
 export type DialogueMetricKey = (typeof DIALOGUE_METRIC_KEYS)[number];
 export type DialogueRequirementStatKey = (typeof DIALOGUE_REQUIREMENT_STAT_KEYS)[number];
-export type DialogueCurrencyStatKey = Extract<DialogueMetricKey, "gold" | "money">;
+export type DialogueCurrencyStatKey = Extract<DialogueMetricKey, "money">;
 export type DialogueStatKey = DialogueMetricKey;
 export type StaticDialogueId = string & { readonly __staticDialogueId: unique symbol };
 export type RuntimeDialogueId = string & { readonly __runtimeDialogueId: unique symbol };
@@ -84,7 +83,7 @@ export type DialogueScript = {
 
 const RUNTIME_DIALOGUE_ID_PREFIX = "runtime:";
 export function isDialogueCurrencyStatKey(stat: DialogueStatKey): stat is DialogueCurrencyStatKey {
-  return stat === "gold" || stat === "money";
+  return stat === "money";
 }
 
 export function toDialogueCurrencyHudKey(stat: DialogueCurrencyStatKey): "money" {

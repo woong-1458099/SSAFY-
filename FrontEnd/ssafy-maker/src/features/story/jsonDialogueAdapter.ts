@@ -29,7 +29,6 @@ export type FixedEventChoiceCondition = {
   social?: number;
   code?: number;
   nunchi?: number;
-  gold?: number;
   money?: number;
   luck?: number;
   hp?: number;
@@ -64,14 +63,23 @@ export type FixedEventTriggerTiming = {
 };
 
 export type FixedEventEntry = {
+  // Legacy
   eventId?: string;
   eventName?: string;
+  dialogues?: FixedEventDialogueEntry[];
+  choices?: FixedEventChoiceEntry[];
+
+  // Authored Dialogue (New)
+  id?: string;
+  label?: string;
+  startNodeId?: string;
+  nodes?: Record<string, DialogueNode>;
+
+  // Common
   eventType?: string;
   triggerTiming?: FixedEventTriggerTiming;
   location?: string;
   isRepeatable?: boolean;
-  dialogues?: FixedEventDialogueEntry[];
-  choices?: FixedEventChoiceEntry[];
 };
 
 type FixedEventMatchContext = {
@@ -180,9 +188,9 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
   if (typeof condition.nunchi === "number") {
     requirements.push({ stat: "luck", min: Math.round(condition.nunchi), label: `눈치 ${Math.round(condition.nunchi)} 이상` });
   }
-  const currencyRequirement = typeof condition.gold === "number" ? condition.gold : condition.money;
+  const currencyRequirement = condition.money;
   if (typeof currencyRequirement === "number") {
-    requirements.push({ stat: "gold", min: Math.round(currencyRequirement), label: `재화 ${Math.round(currencyRequirement)}` });
+    requirements.push({ stat: "money", min: Math.round(currencyRequirement), label: `재화 ${Math.round(currencyRequirement)}` });
   }
   if (typeof condition.luck === "number") {
     requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `운 ${Math.round(condition.luck)} 이상` });
@@ -228,9 +236,8 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
       case "madness":
         mapped.stress = (mapped.stress ?? 0) + value;
         break;
-      case "gold":
       case "money":
-        mapped.gold = (mapped.gold ?? 0) + value;
+        mapped.money = (mapped.money ?? 0) + value;
         break;
       case "hp":
         mapped.hp = (mapped.hp ?? 0) + value;
@@ -362,10 +369,20 @@ export function getFixedEventEntries(rawData: unknown): FixedEventEntry[] {
     return rawData.filter((entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object"));
   }
 
-  if (rawData && typeof rawData === "object" && Array.isArray((rawData as { events?: unknown[] }).events)) {
-    return (rawData as { events: unknown[] }).events.filter(
-      (entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")
-    );
+  if (rawData && typeof rawData === "object") {
+    const dataAsObj = rawData as { dialogues?: unknown[]; events?: unknown[] };
+    
+    if (Array.isArray(dataAsObj.dialogues)) {
+      return dataAsObj.dialogues.filter(
+        (entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")
+      );
+    }
+    
+    if (Array.isArray(dataAsObj.events)) {
+      return dataAsObj.events.filter(
+        (entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")
+      );
+    }
   }
 
   return [];
@@ -384,7 +401,8 @@ export function findMatchingFixedEvent(
       const timing = event.triggerTiming;
       if (!timing || event.eventType !== "FIXED") return false;
 
-      const eventId = typeof event.eventId === "string" ? event.eventId : "";
+      const rawEventId = event.id ?? event.eventId;
+      const eventId = typeof rawEventId === "string" ? rawEventId : "";
       if (event.isRepeatable !== true && eventId && completedSet.has(eventId)) {
         return false;
       }
@@ -406,6 +424,34 @@ export function buildDialogueScriptFromFixedEventEntry(
   const runtimeDialogueId = createRuntimeDialogueId(dialogueId);
   const fallbackNpcLabel = options.fallbackNpcLabel;
   const playerName = options.playerName ?? "플레이어";
+
+  // Authored Dialogue (New Format) Handle
+  if (event.startNodeId && event.nodes && typeof event.nodes === "object") {
+    const parsedNodes: Record<string, DialogueNode> = {};
+    
+    Object.entries(event.nodes).forEach(([nodeId, node]) => {
+      parsedNodes[nodeId] = {
+        ...node,
+        text: normalizeTextWithPlayerName(node.text, "...", playerName)
+      };
+
+      if (parsedNodes[nodeId].choices) {
+        parsedNodes[nodeId].choices = parsedNodes[nodeId].choices?.map((choice) => ({
+          ...choice,
+          text: normalizeChoiceText(choice.text, "선택지", playerName, choice.actionType || "NORMAL"),
+          feedbackText: choice.feedbackText ? normalizeTextWithPlayerName(choice.feedbackText, "", playerName) : undefined
+        }));
+      }
+    });
+
+    return validateDialogueScript({
+      id: runtimeDialogueId,
+      label: event.label ?? (event.label ?? event.eventName) ?? fallbackNpcLabel,
+      startNodeId: event.startNodeId,
+      nodes: parsedNodes
+    });
+  }
+
   const dialogues = Array.isArray(event.dialogues) ? event.dialogues : [];
   const choices = Array.isArray(event.choices) ? event.choices : [];
   if (dialogues.length === 0) {
@@ -436,7 +482,7 @@ export function buildDialogueScriptFromFixedEventEntry(
     finalDialogueNode.nextNodeId = undefined;
     finalDialogueNode.choices = choices.map((choice, index): DialogueChoice => {
       const choiceId = choice.choiceId ?? index + 1;
-      const choiceContextLabel = `${event.eventId ?? dialogueId}:choice:${choiceId}`;
+      const choiceContextLabel = `${(event.id ?? event.eventId) ?? dialogueId}:choice:${choiceId}`;
       const actionType = normalizeActionType(choice.actionType);
       const requirements = mapConditionToRequirements(choice.condition);
       const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : [];
@@ -492,7 +538,7 @@ export function buildDialogueScriptFromFixedEventEntry(
 
   return validateDialogueScript({
     id: runtimeDialogueId,
-    label: event.eventName ?? fallbackNpcLabel,
+    label: (event.label ?? event.eventName) ?? fallbackNpcLabel,
     startNodeId: "json_dialogue_1",
     nodes
   });

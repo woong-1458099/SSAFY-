@@ -32,7 +32,6 @@
         "social": { "type": "number" },
         "code": { "type": "number" },
         "nunchi": { "type": "number" },
-        "gold": { "type": "number" },
         "money": { "type": "number" },
         "luck": { "type": "number" },
         "hp": { "type": "number" },
@@ -49,7 +48,7 @@
       "properties": {
         "stat": {
           "type": "string",
-          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "gold", "money", "playerGender"]
+          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "money", "playerGender"]
         },
         "equals": { "type": "string" },
         "min": { "type": "number" },
@@ -64,7 +63,7 @@
       "properties": {
         "npcId": {
           "type": "string",
-          "enum": ["minsu", "hyoryeon", "sunmi"]
+          "enum": ["minsu", "hyoryeon"]
         },
         "min": { "type": "number" },
         "max": { "type": "number" },
@@ -82,17 +81,13 @@
               "social",
               "code",
               "nunchi",
-              "gold",
+              
               "money",
               "hp",
               "stress",
               "luck",
               "favor_minsu",
-              "favor_hyo",
               "favor_hyoryeon",
-              "favor_pro",
-              "favor_sunmi",
-              "madness",
               "fe",
               "be",
               "teamwork"
@@ -105,7 +100,7 @@
         "affectionChanges": {
           "type": "object",
           "propertyNames": {
-            "enum": ["minsu", "hyoryeon", "sunmi"]
+            "enum": ["minsu", "hyoryeon"]
           },
           "additionalProperties": {
             "type": "number"

@@ -342,7 +342,7 @@ export class DialogueManager {
         ? "HP"
         : req.stat === "playerGender"
           ? "성별"
-          : req.stat === "gold" || req.stat === "money"
+          : req.stat === "money"
           ? "재화"
           : req.stat === "fe"
             ? "FE"
@@ -428,7 +428,6 @@ export class DialogueManager {
     switch (key) {
       case "hp":
         return "HP";
-      case "gold":
       case "money":
         return "재화";
       case "fe":
@@ -441,6 +440,8 @@ export class DialogueManager {
         return "운";
       case "stress":
         return "스트레스";
+      default:
+        return String(key);
     }
   }
 }

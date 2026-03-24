@@ -191,7 +191,14 @@
           "speaker": "SYSTEM",
           "text": "(민수의 살벌한 경고에 조용히 한/영 전환 키를 눌렀다. 햣허브의 꿈은 무너졌다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 1,
+        "day": 4,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_MINSU_W2_D2_AFTERNOON",
@@ -431,7 +438,14 @@
           "speaker": "SYSTEM",
           "text": "(읽음 표시가 사라지자마자, 답답함을 견디지 못한 민수가 내 자리로 뚜벅뚜벅 다가와 키보드를 뺏어 들었다. 시원한 섬유유연제 향이 훅 끼쳐왔다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 2,
+        "day": 2,
+        "timeOfDay": "오후"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_MINSU_W3_D5_MORNING",
@@ -679,7 +693,14 @@
           "speaker": "SYSTEM",
           "text": "(민수가 영수증을 휙 낚아채더니 모니터 뒤로 숨어버린다. 새빨개진 귀는 숨기지 못했다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 3,
+        "day": 5,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_MINSU_W3_D7_MORNING",
@@ -928,7 +949,14 @@
           "speaker": "SYSTEM",
           "text": "(민수가 귀를 새빨갛게 붉힌 채 메뉴판으로 얼굴을 가린다. 피로가 정말로 싹 날아간 기분이다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 3,
+        "day": 7,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_MINSU_W4_D7_NIGHT",
@@ -1213,7 +1241,14 @@
           "speaker": "SYSTEM",
           "text": "(민수의 작고 깊은 한숨 소리가 자장가처럼 들려왔다. 덕분에 방전됐던 체력이 조금 회복되었다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 4,
+        "day": 7,
+        "timeOfDay": "저녁"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_MINSU_W5_D5_AFTERNOON",
@@ -1448,7 +1483,14 @@
           "speaker": "SYSTEM",
           "text": "(가쁜 숨을 내쉬며 내 손목을 낚아챈 민수의 얼굴이 홍당무처럼 달아올라 있다. 달리기 때문인지, 부끄러움 때문인지는 모르겠다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 5,
+        "day": 5,
+        "timeOfDay": "오후"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     },
     {
       "id": "EVT_ROMANCE_MINSU_W6_D3_AFTERNOON",
@@ -1731,7 +1773,14 @@
           "speaker": "SYSTEM",
           "text": "(장난스럽게 던진 말에 민수가 평소답지 않게 직구로 진심을 부딪쳐 온다. 예상치 못한 심쿵에 내 얼굴이 확 달아올랐다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 6,
+        "day": 3,
+        "timeOfDay": "오후"
+      },
+      "location": "캠퍼스",
+      "eventType": "ROMANCE"
     }
   ]
 }

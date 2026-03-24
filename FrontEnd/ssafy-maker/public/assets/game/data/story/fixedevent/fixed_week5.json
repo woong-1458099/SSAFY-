@@ -14,34 +14,64 @@
               "id": "health_c1",
               "text": "\"돈도 없는데 무슨... 기세로 버티자.\" 목을 우두둑 꺾고 다시 키보드를 잡는다.",
               "actionType": "NORMAL",
-              "statChanges": { "hp": -15, "stress": 10 },
+              "statChanges": {
+                "hp": -15,
+                "stress": 10
+              },
               "nextNodeId": "health_c1_res1"
             },
             {
               "id": "health_c2",
               "text": "🔒 [재화 30,000] “원래 개발은 템빨” 로켓배송으로 인체공학 마우스와 노트북 거치대를 풀세트로 지른다.",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "gold", "min": 30000, "label": "재화 30000 이상" }],
+              "requirements": [
+                {
+                  "stat": "money",
+                  "min": 30000,
+                  "label": "재화 30000 이상"
+                }
+              ],
               "lockedReason": "장비를 구매할 재화가 부족합니다.",
-              "statChanges": { "gold": -30000, "hp": 20 },
+              "statChanges": {
+                "money": -30000,
+                "hp": 20
+              },
               "nextNodeId": "health_c2_res1"
             },
             {
               "id": "health_c3",
               "text": "🔒 [체력 80] 잠시 강의장을 나와 벽에 기대어 전신 스트레칭을 하며 요가 마스터가 된다.",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "hp", "min": 80, "label": "체력(HP) 80 이상" }],
+              "requirements": [
+                {
+                  "stat": "hp",
+                  "min": 80,
+                  "label": "체력(HP) 80 이상"
+                }
+              ],
               "lockedReason": "스트레칭을 할 최소한의 기력조차 없습니다.",
-              "statChanges": { "hp": 20, "stress": -20 },
+              "statChanges": {
+                "hp": 20,
+                "stress": -20
+              },
               "nextNodeId": "health_c3_res1"
             },
             {
               "id": "health_c4",
               "text": "🤪 [사교 70] 그러고보니 효련이가 마사지건 같은 걸 들고 있던데… \"아플 땐 물리 치료다.\" 커피를 뇌물로 마사지건을 빌린다.",
               "actionType": "MADNESS",
-              "requirements": [{ "stat": "teamwork", "min": 70, "label": "사교 70 이상" }],
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 70,
+                  "label": "사교 70 이상"
+                }
+              ],
               "lockedReason": "마사지건을 빌릴 만큼 친하지 않습니다.",
-              "statChanges": { "gold": -2000, "hp": 15 },
+              "statChanges": {
+                "money": -2000,
+                "hp": 15
+              },
               "nextNodeId": "health_c4_res1"
             }
           ]
@@ -103,7 +133,14 @@
           "speaker": "SYSTEM",
           "text": "(덜덜덜덜덜덜. 마사지건 소리가 뇌를 울릴 때마다 굳어있던 승모근이 조금씩 풀린다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 4,
+        "day": 1,
+        "timeOfDay": "오후"
+      },
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     },
     {
       "id": "EVT_MAIN_W4_D3_MORNING_SPEED",
@@ -127,7 +164,11 @@
               "id": "speed_c1",
               "text": "\"그러게요... 왜 이렇게 느릴까요 ㅠㅠ...\"",
               "actionType": "NORMAL",
-              "statChanges": { "stress": 10, "fe": 3, "be": 2 },
+              "statChanges": {
+                "stress": 10,
+                "fe": 3,
+                "be": 2
+              },
               "nextNodeId": "speed_c1_res1"
             },
             {
@@ -135,27 +176,50 @@
               "text": "🔒 [FE 45 / BE 45] \"지금 이중 루프 빼고 투 포인터로 달구지에 모터 다는 중입니다.\"",
               "actionType": "LOCKED",
               "requirements": [
-                { "stat": "fe", "min": 45, "label": "프론트엔드 45 이상" },
-                { "stat": "be", "min": 45, "label": "백엔드 45 이상" }
+                {
+                  "stat": "fe",
+                  "min": 45,
+                  "label": "프론트엔드 45 이상"
+                },
+                {
+                  "stat": "be",
+                  "min": 45,
+                  "label": "백엔드 45 이상"
+                }
               ],
               "lockedReason": "투 포인터 알고리즘을 구현할 실력이 부족합니다.",
-              "statChanges": { "fe": 8, "be": 7, "stress": -10 },
+              "statChanges": {
+                "fe": 8,
+                "be": 7,
+                "stress": -10
+              },
               "nextNodeId": "speed_c2_res1"
             },
             {
               "id": "speed_c3",
               "text": "🔒 [운 45] (변명을 하려는 찰나, 갑자기 실습장 전체의 와이파이가 끊기며 에러 창이 뜬다!)",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "luck", "min": 45, "label": "운빨 45 이상" }],
+              "requirements": [
+                {
+                  "stat": "luck",
+                  "min": 45,
+                  "label": "운빨 45 이상"
+                }
+              ],
               "lockedReason": "기적의 타이밍을 잡지 못했습니다.",
-              "statChanges": { "luck": 15, "hp": 5 },
+              "statChanges": {
+                "luck": 15,
+                "hp": 5
+              },
               "nextNodeId": "speed_c3_res1"
             },
             {
               "id": "speed_c4",
               "text": "🤪 [광기] \"컨설턴트님, O(N^3)은 미학입니다. 배열의 모든 데이터를 다정하게 쓰다듬는 제 감수성이 안 느껴지시나요?\"",
               "actionType": "MADNESS",
-              "statChanges": { "stress": -15 },
+              "statChanges": {
+                "stress": -15
+              },
               "nextNodeId": "speed_c4_res1"
             }
           ]
@@ -188,7 +252,14 @@
           "emotion": "SPEECHLESS",
           "text": "\"{playerName}님의 따뜻한 마음이 채점 서버도 불태워버리네요...\""
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 4,
+        "day": 3,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     },
     {
       "id": "EVT_MAIN_W4_D5_MORNING_MOCKTEST",
@@ -204,7 +275,11 @@
               "id": "mock_c1",
               "text": "멘붕에 빠져 try-except로 에러를 다 무시하게 하드코딩한다.",
               "actionType": "NORMAL",
-              "statChanges": { "stress": 25, "fe": -3, "be": -2 },
+              "statChanges": {
+                "stress": 25,
+                "fe": -3,
+                "be": -2
+              },
               "nextNodeId": "mock_c1_res1"
             },
             {
@@ -212,27 +287,51 @@
               "text": "🔒 [FE 75 / BE 75] 심호흡을 하고 dx, dy 델타 배열 위치를 침착하게 수정한다.",
               "actionType": "LOCKED",
               "requirements": [
-                { "stat": "fe", "min": 75, "label": "프론트엔드 75 이상" },
-                { "stat": "be", "min": 75, "label": "백엔드 75 이상" }
+                {
+                  "stat": "fe",
+                  "min": 75,
+                  "label": "프론트엔드 75 이상"
+                },
+                {
+                  "stat": "be",
+                  "min": 75,
+                  "label": "백엔드 75 이상"
+                }
               ],
               "lockedReason": "델타 탐색을 활용할 코딩 지식이 부족합니다.",
-              "statChanges": { "fe": 15, "be": 15, "stress": -20 },
+              "statChanges": {
+                "fe": 15,
+                "be": 15,
+                "stress": -20
+              },
               "nextNodeId": "mock_c2_res1"
             },
             {
               "id": "mock_c3",
               "text": "🔒 [운빨 80] if문 8개로 무식하게 때려 박았는데 기적적으로 테스트 케이스를 통과했다.",
               "actionType": "LOCKED",
-              "requirements": [{ "stat": "luck", "min": 80, "label": "운빨 80 이상" }],
+              "requirements": [
+                {
+                  "stat": "luck",
+                  "min": 80,
+                  "label": "운빨 80 이상"
+                }
+              ],
               "lockedReason": "무식한 코드가 우연히 정답일 확률이 매우 낮습니다.",
-              "statChanges": { "luck": 30, "fe": 5, "be": 5 },
+              "statChanges": {
+                "luck": 30,
+                "fe": 5,
+                "be": 5
+              },
               "nextNodeId": "mock_c3_res1"
             },
             {
               "id": "mock_c4",
               "text": "🤪 [광기] 주석으로 채점자에게 살려달라고 장문의 편지를 쓴다.",
               "actionType": "MADNESS",
-              "statChanges": { "stress": 10 },
+              "statChanges": {
+                "stress": 10
+              },
               "nextNodeId": "mock_c4_res1"
             }
           ]
@@ -294,7 +393,14 @@
           "speaker": "SYSTEM",
           "text": "(애석하게도 1차 채점 서버는 감정이 없는 차가운 기계였다. 나의 눈물겨운 100줄짜리 호소문은 전부 # 처리되어 허공으로 날아갔고, 깔끔하게 0점을 기록했다.)"
         }
-      }
+      },
+      "triggerTiming": {
+        "week": 4,
+        "day": 5,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     }
   ]
 }

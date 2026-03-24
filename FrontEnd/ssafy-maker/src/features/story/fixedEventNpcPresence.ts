@@ -148,8 +148,9 @@ export function buildFixedEventNpcPresentation(
   const renderArea = resolveFixedEventRenderArea(location);
   const slots = FIXED_EVENT_NPC_SLOTS[location] ?? FIXED_EVENT_NPC_SLOTS[renderArea];
 
+  const rawEventId = event.id ?? event.eventId;
   return {
-    eventId: typeof event.eventId === "string" && event.eventId.trim().length > 0 ? event.eventId.trim() : undefined,
+    eventId: typeof rawEventId === "string" && rawEventId.trim().length > 0 ? rawEventId.trim() : undefined,
     renderArea,
     participants: participants.slice(0, slots.length).map((participant, index) => ({
       ...participant,
