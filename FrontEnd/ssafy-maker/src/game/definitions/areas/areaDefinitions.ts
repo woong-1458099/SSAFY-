@@ -52,6 +52,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     id: "world",
     label: "전체 지도",
     map: {
+      entryPoint: { x: 300, y: 360 },
       tmxKey: ASSET_KEYS.map.worldTmx,
       collisionLayerNames: ["root", "build"],
       interactionLayerNames: ["build"],
@@ -69,7 +70,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     map: {
       entryPoint: { x: 216, y: 520 },
       tmxKey: ASSET_KEYS.map.downtownTmx,
-      collisionLayerNames: ["tile layer 5(4)", "tile layer 3", "build(foul)"],
+      collisionLayerNames: ["tile layer 5(4)", "tile layer 3", "build(foul)", "tree"],
       interactionLayerNames: ["build(total)"],
       foregroundLayerNames: ["build(hide)"],
       blockedTileZones: DOWNTOWN_BLOCKED_TILE_ZONES

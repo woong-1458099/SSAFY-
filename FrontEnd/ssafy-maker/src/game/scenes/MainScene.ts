@@ -21,6 +21,7 @@ import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../feature
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
 import type { EndingId } from "../../features/progression/types/ending";
 import { resolveEnding } from "../../features/progression/services/endingResolver";
+import { beginLogout, clearAuthRegistry, clearStoredSession } from "../../features/auth/authSession";
 import { SceneKey } from "../../shared/enums/sceneKey";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
@@ -99,6 +100,7 @@ export class MainScene extends Phaser.Scene {
   private plannerKey?: Phaser.Input.Keyboard.Key;
   private currentSceneId?: SceneId;
   private currentSceneState?: SceneState;
+  private logoutInProgress = false;
   private runtimeDialogueScripts: Record<string, DialogueScript> = {};
   private destroySkyBackground?: () => void;
   private currentTimeOfDay?: TimeOfDay;
@@ -109,6 +111,7 @@ export class MainScene extends Phaser.Scene {
 
 async create() {
     this.initialized = false;
+    this.logoutInProgress = false;
     await ensureAuthoredStoryLoaded(this);
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
@@ -189,7 +192,10 @@ async create() {
       inventoryService: this.inventoryService,
       saveService: this.saveService,
       buildSavePayload: () => this.buildSavePayload(),
-      restoreSavePayload: (payload) => this.restoreSavePayload(payload)
+      restoreSavePayload: (payload) => this.restoreSavePayload(payload),
+      onLogout: () => {
+        void this.handleLogout();
+      }
     });
 
     this.statSystemManager.attachHud(this.hud);
@@ -648,8 +654,40 @@ update() {
   }
 
   private resolveStartScene() {
-    const sceneId = (this.registry.get("startSceneId") as SceneId | undefined) ?? DEFAULT_START_SCENE_ID;
+    const pendingRestorePayload = this.getPendingRestorePayload();
+    const restoredSceneId = pendingRestorePayload?.world?.sceneId ??
+      (pendingRestorePayload?.world?.areaId ? getDefaultSceneIdForArea(pendingRestorePayload.world.areaId) : undefined);
+    const sceneId =
+      (this.registry.get("startSceneId") as SceneId | undefined) ??
+      restoredSceneId ??
+      DEFAULT_START_SCENE_ID;
     return getSceneScript(sceneId) ?? getSceneScript(DEFAULT_START_SCENE_ID);
+  }
+
+  private resolveInitialSceneState(
+    startScene: NonNullable<ReturnType<MainScene["resolveStartScene"]>>,
+    pendingRestorePayload?: SavePayload
+  ): SceneState | undefined {
+    const defaultSceneState = normalizeSceneState(getSceneState(startScene.initialStateId));
+    const restoredSceneState = normalizeSceneState(pendingRestorePayload?.world?.sceneState);
+
+    if (!restoredSceneState) {
+      return defaultSceneState;
+    }
+
+    if (!defaultSceneState) {
+      return restoredSceneState;
+    }
+
+    if (restoredSceneState.npcs.length > 0 || defaultSceneState.npcs.length === 0) {
+      return restoredSceneState;
+    }
+
+    return {
+      ...defaultSceneState,
+      area: restoredSceneState.area ?? defaultSceneState.area,
+      id: restoredSceneState.id ?? defaultSceneState.id
+    };
   }
 
   private restartWithScene(sceneId: SceneId) {

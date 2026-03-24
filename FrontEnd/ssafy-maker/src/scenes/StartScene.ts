@@ -9,6 +9,7 @@ import {
   START_SCENE_FONT_FAMILY
 } from "@features/start/startSceneAssets";
 import { START_SCENE_CONTINUE_MODAL } from "@features/start/startSceneUiConfig";
+import { getDefaultSceneIdForArea } from "../game/scripts/scenes/sceneRegistry";
 
 
 type ContinueSlotView = {
@@ -161,6 +162,8 @@ export class StartScene extends Phaser.Scene {
   private async handleLogout(): Promise<void> {
     this.startArmed = false;
     this.input.enabled = false;
+    this.stopBackgroundMusic();
+    this.sound.stopAll();
 
     this.clearAuthRegistry();
 
@@ -303,8 +306,10 @@ export class StartScene extends Phaser.Scene {
     this.cameras.main.fadeOut(280, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.registry.set("pendingRestorePayload", saveSlot.payload);
-      if (saveSlot.payload.world?.sceneId) {
-        this.registry.set("startSceneId", saveSlot.payload.world.sceneId);
+      const restoreSceneId = saveSlot.payload.world?.sceneId ??
+        (saveSlot.payload.world?.areaId ? getDefaultSceneIdForArea(saveSlot.payload.world.areaId) : undefined);
+      if (restoreSceneId) {
+        this.registry.set("startSceneId", restoreSceneId);
       }
       this.scene.start(SceneKey.Main);
     });

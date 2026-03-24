@@ -82,10 +82,13 @@ export function createShopModal(scene: Phaser.Scene, options: {
   onClose: () => void;
 }): Phaser.GameObjects.Container {
   const itemsPerPage = 6;
-  const cardWidth = 216;
-  const cardHeight = 178;
-  const cardGapX = 22;
-  const cardGapY = 24;
+  const cardWidth = 220;
+  const cardHeight = 196;
+  const cardPaddingX = 18;
+  const cardPaddingTop = 14;
+  const cardPaddingBottom = 14;
+  const cardGapX = 18;
+  const cardGapY = 20;
   const panelWidth = 860;
   const panelHeight = 720;
   const innerWidth = panelWidth - 20;
@@ -95,7 +98,7 @@ export function createShopModal(scene: Phaser.Scene, options: {
   const columns = 3;
   const gridWidth = columns * cardWidth + (columns - 1) * cardGapX;
   const gridStartX = -gridWidth / 2 + cardWidth / 2;
-  const gridStartY = panelTop + 170 + cardHeight / 2;
+  const gridStartY = panelTop + 146 + cardHeight / 2;
   const footerTop = panelHeight / 2 - footerHeight;
   const centerX = Math.round(scene.scale.width / 2);
   const centerY = Math.round(scene.scale.height / 2);
@@ -131,11 +134,12 @@ export function createShopModal(scene: Phaser.Scene, options: {
     color: "#b6d6fb",
     resolution: 2
   }).setOrigin(0.5);
-  const subtitleText = scene.add.text(0, panelTop + 118, "한 번에 6개씩 확인할 수 있습니다", {
+  const subtitleText = scene.add.text(0, panelTop + 118, "상품 카드를 클릭하면 바로 구매됩니다.", {
     fontFamily: FONT_FAMILY,
-    fontSize: "14px",
+    fontSize: "13px",
     color: "#88b8e9",
-    resolution: 2
+    resolution: 2,
+    align: "center"
   }).setOrigin(0.5);
   const hintText = scene.add.text(0, footerTop + 112, "LEFT / RIGHT 페이지 이동 | Space / ESC 닫기", {
     fontFamily: FONT_FAMILY,
@@ -208,16 +212,22 @@ export function createShopModal(scene: Phaser.Scene, options: {
       const row = Math.floor(index / columns);
       const x = gridStartX + col * (cardWidth + cardGapX);
       const y = gridStartY + row * (cardHeight + cardGapY);
+      const cardTop = -cardHeight / 2;
+      const cardBottom = cardHeight / 2;
+      const contentWidth = cardWidth - cardPaddingX * 2;
       const cardRoot = scene.add.container(x, y);
       const card = scene.add.rectangle(0, 0, cardWidth, cardHeight, 0x234873, 1);
       card.setStrokeStyle(2, 0x5cb0ff, 1);
+      const topGroup = scene.add.container(0, 0);
+      const middleGroup = scene.add.container(0, 0);
+      const bottomGroup = scene.add.container(0, 0);
 
-      const iconPlate = scene.add.rectangle(0, -46, 74, 74, 0xf5fbff, 1);
+      const iconPlate = scene.add.rectangle(0, 32, 74, 74, 0xf5fbff, 1);
       iconPlate.setStrokeStyle(2, item.color, 1);
-      const iconImage = scene.add.image(0, -46, "__WHITE");
+      const iconImage = scene.add.image(0, iconPlate.y, "__WHITE");
       const hasIconImage = applyInventoryItemIconImage(scene, iconImage, item, 58, 58);
       iconPlate.setFillStyle(0xf5fbff, hasIconImage ? 0 : 1);
-      const iconLabel = scene.add.text(0, -46, item.shortLabel, {
+      const iconLabel = scene.add.text(0, iconPlate.y, item.shortLabel, {
         fontFamily: FONT_FAMILY,
         fontSize: "20px",
         fontStyle: "bold",
@@ -226,42 +236,85 @@ export function createShopModal(scene: Phaser.Scene, options: {
       }).setOrigin(0.5);
       iconLabel.setVisible(!hasIconImage);
 
-      const typeText = scene.add.text(0, 22, item.kind === "equipment" ? "장비" : "소비", {
+      const typeText = scene.add.text(0, 72, item.kind === "equipment" ? "장비" : "소비", {
         fontFamily: FONT_FAMILY,
         fontSize: "12px",
         color: "#8fc7ff",
         resolution: 2
-      }).setOrigin(0.5);
-      const nameText = scene.add.text(0, 48, item.name, {
+      }).setOrigin(0.5, 0);
+      const nameText = scene.add.text(0, typeText.y + 16, item.name, {
         fontFamily: FONT_FAMILY,
         fontSize: "15px",
         fontStyle: "bold",
         color: "#eef7ff",
         resolution: 2,
         align: "center",
-        wordWrap: { width: 184 }
-      }).setOrigin(0.5);
-      const priceText = scene.add.text(0, 88, `${item.price.toLocaleString("ko-KR")} G`, {
+        wordWrap: { width: contentWidth }
+      }).setOrigin(0.5, 0);
+      topGroup.add([iconPlate, iconImage, iconLabel, typeText, nameText]);
+
+      const priceText = scene.add.text(0, 0, `${item.price.toLocaleString("ko-KR")} G`, {
         fontFamily: FONT_FAMILY,
-        fontSize: "16px",
+        fontSize: "13px",
         fontStyle: "bold",
-        color: "#b6d6fb",
-        resolution: 2
-      }).setOrigin(0.5);
-      const buyButton = scene.add.rectangle(0, 122, 132, 30, 0x2b5a8c, 1);
-      buyButton.setStrokeStyle(1, 0x8ed2ff, 1);
-      const buyHint = scene.add.text(0, 122, "클릭 구매", {
+        color: "#FFD700",
+        resolution: 2,
+        align: "center",
+        wordWrap: { width: contentWidth }
+      }).setOrigin(0.5, 0);
+      const descriptionText = scene.add.text(0, priceText.height + 8, item.effect, {
         fontFamily: FONT_FAMILY,
         fontSize: "12px",
+        color: "#cfe6fb",
+        resolution: 2,
+        align: "center",
+        wordWrap: { width: contentWidth },
+        lineSpacing: 3
+      }).setOrigin(0.5, 0);
+      middleGroup.add([priceText, descriptionText]);
+
+      const purchaseText = scene.add.text(0, 0, "클릭 시 구매", {
+        fontFamily: FONT_FAMILY,
+        fontSize: "13px",
+        fontStyle: "bold",
         color: "#dceeff",
-        resolution: 2
-      }).setOrigin(0.5);
-      cardRoot.add([card, iconPlate, iconImage, iconLabel, typeText, nameText, priceText, buyButton, buyHint]);
+        resolution: 2,
+        align: "center",
+        wordWrap: { width: contentWidth }
+      }).setOrigin(0.5, 1);
+      bottomGroup.add([purchaseText]);
+
+      const topGroupHeight = nameText.y + nameText.height;
+      const middleGroupHeight = descriptionText.y + descriptionText.height;
+      const bottomGroupHeight = purchaseText.height;
+      const topGroupY = cardTop + cardPaddingTop;
+      const bottomGroupY = cardBottom - cardPaddingBottom;
+      const availableTop = topGroupY + topGroupHeight;
+      const availableBottom = bottomGroupY - bottomGroupHeight;
+      const middleTopMin = availableTop + 8;
+      const middleTopMax = availableBottom - middleGroupHeight - 8;
+      const middlePreferredTop = availableTop + (availableBottom - availableTop - middleGroupHeight) / 2;
+      const middleGroupY = middleTopMax >= middleTopMin
+        ? Phaser.Math.Clamp(middlePreferredTop, middleTopMin, middleTopMax)
+        : middleTopMin;
+
+      topGroup.setPosition(0, topGroupY);
+      middleGroup.setPosition(0, middleGroupY);
+      bottomGroup.setPosition(0, bottomGroupY);
+
+      cardRoot.add([
+        card,
+        topGroup,
+        middleGroup,
+        bottomGroup
+      ]);
 
       card.setInteractive({ useHandCursor: true });
       card.on("pointerover", (pointer: Phaser.Input.Pointer) => {
         card.setFillStyle(0x2c5a8f, 1);
-        buyButton.setFillStyle(0x3771ad, 1);
+        priceText.setColor("#fff29a");
+        descriptionText.setColor("#eef7ff");
+        purchaseText.setColor("#ffffff");
         setTooltipContent(tooltipBg, tooltipText, item);
         positionTooltip(scene, tooltipRoot, tooltipBg, pointer.x, pointer.y);
         tooltipRoot.setVisible(true);
@@ -274,7 +327,9 @@ export function createShopModal(scene: Phaser.Scene, options: {
       });
       card.on("pointerout", () => {
         card.setFillStyle(0x234873, 1);
-        buyButton.setFillStyle(0x2b5a8c, 1);
+        priceText.setColor("#FFD700");
+        descriptionText.setColor("#cfe6fb");
+        purchaseText.setColor("#dceeff");
         tooltipRoot.setVisible(false);
       });
       card.on("pointerdown", () => options.onBuy(item.templateId));

@@ -16,13 +16,17 @@ export class PlayerManager {
   private scene: Phaser.Scene;
   private player?: PlayerVisual;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
-  private isMoving = false;
+  private moveKeys?: {
+    up?: Phaser.Input.Keyboard.Key;
+    down?: Phaser.Input.Keyboard.Key;
+    left?: Phaser.Input.Keyboard.Key;
+    right?: Phaser.Input.Keyboard.Key;
+  };
   private isInputLocked = false;
   private tileSize = 32;
   private currentTileX = 0;
   private currentTileY = 0;
-  private moveRepeatDelay = 110;
-  private lastMoveAt = 0;
+  private moveSpeed = 180;
   private renderBounds?: WorldRenderBounds;
   private currentFacing: Facing = "down";
   private appearance: PlayerAppearanceDefinition = getDefaultPlayerAppearanceDefinition();
@@ -61,6 +65,12 @@ export class PlayerManager {
     this.player.root.setDepth(getActorDepth(y));
     updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
     this.cursors = this.scene.input.keyboard?.createCursorKeys();
+    this.moveKeys = {
+      up: this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      down: this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      left: this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      right: this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D)
+    };
   }
 
   setInputLocked(locked: boolean) {
@@ -73,21 +83,45 @@ export class PlayerManager {
 
     if (
       !this.player ||
-      !this.cursors ||
-      this.isMoving ||
-      this.isInputLocked ||
       !runtimeGrids ||
       !parsedMap
     ) {
       return;
     }
 
-    const now = this.scene.time.now;
-    if (now - this.lastMoveAt < this.moveRepeatDelay) {
+    if (this.isInputLocked) {
+      updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
       return;
     }
 
-    this.tryStartMoveFromInput(now);
+    const moveVector = this.getRequestedMoveVector();
+    if (moveVector.lengthSq() === 0) {
+      updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
+      return;
+    }
+
+    moveVector.normalize().scale(this.moveSpeed);
+    this.currentFacing = this.resolveFacingFromVelocity(moveVector.x, moveVector.y);
+
+    const deltaSeconds = this.scene.game.loop.delta / 1000;
+    const targetX = this.player.root.x + moveVector.x * deltaSeconds;
+    const targetY = this.player.root.y + moveVector.y * deltaSeconds;
+    let nextX = this.player.root.x;
+    let nextY = this.player.root.y;
+
+    if (this.canOccupyWorldPosition(targetX, nextY, runtimeGrids, parsedMap)) {
+      nextX = targetX;
+    }
+
+    if (this.canOccupyWorldPosition(nextX, targetY, runtimeGrids, parsedMap)) {
+      nextY = targetY;
+    }
+
+    const didMove = nextX !== this.player.root.x || nextY !== this.player.root.y;
+    this.player.root.setPosition(nextX, nextY);
+    this.player.root.setDepth(getActorDepth(nextY));
+    this.syncTilePositionFromWorldPosition(nextX, nextY, parsedMap);
+    updatePlayerVisualFrame(this.player, this.currentFacing, didMove, this.scene.time.now);
   }
 
   getSnapshot(): PlayerSnapshot | undefined {
@@ -111,7 +145,6 @@ export class PlayerManager {
     const { x, y } = this.getWorldPositionFromTile(tileX, tileY);
     this.currentTileX = tileX;
     this.currentTileY = tileY;
-    this.isMoving = false;
     this.player.root.setPosition(x, y);
     this.player.root.setDepth(getActorDepth(y));
     updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
@@ -131,131 +164,68 @@ export class PlayerManager {
     return !runtimeGrids.blockedGrid[tileY]?.[tileX];
   }
 
-  private moveToTile(tileX: number, tileY: number) {
-    if (!this.player) {
-      return;
-    }
+  private getRequestedMoveVector() {
+    const horizontal =
+      (this.cursors?.left?.isDown || this.moveKeys?.left?.isDown ? -1 : 0) +
+      (this.cursors?.right?.isDown || this.moveKeys?.right?.isDown ? 1 : 0);
+    const vertical =
+      (this.cursors?.up?.isDown || this.moveKeys?.up?.isDown ? -1 : 0) +
+      (this.cursors?.down?.isDown || this.moveKeys?.down?.isDown ? 1 : 0);
 
-    this.isMoving = true;
-
-    const { x, y } = this.getWorldPositionFromTile(tileX, tileY);
-
-    // 한 줄 한글 설명: tween 첫 프레임 전에 이전 idle 방향이 비치지 않도록 즉시 이동 프레임으로 전환한다.
-    updatePlayerVisualFrame(this.player, this.currentFacing, true, this.scene.time.now);
-
-    this.scene.tweens.add({
-      targets: this.player.root,
-      x,
-      y,
-      duration: 120,
-      onUpdate: () => {
-        if (!this.player) {
-          return;
-        }
-
-        updatePlayerVisualFrame(this.player, this.currentFacing, true, this.scene.time.now);
-        this.player.root.setDepth(getActorDepth(this.player.root.y));
-      },
-      onComplete: () => {
-        if (this.player) {
-          this.player.root.setDepth(getActorDepth(y));
-        }
-        this.isMoving = false;
-
-        // 한 줄 한글 설명: 입력이 유지되면 idle로 떨어지지 않고 다음 타일 이동을 바로 이어서 시작한다.
-        if (this.tryStartMoveFromInput(this.scene.time.now, true)) {
-          return;
-        }
-
-        if (this.player) {
-          updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
-        }
-      }
-    });
+    return new Phaser.Math.Vector2(horizontal, vertical);
   }
 
-  private tryStartMoveFromInput(now: number, isChainedMove = false) {
-    if (!this.player || !this.cursors || !this.runtimeGrids || !this.parsedMap) {
-      return false;
+  private resolveFacingFromVelocity(velocityX: number, velocityY: number): Facing {
+    if (Math.abs(velocityX) > Math.abs(velocityY)) {
+      return velocityX < 0 ? "left" : "right";
     }
 
-    const nextMove = this.getRequestedMove();
-    if (!nextMove) {
-      return false;
-    }
-
-    if (!isChainedMove && now - this.lastMoveAt < this.moveRepeatDelay) {
-      return false;
-    }
-
-    if (!this.canMoveTo(nextMove.tileX, nextMove.tileY, this.runtimeGrids, this.parsedMap)) {
-      updatePlayerVisualFrame(this.player, nextMove.facing, false, now);
-      this.currentFacing = nextMove.facing;
-      return false;
-    }
-
-    this.lastMoveAt = now;
-    this.currentFacing = nextMove.facing;
-    this.currentTileX = nextMove.tileX;
-    this.currentTileY = nextMove.tileY;
-    this.moveToTile(nextMove.tileX, nextMove.tileY);
-    return true;
-  }
-
-  private getRequestedMove() {
-    if (!this.cursors) {
-      return undefined;
-    }
-
-    if (this.cursors.left?.isDown) {
-      return {
-        tileX: this.currentTileX - 1,
-        tileY: this.currentTileY,
-        facing: "left" as const
-      };
-    }
-
-    if (this.cursors.right?.isDown) {
-      return {
-        tileX: this.currentTileX + 1,
-        tileY: this.currentTileY,
-        facing: "right" as const
-      };
-    }
-
-    if (this.cursors.up?.isDown) {
-      return {
-        tileX: this.currentTileX,
-        tileY: this.currentTileY - 1,
-        facing: "up" as const
-      };
-    }
-
-    if (this.cursors.down?.isDown) {
-      return {
-        tileX: this.currentTileX,
-        tileY: this.currentTileY + 1,
-        facing: "down" as const
-      };
-    }
-
-    return undefined;
-  }
-
-  private resolveFacing(nextTileX: number, nextTileY: number): Facing {
-    if (nextTileX < this.currentTileX) {
-      return "left";
-    }
-
-    if (nextTileX > this.currentTileX) {
-      return "right";
-    }
-
-    if (nextTileY < this.currentTileY) {
+    if (velocityY < 0) {
       return "up";
     }
 
     return "down";
+  }
+
+  private canOccupyWorldPosition(
+    worldX: number,
+    worldY: number,
+    runtimeGrids: TmxRuntimeGrids,
+    parsedMap: ParsedTmxMap
+  ) {
+    const { tileX, tileY } = this.getTilePositionFromWorld(worldX, worldY, parsedMap);
+    return this.canMoveTo(tileX, tileY, runtimeGrids, parsedMap);
+  }
+
+  private syncTilePositionFromWorldPosition(worldX: number, worldY: number, parsedMap: ParsedTmxMap) {
+    const { tileX, tileY } = this.getTilePositionFromWorld(worldX, worldY, parsedMap);
+    this.currentTileX = tileX;
+    this.currentTileY = tileY;
+  }
+
+  private getTilePositionFromWorld(worldX: number, worldY: number, parsedMap: ParsedTmxMap) {
+    if (!this.renderBounds) {
+      return {
+        tileX: Phaser.Math.Clamp(Math.floor(worldX / this.tileSize), 0, parsedMap.width - 1),
+        tileY: Phaser.Math.Clamp(Math.floor((worldY - 1) / this.tileSize), 0, parsedMap.height - 1)
+      };
+    }
+
+    const scaledTileWidth = this.renderBounds.tileWidth * this.renderBounds.scale;
+    const scaledTileHeight = this.renderBounds.tileHeight * this.renderBounds.scale;
+
+    return {
+      tileX: Phaser.Math.Clamp(
+        Math.floor((worldX - this.renderBounds.offsetX) / scaledTileWidth),
+        0,
+        parsedMap.width - 1
+      ),
+      tileY: Phaser.Math.Clamp(
+        Math.floor((worldY - this.renderBounds.offsetY - 1) / scaledTileHeight),
+        0,
+        parsedMap.height - 1
+      )
+    };
   }
 
   private getWorldPositionFromTile(tileX: number, tileY: number) {

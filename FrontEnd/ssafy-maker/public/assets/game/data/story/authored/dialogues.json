@@ -121,6 +121,24 @@
       }
     },
     {
+      "id": "npc_minseok",
+      "label": "민석",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "민석",
+          "text": "오늘도 차분하게 하나씩 풀어보자. 급할수록 흐름부터 보는 게 좋아.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "좋아, 차근차근 해볼게."
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "npc_myungjin",
       "label": "명진",
       "startNodeId": "intro",

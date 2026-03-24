@@ -33,6 +33,27 @@ type DialogueRenderOptions = {
   isChoiceAvailable?: (choice: DialogueChoice) => boolean;
 };
 
+type DialogueLayoutMetrics = {
+  panelX: number;
+  panelY: number;
+  panelWidth: number;
+  panelHeight: number;
+  innerX: number;
+  innerWidth: number;
+  headerY: number;
+  headerHeight: number;
+  bodyY: number;
+  bodyHeight: number;
+  choiceY: number;
+  choiceWidth: number;
+  choiceWrapWidth: number;
+  choiceGap: number;
+  choiceHeights: number[];
+  hintX: number;
+  hintY: number;
+  speakerBadgeWidth: number;
+};
+
 const EMOTION_LABELS: Record<string, string> = {
   NORMAL: "평온",
   ANGRY: "분노",
@@ -45,6 +66,26 @@ const EMOTION_LABELS: Record<string, string> = {
   SPEECHLESS: "멍함",
   TIRED: "지침"
 };
+
+const DIALOGUE_GRID = {
+  maxPanelWidth: 1140,
+  minPanelHeight: 220,
+  panelBottomMargin: 28,
+  minViewportMargin: 24,
+  paddingX: 30,
+  paddingTop: 24,
+  paddingBottom: 20,
+  rowGap: 14,
+  headerHeight: 40,
+  footerHeight: 20,
+  minBodyHeight: 72,
+  choiceGap: 10,
+  choicePaddingX: 18,
+  choicePaddingY: 10,
+  minChoiceHeight: 42,
+  minSpeakerBadgeWidth: 170,
+  maxSpeakerBadgeRatio: 0.42
+} as const;
 
 export class DialogueBox {
   private readonly scene: Phaser.Scene;
@@ -197,8 +238,6 @@ export class DialogueBox {
   private renderChoices(node: DialogueNode, selectedChoiceIndex: number, options: DialogueRenderOptions): void {
     this.clearChoices();
     const choices = node.choices ?? [];
-    const { panelX, panelY, panelWidth, panelHeight } = this.getLayoutMetrics();
-    const choiceStartY = panelY + panelHeight - 98 - (choices.length - 1) * 54;
 
     choices.forEach((choice, index) => {
       const isSelected = index === selectedChoiceIndex;
@@ -208,19 +247,19 @@ export class DialogueBox {
       const { fillColor, borderColor, textColor, alpha } = this.getChoicePalette(actionType, isSelected, available);
       const content = this.formatChoiceText(choice, index, isSelected, requirementText, available);
       const bg = this.scene.add
-        .rectangle(panelX + 30, choiceStartY + index * 54, panelWidth - 60, 42, fillColor, 1)
-        .setOrigin(0, 0.5)
+        .rectangle(0, 0, 0, DIALOGUE_GRID.minChoiceHeight, fillColor, 1)
+        .setOrigin(0, 0)
         .setScrollFactor(0)
         .setAlpha(alpha);
       bg.setStrokeStyle(2, borderColor, 1);
-      const text = this.scene.add.text(panelX + 48, choiceStartY + index * 54 - 1, content, {
+      const text = this.scene.add.text(0, 0, content, {
         fontFamily: FONT_FAMILY,
         fontSize: "18px",
         color: textColor,
         resolution: 2,
         lineSpacing: 4,
-        wordWrap: { width: panelWidth - 96 }
-      }).setOrigin(0, 0.5).setScrollFactor(0).setAlpha(alpha);
+        wordWrap: { width: 600 }
+      }).setOrigin(0, 0).setScrollFactor(0).setAlpha(alpha);
       const root = this.scene.add.container(0, 0, [bg, text]).setScrollFactor(0);
       this.choiceRoot.add(root);
       this.choiceViews.push({ root, bg, text, choice, requirementText, available });
@@ -234,7 +273,7 @@ export class DialogueBox {
   }
 
   private updateLayout(): void {
-    const { panelX, panelY, panelWidth, panelHeight } = this.getLayoutMetrics();
+    const metrics = this.getLayoutMetrics();
     this.overlay.setSize(this.scene.scale.width, this.scene.scale.height);
     this.panel.setPosition(panelX, panelY);
     this.panel.setSize(panelWidth, panelHeight);
@@ -245,25 +284,108 @@ export class DialogueBox {
     this.bodyText.setWordWrapWidth(panelWidth - 64);
     this.hintText.setPosition(panelX + panelWidth - 28, panelY + panelHeight - 20);
 
-    if (this.choiceViews.length > 0) {
-      const choiceStartY = panelY + panelHeight - 98 - (this.choiceViews.length - 1) * 54;
-      this.choiceViews.forEach((view, index) => {
-        const y = choiceStartY + index * 54;
-        view.bg.setPosition(panelX + 30, y);
-        view.bg.setSize(panelWidth - 60, 42);
-        view.bg.setDisplaySize(panelWidth - 60, 42);
-        view.text.setPosition(panelX + 48, y - 1);
-        view.text.setWordWrapWidth(panelWidth - 96);
-      });
-    }
+    let currentChoiceY = metrics.choiceY;
+    this.choiceViews.forEach((view, index) => {
+      const choiceHeight = metrics.choiceHeights[index] ?? DIALOGUE_GRID.minChoiceHeight;
+      view.bg.setPosition(metrics.innerX, currentChoiceY);
+      view.bg.setSize(metrics.choiceWidth, choiceHeight);
+      view.bg.setDisplaySize(metrics.choiceWidth, choiceHeight);
+      view.text.setPosition(
+        metrics.innerX + DIALOGUE_GRID.choicePaddingX,
+        currentChoiceY + DIALOGUE_GRID.choicePaddingY
+      );
+      view.text.setWordWrapWidth(metrics.choiceWrapWidth);
+      currentChoiceY += choiceHeight + metrics.choiceGap;
+    });
   }
 
-  private getLayoutMetrics() {
-    const panelWidth = Math.min(1140, this.scene.scale.width - 64);
-    const panelHeight = 244;
+  private getLayoutMetrics(): DialogueLayoutMetrics {
+    const viewportMargin = Math.max(
+      DIALOGUE_GRID.minViewportMargin,
+      Math.round(Math.min(this.scene.scale.width, this.scene.scale.height) * 0.03)
+    );
+    const panelWidth = Math.min(
+      DIALOGUE_GRID.maxPanelWidth,
+      this.scene.scale.width - viewportMargin * 2
+    );
     const panelX = Math.round((this.scene.scale.width - panelWidth) / 2);
-    const panelY = Math.round(this.scene.scale.height - panelHeight - 28);
-    return { panelX, panelY, panelWidth, panelHeight };
+    const innerX = panelX + DIALOGUE_GRID.paddingX;
+    const innerWidth = panelWidth - DIALOGUE_GRID.paddingX * 2;
+    const headerY = DIALOGUE_GRID.paddingTop;
+    const bodyY = headerY + DIALOGUE_GRID.headerHeight + DIALOGUE_GRID.rowGap;
+
+    this.bodyText.setWordWrapWidth(innerWidth);
+    const bodyHeight = Math.max(
+      DIALOGUE_GRID.minBodyHeight,
+      Math.ceil(this.bodyText.getBounds().height || this.bodyText.height || 0)
+    );
+
+    const choiceWrapWidth = Math.max(
+      120,
+      innerWidth - DIALOGUE_GRID.choicePaddingX * 2
+    );
+    const choiceHeights = this.choiceViews.map((view) =>
+      this.measureChoiceHeight(view, choiceWrapWidth)
+    );
+    const choiceBlockHeight =
+      choiceHeights.length > 0
+        ? choiceHeights.reduce((sum, height) => sum + height, 0) +
+          DIALOGUE_GRID.choiceGap * Math.max(0, choiceHeights.length - 1)
+        : 0;
+    const choiceY = bodyY + bodyHeight + (choiceHeights.length > 0 ? DIALOGUE_GRID.rowGap : 0);
+    const panelHeight = Math.max(
+      DIALOGUE_GRID.minPanelHeight,
+      DIALOGUE_GRID.paddingTop +
+        DIALOGUE_GRID.headerHeight +
+        DIALOGUE_GRID.rowGap +
+        bodyHeight +
+        (choiceHeights.length > 0 ? DIALOGUE_GRID.rowGap + choiceBlockHeight : 0) +
+        DIALOGUE_GRID.rowGap +
+        DIALOGUE_GRID.footerHeight +
+        DIALOGUE_GRID.paddingBottom
+    );
+    const panelY = Math.max(
+      viewportMargin,
+      Math.round(this.scene.scale.height - panelHeight - DIALOGUE_GRID.panelBottomMargin)
+    );
+    const speakerBadgeMaxWidth = Math.max(
+      DIALOGUE_GRID.minSpeakerBadgeWidth,
+      Math.floor(innerWidth * DIALOGUE_GRID.maxSpeakerBadgeRatio)
+    );
+    const speakerBadgeWidth = Phaser.Math.Clamp(
+      Math.ceil(this.speakerText.getBounds().width + 36),
+      DIALOGUE_GRID.minSpeakerBadgeWidth,
+      speakerBadgeMaxWidth
+    );
+
+    return {
+      panelX,
+      panelY,
+      panelWidth,
+      panelHeight,
+      innerX,
+      innerWidth,
+      headerY: panelY + headerY,
+      headerHeight: DIALOGUE_GRID.headerHeight,
+      bodyY: panelY + bodyY,
+      bodyHeight,
+      choiceY: panelY + choiceY,
+      choiceWidth: innerWidth,
+      choiceWrapWidth,
+      choiceGap: DIALOGUE_GRID.choiceGap,
+      choiceHeights,
+      hintX: innerX + innerWidth,
+      hintY: panelY + panelHeight - DIALOGUE_GRID.paddingBottom,
+      speakerBadgeWidth
+    };
+  }
+
+  private measureChoiceHeight(view: ChoiceView, wrapWidth: number): number {
+    view.text.setWordWrapWidth(wrapWidth);
+    return Math.max(
+      DIALOGUE_GRID.minChoiceHeight,
+      Math.ceil((view.text.getBounds().height || view.text.height || 0) + DIALOGUE_GRID.choicePaddingY * 2)
+    );
   }
 
   private formatSpeakerTitle(node: DialogueNode): string {
