@@ -372,6 +372,10 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.applyPendingRestorePayload();
+    this.statSystemManager.patchHudState({
+      locationLabel: this.getAreaLabel(runtimeSceneScript.area)
+    });
+    this.storyEventManager?.requestFixedEventTrigger(this.getAreaLabel(runtimeSceneScript.area));
 
     if (DEBUG_FLAGS.overlayEnabled && this.debugLogger && this.npcManager) {
       this.debugOverlay = new DebugOverlay(this, this.debugLogger, this.npcManager);
@@ -438,8 +442,10 @@ export class MainScene extends Phaser.Scene {
     this.initialized = true;
 await director.run(runtimeSceneScript);
     this.applyPendingDebugFixedEvent();
-    this.storyEventManager?.refreshCurrentWeekLoadState();
-    this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent();
+    this.time.delayedCall(0, () => {
+      this.storyEventManager?.refreshCurrentWeekLoadState();
+      this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent();
+    });
 
     const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
     const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
