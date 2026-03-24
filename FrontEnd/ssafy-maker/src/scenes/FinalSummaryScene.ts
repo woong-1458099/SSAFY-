@@ -17,6 +17,7 @@ const TEXT_SUB = "#b9d6f6";
 const FONT_FAMILY = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 
 type SummaryLayout = {
+  headerTopY: number;
   headerCenterY: number;
   headerWidth: number;
   headerHeight: number;
@@ -58,7 +59,8 @@ export class FinalSummaryScene extends Phaser.Scene {
       .rectangle(width / 2, layout.headerCenterY, layout.headerWidth, layout.headerHeight, PANEL_BG, 0.92)
       .setStrokeStyle(3, PANEL_BORDER, 1);
 
-    this.add.text(width / 2, layout.headerCenterY - 28, "6주차 종료 리포트", {
+    const headerTextCenterY = layout.headerTopY + layout.headerHeight / 2;
+    const titleText = this.add.text(0, -16, "6주차 종료 리포트", {
       fontFamily: FONT_FAMILY,
       fontSize: "34px",
       fontStyle: "bold",
@@ -66,12 +68,13 @@ export class FinalSummaryScene extends Phaser.Scene {
       resolution: 2
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, layout.headerCenterY + 12, `${this.payload.week}주차 ${this.payload.dayLabel} ${this.payload.timeLabel} 이후 정산`, {
+    const subtitleText = this.add.text(0, 18, `${this.payload.week}주차 ${this.payload.dayLabel} ${this.payload.timeLabel} 이후 정산`, {
       fontFamily: FONT_FAMILY,
       fontSize: "18px",
       color: TEXT_SUB,
       resolution: 2
     }).setOrigin(0.5);
+    this.add.container(width / 2, headerTextCenterY, [titleText, subtitleText]);
 
     this.createSummaryGrid(width / 2, layout.summaryTopY, this.ending.summaryStats, layout);
     this.createEndingPreview(width / 2, layout.previewTopY, layout);
@@ -80,7 +83,8 @@ export class FinalSummaryScene extends Phaser.Scene {
 
   private buildLayout(width: number, height: number, statCount: number): SummaryLayout {
     const headerHeight = 92;
-    const headerCenterY = 88;
+    const headerTopY = 42;
+    const headerCenterY = headerTopY + headerHeight / 2;
     const headerBottom = headerCenterY + headerHeight / 2;
     const cardWidth = 220;
     const cardHeight = 104;
@@ -95,6 +99,7 @@ export class FinalSummaryScene extends Phaser.Scene {
     const buttonY = Math.min(height - 54, previewTopY + previewHeight / 2 + 34 + 27);
 
     return {
+      headerTopY,
       headerCenterY,
       headerWidth: width - 96,
       headerHeight,
