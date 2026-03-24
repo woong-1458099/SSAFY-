@@ -39,6 +39,16 @@ type ProgressionManagerOptions = {
   onStartEndingFlow?: () => void;
 };
 
+export type ConsumeActionPointFailureReason = "no-action-point" | "blocked-time-advance" | "busy";
+
+export type ConsumeActionPointResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: ConsumeActionPointFailureReason;
+      message?: string;
+    };
+
 export class ProgressionManager {
   private readonly scene: Phaser.Scene;
   private readonly getHudState: () => HudState;
@@ -119,20 +129,46 @@ export class ProgressionManager {
   consumeActionPoint(options?: {
     ignoreTimeAdvanceBlock?: boolean;
   }): boolean {
+    return this.tryConsumeActionPoint({
+      ignoreTimeAdvanceBlock: options?.ignoreTimeAdvanceBlock,
+      notifyOnFailure: true
+    }).ok;
+  }
+
+  tryConsumeActionPoint(options?: {
+    ignoreTimeAdvanceBlock?: boolean;
+    notifyOnFailure?: boolean;
+  }): ConsumeActionPointResult {
     if (this.timeState.actionPoint <= 0) {
-      this.onNotice?.("행동력이 부족합니다");
-      return false;
+      const message = "행동력이 부족합니다";
+      if (options?.notifyOnFailure !== false) {
+        this.onNotice?.(message);
+      }
+      return {
+        ok: false,
+        reason: "no-action-point",
+        message
+      };
     }
     if (this.salaryRoot?.visible) {
-      return false;
+      return {
+        ok: false,
+        reason: "busy"
+      };
     }
     if (!options?.ignoreTimeAdvanceBlock) {
       // User-initiated time advancement retries week loading before enforcing the block.
       this.refreshTimeAdvanceBlockedState?.();
       const blockedMessage = this.getTimeAdvanceBlockedMessage?.() ?? null;
       if (blockedMessage) {
-        this.onNotice?.(blockedMessage);
-        return false;
+        if (options?.notifyOnFailure !== false) {
+          this.onNotice?.(blockedMessage);
+        }
+        return {
+          ok: false,
+          reason: "blocked-time-advance",
+          message: blockedMessage
+        };
       }
     }
 
@@ -148,7 +184,7 @@ export class ProgressionManager {
     if (result.shouldStartEndingAfterUpdate) {
       this.requestEndingFlow();
     }
-    return true;
+    return { ok: true };
   }
 
   debugAdvanceTime(): void {
