@@ -9,6 +9,15 @@ import { UI_DEPTH } from "../../../game/systems/uiDepth";
 const FONT_FAMILY =
   "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 
+const NPC_GENDER_MAP: Record<string, "male" | "female"> = {
+  "지우": "female",
+  "효련": "female",
+  "김도연 프로": "female", 
+  "조선미 프로":"female" ,
+  "이혜원 코치":"female" ,
+  "SYSTEM": "male",
+};
+
 type ChoiceView = {
   root: Phaser.GameObjects.Container;
   bg: Phaser.GameObjects.Rectangle;
@@ -49,6 +58,10 @@ export class DialogueBox {
   private readonly choiceRoot: Phaser.GameObjects.Container;
   private readonly depth = UI_DEPTH.dialogue;
   private choiceViews: ChoiceView[] = [];
+
+
+  private typingEvent?: Phaser.Time.TimerEvent;
+  private currentFullText: string = "";
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -110,16 +123,19 @@ export class DialogueBox {
   }
 
   hide(): void {
+    this.stopTyping(); 
     this.root.setVisible(false);
     this.clearChoices();
   }
+
 
   renderNode(node: DialogueNode, options: DialogueRenderOptions = {}): void {
     const selectedChoiceIndex = options.selectedChoiceIndex ?? 0;
     this.show();
     this.speakerText.setText(this.formatSpeakerTitle(node));
     this.speakerText.setColor(this.getSpeakerColor(node));
-    this.bodyText.setText(node.text);
+    
+    this.startTypingEffect(node);
 
     if (node.choices && node.choices.length > 0) {
       this.renderChoices(node, selectedChoiceIndex, options);
@@ -132,7 +148,47 @@ export class DialogueBox {
     this.updateLayout();
   }
 
+
+private startTypingEffect(node: DialogueNode): void {
+    this.stopTyping(); 
+    
+    this.currentFullText = node.text;
+    this.bodyText.setText(""); 
+    
+    let charIndex = 0;
+    
+    const gender = NPC_GENDER_MAP[node.speaker] || "male";
+    const soundKey = gender === "male" ? "male_voice" : "female_voice";
+
+    this.typingEvent = this.scene.time.addEvent({
+      delay: 40, 
+      repeat: this.currentFullText.length,  
+      callback: () => {
+        const currentDisplayPath = this.currentFullText.substring(0, charIndex);
+        this.bodyText.setText(currentDisplayPath);
+        const currentChar = this.currentFullText[charIndex - 1];
+        if (currentChar && currentChar !== " ") {
+          this.scene.sound.play(soundKey, { volume: 0.4 });
+        }
+
+        charIndex++;
+
+        if (charIndex > this.currentFullText.length) {
+          this.stopTyping();
+        }
+      }
+    });
+  }
+
+  private stopTyping(): void {
+    if (this.typingEvent) {
+      this.typingEvent.destroy();
+      this.typingEvent = undefined;
+    }
+  }
+
   destroy(): void {
+    this.stopTyping();
     this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.updateLayout, this);
     this.clearChoices();
     this.root.destroy(true);

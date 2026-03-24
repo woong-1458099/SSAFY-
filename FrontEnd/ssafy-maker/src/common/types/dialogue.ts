@@ -26,6 +26,8 @@ export type DialogueRequirement = {
   label?: string;
 };
 
+export type Gender = "male" | "female"
+
 export type DialogueChoice = {
   id: string;
   text: string;
@@ -44,6 +46,7 @@ export type DialogueNode = {
   speakerId?: string;
   emotion?: string;
   text: string;
+  speakerGender?: Gender;
   nextNodeId?: string;
   choices?: DialogueChoice[];
   action?: DialogueAction;

@@ -12,7 +12,8 @@ export const PLACE_BACKGROUND_KEYS = {
   ramen: "place_bg_ramen",
   karaoke: "place_bg_karaoke",
   lotto: "place_bg_lotto",
-  beer: "place_bg_beer"
+  beer: "place_bg_beer",
+  campus: "place_bg_campus"
 } as const;
 
 export const PLACE_BGM_KEYS = {
@@ -65,6 +66,7 @@ const PLACE_BACKGROUND_ASSETS: Array<{ key: string; path: string }> = [
   { key: CLOUD_KEYS.evening_cloud2, path: buildGameAssetPath("backgrounds", "evening_cloud2.png") },
   { key: CLOUD_KEYS.night_cloud1, path: buildGameAssetPath("backgrounds", "night_cloud1.png") },
   { key: CLOUD_KEYS.night_cloud2, path: buildGameAssetPath("backgrounds", "night_cloud2.png") },
+  { key: PLACE_BACKGROUND_KEYS.campus, path: buildGameAssetPath("backgrounds", "background_ssafy.png") },
 ];
 
 const PLACE_BGM_ASSETS = [
@@ -96,7 +98,8 @@ const PLACE_BACKGROUND_KEY_BY_PLACE_ID: Partial<Record<PlaceId, string>> = {
   ramen: PLACE_BACKGROUND_KEYS.ramen,
   karaoke: PLACE_BACKGROUND_KEYS.karaoke,
   lotto: PLACE_BACKGROUND_KEYS.lotto,
-  beer: PLACE_BACKGROUND_KEYS.beer
+  beer: PLACE_BACKGROUND_KEYS.beer,
+  campus: PLACE_BACKGROUND_KEYS.campus
 };
 
 const PLACE_BGM_KEY_BY_PLACE_ID: Partial<Record<PlaceId, string>> = {
@@ -263,6 +266,30 @@ export function createPlaceBackgroundImage(
     .setScrollFactor(0);
 }
 
+export function createCampusBackground(
+  scene: Phaser.Scene,
+  depth: number = -10
+): () => void {
+  const bgKey = PLACE_BACKGROUND_KEYS.campus;
+
+  if (!scene.textures.exists(bgKey)) {
+    console.warn(`[Background] 캠퍼스 배경 텍스트가 로드되지 않았습니다: ${bgKey}`);
+  }
+
+  const w = scene.scale.width;
+  const h = scene.scale.height;
+
+const campusBg = scene.add
+    .image(w / 2, h / 2, bgKey)
+    .setDisplaySize(w, h) 
+    .setScrollFactor(0)   
+    .setDepth(depth);     
+
+
+  return () => {
+    campusBg.destroy();
+  };
+}
 
 export function createSkyBackground(
   scene: Phaser.Scene,
