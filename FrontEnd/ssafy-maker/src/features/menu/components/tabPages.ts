@@ -161,7 +161,7 @@ export function createSettingsPage(
     wordWrap: { width: bounds.width - 48 }
   });
 
-  const settingsPanel = scene.add.rectangle(
+const settingsPanel = scene.add.rectangle(
     layout.settingsPanelCenterX,
     layout.settingsPanelCenterY,
     layout.settingsPanelWidth,

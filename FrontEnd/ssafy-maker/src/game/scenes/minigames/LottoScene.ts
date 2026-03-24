@@ -11,6 +11,8 @@ import { returnToScene } from "@features/minigame/minigameLauncher";
 import { LEGACY_LOTTO_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
 import { applyLegacyViewport } from "./viewport";
 import { SCREEN, PIXEL_FONT, COLORS, createBackground, createButton } from './utils';
+import { showMinigameTutorial } from './utils/minigameTutorial';
+import { getMinigameCard } from '@features/minigame/minigameCatalog';
 
 const { W, H } = SCREEN;
 
@@ -27,6 +29,7 @@ export default class LottoScene extends Phaser.Scene {
   private drawnBalls = [];
   private completedOutcome = null;
   private completedOutcomeEmitted = false;
+  private tutorialContainer = null;
 
   constructor() {
     super({ key: LEGACY_LOTTO_SCENE_KEY });
@@ -54,6 +57,28 @@ export default class LottoScene extends Phaser.Scene {
     this.resetRuntimeState();
     applyLegacyViewport(this);
 
+    // 튜토리얼 표시
+    const catalogData = getMinigameCard(this.scene.key);
+    if (catalogData?.howToPlay) {
+      this.tutorialContainer = showMinigameTutorial(this, {
+        title: catalogData.title,
+        howToPlay: catalogData.howToPlay,
+        reward: catalogData.reward,
+        onStart: () => {
+          this.tutorialContainer?.destroy();
+          this.tutorialContainer = null;
+          this.startGame();
+        },
+        onBack: () => {
+          returnToScene(this, this.returnSceneKey);
+        }
+      });
+    } else {
+      this.startGame();
+    }
+  }
+
+  startGame() {
     this.cameras.main.setBackgroundColor("#1a1a2e");
     this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
     this.add.rectangle(W / 2, 0, W, 4, 0xffd700);

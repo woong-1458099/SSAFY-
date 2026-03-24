@@ -60,6 +60,13 @@ export class InteractionManager {
     this.dialogueManager = dialogueManager;
     this.debugLogger = debugLogger;
     this.interactKey = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    
+    // 씬이 일시정지(pause)되었다가 다시 재개(resume)될 때 입력 상태가 꼬여 
+    // 키보드가 계속 눌린 것으로 인식되는 버그(프리즈 현상) 방지
+    this.scene.events.on(Phaser.Scenes.Events.RESUME, () => {
+      this.requiresInteractKeyRelease = false;
+      this.interactKey?.reset();
+    });
   }
 
   setArea(areaId: AreaId) {
@@ -112,6 +119,8 @@ export class InteractionManager {
     this.currentTargetNpcId = this.findCurrentTargetNpc();
     this.currentTargetTransitionId = this.findCurrentTargetTransition();
     this.currentTargetPlaceId = this.findCurrentTargetPlace();
+    // 근접 NPC 감정 말풍선 업데이트 (근접 시 !, 그 외엔 기본 감정)
+    this.npcManager.setProximityTarget(this.currentTargetNpcId);
     this.debugLogger?.setTargetNpc(this.currentTargetNpcId);
     this.renderHint();
 
@@ -136,6 +145,16 @@ export class InteractionManager {
       this.debugLogger?.log(`interact:${this.currentTargetNpcId}`);
       this.isInteractionLocked = true;
 
+      // Emit tutorial event for NPC interaction
+      const tutorialEventInfo = { npcId: this.currentTargetNpcId, handled: false };
+      this.scene.events.emit("tutorial:npcInteraction", tutorialEventInfo);
+
+      if (tutorialEventInfo.handled) {
+        this.isInteractionLocked = false;
+        this.requiresInteractKeyRelease = true;
+        return;
+      }
+
       this.dialogueManager.play(npcState.dialogueId).finally(() => {
         this.isInteractionLocked = false;
         this.requiresInteractKeyRelease = true;
@@ -145,6 +164,10 @@ export class InteractionManager {
 
     if (this.currentTargetTransitionId && this.onTransitionInteract) {
       this.debugLogger?.log(`interact:transition:${this.currentTargetTransitionId}`);
+
+      // Emit tutorial event for area transition
+      this.scene.events.emit("tutorial:areaTransition", this.currentTargetTransitionId);
+
       this.requiresInteractKeyRelease = true;
       this.onTransitionInteract(this.currentTargetTransitionId);
       return;
@@ -158,6 +181,9 @@ export class InteractionManager {
     if (!place) {
       return;
     }
+
+    // Emit tutorial event for place interaction
+    this.scene.events.emit("tutorial:placeInteraction", place.id);
 
     if (this.onPlaceInteract?.(place.id) === true) {
       this.requiresInteractKeyRelease = true;

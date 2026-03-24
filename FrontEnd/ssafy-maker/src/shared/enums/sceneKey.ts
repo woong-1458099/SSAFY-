@@ -1,7 +1,7 @@
 import { SCENE_KEYS } from "../../common/enums/scene";
 import {
-  EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY,
-  LEGACY_TYPING_SCENE_KEY
+  EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY
+  // LEGACY_TYPING_SCENE_KEY // 타이핑 게임 비활성화
 } from "../../features/minigame/minigameSceneKeys";
 
 export const SceneKey = {
@@ -16,8 +16,8 @@ export const SceneKey = {
   FinalSummary: SCENE_KEYS.finalSummary,
   EndingIntro: SCENE_KEYS.endingIntro,
   EndingComic: SCENE_KEYS.endingComic,
-  MiniGameCenter: EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY,
-  MiniGameTyping: LEGACY_TYPING_SCENE_KEY
+  MiniGameCenter: EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY
+  // MiniGameTyping: LEGACY_TYPING_SCENE_KEY // 타이핑 게임 비활성화
 } as const;
 
 export type SceneKey = (typeof SceneKey)[keyof typeof SceneKey];

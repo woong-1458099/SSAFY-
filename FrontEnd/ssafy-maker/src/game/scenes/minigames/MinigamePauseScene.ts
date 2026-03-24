@@ -65,7 +65,11 @@ export default class MinigamePauseScene extends Phaser.Scene {
 
   resumeGame() {
     if (this.targetSceneKey) {
-      this.scene.resume(this.targetSceneKey);
+      if (this.scene.isPaused(this.targetSceneKey)) {
+        this.scene.resume(this.targetSceneKey);
+      } else {
+        this.scene.start(this.targetSceneKey);
+      }
     }
     this.scene.stop();
   }
@@ -75,6 +79,12 @@ export default class MinigamePauseScene extends Phaser.Scene {
       this.scene.stop(this.targetSceneKey);
     }
     this.scene.stop();
-    this.scene.start(this.returnSceneKey);
+    
+    // 이전에 시작된 씬이 일시 정지 상태라면 resume, 아니면 start를 호출하도록 안전하게 복귀
+    if (this.scene.isPaused(this.returnSceneKey)) {
+      this.scene.resume(this.returnSceneKey);
+    } else {
+      this.scene.start(this.returnSceneKey);
+    }
   }
 }

@@ -26,6 +26,7 @@ import { resolveEnding } from "../../features/progression/services/endingResolve
 import { beginLogout, clearAuthRegistry, clearStoredSession } from "../../features/auth/authSession";
 import { SceneKey } from "../../shared/enums/sceneKey";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
+import { TutorialManager } from "../../features/tutorial";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
 import { GameHud } from "../../features/ui/components/GameHud";
 import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
@@ -111,6 +112,7 @@ export class MainScene extends Phaser.Scene {
   private currentTimeOfDay?: TimeOfDay;
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
+  private tutorialManager?: TutorialManager;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -396,6 +398,7 @@ export class MainScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
+      this.tutorialManager?.destroy();
       this.destroySkyBackground?.();
       this.destroySkyBackground = undefined;
     };
@@ -403,7 +406,7 @@ export class MainScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupSceneResources);
 
     this.initialized = true;
-await director.run(runtimeSceneScript);
+    await director.run(runtimeSceneScript);
     this.applyPendingDebugFixedEvent();
 
     const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
@@ -431,6 +434,32 @@ await director.run(runtimeSceneScript);
       void playPlaceBgm(this, currentArea as any, this.audioManager);
     }
 
+    // Initialize tutorial for new games (after scene is fully set up)
+    if (this.shouldStartTutorial()) {
+      const isNewCharacter = this.registry.get("isNewCharacter") === true;
+      // Clear the flag immediately so tutorial doesn't restart completely on map transitions
+      this.registry.set("isNewCharacter", false);
+
+      this.tutorialManager = new TutorialManager({
+        scene: this,
+        onComplete: () => {
+          // Tutorial completed
+        }
+      });
+
+      if (isNewCharacter) {
+        // 첫 게임 시작 시에는 주간 계획표 선택 후(모달 닫힘) 시작
+        this.events.once("tutorial:plannerClosed", () => {
+          this.tutorialManager?.start();
+        });
+      } else {
+        // 이미 진행 중이던 튜토리얼(건물 맵 이동 등) — FADE_IN_COMPLETE 이벤트는
+        // 카메라 페이드 애니메이션이 없을 때 영영 오지 않으므로, 짧은 타이머로 대체
+        this.time.delayedCall(200, () => {
+          this.tutorialManager?.start();
+        });
+      }
+    }
   }
 
   private async handleLogout(): Promise<void> {
@@ -1428,5 +1457,26 @@ await director.run(runtimeSceneScript);
     this.registry.remove(MainScene.PENDING_DEBUG_FIXED_EVENT_KEY);
     const started = this.storyEventManager?.debugStartFixedEventById(pending.week, pending.eventId) === true;
     this.menuManager?.showNotice(started ? `고정 이벤트 실행: ${pending.eventId}` : `고정 이벤트 실행 실패: ${pending.eventId}`);
+  }
+
+  private shouldStartTutorial(): boolean {
+    // Skip if loading from a save
+    const pendingRestorePayload = this.getPendingRestorePayload();
+    if (pendingRestorePayload) {
+      return false;
+    }
+
+    // Start tutorial for every new character creation
+    if (this.registry.get("isNewCharacter") === true) {
+      return true;
+    }
+
+    // Continue tutorial if it's currently in progress
+    const tutorialProgress = this.registry.get("tutorialProgress");
+    if (tutorialProgress && !tutorialProgress.completedAt) {
+      return true;
+    }
+
+    return false;
   }
 }
