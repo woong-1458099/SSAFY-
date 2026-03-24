@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -74,19 +75,32 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ApiResponse<LogoutResponse> logout(
+    public ResponseEntity<ApiResponse<LogoutResponse>> logout(
             HttpServletRequest request,
             @RequestBody(required = false) LogoutRequest logoutRequest
     ) {
         HttpSession session = request.getSession(false);
         String idTokenHint = logoutRequest == null ? null : logoutRequest.idTokenHint();
         log.info("POST /api/auth/logout idTokenHintPresent={}", idTokenHint != null && !idTokenHint.isBlank());
-        return ApiResponse.ok("logout url build success", authService.logout(request, session, idTokenHint));
+        LogoutResponse response = authService.logout(request, session, idTokenHint);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, expireSessionCookie(request).toString())
+                .body(ApiResponse.ok("logout url build success", response));
     }
 
     private ResponseEntity<Void> redirect(String location) {
         return ResponseEntity.status(302)
                 .header(HttpHeaders.LOCATION, location)
+                .build();
+    }
+
+    private ResponseCookie expireSessionCookie(HttpServletRequest request) {
+        return ResponseCookie.from("JSESSIONID", "")
+                .httpOnly(true)
+                .secure(request.isSecure())
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(0)
                 .build();
     }
 }
