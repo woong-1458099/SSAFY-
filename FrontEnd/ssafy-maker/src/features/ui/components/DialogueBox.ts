@@ -13,8 +13,8 @@ const NPC_GENDER_MAP: Record<string, "male" | "female"> = {
   "지우": "female",
   "효련": "female",
   "김도연 프로": "female", 
-  "조선미 프로":"female" ,
-  "이혜원 코치":"female" ,
+  "조선미 프로": "female",
+  "이혜원 코치": "female",
   "SYSTEM": "male",
 };
 
@@ -58,7 +58,6 @@ export class DialogueBox {
   private readonly choiceRoot: Phaser.GameObjects.Container;
   private readonly depth = UI_DEPTH.dialogue;
   private choiceViews: ChoiceView[] = [];
-
 
   private typingEvent?: Phaser.Time.TimerEvent;
   private currentFullText: string = "";
@@ -128,7 +127,6 @@ export class DialogueBox {
     this.clearChoices();
   }
 
-
   renderNode(node: DialogueNode, options: DialogueRenderOptions = {}): void {
     const selectedChoiceIndex = options.selectedChoiceIndex ?? 0;
     this.show();
@@ -148,8 +146,7 @@ export class DialogueBox {
     this.updateLayout();
   }
 
-
-private startTypingEffect(node: DialogueNode): void {
+  private startTypingEffect(node: DialogueNode): void {
     this.stopTyping(); 
     
     this.currentFullText = node.text;
@@ -157,26 +154,29 @@ private startTypingEffect(node: DialogueNode): void {
     
     let charIndex = 0;
     
-    const gender = NPC_GENDER_MAP[node.speaker] || "male";
+    const gender = node.speakerGender || NPC_GENDER_MAP[node.speaker] || "male";
     const soundKey = gender === "male" ? "male_voice" : "female_voice";
 
     this.typingEvent = this.scene.time.addEvent({
       delay: 40, 
-      repeat: this.currentFullText.length,  
+      repeat: this.currentFullText.length - 1,  
       callback: () => {
-        const currentDisplayPath = this.currentFullText.substring(0, charIndex);
-        this.bodyText.setText(currentDisplayPath);
-        const currentChar = this.currentFullText[charIndex - 1];
-        if (currentChar && currentChar !== " ") {
-          this.scene.sound.play(soundKey, { volume: 0.4 });
+        const char = this.currentFullText[charIndex];
+        if (char) {
+          this.bodyText.text += char;
+
+          if (char.trim() !== "" && charIndex % 2 === 0) {
+            this.scene.sound.play(soundKey, { volume: 0.3 });
+          }
         }
 
         charIndex++;
 
-        if (charIndex > this.currentFullText.length) {
+        if (charIndex >= this.currentFullText.length) {
           this.stopTyping();
         }
-      }
+      },
+      callbackScope: this
     });
   }
 
@@ -240,7 +240,7 @@ private startTypingEffect(node: DialogueNode): void {
     this.panel.setSize(panelWidth, panelHeight);
     this.panel.setDisplaySize(panelWidth, panelHeight);
     this.speakerBadge.setPosition(panelX + 30, panelY + 30);
-    this.speakerText.setPosition(panelX + 20, panelY + 30);
+    this.speakerText.setPosition(panelX + 45, panelY + 30); // 뱃지 중앙 정렬을 위해 약간 조정
     this.bodyText.setPosition(panelX + 32, panelY + 64);
     this.bodyText.setWordWrapWidth(panelWidth - 64);
     this.hintText.setPosition(panelX + panelWidth - 28, panelY + panelHeight - 20);
