@@ -19,6 +19,7 @@ export type SettingsPageState = {
 export type SettingsPageView = {
   container: Phaser.GameObjects.Container;
   refresh: () => void;
+  destroy: () => void;
 };
 
 export function createStatsPage(
@@ -117,6 +118,7 @@ export function createSettingsPage(
   }
 ): SettingsPageView {
   const container = scene.add.container(0, 0).setScrollFactor(0);
+  const interactiveRoots: Phaser.GameObjects.GameObject[] = [];
   const settingsPanelLeft = bounds.x + 14;
   const settingsPanelRight = bounds.right - 14;
   const controlColumnStartX = settingsPanelLeft + 380;
@@ -257,6 +259,7 @@ export function createSettingsPage(
     bg.on("pointerdown", onClick);
     bg.on("pointerover", () => bg.setFillStyle(0x34679d, 1));
     bg.on("pointerout", () => bg.setFillStyle(0x29527d, 1));
+    interactiveRoots.push(bg);
     return [bg, label] as const;
   };
 
@@ -296,6 +299,7 @@ export function createSettingsPage(
       refresh();
     }
   });
+  interactiveRoots.push(musicToggleButton);
   const bottomPanel = scene.add.rectangle(layout.bottomPanelCenterX, layout.bottomPanelY, layout.bottomPanelWidth, 70, 0x102842, 0.92)
     .setScrollFactor(0);
   bottomPanel.setStrokeStyle(2, 0x4f98df, 1);
@@ -324,6 +328,7 @@ export function createSettingsPage(
     text: "로그아웃",
     onClick: options.onLogout
   });
+  interactiveRoots.push(logoutButton);
 
   container.add([
     title,
@@ -354,7 +359,28 @@ export function createSettingsPage(
   ]);
 
   refresh();
-  return { container, refresh };
+
+  const destroyInteractiveTree = (object: Phaser.GameObjects.GameObject): void => {
+    if ("removeAllListeners" in object && typeof object.removeAllListeners === "function") {
+      object.removeAllListeners();
+    }
+
+    if ("disableInteractive" in object && typeof object.disableInteractive === "function") {
+      object.disableInteractive();
+    }
+
+    if (object instanceof Phaser.GameObjects.Container) {
+      object.list.forEach((child) => {
+        destroyInteractiveTree(child as Phaser.GameObjects.GameObject);
+      });
+    }
+  };
+
+  const destroy = () => {
+    interactiveRoots.forEach((root) => destroyInteractiveTree(root));
+  };
+
+  return { container, refresh, destroy };
 }
 
 export function createPlaceholderPage(

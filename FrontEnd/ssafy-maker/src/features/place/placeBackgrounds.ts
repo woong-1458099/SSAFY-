@@ -163,6 +163,38 @@ function resumeAudioContext(scene: Phaser.Scene): Promise<void> {
   return ctx.resume();
 }
 
+function isUsableExistingSound(
+  sound: Phaser.Sound.BaseSound | null,
+  scene: Phaser.Scene
+): sound is Phaser.Sound.BaseSound {
+  if (!sound) {
+    return false;
+  }
+
+  if (sound.manager !== scene.sound) {
+    return false;
+  }
+
+  if ((sound as { isDestroyed?: boolean }).isDestroyed === true) {
+    return false;
+  }
+
+  return typeof sound.play === "function";
+}
+
+function tryResumeExistingSound(
+  sound: Phaser.Sound.BaseSound,
+  bgmKey: string
+): boolean {
+  try {
+    sound.play();
+    return true;
+  } catch (error) {
+    console.warn(`[BGM] 기존 사운드 재생 실패, 재생성으로 폴백합니다: ${bgmKey}`, error);
+    return false;
+  }
+}
+
 export async function playPlaceBgm(
   scene: Phaser.Scene,
   placeId: PlaceId,
@@ -177,7 +209,9 @@ export async function playPlaceBgm(
   }
 
   const existing = scene.sound.get(bgmKey);
-  if (existing) {
+  const reusableExisting = isUsableExistingSound(existing, scene) ? existing : null;
+  if (reusableExisting) {
+    const existing = reusableExisting;
     audioManager.registerManagedSound(existing, "bgm", 0.5);
     audioManager.updateManagedSoundVolume(existing, "bgm", 0.5);
     if (existing.isPlaying) {
@@ -187,8 +221,7 @@ export async function playPlaceBgm(
 
   await resumeAudioContext(scene);
   audioManager.stopManagedSounds("bgm", { scene, exceptKey: bgmKey });
-  if (existing) {
-    existing.play();
+  if (reusableExisting && tryResumeExistingSound(reusableExisting, bgmKey)) {
     return;
   }
 
@@ -209,7 +242,9 @@ export async function playWorldBgm(
   }
 
   const existing = scene.sound.get(bgmKey);
-  if (existing) {
+  const reusableExisting = isUsableExistingSound(existing, scene) ? existing : null;
+  if (reusableExisting) {
+    const existing = reusableExisting;
     audioManager.registerManagedSound(existing, "bgm", 0.5);
     audioManager.updateManagedSoundVolume(existing, "bgm", 0.5);
     if (existing.isPlaying) {
@@ -219,8 +254,7 @@ export async function playWorldBgm(
 
   await resumeAudioContext(scene);
   audioManager.stopManagedSounds("bgm", { scene, exceptKey: bgmKey });
-  if (existing) {
-    existing.play();
+  if (reusableExisting && tryResumeExistingSound(reusableExisting, bgmKey)) {
     return;
   }
 

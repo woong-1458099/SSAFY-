@@ -161,6 +161,7 @@ export class InGameMenuManager {
   }
 
   destroy(): void {
+    this.settingsPageView?.destroy();
     this.frame?.root.destroy(true);
     this.frame = undefined;
     this.tabPages = {};

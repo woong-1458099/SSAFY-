@@ -183,44 +183,58 @@ export class AudioManager {
     return Phaser.Math.Clamp(value, 0, 1);
   }
 
-  private static loadVolumes(): VolumeState {
+  private static isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+  }
+
+  private static readStoredSettings(): Partial<AudioSettingsStore> | null {
     if (typeof window === "undefined") {
-      return { ...AudioManager.defaultVolumes };
+      return null;
     }
 
     try {
       const raw = window.localStorage.getItem(AudioManager.storageKey);
       if (!raw) {
-        return { ...AudioManager.defaultVolumes };
+        return null;
       }
 
-      const parsed = JSON.parse(raw) as Partial<AudioSettingsStore>;
-      return {
-        bgm: AudioManager.clamp(parsed.bgm ?? AudioManager.defaultVolumes.bgm),
-        sfx: AudioManager.clamp(parsed.sfx ?? AudioManager.defaultVolumes.sfx),
-        ambience: AudioManager.clamp(parsed.ambience ?? AudioManager.defaultVolumes.ambience)
-      };
+      const parsed = JSON.parse(raw) as unknown;
+      if (!AudioManager.isRecord(parsed)) {
+        return null;
+      }
+
+      const legacyOrCurrentSettings: Partial<AudioSettingsStore> = {};
+      if (typeof parsed.bgm === "number") {
+        legacyOrCurrentSettings.bgm = parsed.bgm;
+      }
+      if (typeof parsed.sfx === "number") {
+        legacyOrCurrentSettings.sfx = parsed.sfx;
+      }
+      if (typeof parsed.ambience === "number") {
+        legacyOrCurrentSettings.ambience = parsed.ambience;
+      }
+      if (typeof parsed.bgmEnabled === "boolean") {
+        legacyOrCurrentSettings.bgmEnabled = parsed.bgmEnabled;
+      }
+
+      return legacyOrCurrentSettings;
     } catch {
-      return { ...AudioManager.defaultVolumes };
+      return null;
     }
   }
 
+  private static loadVolumes(): VolumeState {
+    const parsed = AudioManager.readStoredSettings();
+    return {
+      bgm: AudioManager.clamp(parsed?.bgm ?? AudioManager.defaultVolumes.bgm),
+      sfx: AudioManager.clamp(parsed?.sfx ?? AudioManager.defaultVolumes.sfx),
+      ambience: AudioManager.clamp(parsed?.ambience ?? AudioManager.defaultVolumes.ambience)
+    };
+  }
+
   private static loadBgmEnabled(): boolean {
-    if (typeof window === "undefined") {
-      return true;
-    }
-
-    try {
-      const raw = window.localStorage.getItem(AudioManager.storageKey);
-      if (!raw) {
-        return true;
-      }
-
-      const parsed = JSON.parse(raw) as Partial<AudioSettingsStore>;
-      return parsed.bgmEnabled ?? true;
-    } catch {
-      return true;
-    }
+    const parsed = AudioManager.readStoredSettings();
+    return parsed?.bgmEnabled ?? true;
   }
 
   private static persistSettings(): void {
