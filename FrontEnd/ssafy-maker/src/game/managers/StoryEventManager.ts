@@ -205,12 +205,7 @@ export class StoryEventManager {
   }
 
   tryStartCurrentFixedEvent(): boolean {
-    const event = this.findPresentableFixedEventForCurrentArea();
-    if (!event) {
-      return false;
-    }
-
-    return this.startFixedEvent(event);
+    return this.tryStartFixedEventForLocation(this.getCurrentLocation());
   }
 
   tryStartFixedEventForLocation(location: string): boolean {
