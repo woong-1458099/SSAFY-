@@ -122,6 +122,7 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
+  private tutorialManager?: TutorialManager;
   constructor() {
     super(SCENE_KEYS.main);
   }
