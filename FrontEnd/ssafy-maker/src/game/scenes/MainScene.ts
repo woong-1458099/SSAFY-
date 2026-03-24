@@ -438,6 +438,8 @@ export class MainScene extends Phaser.Scene {
     this.initialized = true;
 await director.run(runtimeSceneScript);
     this.applyPendingDebugFixedEvent();
+    this.storyEventManager?.refreshCurrentWeekLoadState();
+    this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent();
 
     const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
     const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
