@@ -209,7 +209,29 @@ export class AudioManager {
     return typeof value === "object" && value !== null;
   }
 
-  private static readStoredSettings(): Partial<AudioSettingsStore> | null {
+  private static normalizeStoredSettings(value: unknown): AudioSettingsStore | null {
+    if (!AudioManager.isRecord(value)) {
+      return null;
+    }
+
+    return {
+      bgm: AudioManager.clamp(typeof value.bgm === "number" ? value.bgm : AudioManager.defaultVolumes.bgm),
+      sfx: AudioManager.clamp(typeof value.sfx === "number" ? value.sfx : AudioManager.defaultVolumes.sfx),
+      ambience: AudioManager.clamp(typeof value.ambience === "number" ? value.ambience : AudioManager.defaultVolumes.ambience),
+      bgmEnabled: typeof value.bgmEnabled === "boolean" ? value.bgmEnabled : true,
+      sfxEnabled: typeof value.sfxEnabled === "boolean" ? value.sfxEnabled : true
+    };
+  }
+
+  private static buildStoredSettings(): AudioSettingsStore {
+    return {
+      ...AudioManager.volumes,
+      bgmEnabled: AudioManager.bgmEnabled,
+      sfxEnabled: AudioManager.sfxEnabled
+    };
+  }
+
+  private static readStoredSettings(): AudioSettingsStore | null {
     if (typeof window === "undefined") {
       return null;
     }
@@ -221,28 +243,7 @@ export class AudioManager {
       }
 
       const parsed = JSON.parse(raw) as unknown;
-      if (!AudioManager.isRecord(parsed)) {
-        return null;
-      }
-
-      const legacyOrCurrentSettings: Partial<AudioSettingsStore> = {};
-      if (typeof parsed.bgm === "number") {
-        legacyOrCurrentSettings.bgm = parsed.bgm;
-      }
-      if (typeof parsed.sfx === "number") {
-        legacyOrCurrentSettings.sfx = parsed.sfx;
-      }
-      if (typeof parsed.ambience === "number") {
-        legacyOrCurrentSettings.ambience = parsed.ambience;
-      }
-      if (typeof parsed.bgmEnabled === "boolean") {
-        legacyOrCurrentSettings.bgmEnabled = parsed.bgmEnabled;
-      }
-      if (typeof parsed.sfxEnabled === "boolean") {
-        legacyOrCurrentSettings.sfxEnabled = parsed.sfxEnabled;
-      }
-
-      return legacyOrCurrentSettings;
+      return AudioManager.normalizeStoredSettings(parsed);
     } catch {
       return null;
     }
@@ -275,11 +276,7 @@ export class AudioManager {
     try {
       window.localStorage.setItem(
         AudioManager.storageKey,
-        JSON.stringify({
-          ...AudioManager.volumes,
-          bgmEnabled: AudioManager.bgmEnabled,
-          sfxEnabled: AudioManager.sfxEnabled
-        } satisfies AudioSettingsStore)
+        JSON.stringify(AudioManager.buildStoredSettings())
       );
     } catch (error) {
       console.warn("[AudioManager] failed to persist audio settings", error);

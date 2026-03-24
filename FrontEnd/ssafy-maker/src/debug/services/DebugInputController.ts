@@ -62,7 +62,7 @@ export class DebugInputController {
         this.emitIfAllowed({ type: "toggleDebugPanel" }, event);
       }),
       this.register("keydown-F4", (event) => {
-        if (!event.shiftKey) {
+        if (!this.isWorldTileEditorShortcut(event)) {
           return;
         }
         this.emitIfAllowed({ type: "toggleWorldTileEditor" }, event);
@@ -157,6 +157,10 @@ export class DebugInputController {
   private consume(event: KeyboardEvent): void {
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  private isWorldTileEditorShortcut(event: KeyboardEvent): boolean {
+    return event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
   }
 
   private emitIfAllowed(command: DebugCommand, event?: KeyboardEvent): void {

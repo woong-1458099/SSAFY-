@@ -15,6 +15,8 @@ export class WorldGridOverlay {
   private placePromptGraphics: Phaser.GameObjects.Graphics;
   private playerProbeGraphics: Phaser.GameObjects.Graphics;
   private visible = true;
+  private destroyed = false;
+  private lifecycleBound = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -24,6 +26,7 @@ export class WorldGridOverlay {
     this.interactionGraphics = scene.add.graphics().setDepth(UI_DEPTH.worldGridInteraction);
     this.placePromptGraphics = scene.add.graphics().setDepth(UI_DEPTH.worldGridPlacePrompt);
     this.playerProbeGraphics = scene.add.graphics().setDepth(UI_DEPTH.worldGridPlayerProbe);
+    this.bindSceneLifecycle();
   }
 
   render(
@@ -106,6 +109,10 @@ export class WorldGridOverlay {
   }
 
   setVisible(visible: boolean) {
+    if (this.destroyed) {
+      return;
+    }
+
     this.visible = visible;
 
     if (!visible) {
@@ -120,5 +127,33 @@ export class WorldGridOverlay {
 
   isVisible() {
     return this.visible;
+  }
+
+  destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.destroyed = true;
+    this.walkableGraphics.destroy();
+    this.blockedGraphics.destroy();
+    this.manualBlockedGraphics.destroy();
+    this.interactionGraphics.destroy();
+    this.placePromptGraphics.destroy();
+    this.playerProbeGraphics.destroy();
+  }
+
+  private bindSceneLifecycle(): void {
+    if (this.lifecycleBound) {
+      return;
+    }
+
+    this.lifecycleBound = true;
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.destroy();
+    });
+    this.scene.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      this.destroy();
+    });
   }
 }
