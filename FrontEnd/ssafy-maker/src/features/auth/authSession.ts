@@ -10,10 +10,9 @@ export interface AuthSession {
 type AuthAction = "login" | "signup";
 const AUTH_REDIRECT_PENDING_KEY = "ssafy-maker.auth.redirect.pending";
 const AUTH_SESSION_STORAGE_KEY = "ssafy-maker.auth.session";
-const LOGOUT_ENDPOINT = "/api/auth/logout";
 
 function buildLogoutUrl(): string {
-  return LOGOUT_ENDPOINT;
+  return `${API_PREFIX}/auth/logout`;
 }
 
 function cleanupCallbackUrl(): void {
@@ -136,10 +135,11 @@ export function clearPendingAuthRedirect(): void {
 }
 
 export async function beginLogout(): Promise<void> {
+  const logoutUrl = buildLogoutUrl();
   console.log("[auth-session] beginLogout", {
-    endpoint: LOGOUT_ENDPOINT
+    endpoint: logoutUrl
   });
-  const response = await fetch(LOGOUT_ENDPOINT, {
+  const response = await fetch(logoutUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
