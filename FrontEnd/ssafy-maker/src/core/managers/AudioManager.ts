@@ -21,6 +21,11 @@ type ManagedSound = {
 
 export class AudioManager {
   private static readonly storageKey = "ssafy-maker-audio-settings";
+  private static readonly legacyStorageKeys = {
+    volumes: "ssafy-maker-audio-volumes",
+    bgmEnabled: "ssafy-maker-bgm-enabled",
+    sfxEnabled: "ssafy-maker-sfx-enabled"
+  } as const;
   private static readonly defaultVolumes: VolumeState = {
     bgm: 0.7,
     sfx: 0.8,
@@ -253,6 +258,14 @@ export class AudioManager {
     };
   }
 
+  private static parseStoredNumber(value: unknown): number | null {
+    return typeof value === "number" && Number.isFinite(value) ? AudioManager.clamp(value) : null;
+  }
+
+  private static parseStoredBoolean(value: unknown): boolean | null {
+    return typeof value === "boolean" ? value : null;
+  }
+
   private static buildStoredSettings(): AudioSettingsStore {
     return {
       ...AudioManager.volumes,
@@ -268,14 +281,117 @@ export class AudioManager {
 
     try {
       const raw = window.localStorage.getItem(AudioManager.storageKey);
-      if (!raw) {
-        return null;
+      const parsedCurrent = raw ? AudioManager.normalizeStoredSettings(JSON.parse(raw) as unknown) : null;
+      if (parsedCurrent) {
+        return parsedCurrent;
       }
 
-      const parsed = JSON.parse(raw) as unknown;
-      return AudioManager.normalizeStoredSettings(parsed);
+      return AudioManager.readLegacyStoredSettings();
     } catch {
       return null;
+    }
+  }
+
+  private static readLegacyStoredSettings(): AudioSettingsStore | null {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const defaults = AudioManager.defaultSettings;
+    let hasLegacyValue = false;
+    const next: AudioSettingsStore = { ...defaults };
+
+    const legacyVolumesRaw = window.localStorage.getItem(AudioManager.legacyStorageKeys.volumes);
+    if (legacyVolumesRaw) {
+      try {
+        const parsed = JSON.parse(legacyVolumesRaw) as unknown;
+        if (AudioManager.isRecord(parsed)) {
+          const bgm = AudioManager.parseStoredNumber(parsed.bgm);
+          const sfx = AudioManager.parseStoredNumber(parsed.sfx);
+          const ambience = AudioManager.parseStoredNumber(parsed.ambience);
+
+          if (bgm !== null) {
+            next.bgm = bgm;
+            hasLegacyValue = true;
+          }
+          if (sfx !== null) {
+            next.sfx = sfx;
+            hasLegacyValue = true;
+          }
+          if (ambience !== null) {
+            next.ambience = ambience;
+            hasLegacyValue = true;
+          }
+
+          const nestedVolumes = AudioManager.isRecord(parsed.volumes) ? parsed.volumes : null;
+          if (nestedVolumes) {
+            const nestedBgm = AudioManager.parseStoredNumber(nestedVolumes.bgm);
+            const nestedSfx = AudioManager.parseStoredNumber(nestedVolumes.sfx);
+            const nestedAmbience = AudioManager.parseStoredNumber(nestedVolumes.ambience);
+
+            if (nestedBgm !== null) {
+              next.bgm = nestedBgm;
+              hasLegacyValue = true;
+            }
+            if (nestedSfx !== null) {
+              next.sfx = nestedSfx;
+              hasLegacyValue = true;
+            }
+            if (nestedAmbience !== null) {
+              next.ambience = nestedAmbience;
+              hasLegacyValue = true;
+            }
+          }
+
+          const parsedBgmEnabled = AudioManager.parseStoredBoolean(parsed.bgmEnabled);
+          const parsedSfxEnabled = AudioManager.parseStoredBoolean(parsed.sfxEnabled);
+          if (parsedBgmEnabled !== null) {
+            next.bgmEnabled = parsedBgmEnabled;
+            hasLegacyValue = true;
+          }
+          if (parsedSfxEnabled !== null) {
+            next.sfxEnabled = parsedSfxEnabled;
+            hasLegacyValue = true;
+          }
+        }
+      } catch {
+        // Ignore malformed legacy payloads and continue checking other legacy keys.
+      }
+    }
+
+    const legacyBgmEnabled = AudioManager.parseStoredBoolean(
+      AudioManager.readJsonStoredValue(AudioManager.legacyStorageKeys.bgmEnabled)
+    );
+    const legacySfxEnabled = AudioManager.parseStoredBoolean(
+      AudioManager.readJsonStoredValue(AudioManager.legacyStorageKeys.sfxEnabled)
+    );
+
+    if (legacyBgmEnabled !== null) {
+      next.bgmEnabled = legacyBgmEnabled;
+      hasLegacyValue = true;
+    }
+    if (legacySfxEnabled !== null) {
+      next.sfxEnabled = legacySfxEnabled;
+      hasLegacyValue = true;
+    }
+
+    return hasLegacyValue ? next : null;
+  }
+
+  private static readJsonStoredValue(storageKey: string): unknown {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw) as unknown;
+    } catch {
+      return raw;
     }
   }
 

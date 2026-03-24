@@ -8,12 +8,12 @@ import type { RuntimeStaticPlaceTarget } from "../../game/managers/InteractionMa
 
 export class WorldGridOverlay {
   private scene: Phaser.Scene;
-  private walkableGraphics: Phaser.GameObjects.Graphics;
-  private blockedGraphics: Phaser.GameObjects.Graphics;
-  private manualBlockedGraphics: Phaser.GameObjects.Graphics;
-  private interactionGraphics: Phaser.GameObjects.Graphics;
-  private placePromptGraphics: Phaser.GameObjects.Graphics;
-  private playerProbeGraphics: Phaser.GameObjects.Graphics;
+  private walkableGraphics?: Phaser.GameObjects.Graphics;
+  private blockedGraphics?: Phaser.GameObjects.Graphics;
+  private manualBlockedGraphics?: Phaser.GameObjects.Graphics;
+  private interactionGraphics?: Phaser.GameObjects.Graphics;
+  private placePromptGraphics?: Phaser.GameObjects.Graphics;
+  private playerProbeGraphics?: Phaser.GameObjects.Graphics;
   private visible = true;
   private destroyed = false;
   private lifecycleBound = false;
@@ -58,14 +58,20 @@ export class WorldGridOverlay {
     const offsetY = renderBounds?.offsetY ?? 0;
     const tileWidth = (renderBounds?.tileWidth ?? parsedMap.tileWidth) * scale;
     const tileHeight = (renderBounds?.tileHeight ?? parsedMap.tileHeight) * scale;
+    const walkableGraphics = this.walkableGraphics!;
+    const blockedGraphics = this.blockedGraphics!;
+    const manualBlockedGraphics = this.manualBlockedGraphics!;
+    const interactionGraphics = this.interactionGraphics!;
+    const placePromptGraphics = this.placePromptGraphics!;
+    const playerProbeGraphics = this.playerProbeGraphics!;
 
-    this.walkableGraphics.fillStyle(0x8c8c8c, 0.16);
-    this.blockedGraphics.fillStyle(0xff4d4f, 0.25);
-    this.manualBlockedGraphics.fillStyle(0xffc53d, 0.52);
-    this.manualBlockedGraphics.lineStyle(2, 0xffec99, 0.9);
-    this.interactionGraphics.fillStyle(0x4da6ff, 0.2);
-    this.placePromptGraphics.fillStyle(0xb37feb, 0.36);
-    this.placePromptGraphics.lineStyle(2, 0xe9d5ff, 0.95);
+    walkableGraphics.fillStyle(0x8c8c8c, 0.16);
+    blockedGraphics.fillStyle(0xff4d4f, 0.25);
+    manualBlockedGraphics.fillStyle(0xffc53d, 0.52);
+    manualBlockedGraphics.lineStyle(2, 0xffec99, 0.9);
+    interactionGraphics.fillStyle(0x4da6ff, 0.2);
+    placePromptGraphics.fillStyle(0xb37feb, 0.36);
+    placePromptGraphics.lineStyle(2, 0xe9d5ff, 0.95);
 
     for (let y = 0; y < parsedMap.height; y += 1) {
       for (let x = 0; x < parsedMap.width; x += 1) {
@@ -73,18 +79,18 @@ export class WorldGridOverlay {
         const drawY = offsetY + y * tileHeight;
 
         if (runtimeGrids.blockedGrid[y]?.[x]) {
-          this.blockedGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
+          blockedGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
         } else {
-          this.walkableGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
+          walkableGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
         }
 
         if (runtimeGrids.interactionGrid[y]?.[x]) {
-          this.interactionGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
+          interactionGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
         }
 
         if (runtimeGrids.manualBlockedGrid[y]?.[x]) {
-          this.manualBlockedGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
-          this.manualBlockedGraphics.strokeRect(drawX, drawY, tileWidth, tileHeight);
+          manualBlockedGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
+          manualBlockedGraphics.strokeRect(drawX, drawY, tileWidth, tileHeight);
         }
       }
     }
@@ -93,8 +99,8 @@ export class WorldGridOverlay {
       place.promptTiles?.forEach((tile) => {
         const drawX = offsetX + tile.tileX * tileWidth;
         const drawY = offsetY + tile.tileY * tileHeight;
-        this.placePromptGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
-        this.placePromptGraphics.strokeRect(drawX, drawY, tileWidth, tileHeight);
+        placePromptGraphics.fillRect(drawX, drawY, tileWidth, tileHeight);
+        placePromptGraphics.strokeRect(drawX, drawY, tileWidth, tileHeight);
       });
     });
 
@@ -106,10 +112,10 @@ export class WorldGridOverlay {
       const tileDrawX = offsetX + probeTileX * tileWidth;
       const tileDrawY = offsetY + probeTileY * tileHeight;
 
-      this.playerProbeGraphics.lineStyle(2, 0x00ff99, 1);
-      this.playerProbeGraphics.strokeRect(tileDrawX, tileDrawY, tileWidth, tileHeight);
-      this.playerProbeGraphics.fillStyle(0x00ff99, 0.95);
-      this.playerProbeGraphics.fillCircle(probeX, probeY, Math.max(3, Math.round(tileWidth * 0.08)));
+      playerProbeGraphics.lineStyle(2, 0x00ff99, 1);
+      playerProbeGraphics.strokeRect(tileDrawX, tileDrawY, tileWidth, tileHeight);
+      playerProbeGraphics.fillStyle(0x00ff99, 0.95);
+      playerProbeGraphics.fillCircle(probeX, probeY, Math.max(3, Math.round(tileWidth * 0.08)));
     }
   }
 
@@ -142,12 +148,18 @@ export class WorldGridOverlay {
     }
 
     this.clearGraphics();
-    this.walkableGraphics.destroy();
-    this.blockedGraphics.destroy();
-    this.manualBlockedGraphics.destroy();
-    this.interactionGraphics.destroy();
-    this.placePromptGraphics.destroy();
-    this.playerProbeGraphics.destroy();
+    this.walkableGraphics?.destroy();
+    this.blockedGraphics?.destroy();
+    this.manualBlockedGraphics?.destroy();
+    this.interactionGraphics?.destroy();
+    this.placePromptGraphics?.destroy();
+    this.playerProbeGraphics?.destroy();
+    this.walkableGraphics = undefined;
+    this.blockedGraphics = undefined;
+    this.manualBlockedGraphics = undefined;
+    this.interactionGraphics = undefined;
+    this.placePromptGraphics = undefined;
+    this.playerProbeGraphics = undefined;
   }
 
   private bindSceneLifecycle(): void {
@@ -161,15 +173,15 @@ export class WorldGridOverlay {
   }
 
   private clearGraphics(): void {
-    this.walkableGraphics.clear();
-    this.blockedGraphics.clear();
-    this.manualBlockedGraphics.clear();
-    this.interactionGraphics.clear();
-    this.placePromptGraphics.clear();
-    this.playerProbeGraphics.clear();
+    this.getGraphicsList().forEach((graphics) => graphics.clear());
   }
 
   private areGraphicsActive(): boolean {
+    const graphicsList = this.getGraphicsList();
+    return graphicsList.length === 6 && graphicsList.every((graphics) => graphics.active);
+  }
+
+  private getGraphicsList(): Phaser.GameObjects.Graphics[] {
     return [
       this.walkableGraphics,
       this.blockedGraphics,
@@ -177,6 +189,6 @@ export class WorldGridOverlay {
       this.interactionGraphics,
       this.placePromptGraphics,
       this.playerProbeGraphics
-    ].every((graphics) => graphics.active);
+    ].filter((graphics): graphics is Phaser.GameObjects.Graphics => Boolean(graphics));
   }
 }
