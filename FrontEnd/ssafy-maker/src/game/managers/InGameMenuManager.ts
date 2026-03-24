@@ -42,6 +42,7 @@ type InGameMenuManagerOptions = {
   saveService: SaveService;
   buildSavePayload: () => SavePayload;
   restoreSavePayload: (payload: SavePayload) => boolean;
+  onLogout: () => void;
 };
 
 const FONT_FAMILY =
@@ -62,6 +63,7 @@ export class InGameMenuManager {
   private readonly saveService: SaveService;
   private readonly buildSavePayload: () => SavePayload;
   private readonly restoreSavePayload: (payload: SavePayload) => boolean;
+  private readonly onLogout: () => void;
 
   private frame?: MenuFrameView;
   private menuOpen = false;
@@ -89,6 +91,7 @@ export class InGameMenuManager {
     this.saveService = options.saveService;
     this.buildSavePayload = options.buildSavePayload;
     this.restoreSavePayload = options.restoreSavePayload;
+    this.onLogout = options.onLogout;
   }
 
   build(): void {
@@ -113,7 +116,11 @@ export class InGameMenuManager {
     this.tabPages = {
       inventory: inventoryPage,
       stats: statsPage.container,
-      settings: createSettingsPage(this.scene, bounds),
+      settings: createSettingsPage(this.scene, bounds, {
+        createActionButton: ({ x, y, width, height, text, onClick }) =>
+          this.createActionButton(x, y, width, height, text, onClick),
+        onLogout: () => this.onLogout()
+      }),
       save: savePage
     };
 

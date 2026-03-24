@@ -86,7 +86,21 @@ export function refreshStatsPage(statViews: Record<PlayerStatKey, StatRowView>, 
   });
 }
 
-export function createSettingsPage(scene: Phaser.Scene, bounds: Phaser.Geom.Rectangle): Phaser.GameObjects.Container {
+export function createSettingsPage(
+  scene: Phaser.Scene,
+  bounds: Phaser.Geom.Rectangle,
+  options: {
+    createActionButton: (args: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      text: string;
+      onClick: () => void;
+    }) => Phaser.GameObjects.Container;
+    onLogout: () => void;
+  }
+): Phaser.GameObjects.Container {
   const container = scene.add.container(0, 0).setScrollFactor(0);
   const title = scene.add.text(bounds.x + 24, bounds.y + 18, "설정", {
     fontFamily: FONT_FAMILY,
@@ -102,7 +116,24 @@ export function createSettingsPage(scene: Phaser.Scene, bounds: Phaser.Geom.Rect
     resolution: 2,
     lineSpacing: 8
   });
-  container.add([title, body]);
+
+  const logoutGuide = scene.add.text(bounds.x + 24, bounds.y + 194, "현재 세션을 종료하고 로그인 화면으로 돌아갑니다.", {
+    fontFamily: FONT_FAMILY,
+    fontSize: "15px",
+    color: "#a9d0f4",
+    resolution: 2
+  });
+
+  const logoutButton = options.createActionButton({
+    x: bounds.x + 134,
+    y: bounds.y + 264,
+    width: 220,
+    height: 52,
+    text: "로그아웃",
+    onClick: options.onLogout
+  });
+
+  container.add([title, body, logoutGuide, logoutButton]);
   return container;
 }
 
