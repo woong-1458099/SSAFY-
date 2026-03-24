@@ -55,8 +55,8 @@ function createLayerAssetDefinition(
   return {
     idleTextureKey: getPlayerIdleTextureKey(appearanceAssetId, layer),
     walkTextureKey: getPlayerWalkTextureKey(appearanceAssetId, layer),
-    idleImagePath: `assets/game/character/${idleFileName}`,
-    walkSpritesheetPath: `assets/game/character/${walkFileName}`
+    idleImagePath: `/assets/game/character/${idleFileName}`,
+    walkSpritesheetPath: `/assets/game/character/${walkFileName}`
   };
 }
 
