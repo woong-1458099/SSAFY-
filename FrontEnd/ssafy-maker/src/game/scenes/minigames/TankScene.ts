@@ -70,11 +70,11 @@ export default class TankScene extends Phaser.Scene {
       this.playerLivesIcons.push(heart);
     }
 
-    // UI - Enemy lives (top right)
-    this.add.text(W - 170, 15, 'ENEMY', { fontSize: '10px', color: '#ff4466', fontFamily: PIXEL_FONT });
+    // UI - Enemy lives (top right) - 6 hearts for 3 tanks x 2 lives
+    this.add.text(W - 220, 15, 'ENEMY', { fontSize: '10px', color: '#ff4466', fontFamily: PIXEL_FONT });
     this.enemyLivesIcons = [];
-    for (let i = 0; i < LEGACY_TANK_INITIAL_LIVES; i++) {
-      const heart = this.add.text(W - 100 + i * 25, 12, '❤️', { fontSize: '14px' });
+    for (let i = 0; i < 6; i++) {
+      const heart = this.add.text(W - 150 + i * 22, 12, '❤️', { fontSize: '12px' });
       this.enemyLivesIcons.push(heart);
     }
 
@@ -82,23 +82,33 @@ export default class TankScene extends Phaser.Scene {
     this.add.text(W / 2, 15, '🎮 탱크 배틀', { fontSize: '16px', color: '#88ff00', fontFamily: PIXEL_FONT }).setOrigin(0.5);
 
     // Hint
-    this.hintTxt = this.add.text(W / 2, H - 18, 'WASD: 이동 | 방향키: 조준 | SPACE: 발사', { fontSize: '10px', color: '#88ff88', fontFamily: PIXEL_FONT }).setOrigin(0.5);
+    this.hintTxt = this.add.text(W / 2, H - 18, 'WASD: 이동 | 마우스: 조준 & 클릭 발사', { fontSize: '10px', color: '#88ff88', fontFamily: PIXEL_FONT }).setOrigin(0.5);
 
     // Create Player Tank (bottom - Blue/Green)
     this.player = this.createTank(W / 2, H - 100, 0x334400, 0x88ff00, true);
 
-    // Create Enemy Tank (top - Red)
-    this.enemy = this.createTank(W / 2, 100, 0x440000, 0xff4466, false);
-    this.enemyTargetX = this.enemy.x;
-    this.enemyTargetY = this.enemy.y;
-    this.enemyMoveTimer = 0;
+    // Create Enemy Tanks (top - Red) - 3대
+    this.enemies = [];
+    const enemyPositions = [
+      { x: W / 4, y: 100 },
+      { x: W / 2, y: 120 },
+      { x: W * 3 / 4, y: 100 }
+    ];
+    for (let i = 0; i < 3; i++) {
+      const enemy = this.createTank(enemyPositions[i].x, enemyPositions[i].y, 0x440000, 0xff4466, false);
+      enemy.setData('targetX', enemyPositions[i].x);
+      enemy.setData('targetY', enemyPositions[i].y);
+      enemy.setData('moveTimer', Phaser.Math.Between(0, 1000));
+      enemy.setData('lives', 2); // 각 적 탱크 체력 2
+      this.enemies.push(enemy);
+    }
+    this.enemyLives = 6; // 총 적 체력 (3대 x 2)
 
     // Controls
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE');
+    this.keys = this.input.keyboard.addKeys('W,A,S,D');
 
-    // Space fire
-    this.input.keyboard.on('keydown-SPACE', () => {
+    // Mouse click to fire
+    this.input.on('pointerdown', () => {
       if (this.started && !this.gameOver) this.playerFire();
     });
 
@@ -164,14 +174,17 @@ export default class TankScene extends Phaser.Scene {
     this.fireBullet(this.player.x, this.player.y, this.playerAimAngle, true);
   }
 
-  enemyFire() {
+  enemyFire(enemy) {
+    if (!enemy || !enemy.active) return;
+
     const now = this.time.now;
-    if (now - this.lastEnemyShot < this.shootCooldown * 1.8) return;
-    this.lastEnemyShot = now;
+    const lastShot = enemy.getData('lastShot') || 0;
+    if (now - lastShot < this.shootCooldown * 2) return;
+    enemy.setData('lastShot', now);
 
     // Enemy aims at player
-    const aimAngle = Phaser.Math.Angle.Between(this.enemy.x, this.enemy.y, this.player.x, this.player.y);
-    this.fireBullet(this.enemy.x, this.enemy.y, aimAngle, false);
+    const aimAngle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+    this.fireBullet(enemy.x, enemy.y, aimAngle, false);
   }
 
   fireBullet(x, y, angle, isPlayer) {
@@ -202,40 +215,47 @@ export default class TankScene extends Phaser.Scene {
   }
 
   updateAI(dt) {
-    if (!this.enemy || this.gameOver) return;
+    if (this.gameOver) return;
 
-    // Move AI randomly in top half
-    this.enemyMoveTimer -= dt * 1000;
-    if (this.enemyMoveTimer <= 0) {
-      this.enemyTargetX = Phaser.Math.Between(80, W - 80);
-      this.enemyTargetY = Phaser.Math.Between(80, H / 2 - 60);
-      this.enemyMoveTimer = Phaser.Math.Between(1000, 2500);
-    }
+    this.enemies.forEach((enemy) => {
+      if (!enemy.active) return;
 
-    // Move toward target
-    const dx = this.enemyTargetX - this.enemy.x;
-    const dy = this.enemyTargetY - this.enemy.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+      // Move AI randomly in top half
+      let moveTimer = enemy.getData('moveTimer') - dt * 1000;
+      if (moveTimer <= 0) {
+        enemy.setData('targetX', Phaser.Math.Between(80, W - 80));
+        enemy.setData('targetY', Phaser.Math.Between(80, H / 2 - 60));
+        moveTimer = Phaser.Math.Between(1000, 2500);
+      }
+      enemy.setData('moveTimer', moveTimer);
 
-    if (dist > 10) {
-      const speed = 100;
-      this.enemy.x += (dx / dist) * speed * dt;
-      this.enemy.y += (dy / dist) * speed * dt;
-    }
+      // Move toward target
+      const targetX = enemy.getData('targetX');
+      const targetY = enemy.getData('targetY');
+      const dx = targetX - enemy.x;
+      const dy = targetY - enemy.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Clamp position (top half)
-    this.enemy.x = Phaser.Math.Clamp(this.enemy.x, 50, W - 50);
-    this.enemy.y = Phaser.Math.Clamp(this.enemy.y, 50, H / 2 - 40);
+      if (dist > 10) {
+        const speed = 80;
+        enemy.x += (dx / dist) * speed * dt;
+        enemy.y += (dy / dist) * speed * dt;
+      }
 
-    // Aim turret at player
-    const turret = this.enemy.getData('turret');
-    const aimAngle = Phaser.Math.Angle.Between(this.enemy.x, this.enemy.y, this.player.x, this.player.y);
-    turret.rotation = aimAngle + Math.PI / 2;
+      // Clamp position (top half)
+      enemy.x = Phaser.Math.Clamp(enemy.x, 50, W - 50);
+      enemy.y = Phaser.Math.Clamp(enemy.y, 50, H / 2 - 40);
 
-    // Fire at player periodically
-    if (Phaser.Math.Between(0, 100) < 3) {
-      this.enemyFire();
-    }
+      // Aim turret at player
+      const turret = enemy.getData('turret');
+      const aimAngle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+      turret.rotation = aimAngle + Math.PI / 2;
+
+      // Fire at player periodically
+      if (Phaser.Math.Between(0, 100) < 2) {
+        this.enemyFire(enemy);
+      }
+    });
   }
 
   update(time, delta) {
@@ -244,27 +264,12 @@ export default class TankScene extends Phaser.Scene {
     const dt = delta / 1000;
     const speed = 160;
 
-    // Player turret aiming with arrow keys
-    if (this.cursors.up.isDown) {
-      this.playerAimAngle = -Math.PI / 2; // 위
-    } else if (this.cursors.down.isDown) {
-      this.playerAimAngle = Math.PI / 2; // 아래
-    } else if (this.cursors.left.isDown) {
-      this.playerAimAngle = Math.PI; // 왼쪽
-    } else if (this.cursors.right.isDown) {
-      this.playerAimAngle = 0; // 오른쪽
-    }
-
-    // Diagonal aiming
-    if (this.cursors.up.isDown && this.cursors.left.isDown) {
-      this.playerAimAngle = -Math.PI * 3 / 4;
-    } else if (this.cursors.up.isDown && this.cursors.right.isDown) {
-      this.playerAimAngle = -Math.PI / 4;
-    } else if (this.cursors.down.isDown && this.cursors.left.isDown) {
-      this.playerAimAngle = Math.PI * 3 / 4;
-    } else if (this.cursors.down.isDown && this.cursors.right.isDown) {
-      this.playerAimAngle = Math.PI / 4;
-    }
+    // Player turret aiming with mouse (카메라 변환 적용)
+    const pointer = this.input.activePointer;
+    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    this.playerAimAngle = Phaser.Math.Angle.Between(
+      this.player.x, this.player.y, worldPoint.x, worldPoint.y
+    );
 
     // Update player turret visual
     const turret = this.player.getData('turret');
@@ -287,11 +292,39 @@ export default class TankScene extends Phaser.Scene {
     // Update AI
     this.updateAI(dt);
 
-    // Update player bullets
-    this.updateBullets(this.playerBullets, this.enemy, false, dt);
+    // Update player bullets (check against all enemies)
+    this.updatePlayerBullets(dt);
 
     // Update enemy bullets
     this.updateBullets(this.enemyBullets, this.player, true, dt);
+  }
+
+  updatePlayerBullets(dt) {
+    for (let i = this.playerBullets.length - 1; i >= 0; i--) {
+      const bullet = this.playerBullets[i];
+      bullet.x += bullet.getData('vx') * dt;
+      bullet.y += bullet.getData('vy') * dt;
+
+      // Remove if out of bounds
+      if (bullet.x < 10 || bullet.x > W - 10 || bullet.y < 10 || bullet.y > H - 10) {
+        bullet.destroy();
+        this.playerBullets.splice(i, 1);
+        continue;
+      }
+
+      // Check collision with each enemy
+      for (const enemy of this.enemies) {
+        if (!enemy.active || enemy.getData('invincible')) continue;
+
+        const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, enemy.x, enemy.y);
+        if (dist < 28) {
+          bullet.destroy();
+          this.playerBullets.splice(i, 1);
+          this.hitEnemy(enemy);
+          break;
+        }
+      }
+    }
   }
 
   updateBullets(bullets, target, targetIsPlayer, dt) {
@@ -317,6 +350,58 @@ export default class TankScene extends Phaser.Scene {
           break;
         }
       }
+    }
+  }
+
+  hitEnemy(enemy) {
+    // Explosion effect
+    const exp = this.add.circle(enemy.x, enemy.y, 25, 0xff8800, 0.9);
+    this.tweens.add({ targets: exp, scaleX: 2, scaleY: 2, alpha: 0, duration: 300, onComplete: () => exp.destroy() });
+
+    this.cameras.main.shake(150, 0.015);
+
+    // Reduce enemy lives
+    let lives = enemy.getData('lives') - 1;
+    enemy.setData('lives', lives);
+    this.enemyLives--;
+
+    // Update UI
+    if (this.enemyLives >= 0 && this.enemyLivesIcons[this.enemyLives]) {
+      this.enemyLivesIcons[this.enemyLives].setText('🖤');
+    }
+
+    if (lives <= 0) {
+      // Destroy this enemy tank
+      this.tweens.add({
+        targets: enemy,
+        alpha: 0,
+        scaleX: 0.5,
+        scaleY: 0.5,
+        duration: 300,
+        onComplete: () => {
+          enemy.setActive(false);
+          enemy.setVisible(false);
+        }
+      });
+    } else {
+      // Flash tank (still alive)
+      enemy.setData('invincible', true);
+      this.tweens.add({
+        targets: enemy,
+        alpha: 0.3,
+        duration: 100,
+        yoyo: true,
+        repeat: 3,
+        onComplete: () => {
+          enemy.setAlpha(1);
+          enemy.setData('invincible', false);
+        }
+      });
+    }
+
+    // Check game over
+    if (this.enemyLives <= 0) {
+      this.triggerGameOver(true);
     }
   }
 
@@ -349,23 +434,11 @@ export default class TankScene extends Phaser.Scene {
       // Reset player position
       this.player.x = W / 2;
       this.player.y = H - 100;
-    } else {
-      this.enemyLives--;
-      if (this.enemyLives >= 0 && this.enemyLivesIcons[this.enemyLives]) {
-        this.enemyLivesIcons[this.enemyLives].setText('🖤');
-      }
-      // Reset enemy position
-      this.enemy.x = W / 2;
-      this.enemy.y = 100;
-      this.enemyTargetX = this.enemy.x;
-      this.enemyTargetY = this.enemy.y;
-    }
 
-    // Check game over
-    if (this.playerLives <= 0) {
-      this.triggerGameOver(false);
-    } else if (this.enemyLives <= 0) {
-      this.triggerGameOver(true);
+      // Check game over
+      if (this.playerLives <= 0) {
+        this.triggerGameOver(false);
+      }
     }
   }
 
@@ -402,24 +475,18 @@ export default class TankScene extends Phaser.Scene {
   }
 
   shutdown() {
-    this.input.keyboard.off('keydown-SPACE');
+    this.input.off('pointerdown');
 
     if (this.keys) {
       this.input.keyboard.removeKey('W');
       this.input.keyboard.removeKey('A');
       this.input.keyboard.removeKey('S');
       this.input.keyboard.removeKey('D');
-      this.input.keyboard.removeKey('SPACE');
-    }
-    if (this.cursors) {
-      this.cursors.up.destroy();
-      this.cursors.down.destroy();
-      this.cursors.left.destroy();
-      this.cursors.right.destroy();
     }
 
     this.playerBullets = [];
     this.enemyBullets = [];
+    this.enemies = [];
   }
 
   emitCompletedReward() {

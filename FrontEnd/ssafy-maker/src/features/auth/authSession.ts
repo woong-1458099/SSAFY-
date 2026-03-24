@@ -1,5 +1,5 @@
 import type Phaser from "phaser";
-import { API_BASE_URL, fetchBackendSession, type BackendAuthSession, type UserProfile } from "@features/auth/api";
+import { API_PREFIX, fetchBackendSession, type BackendAuthSession, type UserProfile } from "@features/auth/api";
 
 export interface AuthSession {
   authenticated: boolean;
@@ -12,7 +12,7 @@ const AUTH_REDIRECT_PENDING_KEY = "ssafy-maker.auth.redirect.pending";
 const AUTH_SESSION_STORAGE_KEY = "ssafy-maker.auth.session";
 
 function buildLogoutUrl(): string {
-  return `${API_BASE_URL}/api/auth/logout`;
+  return `${API_PREFIX}/auth/logout`;
 }
 
 function cleanupCallbackUrl(): void {
@@ -136,9 +136,9 @@ export function clearPendingAuthRedirect(): void {
 
 export async function beginLogout(): Promise<void> {
   console.log("[auth-session] beginLogout", {
-    endpoint: `${API_BASE_URL}/api/auth/logout`
+    endpoint: `${API_PREFIX}/auth/logout`
   });
-  const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+  const response = await fetch(`${API_PREFIX}/auth/logout`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -173,11 +173,12 @@ export async function beginBackendAuth(action: AuthAction, loginHint?: string): 
     action,
     startedAt: Date.now()
   }));
+  const authPath = `${API_PREFIX}/auth/${action === "signup" ? "signup" : "login"}`;
   console.log("[auth-session] beginBackendAuth", {
     action,
-    redirectTo: `${API_BASE_URL}/api/auth/${action === "signup" ? "signup" : "login"}`
+    redirectTo: authPath
   });
-  window.location.assign(`${API_BASE_URL}/api/auth/${action === "signup" ? "signup" : "login"}`);
+  window.location.assign(authPath);
 }
 
 export async function completeAuthIfPresent(): Promise<AuthSession | null> {

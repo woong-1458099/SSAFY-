@@ -97,7 +97,7 @@ export default class TypingScene extends Phaser.Scene {
     });
 
     // 안내 문구
-    this.hintTxt = this.add.text(W / 2, H - 8, '떨어지는 단어를 입력하세요!', {
+    this.hintTxt = this.add.text(W / 2, H - 8, '떨어지는 단어를 입력하세요! | ENTER: 입력 초기화', {
       fontSize: '9px', color: '#668888', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
@@ -197,7 +197,9 @@ export default class TypingScene extends Phaser.Scene {
   handleKey(event) {
     if (this.gameOver) return;
 
-    if (event.key === 'Backspace') {
+    if (event.key === 'Enter') {
+      this.typedText = '';  // Enter 시 입력창 초기화
+    } else if (event.key === 'Backspace') {
       this.typedText = this.typedText.slice(0, -1);
     } else if (event.key === 'Escape') {
       this.typedText = '';

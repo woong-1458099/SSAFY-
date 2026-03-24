@@ -1,4 +1,4 @@
-import { API_BASE_URL, type ApiResponse } from "@features/auth/api";
+import { API_PREFIX, type ApiResponse } from "@features/auth/api";
 
 export interface BackendSaveFile {
   id: string;
@@ -17,7 +17,7 @@ export interface SaveFileMutationRequest {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_PREFIX}${path}`, {
     credentials: "include",
     ...init
   });
