@@ -52,6 +52,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     id: "world",
     label: "전체 지도",
     map: {
+      entryPoint: { x: 300, y: 360 },
       tmxKey: ASSET_KEYS.map.worldTmx,
       collisionLayerNames: ["root", "build"],
       interactionLayerNames: ["build"],
