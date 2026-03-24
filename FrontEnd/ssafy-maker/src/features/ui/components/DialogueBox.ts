@@ -102,6 +102,7 @@ export class DialogueBox {
 
   private typingEvent?: Phaser.Time.TimerEvent;
   private currentFullText: string = "";
+  private warnedMissingSoundKeys = new Set<string>();
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -207,7 +208,7 @@ export class DialogueBox {
           this.bodyText.text += char;
 
           if (char.trim() !== "" && charIndex % 2 === 0) {
-            this.scene.sound.play(soundKey, { volume: 0.3 });
+            this.playTypingSound(soundKey);
           }
         }
 
@@ -225,6 +226,32 @@ export class DialogueBox {
     if (this.typingEvent) {
       this.typingEvent.destroy();
       this.typingEvent = undefined;
+    }
+  }
+
+  private playTypingSound(preferredKey: string): void {
+    const fallbackKey = "type_sfx";
+    const soundKey = this.scene.cache.audio.exists(preferredKey)
+      ? preferredKey
+      : this.scene.cache.audio.exists(fallbackKey)
+        ? fallbackKey
+        : null;
+
+    if (!soundKey) {
+      if (!this.warnedMissingSoundKeys.has(preferredKey)) {
+        this.warnedMissingSoundKeys.add(preferredKey);
+        console.warn(`[DialogueBox] typing sound is unavailable: ${preferredKey}`);
+      }
+      return;
+    }
+
+    try {
+      this.scene.sound.play(soundKey, { volume: soundKey === fallbackKey ? 0.18 : 0.3 });
+    } catch (error) {
+      if (!this.warnedMissingSoundKeys.has(soundKey)) {
+        this.warnedMissingSoundKeys.add(soundKey);
+        console.warn(`[DialogueBox] failed to play typing sound: ${soundKey}`, error);
+      }
     }
   }
 
