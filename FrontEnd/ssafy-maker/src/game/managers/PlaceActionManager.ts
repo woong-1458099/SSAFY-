@@ -19,7 +19,10 @@ import { getPlacePopupContent, resolvePlaceEffect } from "../../features/place/p
 import { createShopModal } from "../../features/shop/ShopModal";
 import type { HudState, PlayerStatKey } from "../state/gameState";
 import { UI_DEPTH } from "../systems/uiDepth";
-import type { ConsumeActionPointResult } from "./ProgressionManager";
+import {
+  getConsumeActionPointFailurePresentation,
+  type ConsumeActionPointResult
+} from "./ProgressionManager";
 
 type PlaceActionManagerOptions = {
   scene: Phaser.Scene;
@@ -270,21 +273,8 @@ export class PlaceActionManager {
   }
 
   private openConsumeFailureModal(result: Exclude<ConsumeActionPointResult, { ok: true }>, placeId: PlaceId): void {
-    switch (result.reason) {
-      case "blocked-time-advance":
-        this.openInfoModal(
-          "이벤트 진행 필요",
-          result.message ?? "현재 시간대의 고정 이벤트를 먼저 진행해야 합니다.",
-          placeId
-        );
-        return;
-      case "busy":
-        this.openInfoModal("지금은 진행할 수 없음", "다른 진행 중인 화면을 먼저 닫아 주세요.", placeId);
-        return;
-      case "no-action-point":
-      default:
-        this.openInfoModal("행동력 부족", "행동력이 부족해서 지금은 시간을 진행할 수 없습니다.", placeId);
-    }
+    const presentation = getConsumeActionPointFailurePresentation(result);
+    this.openInfoModal(presentation.modalTitle, presentation.modalDescription, placeId);
   }
 
   private getUnavailableMessage(placeId: PlaceId): { title: string; description: string } | null {

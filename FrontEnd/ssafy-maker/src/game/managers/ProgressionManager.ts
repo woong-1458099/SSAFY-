@@ -48,6 +48,40 @@ export type ConsumeActionPointResult =
       message?: string;
     };
 
+export type ConsumeActionPointFailurePresentation = {
+  noticeMessage: string | null;
+  modalTitle: string;
+  modalDescription: string;
+};
+
+export function getConsumeActionPointFailurePresentation(
+  result: Exclude<ConsumeActionPointResult, { ok: true }>
+): ConsumeActionPointFailurePresentation {
+  switch (result.reason) {
+    case "blocked-time-advance": {
+      const description = result.message ?? "현재 시간대의 고정 이벤트를 먼저 진행해야 합니다.";
+      return {
+        noticeMessage: description,
+        modalTitle: "이벤트 진행 필요",
+        modalDescription: description
+      };
+    }
+    case "busy":
+      return {
+        noticeMessage: null,
+        modalTitle: "지금은 진행할 수 없음",
+        modalDescription: "다른 진행 중인 화면을 먼저 닫아 주세요."
+      };
+    case "no-action-point":
+    default:
+      return {
+        noticeMessage: "행동력이 부족합니다",
+        modalTitle: "행동력 부족",
+        modalDescription: "행동력이 부족해서 지금은 시간을 진행할 수 없습니다."
+      };
+  }
+}
+
 export class ProgressionManager {
   private readonly scene: Phaser.Scene;
   private readonly getHudState: () => HudState;
@@ -137,15 +171,16 @@ export class ProgressionManager {
     notifyOnFailure?: boolean;
   }): ConsumeActionPointResult {
     if (this.timeState.actionPoint <= 0) {
-      const message = "행동력이 부족합니다";
-      if (options?.notifyOnFailure !== false) {
-        this.onNotice?.(message);
-      }
-      return {
+      const result: Exclude<ConsumeActionPointResult, { ok: true }> = {
         ok: false,
         reason: "no-action-point",
-        message
+        message: "행동력이 부족합니다"
       };
+      if (options?.notifyOnFailure !== false) {
+        const presentation = getConsumeActionPointFailurePresentation(result);
+        this.onNotice?.(presentation.noticeMessage ?? "행동력이 부족합니다");
+      }
+      return result;
     }
     if (this.salaryRoot?.visible) {
       return {
@@ -156,14 +191,16 @@ export class ProgressionManager {
     if (!options?.ignoreTimeAdvanceBlock) {
       const blockedMessage = this.resolveTimeAdvanceBlockedMessage?.() ?? null;
       if (blockedMessage) {
-        if (options?.notifyOnFailure !== false) {
-          this.onNotice?.(blockedMessage);
-        }
-        return {
+        const result: Exclude<ConsumeActionPointResult, { ok: true }> = {
           ok: false,
           reason: "blocked-time-advance",
           message: blockedMessage
         };
+        if (options?.notifyOnFailure !== false) {
+          const presentation = getConsumeActionPointFailurePresentation(result);
+          this.onNotice?.(presentation.noticeMessage ?? blockedMessage);
+        }
+        return result;
       }
     }
 

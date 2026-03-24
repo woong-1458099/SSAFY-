@@ -37,6 +37,7 @@ type StoryEventManagerOptions = {
 export class StoryEventManager {
   private static readonly FIXED_EVENT_DIALOGUE_ID = createRuntimeDialogueId("fixed_event");
   private static readonly LOAD_FAILURE_RETRY_COOLDOWN_MS = 5000;
+  private static readonly FORCE_RELOAD_MIN_INTERVAL_MS = 1000;
 
   private readonly scene: Phaser.Scene;
   private readonly getHudState: () => HudState;
@@ -53,6 +54,7 @@ export class StoryEventManager {
   private readonly weekLoads = new Map<number, Promise<unknown>>();
   private readonly weekLoadErrors = new Map<number, string>();
   private readonly weekLoadRetryAvailableAt = new Map<number, number>();
+  private readonly weekLastForcedLoadRequestedAt = new Map<number, number>();
   private completedFixedEventIds: string[] = [];
   private activeFixedEventId: string | null = null;
   private pendingTriggerLocations: string[] = [];
@@ -79,6 +81,7 @@ export class StoryEventManager {
     this.activeFixedEventId = null;
     this.pendingTriggerLocations = [];
     this.starting = false;
+    this.weekLastForcedLoadRequestedAt.clear();
     this.removeRuntimeDialogueScript(StoryEventManager.FIXED_EVENT_DIALOGUE_ID);
   }
 
@@ -326,13 +329,12 @@ export class StoryEventManager {
       return;
     }
 
-    this.weekLoadErrors.delete(normalizedWeek);
+    this.clearWeekLoadFailureState(normalizedWeek);
 
     const request = loadFixedEventWeek(normalizedWeek)
       .then((rawData) => {
         this.weekData.set(normalizedWeek, rawData);
-        this.weekLoadErrors.delete(normalizedWeek);
-        this.weekLoadRetryAvailableAt.delete(normalizedWeek);
+        this.clearWeekLoadFailureState(normalizedWeek);
         this.weekLoads.delete(normalizedWeek);
         return rawData;
       })
@@ -512,12 +514,26 @@ export class StoryEventManager {
       return;
     }
 
+    if (options?.ignoreRetryCooldown) {
+      const lastForcedRequestedAt = this.weekLastForcedLoadRequestedAt.get(week) ?? 0;
+      const now = Date.now();
+      if (now - lastForcedRequestedAt < StoryEventManager.FORCE_RELOAD_MIN_INTERVAL_MS) {
+        return;
+      }
+      this.weekLastForcedLoadRequestedAt.set(week, now);
+    }
+
     const retryAvailableAt = this.weekLoadRetryAvailableAt.get(week) ?? 0;
     if (!options?.ignoreRetryCooldown && Date.now() < retryAvailableAt) {
       return;
     }
 
     this.syncWeek(week);
+  }
+
+  private clearWeekLoadFailureState(week: number): void {
+    this.weekLoadErrors.delete(week);
+    this.weekLoadRetryAvailableAt.delete(week);
   }
 
   private resolveDayIndex(dayLabel: string): number {
