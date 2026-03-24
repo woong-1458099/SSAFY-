@@ -21,9 +21,10 @@ export type RuntimeStaticPlaceTarget = {
   zoneY: number;
   zoneWidth: number;
   zoneHeight: number;
+  promptTiles?: Array<{ tileX: number; tileY: number }>;
 };
 
-const PLACE_INTERACTION_PADDING = 24;
+export const PLACE_INTERACTION_PADDING = 24;
 
 export class InteractionManager {
   private scene: Phaser.Scene;
@@ -224,6 +225,16 @@ export class InteractionManager {
     const player = this.playerManager.getSnapshot();
     if (!player) {
       return undefined;
+    }
+
+    for (const place of this.currentStaticPlaceTargets) {
+      if (
+        place.promptTiles?.some(
+          (tile) => tile.tileX === player.tileX && tile.tileY === player.tileY
+        )
+      ) {
+        return place.id;
+      }
     }
 
     for (const place of this.currentStaticPlaceTargets) {

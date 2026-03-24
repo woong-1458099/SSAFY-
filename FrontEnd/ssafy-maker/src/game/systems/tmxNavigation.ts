@@ -65,6 +65,17 @@ export type ResolvedTmxLayers = {
 export type TmxRuntimeGrids = {
   blockedGrid: boolean[][];
   interactionGrid: boolean[][];
+  manualBlockedGrid: boolean[][];
+};
+
+export type TmxConnectedRegion = {
+  tiles: { x: number; y: number }[];
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  centerX: number;
+  centerY: number;
 };
 
 function cloneBooleanGrid(grid: boolean[][]) {
@@ -126,6 +137,28 @@ export function applyBlockedTileZones(
   return nextBlockedGrid;
 }
 
+export function applyBlockedTiles(
+  blockedGrid: boolean[][],
+  blockedTiles?: { x: number; y: number }[]
+) {
+  if (!blockedTiles || blockedTiles.length === 0) {
+    return blockedGrid;
+  }
+
+  const nextBlockedGrid = cloneBooleanGrid(blockedGrid);
+
+  blockedTiles.forEach((tile) => {
+    const row = nextBlockedGrid[tile.y];
+    if (!row || tile.x < 0 || tile.x >= row.length) {
+      return;
+    }
+
+    row[tile.x] = true;
+  });
+
+  return nextBlockedGrid;
+}
+
 function isParsedTmxTilesetRef(
   value: ParsedTmxTilesetRef | null
 ): value is ParsedTmxTilesetRef {
@@ -177,11 +210,171 @@ export function buildBooleanGridFromLayers(
   return grid;
 }
 
+export function buildBooleanGridFromTiles(
+  width: number,
+  height: number,
+  blockedTiles?: { x: number; y: number }[]
+) {
+  const grid = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => false)
+  );
+
+  blockedTiles?.forEach((tile) => {
+    const row = grid[tile.y];
+    if (!row || tile.x < 0 || tile.x >= row.length) {
+      return;
+    }
+
+    row[tile.x] = true;
+  });
+
+  return grid;
+}
+
+export function extractConnectedRegionsFromGrid(
+  grid: boolean[][],
+  minAreaTiles = 1
+): TmxConnectedRegion[] {
+  const height = grid.length;
+  const width = grid[0]?.length ?? 0;
+
+  if (width === 0 || height === 0) {
+    return [];
+  }
+
+  const visited = Array.from({ length: height }, () => Array.from({ length: width }, () => false));
+  const regions: TmxConnectedRegion[] = [];
+  const directions: Array<[number, number]> = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+  ];
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (!grid[y]?.[x] || visited[y][x]) {
+        continue;
+      }
+
+      const queue: Array<{ x: number; y: number }> = [{ x, y }];
+      const tiles: Array<{ x: number; y: number }> = [];
+      visited[y][x] = true;
+      let queueIndex = 0;
+      let minX = x;
+      let maxX = x;
+      let minY = y;
+      let maxY = y;
+      let sumX = 0;
+      let sumY = 0;
+
+      while (queueIndex < queue.length) {
+        const current = queue[queueIndex];
+        queueIndex += 1;
+        tiles.push(current);
+        minX = Math.min(minX, current.x);
+        maxX = Math.max(maxX, current.x);
+        minY = Math.min(minY, current.y);
+        maxY = Math.max(maxY, current.y);
+        sumX += current.x;
+        sumY += current.y;
+
+        directions.forEach(([dx, dy]) => {
+          const nextX = current.x + dx;
+          const nextY = current.y + dy;
+
+          if (
+            nextX < 0 ||
+            nextY < 0 ||
+            nextX >= width ||
+            nextY >= height ||
+            visited[nextY][nextX] ||
+            !grid[nextY]?.[nextX]
+          ) {
+            return;
+          }
+
+          visited[nextY][nextX] = true;
+          queue.push({ x: nextX, y: nextY });
+        });
+      }
+
+      if (tiles.length < minAreaTiles) {
+        continue;
+      }
+
+      regions.push({
+        tiles,
+        minX,
+        maxX,
+        minY,
+        maxY,
+        centerX: sumX / tiles.length,
+        centerY: sumY / tiles.length
+      });
+    }
+  }
+
+  return regions;
+}
+
+export function buildAdjacentWalkableTiles(
+  region: TmxConnectedRegion,
+  blockedGrid: boolean[][]
+) {
+  const height = blockedGrid.length;
+  const width = blockedGrid[0]?.length ?? 0;
+
+  if (width === 0 || height === 0) {
+    return [];
+  }
+
+  const regionKeys = new Set(region.tiles.map((tile) => `${tile.x},${tile.y}`));
+  const adjacentKeys = new Set<string>();
+  const adjacentTiles: Array<{ x: number; y: number }> = [];
+  const directions: Array<[number, number]> = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1]
+  ];
+
+  region.tiles.forEach((tile) => {
+    directions.forEach(([dx, dy]) => {
+      const nextX = tile.x + dx;
+      const nextY = tile.y + dy;
+      const key = `${nextX},${nextY}`;
+
+      if (
+        nextX < 0 ||
+        nextY < 0 ||
+        nextX >= width ||
+        nextY >= height ||
+        regionKeys.has(key) ||
+        blockedGrid[nextY]?.[nextX] ||
+        adjacentKeys.has(key)
+      ) {
+        return;
+      }
+
+      adjacentKeys.add(key);
+      adjacentTiles.push({ x: nextX, y: nextY });
+    });
+  });
+
+  return adjacentTiles;
+}
+
 export function buildRuntimeGrids(
   parsedMap: ParsedTmxMap,
   resolvedLayers: ResolvedTmxLayers,
   walkableTileZones?: { x: number; y: number; width: number; height: number }[],
-  blockedTileZones?: { x: number; y: number; width: number; height: number }[]
+  blockedTileZones?: { x: number; y: number; width: number; height: number }[],
+  blockedTiles?: { x: number; y: number }[]
 ): TmxRuntimeGrids {
   const baseBlockedGrid = buildBooleanGridFromLayers(
     parsedMap.width,
@@ -189,14 +382,17 @@ export function buildRuntimeGrids(
     resolvedLayers.collisionLayers
   );
   const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
+  const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones);
+  const manualBlockedGrid = buildBooleanGridFromTiles(parsedMap.width, parsedMap.height, blockedTiles);
 
   return {
-    blockedGrid: applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones),
+    blockedGrid: applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles),
     interactionGrid: buildBooleanGridFromLayers(
       parsedMap.width,
       parsedMap.height,
       resolvedLayers.interactionLayers
-    )
+    ),
+    manualBlockedGrid
   };
 }
 

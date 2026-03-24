@@ -163,7 +163,8 @@ export class WorldManager {
       this.currentParsedTmxMap,
       this.currentResolvedTmxLayers,
       area.map.walkableTileZones,
-      area.map.blockedTileZones
+      area.map.blockedTileZones,
+      area.map.blockedTiles
     );
   }
 

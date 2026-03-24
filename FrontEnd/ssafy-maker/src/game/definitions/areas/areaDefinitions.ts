@@ -11,6 +11,7 @@ export type AreaMapDefinition = {
   foregroundLayerNames: string[];
   walkableTileZones?: Rect[];
   blockedTileZones?: Rect[];
+  blockedTiles?: Vector2[];
 };
 
 export type AreaBlockedOverlayDefinition = {
@@ -55,7 +56,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
       entryPoint: { x: 300, y: 360 },
       tmxKey: ASSET_KEYS.map.worldTmx,
       collisionLayerNames: ["root", "build"],
-      interactionLayerNames: ["build"],
+      interactionLayerNames: ["interaction(build)"],
       foregroundLayerNames: ["tree"],
       blockedTileZones: WORLD_BLOCKED_TILE_ZONES
     },
@@ -70,8 +71,8 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     map: {
       entryPoint: { x: 216, y: 520 },
       tmxKey: ASSET_KEYS.map.downtownTmx,
-      collisionLayerNames: ["tile layer 5(4)", "tile layer 3", "build(foul)", "tree"],
-      interactionLayerNames: ["build(total)"],
+      collisionLayerNames: ["tile layer 5(4)", "tile layer 3", "build(foul)", "collision(patch)"],
+      interactionLayerNames: ["interaction(prompt)"],
       foregroundLayerNames: ["build(hide)"],
       blockedTileZones: DOWNTOWN_BLOCKED_TILE_ZONES
     },

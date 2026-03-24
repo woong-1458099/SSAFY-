@@ -8,6 +8,7 @@ import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
 import { DebugPanel } from "../../debug/overlay/DebugPanel";
 import { DebugMinigameHud } from "../../debug/overlay/DebugMinigameHud";
 import { WorldGridOverlay } from "../../debug/overlay/WorldGridOverlay";
+import { WorldTileEditor } from "../../debug/editor/WorldTileEditor";
 import { DEBUG_FLAGS } from "../../debug/config/debugFlags";
 import { DebugCommandBus } from "../../debug/services/DebugCommandBus";
 import { DebugEventLogger } from "../../debug/services/DebugEventLogger";
@@ -62,7 +63,14 @@ import {
   getSceneScript
 } from "../scripts/scenes/sceneRegistry";
 import { buildRuntimeSceneScript, normalizeSceneState } from "../systems/sceneStateRuntime";
-import { countTrueCells, findFirstWalkableTile } from "../systems/tmxNavigation";
+import {
+  buildAdjacentWalkableTiles,
+  countTrueCells,
+  extractConnectedRegionsFromGrid,
+  findFirstWalkableTile,
+  type ParsedTmxMap,
+  type TmxRuntimeGrids
+} from "../systems/tmxNavigation";
 import {
   AreaTransitionOverlay,
   type RuntimeAreaTransitionTarget
@@ -80,6 +88,7 @@ export class MainScene extends Phaser.Scene {
   private debugOverlay?: DebugOverlay;
   private debugPanel?: DebugPanel;
   private worldGridOverlay?: WorldGridOverlay;
+  private worldTileEditor?: WorldTileEditor;
   private debugMinigameHud?: DebugMinigameHud;
   private worldManager?: WorldManager;
   private playerManager?: PlayerManager;
@@ -111,6 +120,7 @@ export class MainScene extends Phaser.Scene {
   private currentTimeOfDay?: TimeOfDay;
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
+  private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -121,9 +131,10 @@ export class MainScene extends Phaser.Scene {
     await ensureAuthoredStoryLoaded(this);
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
-    this.debugInputController = new DebugInputController(this, this.debugCommandBus, (command) => {
+      this.debugInputController = new DebugInputController(this, this.debugCommandBus, (command) => {
       const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
       const debugPanelVisible = this.debugPanel?.isVisible() === true;
+      const debugTileEditorVisible = this.worldTileEditor?.isVisible() === true;
       const menuOpen = this.menuManager?.isOpen() === true;
       const placePopupOpen = this.placeActionManager?.isOpen() === true;
       const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
@@ -134,7 +145,8 @@ export class MainScene extends Phaser.Scene {
       if (
         command.type === "toggleDebugOverlay" ||
         command.type === "toggleWorldGrid" ||
-        command.type === "toggleDebugPanel"
+        command.type === "toggleDebugPanel" ||
+        command.type === "toggleWorldTileEditor"
       ) {
         return true;
       }
@@ -147,7 +159,7 @@ export class MainScene extends Phaser.Scene {
         return !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying;
       }
 
-      return !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible;
+      return !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible && !debugTileEditorVisible;
     });
     this.worldManager = new WorldManager(this);
     this.playerManager = new PlayerManager(this);
@@ -333,13 +345,18 @@ export class MainScene extends Phaser.Scene {
 
     const tmxConfig = this.worldManager.getCurrentTmxConfig();
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
-    const resolvedLayers = this.worldManager.getCurrentResolvedTmxLayers();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
     const renderBounds = this.worldManager.getCurrentRenderBounds();
 
     this.playerManager.setRenderBounds(renderBounds);
     const transitionTargets = this.resolveAreaTransitionTargets(runtimeSceneScript.area, renderBounds);
-    const staticPlaceTargets = this.resolveStaticPlaceTargets(runtimeSceneScript.area, renderBounds);
+    const staticPlaceTargets = this.resolveStaticPlaceTargets(
+      runtimeSceneScript.area,
+      renderBounds,
+      parsedMap,
+      runtimeGrids
+    );
+    this.currentStaticPlaceTargets = staticPlaceTargets;
     this.interactionManager.setTransitionTargets(transitionTargets);
     this.interactionManager.setStaticPlaceTargets(staticPlaceTargets);
 
@@ -356,11 +373,22 @@ export class MainScene extends Phaser.Scene {
       this.debugOverlay = new DebugOverlay(this, this.debugLogger, this.npcManager);
       this.debugPanel = new DebugPanel(this, this.debugCommandBus);
       this.debugMinigameHud = new DebugMinigameHud(this);
+      this.worldTileEditor = new WorldTileEditor(this, {
+        onApply: ({ collisionGrid, interactionGrid }) => {
+          this.applyDebugTileEditorGrids(collisionGrid, interactionGrid);
+        }
+      });
     }
 
     if (DEBUG_FLAGS.worldGridEnabled) {
       this.worldGridOverlay = new WorldGridOverlay(this);
-      this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
+      this.worldGridOverlay.render(
+        runtimeGrids,
+        parsedMap,
+        renderBounds,
+        this.playerManager.getSnapshot(),
+        this.currentStaticPlaceTargets
+      );
     }
 
     this.areaTransitionOverlay = new AreaTransitionOverlay(this);
@@ -383,6 +411,7 @@ export class MainScene extends Phaser.Scene {
       this.debugCommandBus?.destroy();
       this.debugMinigameHud?.destroy();
       this.debugPanel?.destroy();
+      this.worldTileEditor?.destroy();
       this.debugInputController?.destroy();
       this.dialogueManager?.destroy();
       this.dialogueBox?.destroy();
@@ -541,8 +570,16 @@ await director.run(runtimeSceneScript);
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
     const renderBounds = this.worldManager.getCurrentRenderBounds();
+    this.worldTileEditor?.setWorldState({
+      areaId: this.worldManager.getCurrentAreaId(),
+      tmxKey: this.worldManager.getCurrentTmxConfig()?.tmxKey,
+      parsedMap,
+      runtimeGrids,
+      renderBounds
+    });
     const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
     const debugPanelVisible = this.debugPanel?.isVisible() === true;
+    const debugTileEditorVisible = this.worldTileEditor?.isVisible() === true;
     const menuOpen = this.menuManager?.isOpen() === true;
     const placePopupOpen = this.placeActionManager?.isOpen() === true;
 
@@ -562,9 +599,9 @@ await director.run(runtimeSceneScript);
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
 
-    this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible);
+    this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible || debugTileEditorVisible);
     this.playerManager.setInputLocked(
-      this.interactionManager.isInputLocked() || debugHudVisible || debugPanelVisible || menuOpen || placePopupOpen || plannerOpen
+      this.interactionManager.isInputLocked() || debugHudVisible || debugPanelVisible || debugTileEditorVisible || menuOpen || placePopupOpen || plannerOpen
     );
 
     if (
@@ -573,6 +610,10 @@ await director.run(runtimeSceneScript);
       !dialoguePlaying &&
       !plannerOpen
     ) {
+      if (debugTileEditorVisible) {
+        this.worldTileEditor?.setVisible(false);
+        return;
+      }
       if (debugPanelVisible) {
         this.debugPanel?.hide();
         return;
@@ -591,7 +632,8 @@ await director.run(runtimeSceneScript);
       !menuOpen &&
       !placePopupOpen &&
       !debugHudVisible &&
-      !debugPanelVisible
+      !debugPanelVisible &&
+      !debugTileEditorVisible
     ) {
       this.progressionManager?.togglePlanner();
     }
@@ -603,6 +645,7 @@ await director.run(runtimeSceneScript);
       !plannerOpen &&
       !debugHudVisible &&
       !debugPanelVisible &&
+      !debugTileEditorVisible &&
       !dialoguePlaying
     ) {
       this.storyEventManager?.refreshCurrentWeekLoadState();
@@ -615,15 +658,22 @@ await director.run(runtimeSceneScript);
     this.fixedEventNpcManager?.render({
       presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
       areaId: this.worldManager.getCurrentAreaId() ?? "world",
-      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !dialoguePlaying
+      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !debugTileEditorVisible && !dialoguePlaying
     });
     this.debugPanel?.render(this.buildDebugPanelState());
 
     this.playerManager.update(runtimeGrids, parsedMap);
     this.interactionManager.update();
     this.debugInputController?.update();
+    this.worldTileEditor?.update();
     if (this.worldGridOverlay) {
-      this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
+      this.worldGridOverlay.render(
+        runtimeGrids,
+        parsedMap,
+        renderBounds,
+        this.playerManager.getSnapshot(),
+        this.currentStaticPlaceTargets
+      );
     }
 
     this.areaTransitionOverlay?.render(
@@ -712,6 +762,9 @@ await director.run(runtimeSceneScript);
           if (this.debugPanel?.isVisible()) {
             this.storyEventManager?.debugSyncAllWeeks();
           }
+          break;
+        case "toggleWorldTileEditor":
+          this.worldTileEditor?.toggle();
           break;
         case "toggleWorldGrid":
           if (this.worldGridOverlay) {
@@ -1067,13 +1120,28 @@ await director.run(runtimeSceneScript);
 
   private resolveStaticPlaceTargets(
     areaId: AreaId,
-    renderBounds?: ReturnType<WorldManager["getCurrentRenderBounds"]>
+    renderBounds?: ReturnType<WorldManager["getCurrentRenderBounds"]>,
+    parsedMap?: ParsedTmxMap,
+    runtimeGrids?: TmxRuntimeGrids
   ): RuntimeStaticPlaceTarget[] {
     if (!renderBounds) {
       return [];
     }
 
-    return getStaticPlaceDefinitions(areaId).map((place) => {
+    const staticPlaces = getStaticPlaceDefinitions(areaId);
+    const tmxDerivedTargets = this.resolveTmxStaticPlaceTargets(
+      staticPlaces,
+      renderBounds,
+      parsedMap,
+      runtimeGrids
+    );
+
+    return staticPlaces.map((place) => {
+      const tmxTarget = tmxDerivedTargets.get(place.id);
+      if (tmxTarget) {
+        return tmxTarget;
+      }
+
       const interactionZone = place.interactionZone ?? place.zone;
 
       return {
@@ -1088,6 +1156,126 @@ await director.run(runtimeSceneScript);
         zoneHeight: interactionZone.height * renderBounds.scale
       };
     });
+  }
+
+  private resolveTmxStaticPlaceTargets(
+    staticPlaces: ReturnType<typeof getStaticPlaceDefinitions>,
+    renderBounds?: ReturnType<WorldManager["getCurrentRenderBounds"]>,
+    parsedMap?: ParsedTmxMap,
+    runtimeGrids?: TmxRuntimeGrids
+  ) {
+    const targets = new Map<RuntimeStaticPlaceTarget["id"], RuntimeStaticPlaceTarget>();
+
+    if (
+      !renderBounds ||
+      !parsedMap ||
+      !runtimeGrids ||
+      staticPlaces.length === 0
+    ) {
+      return targets;
+    }
+
+    const availableRegions = extractConnectedRegionsFromGrid(runtimeGrids.interactionGrid, 2);
+
+    if (availableRegions.length === 0) {
+      return targets;
+    }
+
+    staticPlaces.forEach((place) => {
+      if (availableRegions.length === 0) {
+        return;
+      }
+
+      const anchorTileX = Phaser.Math.Clamp(
+        Math.floor((place.zone.x + place.zone.width / 2) / parsedMap.tileWidth),
+        0,
+        parsedMap.width - 1
+      );
+      const anchorTileY = Phaser.Math.Clamp(
+        Math.floor((place.zone.y + place.zone.height / 2) / parsedMap.tileHeight),
+        0,
+        parsedMap.height - 1
+      );
+
+      let bestRegionIndex = -1;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      availableRegions.forEach((region, index) => {
+        const dx = region.centerX - anchorTileX;
+        const dy = region.centerY - anchorTileY;
+        const distance = dx * dx + dy * dy;
+
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestRegionIndex = index;
+        }
+      });
+
+      if (bestRegionIndex < 0) {
+        return;
+      }
+
+      const [region] = availableRegions.splice(bestRegionIndex, 1);
+      if (!region) {
+        return;
+      }
+
+      const promptTiles = buildAdjacentWalkableTiles(region, runtimeGrids.blockedGrid).map((tile) => ({
+        tileX: tile.x,
+        tileY: tile.y
+      }));
+
+      if (promptTiles.length === 0) {
+        return;
+      }
+
+      const minTileX = Math.min(...promptTiles.map((tile) => tile.tileX));
+      const maxTileX = Math.max(...promptTiles.map((tile) => tile.tileX));
+      const minTileY = Math.min(...promptTiles.map((tile) => tile.tileY));
+      const maxTileY = Math.max(...promptTiles.map((tile) => tile.tileY));
+      const scaledTileWidth = renderBounds.tileWidth * renderBounds.scale;
+      const scaledTileHeight = renderBounds.tileHeight * renderBounds.scale;
+      const zoneX = renderBounds.offsetX + minTileX * scaledTileWidth;
+      const zoneY = renderBounds.offsetY + minTileY * scaledTileHeight;
+      const zoneWidth = (maxTileX - minTileX + 1) * scaledTileWidth;
+      const zoneHeight = (maxTileY - minTileY + 1) * scaledTileHeight;
+
+      targets.set(place.id, {
+        id: place.id,
+        label: place.label,
+        dialogueId: place.dialogueId!,
+        x: zoneX + zoneWidth / 2,
+        y: zoneY + zoneHeight / 2,
+        zoneX,
+        zoneY,
+        zoneWidth,
+        zoneHeight,
+        promptTiles
+      });
+    });
+
+    return targets;
+  }
+
+  private applyDebugTileEditorGrids(collisionGrid: boolean[][], interactionGrid: boolean[][]) {
+    const runtimeGrids = this.worldManager?.getCurrentRuntimeGrids();
+    const areaId = this.worldManager?.getCurrentAreaId();
+    const renderBounds = this.worldManager?.getCurrentRenderBounds();
+    const parsedMap = this.worldManager?.getCurrentParsedTmxMap();
+
+    if (!runtimeGrids || !areaId) {
+      return;
+    }
+
+    runtimeGrids.blockedGrid = collisionGrid;
+    runtimeGrids.interactionGrid = interactionGrid;
+    this.currentStaticPlaceTargets = this.resolveStaticPlaceTargets(
+      areaId,
+      renderBounds,
+      parsedMap,
+      runtimeGrids
+    );
+    this.interactionManager?.setStaticPlaceTargets(this.currentStaticPlaceTargets);
   }
 
   private getAreaLabel(areaId: AreaId): string {
