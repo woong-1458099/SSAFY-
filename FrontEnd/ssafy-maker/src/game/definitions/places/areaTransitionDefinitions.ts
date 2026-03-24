@@ -54,8 +54,8 @@ export const AREA_TRANSITION_DEFINITIONS: Record<AreaTransitionId, AreaTransitio
     fromArea: "downtown",
     toArea: "world",
     label: "월드맵으로 이동",
-    tileX: 3,
-    tileY: 7,
+    tileX: 2,
+    tileY: 8,
     tileWidth: 1,
     tileHeight: 1
   }
