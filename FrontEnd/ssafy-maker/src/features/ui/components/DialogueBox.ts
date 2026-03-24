@@ -9,6 +9,15 @@ import { UI_DEPTH } from "../../../game/systems/uiDepth";
 const FONT_FAMILY =
   "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 
+const NPC_GENDER_MAP: Record<string, "male" | "female"> = {
+  "지우": "female",
+  "효련": "female",
+  "김도연 프로": "female", 
+  "조선미 프로": "female",
+  "이혜원 코치": "female",
+  "SYSTEM": "male",
+};
+
 type ChoiceView = {
   root: Phaser.GameObjects.Container;
   bg: Phaser.GameObjects.Rectangle;
@@ -91,6 +100,9 @@ export class DialogueBox {
   private readonly depth = UI_DEPTH.dialogue;
   private choiceViews: ChoiceView[] = [];
 
+  private typingEvent?: Phaser.Time.TimerEvent;
+  private currentFullText: string = "";
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.root = scene.add.container(0, 0).setDepth(this.depth).setScrollFactor(0).setVisible(false);
@@ -151,6 +163,7 @@ export class DialogueBox {
   }
 
   hide(): void {
+    this.stopTyping(); 
     this.root.setVisible(false);
     this.clearChoices();
   }
@@ -160,7 +173,8 @@ export class DialogueBox {
     this.show();
     this.speakerText.setText(this.formatSpeakerTitle(node));
     this.speakerText.setColor(this.getSpeakerColor(node));
-    this.bodyText.setText(node.text);
+    
+    this.startTypingEffect(node);
 
     if (node.choices && node.choices.length > 0) {
       this.renderChoices(node, selectedChoiceIndex, options);
@@ -173,7 +187,49 @@ export class DialogueBox {
     this.updateLayout();
   }
 
+  private startTypingEffect(node: DialogueNode): void {
+    this.stopTyping(); 
+    
+    this.currentFullText = node.text;
+    this.bodyText.setText(""); 
+    
+    let charIndex = 0;
+    
+    const gender = node.speakerGender || NPC_GENDER_MAP[node.speaker] || "male";
+    const soundKey = gender === "male" ? "male_voice" : "female_voice";
+
+    this.typingEvent = this.scene.time.addEvent({
+      delay: 40, 
+      repeat: this.currentFullText.length - 1,  
+      callback: () => {
+        const char = this.currentFullText[charIndex];
+        if (char) {
+          this.bodyText.text += char;
+
+          if (char.trim() !== "" && charIndex % 2 === 0) {
+            this.scene.sound.play(soundKey, { volume: 0.3 });
+          }
+        }
+
+        charIndex++;
+
+        if (charIndex >= this.currentFullText.length) {
+          this.stopTyping();
+        }
+      },
+      callbackScope: this
+    });
+  }
+
+  private stopTyping(): void {
+    if (this.typingEvent) {
+      this.typingEvent.destroy();
+      this.typingEvent = undefined;
+    }
+  }
+
   destroy(): void {
+    this.stopTyping();
     this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.updateLayout, this);
     this.clearChoices();
     this.root.destroy(true);
@@ -219,16 +275,14 @@ export class DialogueBox {
   private updateLayout(): void {
     const metrics = this.getLayoutMetrics();
     this.overlay.setSize(this.scene.scale.width, this.scene.scale.height);
-    this.panel.setPosition(metrics.panelX, metrics.panelY);
-    this.panel.setSize(metrics.panelWidth, metrics.panelHeight);
-    this.panel.setDisplaySize(metrics.panelWidth, metrics.panelHeight);
-    this.speakerBadge.setPosition(metrics.innerX, metrics.headerY + metrics.headerHeight / 2);
-    this.speakerBadge.setSize(metrics.speakerBadgeWidth, metrics.headerHeight);
-    this.speakerBadge.setDisplaySize(metrics.speakerBadgeWidth, metrics.headerHeight);
-    this.speakerText.setPosition(metrics.innerX + 18, metrics.headerY + metrics.headerHeight / 2);
-    this.bodyText.setPosition(metrics.innerX, metrics.bodyY);
-    this.bodyText.setWordWrapWidth(metrics.innerWidth);
-    this.hintText.setPosition(metrics.hintX, metrics.hintY);
+    this.panel.setPosition(panelX, panelY);
+    this.panel.setSize(panelWidth, panelHeight);
+    this.panel.setDisplaySize(panelWidth, panelHeight);
+    this.speakerBadge.setPosition(panelX + 30, panelY + 30);
+    this.speakerText.setPosition(panelX + 45, panelY + 30); // 뱃지 중앙 정렬을 위해 약간 조정
+    this.bodyText.setPosition(panelX + 32, panelY + 64);
+    this.bodyText.setWordWrapWidth(panelWidth - 64);
+    this.hintText.setPosition(panelX + panelWidth - 28, panelY + panelHeight - 20);
 
     let currentChoiceY = metrics.choiceY;
     this.choiceViews.forEach((view, index) => {
