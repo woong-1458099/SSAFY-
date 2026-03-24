@@ -2,6 +2,8 @@
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { DIALOGUE_IDS } from "../../common/enums/dialogue";
+import { AudioManager } from "../../core/managers/AudioManager";
+import { DisplaySettingsManager } from "../../core/managers/DisplaySettingsManager";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
 import { DebugPanel } from "../../debug/overlay/DebugPanel";
 import { DebugMinigameHud } from "../../debug/overlay/DebugMinigameHud";
@@ -65,11 +67,14 @@ import {
   AreaTransitionOverlay,
   type RuntimeAreaTransitionTarget
 } from "../view/AreaTransitionOverlay";
+import { UI_DEPTH } from "../systems/uiDepth";
 
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
   private static readonly PENDING_RESTORE_PAYLOAD_KEY = "pendingRestorePayload";
   private static readonly PENDING_DEBUG_FIXED_EVENT_KEY = "pendingDebugFixedEvent";
+  private readonly audioManager = new AudioManager();
+  private readonly displaySettingsManager = new DisplaySettingsManager();
   private initialized = false;
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
@@ -105,11 +110,12 @@ export class MainScene extends Phaser.Scene {
   private destroySkyBackground?: () => void;
   private currentTimeOfDay?: TimeOfDay;
   private wasPlacePopupOpen = false;
+  private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   constructor() {
     super(SCENE_KEYS.main);
   }
 
-async create() {
+  async create() {
     this.initialized = false;
     this.logoutInProgress = false;
     await ensureAuthoredStoryLoaded(this);
@@ -122,6 +128,8 @@ async create() {
       const placePopupOpen = this.placeActionManager?.isOpen() === true;
       const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
       const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+
+      
 
       if (
         command.type === "toggleDebugOverlay" ||
@@ -141,7 +149,6 @@ async create() {
 
       return !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible;
     });
-
     this.worldManager = new WorldManager(this);
     this.playerManager = new PlayerManager(this);
     this.npcManager = new NpcManager(this);
@@ -155,16 +162,18 @@ async create() {
     this.hud = new GameHud(this);
     this.fixedEventNpcManager = new FixedEventNpcManager(this);
     this.dialogueManager.setDialogueBox(this.dialogueBox);
-
     this.dialogueManager.setRuntimeHooks({
       getMetricValue: (stat) => {
         const hudState = this.statSystemManager!.getHudState();
         const statsState = this.statSystemManager!.getStatsState();
         switch (stat) {
-          case "hp": return hudState.hp;
+          case "hp":
+            return hudState.hp;
           case "gold":
-          case "money": return hudState.money;
-          default: return statsState[stat];
+          case "money":
+            return hudState.money;
+          default:
+            return statsState[stat];
         }
       },
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
@@ -172,17 +181,31 @@ async create() {
       onNotice: (message) => this.menuManager?.showNotice(message),
       runAction: (action) => {
         switch (action) {
-          case "openShop": this.placeActionManager?.openShop(); return;
-          case "openMiniGame": openMinigameMenu(this, SCENE_KEYS.main); return;
-          case "playDrinking": launchMinigame(this, "DrinkingScene", SCENE_KEYS.main); return;
-          case "playInterview": launchMinigame(this, "InterviewScene", SCENE_KEYS.main); return;
-          case "playGym": launchMinigame(this, "GymScene", SCENE_KEYS.main); return;
-          case "playRhythm": launchMinigame(this, "RhythmScene", SCENE_KEYS.main); return;
-          case "playCooking": launchMinigame(this, "CookingScene", SCENE_KEYS.main); return;
+          case "openShop":
+            this.placeActionManager?.openShop();
+            return;
+          case "openMiniGame":
+            openMinigameMenu(this, SCENE_KEYS.main);
+            return;
+          case "playDrinking":
+            launchMinigame(this, "DrinkingScene", SCENE_KEYS.main);
+            return;
+          case "playInterview":
+            launchMinigame(this, "InterviewScene", SCENE_KEYS.main);
+            return;
+          case "playGym":
+            launchMinigame(this, "GymScene", SCENE_KEYS.main);
+            return;
+          case "playRhythm":
+            launchMinigame(this, "RhythmScene", SCENE_KEYS.main);
+            return;
+          case "playCooking":
+            launchMinigame(this, "CookingScene", SCENE_KEYS.main);
+            return;
         }
       }
+      
     });
-
     this.menuManager = new InGameMenuManager({
       scene: this,
       getStatsState: () => this.statSystemManager!.getStatsState(),
@@ -193,11 +216,18 @@ async create() {
       saveService: this.saveService,
       buildSavePayload: () => this.buildSavePayload(),
       restoreSavePayload: (payload) => this.restoreSavePayload(payload),
+      getSettingsState: () => ({
+        bgmVolume: this.audioManager.getVolumes().bgm,
+        bgmEnabled: this.audioManager.isBgmEnabled(),
+        brightness: this.displaySettingsManager.getBrightness()
+      }),
+      onAdjustBgmVolume: (delta) => this.adjustBgmVolume(delta),
+      onToggleBgm: () => this.toggleBgmEnabled(),
+      onAdjustBrightness: (delta) => this.adjustBrightness(delta),
       onLogout: () => {
         void this.handleLogout();
       }
     });
-
     this.statSystemManager.attachHud(this.hud);
     this.progressionManager = new ProgressionManager({
       scene: this,
@@ -210,7 +240,6 @@ async create() {
       onStartEndingFlow: () => this.startEndingFlow()
     });
     this.progressionManager.initialize();
-
     this.storyEventManager = new StoryEventManager({
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
@@ -232,16 +261,15 @@ async create() {
       onNotice: (message) => this.menuManager?.showNotice(message)
     });
     await this.storyEventManager.initialize(this.statSystemManager.getHudState().week);
-
     this.minigameRewardManager = new MinigameRewardManager({
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier)
     });
-
     this.placeActionManager = new PlaceActionManager({
       scene: this,
+      audioManager: this.audioManager,
       getHudState: () => this.statSystemManager!.getHudState(),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
@@ -252,38 +280,60 @@ async create() {
       tryConsumeActionPoint: () => this.progressionManager!.tryConsumeActionPoint({ notifyOnFailure: false }),
       onHomeTimeAdvanced: () => this.storyEventManager?.requestFixedEventTrigger("home")
     });
-
-    this.interactionManager = new InteractionManager(this, this.playerManager, this.npcManager, this.dialogueManager, this.debugLogger);
+    this.interactionManager = new InteractionManager(
+      this,
+      this.playerManager,
+      this.npcManager,
+      this.dialogueManager,
+      this.debugLogger
+    );
     this.interactionManager.setHud(this.hud);
     this.interactionManager.setPlaceInteractHandler((placeId) => {
-      if (this.storyEventManager?.tryStartFixedEventForLocation(placeId) === true) return true;
+      if (this.storyEventManager?.tryStartFixedEventForLocation(placeId) === true) {
+        return true;
+      }
+
       return this.placeActionManager?.open(placeId) === true;
     });
-
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.plannerKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.P);
-    this.statSystemManager.setStatsChangedListener(() => this.menuManager?.refreshStatsUi());
-    this.inventoryService.setChangeListener(() => this.menuManager?.refreshInventoryUi());
+    this.statSystemManager.setStatsChangedListener(() => {
+      this.menuManager?.refreshStatsUi();
+    });
+    this.inventoryService.setChangeListener(() => {
+      this.menuManager?.refreshInventoryUi();
+    });
 
-    const director = new SceneDirector(this.npcManager, this.dialogueManager, this.debugLogger);
-    this.interactionManager.setTransitionInteractHandler((transitionId) => this.handleAreaTransition(transitionId));
-
+    const director = new SceneDirector(
+      this.npcManager,
+      this.dialogueManager,
+      this.debugLogger
+    );
+    this.interactionManager.setTransitionInteractHandler((transitionId) => {
+      this.handleAreaTransition(transitionId);
+    });
     const pendingRestorePayload = this.getPendingRestorePayload();
     const startScene = this.resolveStartScene();
     this.currentSceneId = startScene.id;
-    const initialSceneState = normalizeSceneState(pendingRestorePayload?.world?.sceneState ?? getSceneState(startScene.initialStateId));
+    const initialSceneState = this.resolveInitialSceneState(startScene, pendingRestorePayload);
     this.currentSceneState = initialSceneState;
     const runtimeSceneScript = buildRuntimeSceneScript(startScene, initialSceneState);
-    const playerAppearance = resolvePlayerAppearanceDefinition(this.registry.get("playerData") as Partial<PlayerAppearanceSelection> | undefined);
+    const playerAppearance = resolvePlayerAppearanceDefinition(
+      this.registry.get("playerData") as Partial<PlayerAppearanceSelection> | undefined
+    );
 
     this.worldManager.loadArea(runtimeSceneScript.area);
     this.playerManager.setAppearance(playerAppearance);
     this.npcManager.setArea(runtimeSceneScript.area);
     this.interactionManager.setArea(runtimeSceneScript.area);
     this.interactionManager.setSceneState(initialSceneState);
-    this.statSystemManager.patchHudState({ locationLabel: this.getAreaLabel(runtimeSceneScript.area) });
+    this.statSystemManager.patchHudState({
+      locationLabel: this.getAreaLabel(runtimeSceneScript.area)
+    });
 
+    const tmxConfig = this.worldManager.getCurrentTmxConfig();
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
+    const resolvedLayers = this.worldManager.getCurrentResolvedTmxLayers();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
     const renderBounds = this.worldManager.getCurrentRenderBounds();
 
@@ -292,6 +342,8 @@ async create() {
     const staticPlaceTargets = this.resolveStaticPlaceTargets(runtimeSceneScript.area, renderBounds);
     this.interactionManager.setTransitionTargets(transitionTargets);
     this.interactionManager.setStaticPlaceTargets(staticPlaceTargets);
+
+    this.syncDebugWorldState();
 
     if (parsedMap && runtimeGrids && this.playerManager) {
       const startTile = this.resolvePlayerStartTile(runtimeSceneScript.area, parsedMap, runtimeGrids);
@@ -313,15 +365,21 @@ async create() {
 
     this.areaTransitionOverlay = new AreaTransitionOverlay(this);
     this.areaTransitionOverlay.render(transitionTargets);
+    this.ensureBrightnessOverlay();
+    this.applyBrightnessOverlay();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     this.bindDebugControls();
     this.debugInputController.bind();
-
     let cleanedUp = false;
     const cleanupSceneResources = () => {
-      if (cleanedUp) return;
+      if (cleanedUp) {
+        return;
+      }
+
       cleanedUp = true;
       this.unsubscribeDebugCommandBus?.();
+      this.unsubscribeDebugCommandBus = undefined;
       this.debugCommandBus?.destroy();
       this.debugMinigameHud?.destroy();
       this.debugPanel?.destroy();
@@ -335,6 +393,9 @@ async create() {
       this.storyEventManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+      this.brightnessOverlay?.destroy();
+      this.brightnessOverlay = undefined;
       this.destroySkyBackground?.();
       this.destroySkyBackground = undefined;
     };
@@ -342,141 +403,35 @@ async create() {
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupSceneResources);
 
     this.initialized = true;
-    await director.run(runtimeSceneScript);
+await director.run(runtimeSceneScript);
     this.applyPendingDebugFixedEvent();
 
     const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
     const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
     const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
 
-    const mapPixelWidth = renderBounds && parsedMap ? parsedMap.width * renderBounds.tileWidth * renderBounds.scale : undefined;
-    const mapPixelHeight = renderBounds && parsedMap ? parsedMap.height * renderBounds.tileHeight * renderBounds.scale : undefined;
-    this.destroySkyBackground?.();
+    const mapPixelWidth = renderBounds && parsedMap
+      ? parsedMap.width * renderBounds.tileWidth * renderBounds.scale
+      : undefined;
+    const mapPixelHeight = renderBounds && parsedMap
+      ? parsedMap.height * renderBounds.tileHeight * renderBounds.scale
+      : undefined;
 
-    if (currentArea === "world" || currentArea === "downtown") {
-      if (currentArea === "world") {
-        playWorldBgm(this, timeOfDay);
-      } else {
-        playPlaceBgm(this, "downtown" as any);
-      }
+    this.destroySkyBackground?.();
+    if (currentArea === "world") {
+      void playWorldBgm(this, timeOfDay, this.audioManager);
+      this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
+    } else if (currentArea === "downtown") {
+      void playPlaceBgm(this, "downtown" as any, this.audioManager);
       this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
     } else if (currentArea === "campus") {
-      playPlaceBgm(this, "campus" as any);
+      void playPlaceBgm(this, "campus" as any, this.audioManager);
       this.destroySkyBackground = createCampusBackground(this, -10);
     } else {
-      playPlaceBgm(this, currentArea as any);
+      void playPlaceBgm(this, currentArea as any, this.audioManager);
     }
+
   }
-  
-update() {
-  if (!this.initialized) return;
-
-  if (
-    !this.worldManager ||
-    !this.playerManager ||
-    !this.debugLogger ||
-    !this.interactionManager
-  ) return;
-
-  const parsedMap = this.worldManager.getCurrentParsedTmxMap();
-  const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
-  const renderBounds = this.worldManager.getCurrentRenderBounds();
-  const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
-  const debugPanelVisible = this.debugPanel?.isVisible() === true;
-  const menuOpen = this.menuManager?.isOpen() === true;
-  const placePopupOpen = this.placeActionManager?.isOpen() === true;
-  const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
-  const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
-
-  const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
-
-  if (this.wasPlacePopupOpen && !placePopupOpen) {
-    const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
-    const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
-
-    if (currentArea === "world") {
-      playWorldBgm(this, timeOfDay);
-    } else {
-      playPlaceBgm(this, currentArea as any);
-    }
-  }
-  this.wasPlacePopupOpen = placePopupOpen;
-
-  this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible);
-  this.playerManager.setInputLocked(
-    this.interactionManager.isInputLocked() || debugHudVisible || debugPanelVisible || menuOpen || placePopupOpen || plannerOpen
-  );
-
-  if (this.escapeKey && Phaser.Input.Keyboard.JustDown(this.escapeKey) && !dialoguePlaying && !plannerOpen) {
-    if (debugPanelVisible) { this.debugPanel?.hide(); return; }
-    if (placePopupOpen) { this.placeActionManager?.close(); return; }
-    this.menuManager?.toggle();
-  }
-
-  if (this.plannerKey && Phaser.Input.Keyboard.JustDown(this.plannerKey) && !dialoguePlaying && !menuOpen && !placePopupOpen && !debugHudVisible && !debugPanelVisible) {
-    this.progressionManager?.togglePlanner();
-  }
-
-  let fixedEventStarted = false;
-  const isUiClosed = !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !dialoguePlaying;
-
-  if (isUiClosed) {
-    this.storyEventManager?.refreshCurrentWeekLoadState();
-    fixedEventStarted = this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() === true;
-  }
-
-  if (!fixedEventStarted) {
-    this.progressionManager?.processAutomaticFlow();
-  }
-
-  this.fixedEventNpcManager?.render({
-    presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
-    areaId: currentArea,
-    visible: isUiClosed
-  });
-  
-  this.debugPanel?.render(this.buildDebugPanelState());
-  this.playerManager.update(runtimeGrids, parsedMap);
-  this.interactionManager.update();
-  this.debugInputController?.update();
-
-  if (this.worldGridOverlay) {
-    this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
-  }
-
-  this.areaTransitionOverlay?.render(
-    this.resolveAreaTransitionTargets(currentArea, renderBounds),
-    this.interactionManager.getCurrentTargetTransitionId()
-  );
-
-  const player = this.playerManager.getSnapshot();
-  if (player) {
-    this.debugLogger.setPlayer(`${Math.round(player.x)}, ${Math.round(player.y)}`, `${player.tileX}, ${player.tileY}`);
-  }
-
-  const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
-  const newTimeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
-
-  if (newTimeOfDay !== this.currentTimeOfDay) {
-    this.currentTimeOfDay = newTimeOfDay;
-
-    const rb = this.worldManager.getCurrentRenderBounds();
-    const pm = this.worldManager.getCurrentParsedTmxMap();
-    const mapPixelWidth = rb && pm ? pm.width * rb.tileWidth * rb.scale : undefined;
-    const mapPixelHeight = rb && pm ? pm.height * rb.tileHeight * rb.scale : undefined;
-
-    this.destroySkyBackground?.();
-
-    if (currentArea === "world" || currentArea === "downtown") {
-      this.destroySkyBackground = createSkyBackground(this, newTimeOfDay, mapPixelWidth, mapPixelHeight);
-      if (currentArea === "world") playWorldBgm(this, newTimeOfDay);
-    } else if (currentArea === "campus") {
-      this.destroySkyBackground = createCampusBackground(this, -10);
-    }
-  }
-
-  this.debugOverlay?.render();
-}
 
   private async handleLogout(): Promise<void> {
     if (this.logoutInProgress) {
@@ -499,6 +454,244 @@ update() {
       this.registry.remove("startSceneId");
       this.scene.start(SceneKey.Login);
     }
+  }
+
+  private handleResize(): void {
+    this.layoutBrightnessOverlay();
+  }
+
+  private ensureBrightnessOverlay(): void {
+    if (this.brightnessOverlay) {
+      return;
+    }
+
+    this.brightnessOverlay = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 1)
+      .setScrollFactor(0)
+      .setDepth(UI_DEPTH.hud - 1);
+    this.layoutBrightnessOverlay();
+  }
+
+  private layoutBrightnessOverlay(): void {
+    if (!this.brightnessOverlay) {
+      return;
+    }
+
+    this.brightnessOverlay.setPosition(this.scale.width / 2, this.scale.height / 2);
+    this.brightnessOverlay.setSize(this.scale.width, this.scale.height);
+    this.brightnessOverlay.setDisplaySize(this.scale.width, this.scale.height);
+  }
+
+  private applyBrightnessOverlay(): void {
+    this.ensureBrightnessOverlay();
+    if (!this.brightnessOverlay) {
+      return;
+    }
+
+    const brightness = this.displaySettingsManager.getBrightness();
+    const overlayAlpha = Phaser.Math.Clamp(1 - brightness, 0, 0.45);
+    this.brightnessOverlay.setAlpha(overlayAlpha);
+    this.brightnessOverlay.setVisible(overlayAlpha > 0.001);
+  }
+
+  private adjustBgmVolume(delta: number): void {
+    const current = this.audioManager.getVolumes().bgm;
+    this.audioManager.setBgmVolume(current + delta);
+    this.refreshCurrentAreaBgm();
+  }
+
+  private toggleBgmEnabled(): void {
+    this.audioManager.setBgmEnabled(!this.audioManager.isBgmEnabled());
+    this.refreshCurrentAreaBgm();
+  }
+
+  private adjustBrightness(delta: number): void {
+    const current = this.displaySettingsManager.getBrightness();
+    this.displaySettingsManager.setBrightness(current + delta);
+    this.applyBrightnessOverlay();
+  }
+
+  private refreshCurrentAreaBgm(): void {
+    const currentArea = this.worldManager?.getCurrentAreaId() ?? "world";
+    const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+    const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+    if (currentArea === "world") {
+      void playWorldBgm(this, timeOfDay, this.audioManager);
+      return;
+    }
+
+    void playPlaceBgm(this, currentArea as any, this.audioManager);
+  }
+
+  update() {
+    if (!this.initialized) {
+      return;
+    }
+
+    if (
+      !this.worldManager ||
+      !this.playerManager ||
+      !this.debugLogger ||
+      !this.interactionManager
+    ) {
+      return;
+    }
+
+    const parsedMap = this.worldManager.getCurrentParsedTmxMap();
+    const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
+    const renderBounds = this.worldManager.getCurrentRenderBounds();
+    const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
+    const debugPanelVisible = this.debugPanel?.isVisible() === true;
+    const menuOpen = this.menuManager?.isOpen() === true;
+    const placePopupOpen = this.placeActionManager?.isOpen() === true;
+
+    if (this.wasPlacePopupOpen && !placePopupOpen) {
+      const area = this.worldManager?.getCurrentAreaId() ?? "world";
+      const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+      const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+      if (area === "world") {
+        void playWorldBgm(this, timeOfDay, this.audioManager);
+      } else {
+        void playPlaceBgm(this, area as any, this.audioManager);
+      }
+    }
+    this.wasPlacePopupOpen = placePopupOpen;
+
+    const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
+    const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+
+    this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible);
+    this.playerManager.setInputLocked(
+      this.interactionManager.isInputLocked() || debugHudVisible || debugPanelVisible || menuOpen || placePopupOpen || plannerOpen
+    );
+
+    if (
+      this.escapeKey &&
+      Phaser.Input.Keyboard.JustDown(this.escapeKey) &&
+      !dialoguePlaying &&
+      !plannerOpen
+    ) {
+      if (debugPanelVisible) {
+        this.debugPanel?.hide();
+        return;
+      }
+      if (placePopupOpen) {
+        this.placeActionManager?.close();
+        return;
+      }
+      this.menuManager?.toggle();
+    }
+
+    if (
+      this.plannerKey &&
+      Phaser.Input.Keyboard.JustDown(this.plannerKey) &&
+      !dialoguePlaying &&
+      !menuOpen &&
+      !placePopupOpen &&
+      !debugHudVisible &&
+      !debugPanelVisible
+    ) {
+      this.progressionManager?.togglePlanner();
+    }
+
+    let fixedEventStarted = false;
+    if (
+      !menuOpen &&
+      !placePopupOpen &&
+      !plannerOpen &&
+      !debugHudVisible &&
+      !debugPanelVisible &&
+      !dialoguePlaying
+    ) {
+      this.storyEventManager?.refreshCurrentWeekLoadState();
+      fixedEventStarted = this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() === true;
+    }
+
+    const automaticProgressionFlowOpened =
+      !fixedEventStarted && this.progressionManager?.processAutomaticFlow() === true;
+    this.syncDebugWorldState();
+    this.fixedEventNpcManager?.render({
+      presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
+      areaId: this.worldManager.getCurrentAreaId() ?? "world",
+      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !dialoguePlaying
+    });
+    this.debugPanel?.render(this.buildDebugPanelState());
+
+    this.playerManager.update(runtimeGrids, parsedMap);
+    this.interactionManager.update();
+    this.debugInputController?.update();
+    if (this.worldGridOverlay) {
+      this.worldGridOverlay.render(runtimeGrids, parsedMap, renderBounds);
+    }
+
+    this.areaTransitionOverlay?.render(
+      this.resolveAreaTransitionTargets(this.worldManager.getCurrentAreaId() ?? "world", renderBounds),
+      this.interactionManager.getCurrentTargetTransitionId()
+    );
+
+    const player = this.playerManager.getSnapshot();
+    if (player) {
+      this.debugLogger.setPlayer(
+        `${Math.round(player.x)}, ${Math.round(player.y)}`,
+        `${player.tileX}, ${player.tileY}`
+      );
+    }
+
+    const currentArea = this.worldManager.getCurrentAreaId();
+    if (currentArea === "world" || currentArea === "downtown" || currentArea === "campus") {
+      const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
+      const newTimeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
+
+      if (newTimeOfDay !== this.currentTimeOfDay) {
+        this.currentTimeOfDay = newTimeOfDay;
+
+        const rb = this.worldManager.getCurrentRenderBounds();
+        const pm = this.worldManager.getCurrentParsedTmxMap();
+        const mapPixelWidth = rb && pm ? pm.width * rb.tileWidth * rb.scale : undefined;
+        const mapPixelHeight = rb && pm ? pm.height * rb.tileHeight * rb.scale : undefined;
+
+        this.destroySkyBackground?.();
+        if (currentArea === "world" || currentArea === "downtown") {
+          this.destroySkyBackground = createSkyBackground(this, newTimeOfDay, mapPixelWidth, mapPixelHeight);
+        } else if (currentArea === "campus") {
+          this.destroySkyBackground = createCampusBackground(this, -10);
+        }
+
+        if (currentArea === "world") {
+          void playWorldBgm(this, newTimeOfDay, this.audioManager);
+        }
+      }
+    }
+
+    this.debugOverlay?.render();
+  }
+
+  private syncDebugWorldState(): void {
+    if (!this.debugLogger || !this.worldManager) {
+      return;
+    }
+
+    const currentAreaId = this.worldManager.getCurrentAreaId() ?? this.currentSceneState?.area ?? "world";
+    const tmxConfig = this.worldManager.getCurrentTmxConfig();
+    const parsedMap = this.worldManager.getCurrentParsedTmxMap();
+    const resolvedLayers = this.worldManager.getCurrentResolvedTmxLayers();
+    const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
+    const mapSize = parsedMap
+      ? `${parsedMap.width}x${parsedMap.height} (${parsedMap.tileWidth}x${parsedMap.tileHeight})`
+      : undefined;
+
+    this.debugLogger.setArea(
+      currentAreaId,
+      tmxConfig?.tmxKey,
+      mapSize,
+      resolvedLayers?.collisionLayers.length,
+      resolvedLayers?.interactionLayers.length,
+      resolvedLayers?.foregroundLayers.length,
+      runtimeGrids ? countTrueCells(runtimeGrids.blockedGrid) : 0,
+      runtimeGrids ? countTrueCells(runtimeGrids.interactionGrid) : 0
+    );
   }
 
   private bindDebugControls() {

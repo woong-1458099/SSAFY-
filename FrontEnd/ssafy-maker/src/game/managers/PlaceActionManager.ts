@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { PlaceId } from "../../common/enums/area";
 import { SCENE_KEYS } from "../../common/enums/scene";
+import { AudioManager } from "../../core/managers/AudioManager";
 import { createHomeActionModal } from "../../features/home/homeActionModal";
 import { resolveHomeAction, type HomeActionId } from "../../features/home/homeActions";
 import {
@@ -26,6 +27,7 @@ import {
 
 type PlaceActionManagerOptions = {
   scene: Phaser.Scene;
+  audioManager: AudioManager;
   getHudState: () => HudState;
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
@@ -42,6 +44,7 @@ const FONT_FAMILY =
 
 export class PlaceActionManager {
   private readonly scene: Phaser.Scene;
+  private readonly audioManager: AudioManager;
   private readonly getHudState: () => HudState;
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
@@ -57,6 +60,7 @@ export class PlaceActionManager {
 
   constructor(options: PlaceActionManagerOptions) {
     this.scene = options.scene;
+    this.audioManager = options.audioManager;
     this.getHudState = options.getHudState;
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
@@ -333,7 +337,7 @@ export class PlaceActionManager {
   ): void {
     this.popupRequestId += 1;
     const requestId = this.popupRequestId;
-    ensurePlaceBackgroundTexture(this.scene, placeId, () => {
+    ensurePlaceBackgroundTexture(this.scene, placeId, this.audioManager, () => {
       if (requestId !== this.popupRequestId || !this.scene.scene.isActive()) {
         return;
       }

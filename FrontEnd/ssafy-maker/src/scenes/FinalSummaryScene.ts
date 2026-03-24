@@ -16,6 +16,25 @@ const TEXT_MAIN = "#e8f4ff";
 const TEXT_SUB = "#b9d6f6";
 const FONT_FAMILY = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 
+type SummaryLayout = {
+  headerTopY: number;
+  headerCenterY: number;
+  headerWidth: number;
+  headerHeight: number;
+  summaryTopY: number;
+  cardWidth: number;
+  cardHeight: number;
+  cardGapX: number;
+  cardGapY: number;
+  previewTopY: number;
+  previewWidth: number;
+  previewHeight: number;
+  previewPaddingX: number;
+  previewPaddingTop: number;
+  previewInnerWidth: number;
+  buttonY: number;
+};
+
 export class FinalSummaryScene extends Phaser.Scene {
   private payload!: EndingFlowPayload;
   private ending!: EndingResult;
@@ -31,12 +50,17 @@ export class FinalSummaryScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+    const layout = this.buildLayout(width, height, this.ending.summaryStats.length);
+
     this.cameras.main.setBackgroundColor("#0f2541");
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x102846, 1);
-    this.add.rectangle(width / 2, 88, width - 96, 92, PANEL_BG, 0.92).setStrokeStyle(3, PANEL_BORDER, 1);
+    this.add
+      .rectangle(width / 2, layout.headerCenterY, layout.headerWidth, layout.headerHeight, PANEL_BG, 0.92)
+      .setStrokeStyle(3, PANEL_BORDER, 1);
 
-    this.add.text(width / 2, 58, "6주차 종료 리포트", {
+    const headerTextCenterY = layout.headerTopY + layout.headerHeight / 2;
+    const titleText = this.add.text(0, -16, "6주차 종료 리포트", {
       fontFamily: FONT_FAMILY,
       fontSize: "34px",
       fontStyle: "bold",
@@ -44,85 +68,131 @@ export class FinalSummaryScene extends Phaser.Scene {
       resolution: 2
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, 98, `${this.payload.week}주차 ${this.payload.dayLabel} ${this.payload.timeLabel} 이후 정산`, {
+    const subtitleText = this.add.text(0, 18, `${this.payload.week}주차 ${this.payload.dayLabel} ${this.payload.timeLabel} 이후 정산`, {
       fontFamily: FONT_FAMILY,
       fontSize: "18px",
       color: TEXT_SUB,
       resolution: 2
     }).setOrigin(0.5);
+    this.add.container(width / 2, headerTextCenterY, [titleText, subtitleText]);
 
-    this.createSummaryGrid(width / 2, 246, this.ending.summaryStats);
-    this.createEndingPreview(width / 2, 480);
-    this.createNextButton(width / 2, height - 70);
+    this.createSummaryGrid(width / 2, layout.summaryTopY, this.ending.summaryStats, layout);
+    this.createEndingPreview(width / 2, layout.previewTopY, layout);
+    this.createNextButton(width / 2, layout.buttonY);
   }
 
-  private createSummaryGrid(centerX: number, topY: number, stats: EndingSummaryStat[]): void {
-    const columns = 3;
+  private buildLayout(width: number, height: number, statCount: number): SummaryLayout {
+    const headerHeight = 92;
+    const headerTopY = 42;
+    const headerCenterY = headerTopY + headerHeight / 2;
+    const headerBottom = headerCenterY + headerHeight / 2;
     const cardWidth = 220;
-    const cardHeight = 108;
-    const gapX = 24;
-    const gapY = 18;
-    const totalWidth = columns * cardWidth + (columns - 1) * gapX;
-    const startX = centerX - totalWidth / 2 + cardWidth / 2;
+    const cardHeight = 104;
+    const cardGapX = 24;
+    const cardGapY = 18;
+    const rowCount = Math.ceil(statCount / 3);
+    const summaryTopY = headerBottom + 24 + cardHeight / 2;
+    const summaryHeight = rowCount * cardHeight + Math.max(0, rowCount - 1) * cardGapY;
+    const summaryBottom = summaryTopY - cardHeight / 2 + summaryHeight;
+    const previewHeight = 162;
+    const previewTopY = summaryBottom + 28 + previewHeight / 2;
+    const buttonY = Math.min(height - 54, previewTopY + previewHeight / 2 + 34 + 27);
 
-    stats.forEach((stat, index) => {
-      const col = index % columns;
-      const row = Math.floor(index / columns);
-      const x = startX + col * (cardWidth + gapX);
-      const y = topY + row * (cardHeight + gapY);
-
-      this.add.rectangle(x, y, cardWidth, cardHeight, PANEL_BG, 0.88).setStrokeStyle(2, PANEL_BORDER, 1);
-      this.add.text(x - 82, y - 30, stat.label, {
-        fontFamily: FONT_FAMILY,
-        fontSize: "20px",
-        fontStyle: "bold",
-        color: TEXT_SUB,
-        resolution: 2
-      });
-      this.add.text(x - 82, y + 2, `${stat.value}`, {
-        fontFamily: FONT_FAMILY,
-        fontSize: "36px",
-        fontStyle: "bold",
-        color: TEXT_MAIN,
-        resolution: 2
-      });
-      this.add.rectangle(x + 54, y + 8, 76, 12, 0x234a72, 1).setOrigin(0.5);
-      this.add.rectangle(
-        x + 16,
-        y + 8,
-        Math.max(12, Math.min(76, Math.round((76 * Phaser.Math.Clamp(stat.value, 0, 100)) / 100))),
-        12,
-        PANEL_ACCENT,
-        1
-      ).setOrigin(0, 0.5);
-    });
+    return {
+      headerTopY,
+      headerCenterY,
+      headerWidth: width - 96,
+      headerHeight,
+      summaryTopY,
+      cardWidth,
+      cardHeight,
+      cardGapX,
+      cardGapY,
+      previewTopY,
+      previewWidth: Math.min(920, width - 72),
+      previewHeight,
+      previewPaddingX: 42,
+      previewPaddingTop: 28,
+      previewInnerWidth: Math.min(920, width - 72) - 84,
+      buttonY,
+    };
   }
 
-  private createEndingPreview(centerX: number, centerY: number): void {
-    this.add.rectangle(centerX, centerY, 920, 180, 0x132d4b, 0.94).setStrokeStyle(3, PANEL_BORDER, 1);
-    this.add.text(centerX, centerY - 52, this.ending.title, {
+  private createSummaryGrid(centerX: number, topY: number, stats: EndingSummaryStat[], layout: SummaryLayout): void {
+    const columns = 3;
+    const rows = Array.from({ length: Math.ceil(stats.length / columns) }, (_, rowIndex) =>
+      stats.slice(rowIndex * columns, rowIndex * columns + columns)
+    );
+
+    rows.forEach((rowStats, rowIndex) => {
+      const rowWidth =
+        rowStats.length * layout.cardWidth +
+        Math.max(0, rowStats.length - 1) * layout.cardGapX;
+      const startX = centerX - rowWidth / 2 + layout.cardWidth / 2;
+      const y = topY + rowIndex * (layout.cardHeight + layout.cardGapY);
+
+      rowStats.forEach((stat, colIndex) => {
+        const x = startX + colIndex * (layout.cardWidth + layout.cardGapX);
+
+        this.add.rectangle(x, y, layout.cardWidth, layout.cardHeight, PANEL_BG, 0.88).setStrokeStyle(2, PANEL_BORDER, 1);
+        this.add.text(x - 82, y - 28, stat.label, {
+          fontFamily: FONT_FAMILY,
+          fontSize: "20px",
+          fontStyle: "bold",
+          color: TEXT_SUB,
+          resolution: 2
+        });
+        this.add.text(x - 82, y + 2, `${stat.value}`, {
+          fontFamily: FONT_FAMILY,
+          fontSize: "36px",
+          fontStyle: "bold",
+          color: TEXT_MAIN,
+          resolution: 2
+        });
+        this.add.rectangle(x + 54, y + 8, 76, 12, 0x234a72, 1).setOrigin(0.5);
+        this.add.rectangle(
+          x + 16,
+          y + 8,
+          Math.max(12, Math.min(76, Math.round((76 * Phaser.Math.Clamp(stat.value, 0, 100)) / 100))),
+          12,
+          PANEL_ACCENT,
+          1
+        ).setOrigin(0, 0.5);
+      });
+    });
+}
+
+  private createEndingPreview(centerX: number, centerY: number, layout: SummaryLayout): void {
+    this.add
+      .rectangle(centerX, centerY, layout.previewWidth, layout.previewHeight, 0x132d4b, 0.94)
+      .setStrokeStyle(3, PANEL_BORDER, 1);
+
+    const topY = centerY - layout.previewHeight / 2 + layout.previewPaddingTop;
+
+    this.add.text(centerX, topY, this.ending.title, {
       fontFamily: FONT_FAMILY,
       fontSize: "28px",
       fontStyle: "bold",
       color: TEXT_MAIN,
       resolution: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0.5, 0);
 
-    this.add.text(centerX, centerY - 12, this.ending.shortDescription, {
+    this.add.text(centerX, topY + 44, this.ending.shortDescription, {
       fontFamily: FONT_FAMILY,
       fontSize: "18px",
       color: TEXT_SUB,
       align: "center",
-      wordWrap: { width: 760 },
+      wordWrap: { width: layout.previewInnerWidth },
+      lineSpacing: 6,
       resolution: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0.5, 0);
 
-    this.add.text(centerX, centerY + 54, `주요 키워드: ${this.ending.dominantLabels.join(" / ")}`, {
+    this.add.text(centerX, centerY + layout.previewHeight / 2 - 36, `주요 키워드: ${this.ending.dominantLabels.join(" / ")}`, {
       fontFamily: FONT_FAMILY,
       fontSize: "18px",
       color: "#c8f4ff",
       resolution: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0.5, 0.5);
   }
 
   private createNextButton(x: number, y: number): void {
