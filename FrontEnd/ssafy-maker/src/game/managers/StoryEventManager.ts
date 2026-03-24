@@ -50,6 +50,7 @@ export class StoryEventManager {
 
   private readonly weekData = new Map<number, unknown>();
   private readonly weekLoads = new Map<number, Promise<unknown>>();
+  private readonly weekLoadErrors = new Map<number, string>();
   private completedFixedEventIds: string[] = [];
   private activeFixedEventId: string | null = null;
   private pendingTriggerLocation: string | null = null;
@@ -211,6 +212,12 @@ export class StoryEventManager {
   }
 
   getTimeAdvanceBlockedMessage(): string | null {
+    const week = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
+    if (!this.weekData.has(week)) {
+      this.syncWeek(week);
+      return this.weekLoadErrors.get(week) ?? "고정 이벤트 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.";
+    }
+
     const event = this.findPendingFixedEventForCurrentTime();
     if (!event) {
       return null;
@@ -287,6 +294,7 @@ export class StoryEventManager {
     const request = loadFixedEventWeek(normalizedWeek)
       .then((rawData) => {
         this.weekData.set(normalizedWeek, rawData);
+        this.weekLoadErrors.delete(normalizedWeek);
         this.weekLoads.delete(normalizedWeek);
         return rawData;
       })
@@ -301,6 +309,7 @@ export class StoryEventManager {
       await request;
     } catch (error) {
       const message = error instanceof Error ? error.message : "고정 이벤트 데이터를 불러오지 못했습니다";
+      this.weekLoadErrors.set(normalizedWeek, message);
       this.onNotice?.(message);
     }
   }
