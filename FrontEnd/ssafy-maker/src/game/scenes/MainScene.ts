@@ -269,6 +269,7 @@ export class MainScene extends Phaser.Scene {
     });
     this.placeActionManager = new PlaceActionManager({
       scene: this,
+      audioManager: this.audioManager,
       getHudState: () => this.statSystemManager!.getHudState(),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
@@ -417,15 +418,15 @@ await director.run(runtimeSceneScript);
       : undefined;
 
     if (currentArea === "world") {
-      playWorldBgm(this, timeOfDay);
+      void playWorldBgm(this, timeOfDay, this.audioManager);
       this.destroySkyBackground?.();
       this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
     } else if (currentArea === "downtown") {
-      playPlaceBgm(this, currentArea as any);
+      void playPlaceBgm(this, currentArea as any, this.audioManager);
       this.destroySkyBackground?.();
       this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
     } else {
-      playPlaceBgm(this, currentArea as any);
+      void playPlaceBgm(this, currentArea as any, this.audioManager);
     }
 
   }
@@ -514,11 +515,11 @@ await director.run(runtimeSceneScript);
     const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
 
     if (currentArea === "world") {
-      void playWorldBgm(this, timeOfDay);
+      void playWorldBgm(this, timeOfDay, this.audioManager);
       return;
     }
 
-    void playPlaceBgm(this, currentArea as any);
+    void playPlaceBgm(this, currentArea as any, this.audioManager);
   }
 
   update() {
@@ -549,9 +550,9 @@ await director.run(runtimeSceneScript);
       const timeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
 
       if (area === "world") {
-        playWorldBgm(this, timeOfDay);
+        void playWorldBgm(this, timeOfDay, this.audioManager);
       } else {
-        playPlaceBgm(this, area as any);
+        void playPlaceBgm(this, area as any, this.audioManager);
       }
     }
     this.wasPlacePopupOpen = placePopupOpen;
@@ -653,7 +654,7 @@ await director.run(runtimeSceneScript);
         this.destroySkyBackground = createSkyBackground(this, newTimeOfDay, mapPixelWidth, mapPixelHeight);
 
         if (currentArea === "world") {
-          playWorldBgm(this, newTimeOfDay);
+          void playWorldBgm(this, newTimeOfDay, this.audioManager);
         }
       }
     }

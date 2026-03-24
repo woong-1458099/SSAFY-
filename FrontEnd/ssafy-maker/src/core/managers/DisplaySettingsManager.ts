@@ -45,11 +45,15 @@ export class DisplaySettingsManager {
       return;
     }
 
-    window.localStorage.setItem(
-      DisplaySettingsManager.storageKey,
-      JSON.stringify({
-        brightness: DisplaySettingsManager.brightness
-      } satisfies DisplaySettingsStore)
-    );
+    try {
+      window.localStorage.setItem(
+        DisplaySettingsManager.storageKey,
+        JSON.stringify({
+          brightness: DisplaySettingsManager.brightness
+        } satisfies DisplaySettingsStore)
+      );
+    } catch (error) {
+      console.warn("[DisplaySettingsManager] failed to persist display settings", error);
+    }
   }
 }

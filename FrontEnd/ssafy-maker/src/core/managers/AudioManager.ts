@@ -94,6 +94,16 @@ export class AudioManager {
     AudioManager.registerManagedSound(sound, category, baseVolume);
   }
 
+  stopManagedSounds(
+    category: AudioCategory,
+    options: {
+      scene?: Phaser.Scene;
+      exceptKey?: string;
+    } = {}
+  ): void {
+    AudioManager.stopManagedSounds(category, options);
+  }
+
   updateManagedSoundVolume(sound: Phaser.Sound.BaseSound, category: AudioCategory, baseVolume = 1): void {
     (sound as Phaser.Sound.WebAudioSound | Phaser.Sound.HTML5AudioSound).setVolume(AudioManager.getEffectiveVolumeFor(category, baseVolume));
   }
@@ -139,6 +149,33 @@ export class AudioManager {
         return;
       }
       (entry.sound as Phaser.Sound.WebAudioSound | Phaser.Sound.HTML5AudioSound).setVolume(AudioManager.getEffectiveVolumeFor(entry.category, entry.baseVolume));
+    });
+  }
+
+  private static stopManagedSounds(
+    category: AudioCategory,
+    options: {
+      scene?: Phaser.Scene;
+      exceptKey?: string;
+    }
+  ): void {
+    Array.from(AudioManager.managedSounds).forEach((entry) => {
+      if (entry.category !== category) {
+        return;
+      }
+
+      if (options.scene && entry.sound.manager !== options.scene.sound) {
+        return;
+      }
+
+      const soundKey = (entry.sound as Phaser.Sound.BaseSound & { key?: string }).key;
+      if (options.exceptKey && soundKey === options.exceptKey) {
+        return;
+      }
+
+      if (entry.sound.isPlaying) {
+        entry.sound.stop();
+      }
     });
   }
 
@@ -191,12 +228,16 @@ export class AudioManager {
       return;
     }
 
-    window.localStorage.setItem(
-      AudioManager.storageKey,
-      JSON.stringify({
-        ...AudioManager.volumes,
-        bgmEnabled: AudioManager.bgmEnabled
-      } satisfies AudioSettingsStore)
-    );
+    try {
+      window.localStorage.setItem(
+        AudioManager.storageKey,
+        JSON.stringify({
+          ...AudioManager.volumes,
+          bgmEnabled: AudioManager.bgmEnabled
+        } satisfies AudioSettingsStore)
+      );
+    } catch (error) {
+      console.warn("[AudioManager] failed to persist audio settings", error);
+    }
   }
 }

@@ -120,8 +120,6 @@ const WORLD_BGM_KEY_BY_TIME: Record<TimeOfDay, string> = {
   밤: PLACE_BGM_KEYS.world_밤,
 };
 
-const audioManager = new AudioManager();
-
 function getSkyBackgroundKey(timeOfDay: TimeOfDay): string {
   switch (timeOfDay) {
     case "오전":
@@ -165,6 +163,7 @@ function resumeAudioContext(scene: Phaser.Scene): Promise<void> {
 export async function playPlaceBgm(
   scene: Phaser.Scene,
   placeId: PlaceId,
+  audioManager: AudioManager
 ): Promise<void> {
   const bgmKey = PLACE_BGM_KEY_BY_PLACE_ID[placeId];
   if (!bgmKey) return;
@@ -184,7 +183,7 @@ export async function playPlaceBgm(
   }
 
   await resumeAudioContext(scene);
-  scene.sound.stopAll();
+  audioManager.stopManagedSounds("bgm", { scene, exceptKey: bgmKey });
   if (existing) {
     existing.play();
     return;
@@ -196,7 +195,8 @@ export async function playPlaceBgm(
 
 export async function playWorldBgm(
   scene: Phaser.Scene,
-  timeOfDay: TimeOfDay
+  timeOfDay: TimeOfDay,
+  audioManager: AudioManager
 ): Promise<void> {
   const bgmKey = WORLD_BGM_KEY_BY_TIME[timeOfDay];
 
@@ -215,7 +215,7 @@ export async function playWorldBgm(
   }
 
   await resumeAudioContext(scene);
-  scene.sound.stopAll();
+  audioManager.stopManagedSounds("bgm", { scene, exceptKey: bgmKey });
   if (existing) {
     existing.play();
     return;
@@ -232,6 +232,7 @@ export function getPlaceBackgroundTextureKey(placeId: PlaceId): string | null {
 export function ensurePlaceBackgroundTexture(
   scene: Phaser.Scene,
   placeId: PlaceId,
+  audioManager: AudioManager,
   onReady: (textureKey: string | null) => void,
 ): void {
   const textureKey = getPlaceBackgroundTextureKey(placeId);
@@ -239,7 +240,7 @@ export function ensurePlaceBackgroundTexture(
 
   if (!textureKey) {
     if (bgmKey && scene.cache.audio.exists(bgmKey)) {
-      playPlaceBgm(scene, placeId);
+      void playPlaceBgm(scene, placeId, audioManager);
     }
     onReady(null);
     return;
@@ -249,7 +250,7 @@ export function ensurePlaceBackgroundTexture(
   const isAudioLoaded = bgmKey ? scene.cache.audio.exists(bgmKey) : true;
 
   if (isTextureLoaded && isAudioLoaded) {
-    playPlaceBgm(scene, placeId);
+    void playPlaceBgm(scene, placeId, audioManager);
     onReady(textureKey);
     return;
   }
@@ -267,7 +268,7 @@ export function ensurePlaceBackgroundTexture(
   }
 
   scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
-    playPlaceBgm(scene, placeId);
+    void playPlaceBgm(scene, placeId, audioManager);
     onReady(textureKey);
   });
 
