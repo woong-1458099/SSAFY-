@@ -192,6 +192,8 @@ export class InGameMenuManager {
     this.menuOpen = !this.menuOpen;
     this.frame?.root.setVisible(this.menuOpen);
     if (this.menuOpen) {
+      // Emit tutorial event for menu opened
+      this.scene.events.emit("tutorial:menuOpened");
       this.refreshStatsUi();
       this.refreshInventoryUi();
       this.refreshSaveUi();

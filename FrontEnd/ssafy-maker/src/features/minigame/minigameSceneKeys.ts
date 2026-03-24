@@ -6,7 +6,7 @@ export const LEGACY_RHYTHM_SCENE_KEY = "RhythmScene" as const;
 export const LEGACY_INTERVIEW_SCENE_KEY = "InterviewScene" as const;
 export const LEGACY_RUNNER_SCENE_KEY = "RunnerScene" as const;
 export const LEGACY_TANK_SCENE_KEY = "TankScene" as const;
-export const LEGACY_TYPING_SCENE_KEY = "TypingScene" as const;
+// export const LEGACY_TYPING_SCENE_KEY = "TypingScene" as const; // 타이핑 게임 비활성화
 export const LEGACY_BUSINESS_SMILE_SCENE_KEY = "BusinessSmileScene" as const;
 export const LEGACY_DONT_SMILE_SCENE_KEY = "DontSmileScene" as const;
 export const LEGACY_GYM_SCENE_KEY = "GymScene" as const;
@@ -24,7 +24,7 @@ export const MINIGAME_SCENE_KEYS = {
   interview: LEGACY_INTERVIEW_SCENE_KEY,
   runner: LEGACY_RUNNER_SCENE_KEY,
   tank: LEGACY_TANK_SCENE_KEY,
-  typing: LEGACY_TYPING_SCENE_KEY,
+  // typing: LEGACY_TYPING_SCENE_KEY, // 타이핑 게임 비활성화
   businessSmile: LEGACY_BUSINESS_SMILE_SCENE_KEY,
   dontSmile: LEGACY_DONT_SMILE_SCENE_KEY,
   gym: LEGACY_GYM_SCENE_KEY,
@@ -46,7 +46,7 @@ export const LEGACY_MINIGAME_SCENE_KEYS = [
   LEGACY_INTERVIEW_SCENE_KEY,
   LEGACY_RUNNER_SCENE_KEY,
   LEGACY_TANK_SCENE_KEY,
-  LEGACY_TYPING_SCENE_KEY,
+  // LEGACY_TYPING_SCENE_KEY, // 타이핑 게임 비활성화
   LEGACY_BUSINESS_SMILE_SCENE_KEY,
   LEGACY_DONT_SMILE_SCENE_KEY,
   LEGACY_GYM_SCENE_KEY,

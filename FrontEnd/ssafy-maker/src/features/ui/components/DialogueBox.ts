@@ -99,6 +99,7 @@ export class DialogueBox {
   private readonly choiceRoot: Phaser.GameObjects.Container;
   private readonly depth = UI_DEPTH.dialogue;
   private choiceViews: ChoiceView[] = [];
+  private currentBadgeWidth = 170;
 
   private typingEvent?: Phaser.Time.TimerEvent;
   private currentFullText: string = "";
@@ -174,7 +175,7 @@ export class DialogueBox {
     this.show();
     this.speakerText.setText(this.formatSpeakerTitle(node));
     this.speakerText.setColor(this.getSpeakerColor(node));
-    
+
     this.startTypingEffect(node);
 
     if (node.choices && node.choices.length > 0) {
