@@ -33,9 +33,54 @@ type ProgressionManagerOptions = {
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
+  resolveTimeAdvanceBlockedMessage?: () => string | null;
   onNotice?: (message: string) => void;
   onStartEndingFlow?: () => void;
 };
+
+export type ConsumeActionPointFailureReason = "no-action-point" | "blocked-time-advance" | "busy";
+
+export type ConsumeActionPointResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: ConsumeActionPointFailureReason;
+      message?: string;
+    };
+
+export type ConsumeActionPointFailurePresentation = {
+  noticeMessage: string | null;
+  modalTitle: string;
+  modalDescription: string;
+};
+
+export function getConsumeActionPointFailurePresentation(
+  result: Exclude<ConsumeActionPointResult, { ok: true }>
+): ConsumeActionPointFailurePresentation {
+  switch (result.reason) {
+    case "blocked-time-advance": {
+      const description = result.message ?? "현재 시간대의 고정 이벤트를 먼저 진행해야 합니다.";
+      return {
+        noticeMessage: description,
+        modalTitle: "이벤트 진행 필요",
+        modalDescription: description
+      };
+    }
+    case "busy":
+      return {
+        noticeMessage: null,
+        modalTitle: "지금은 진행할 수 없음",
+        modalDescription: "다른 진행 중인 화면을 먼저 닫아 주세요."
+      };
+    case "no-action-point":
+    default:
+      return {
+        noticeMessage: "행동력이 부족합니다",
+        modalTitle: "행동력 부족",
+        modalDescription: "행동력이 부족해서 지금은 시간을 진행할 수 없습니다."
+      };
+  }
+}
 
 export class ProgressionManager {
   private readonly scene: Phaser.Scene;
@@ -43,6 +88,7 @@ export class ProgressionManager {
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   private readonly getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
+  private readonly resolveTimeAdvanceBlockedMessage?: () => string | null;
   private readonly onNotice?: (message: string) => void;
   private readonly onStartEndingFlow?: () => void;
 
@@ -61,6 +107,7 @@ export class ProgressionManager {
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
     this.getFixedEventSlots = options.getFixedEventSlots;
+    this.resolveTimeAdvanceBlockedMessage = options.resolveTimeAdvanceBlockedMessage;
     this.onNotice = options.onNotice;
     this.onStartEndingFlow = options.onStartEndingFlow;
   }
@@ -110,13 +157,51 @@ export class ProgressionManager {
     return false;
   }
 
-  consumeActionPoint(): boolean {
+  consumeActionPoint(options?: {
+    ignoreTimeAdvanceBlock?: boolean;
+  }): boolean {
+    return this.tryConsumeActionPoint({
+      ignoreTimeAdvanceBlock: options?.ignoreTimeAdvanceBlock,
+      notifyOnFailure: true
+    }).ok;
+  }
+
+  tryConsumeActionPoint(options?: {
+    ignoreTimeAdvanceBlock?: boolean;
+    notifyOnFailure?: boolean;
+  }): ConsumeActionPointResult {
     if (this.timeState.actionPoint <= 0) {
-      this.onNotice?.("행동력이 부족합니다");
-      return false;
+      const result: Exclude<ConsumeActionPointResult, { ok: true }> = {
+        ok: false,
+        reason: "no-action-point",
+        message: "행동력이 부족합니다"
+      };
+      if (options?.notifyOnFailure !== false) {
+        const presentation = getConsumeActionPointFailurePresentation(result);
+        this.onNotice?.(presentation.noticeMessage ?? "행동력이 부족합니다");
+      }
+      return result;
     }
     if (this.salaryRoot?.visible) {
-      return false;
+      return {
+        ok: false,
+        reason: "busy"
+      };
+    }
+    if (!options?.ignoreTimeAdvanceBlock) {
+      const blockedMessage = this.resolveTimeAdvanceBlockedMessage?.() ?? null;
+      if (blockedMessage) {
+        const result: Exclude<ConsumeActionPointResult, { ok: true }> = {
+          ok: false,
+          reason: "blocked-time-advance",
+          message: blockedMessage
+        };
+        if (options?.notifyOnFailure !== false) {
+          const presentation = getConsumeActionPointFailurePresentation(result);
+          this.onNotice?.(presentation.noticeMessage ?? blockedMessage);
+        }
+        return result;
+      }
     }
 
     const result = advanceTime(this.timeState);
@@ -131,7 +216,7 @@ export class ProgressionManager {
     if (result.shouldStartEndingAfterUpdate) {
       this.requestEndingFlow();
     }
-    return true;
+    return { ok: true };
   }
 
   debugAdvanceTime(): void {
