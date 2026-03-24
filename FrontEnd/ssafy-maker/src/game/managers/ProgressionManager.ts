@@ -33,6 +33,7 @@ type ProgressionManagerOptions = {
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
+  getTimeAdvanceBlockedMessage?: () => string | null;
   onNotice?: (message: string) => void;
   onStartEndingFlow?: () => void;
 };
@@ -43,6 +44,7 @@ export class ProgressionManager {
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   private readonly getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
+  private readonly getTimeAdvanceBlockedMessage?: () => string | null;
   private readonly onNotice?: (message: string) => void;
   private readonly onStartEndingFlow?: () => void;
 
@@ -61,6 +63,7 @@ export class ProgressionManager {
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
     this.getFixedEventSlots = options.getFixedEventSlots;
+    this.getTimeAdvanceBlockedMessage = options.getTimeAdvanceBlockedMessage;
     this.onNotice = options.onNotice;
     this.onStartEndingFlow = options.onStartEndingFlow;
   }
@@ -110,13 +113,22 @@ export class ProgressionManager {
     return false;
   }
 
-  consumeActionPoint(): boolean {
+  consumeActionPoint(options?: {
+    ignoreTimeAdvanceBlock?: boolean;
+  }): boolean {
     if (this.timeState.actionPoint <= 0) {
       this.onNotice?.("행동력이 부족합니다");
       return false;
     }
     if (this.salaryRoot?.visible) {
       return false;
+    }
+    if (!options?.ignoreTimeAdvanceBlock) {
+      const blockedMessage = this.getTimeAdvanceBlockedMessage?.() ?? null;
+      if (blockedMessage) {
+        this.onNotice?.(blockedMessage);
+        return false;
+      }
     }
 
     const result = advanceTime(this.timeState);
@@ -132,6 +144,10 @@ export class ProgressionManager {
       this.requestEndingFlow();
     }
     return true;
+  }
+
+  getActionPointBlockMessage(): string | null {
+    return this.getTimeAdvanceBlockedMessage?.() ?? null;
   }
 
   debugAdvanceTime(): void {

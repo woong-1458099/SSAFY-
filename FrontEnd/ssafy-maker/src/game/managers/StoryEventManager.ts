@@ -52,6 +52,7 @@ export class StoryEventManager {
   private readonly weekLoads = new Map<number, Promise<unknown>>();
   private completedFixedEventIds: string[] = [];
   private activeFixedEventId: string | null = null;
+  private pendingTriggerLocation: string | null = null;
   private starting = false;
 
   constructor(options: StoryEventManagerOptions) {
@@ -73,6 +74,7 @@ export class StoryEventManager {
 
   destroy(): void {
     this.activeFixedEventId = null;
+    this.pendingTriggerLocation = null;
     this.starting = false;
     this.removeRuntimeDialogueScript(StoryEventManager.FIXED_EVENT_DIALOGUE_ID);
   }
@@ -206,6 +208,37 @@ export class StoryEventManager {
 
   tryStartCurrentFixedEvent(): boolean {
     return this.tryStartFixedEventForLocation(this.getCurrentLocation());
+  }
+
+  getTimeAdvanceBlockedMessage(): string | null {
+    const event = this.findPendingFixedEventForCurrentTime();
+    if (!event) {
+      return null;
+    }
+
+    const eventName =
+      typeof event.eventName === "string" && event.eventName.trim().length > 0
+        ? event.eventName.trim()
+        : "고정 이벤트";
+
+    return `${eventName} 이벤트를 먼저 진행해야 합니다.`;
+  }
+
+  queueFixedEventTrigger(location: string): void {
+    const normalizedLocation = location.trim();
+    if (!normalizedLocation) {
+      return;
+    }
+
+    this.pendingTriggerLocation = normalizedLocation;
+  }
+
+  tryStartQueuedOrCurrentFixedEvent(): boolean {
+    if (this.tryStartQueuedFixedEvent()) {
+      return true;
+    }
+
+    return this.tryStartCurrentFixedEvent();
   }
 
   tryStartFixedEventForLocation(location: string): boolean {
@@ -345,6 +378,39 @@ export class StoryEventManager {
     );
   }
 
+  private findPendingFixedEventForCurrentTime(): FixedEventEntry | null {
+    const hudState = this.getHudState();
+    const rawData = this.weekData.get(hudState.week);
+
+    if (this.starting || this.activeFixedEventId) {
+      return null;
+    }
+
+    if (!rawData) {
+      this.syncWeek(hudState.week);
+      return null;
+    }
+
+    return (
+      getFixedEventEntries(rawData).find((event) => {
+        const timing = event.triggerTiming;
+        if (!timing || event.eventType !== "FIXED") {
+          return false;
+        }
+
+        const eventId = typeof event.eventId === "string" ? event.eventId : "";
+        if (event.isRepeatable !== true && eventId && this.completedFixedEventIds.includes(eventId)) {
+          return false;
+        }
+
+        const sameWeek = Math.round(timing.week ?? -1) === hudState.week;
+        const sameDay = Math.round(timing.day ?? -1) === this.resolveDayIndex(hudState.dayLabel) + 1;
+        const sameTime = typeof timing.timeOfDay === "string" && timing.timeOfDay.trim() === hudState.timeLabel;
+        return sameWeek && sameDay && sameTime;
+      }) ?? null
+    );
+  }
+
   private startFixedEvent(event: FixedEventEntry): boolean {
     const eventId = typeof event.eventId === "string" ? event.eventId : null;
     const runtimeScript = buildDialogueScriptFromFixedEventEntry(StoryEventManager.FIXED_EVENT_DIALOGUE_ID, event, {
@@ -361,6 +427,27 @@ export class StoryEventManager {
     this.setRuntimeDialogueScript(runtimeScript);
     void this.playFixedEventDialogue(event, runtimeScript, eventId);
     return true;
+  }
+
+  private tryStartQueuedFixedEvent(): boolean {
+    const queuedLocation = this.pendingTriggerLocation?.trim();
+    if (!queuedLocation) {
+      this.pendingTriggerLocation = null;
+      return false;
+    }
+
+    const week = this.getHudState().week;
+    if (!this.weekData.has(week)) {
+      this.syncWeek(week);
+      return false;
+    }
+
+    const started = this.tryStartFixedEventForLocation(queuedLocation);
+    if (started || this.weekData.has(week)) {
+      this.pendingTriggerLocation = null;
+    }
+
+    return started;
   }
 
   private resolveDayIndex(dayLabel: string): number {

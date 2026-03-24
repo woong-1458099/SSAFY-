@@ -215,6 +215,7 @@ export class MainScene extends Phaser.Scene {
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
       getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
+      getTimeAdvanceBlockedMessage: () => this.storyEventManager?.getTimeAdvanceBlockedMessage() ?? null,
       onNotice: (message) => this.menuManager?.showNotice(message),
       onStartEndingFlow: () => this.startEndingFlow()
     });
@@ -233,7 +234,7 @@ export class MainScene extends Phaser.Scene {
       removeRuntimeDialogueScript: (dialogueId) => this.removeRuntimeDialogueScript(dialogueId),
       playDialogue: (dialogueId) => this.dialogueManager!.play(dialogueId),
       advanceTimeAfterFixedEvent: () => {
-        if (this.progressionManager?.consumeActionPoint()) {
+        if (this.progressionManager?.consumeActionPoint({ ignoreTimeAdvanceBlock: true })) {
           this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
         }
       },
@@ -255,7 +256,9 @@ export class MainScene extends Phaser.Scene {
       getTimeCycleIndex: () => this.progressionManager!.getTimeCycleIndex(),
       getActionPoint: () => this.progressionManager!.getActionPoint(),
       getMaxActionPoint: () => this.progressionManager!.getMaxActionPoint(),
-      consumeActionPoint: () => this.progressionManager!.consumeActionPoint()
+      getActionPointBlockMessage: () => this.progressionManager?.getActionPointBlockMessage() ?? null,
+      consumeActionPoint: () => this.progressionManager!.consumeActionPoint(),
+      onHomeTimeAdvanced: () => this.storyEventManager?.queueFixedEventTrigger("home")
     });
     this.interactionManager = new InteractionManager(
       this,
@@ -491,16 +494,8 @@ update() {
       this.progressionManager?.togglePlanner();
     }
 
-    const automaticProgressionFlowOpened = this.progressionManager?.processAutomaticFlow() === true;
-    this.fixedEventNpcManager?.render({
-      presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
-      areaId: this.worldManager.getCurrentAreaId() ?? "world",
-      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !dialoguePlaying
-    });
-    this.debugPanel?.render(this.buildDebugPanelState());
-
+    let fixedEventStarted = false;
     if (
-      !automaticProgressionFlowOpened &&
       !menuOpen &&
       !placePopupOpen &&
       !plannerOpen &&
@@ -509,8 +504,17 @@ update() {
       !dialoguePlaying
     ) {
       this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
-      this.storyEventManager?.tryStartCurrentFixedEvent();
+      fixedEventStarted = this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() === true;
     }
+
+    const automaticProgressionFlowOpened =
+      !fixedEventStarted && this.progressionManager?.processAutomaticFlow() === true;
+    this.fixedEventNpcManager?.render({
+      presentation: this.storyEventManager?.getCurrentFixedEventPresentation() ?? null,
+      areaId: this.worldManager.getCurrentAreaId() ?? "world",
+      visible: !menuOpen && !placePopupOpen && !plannerOpen && !debugHudVisible && !debugPanelVisible && !dialoguePlaying
+    });
+    this.debugPanel?.render(this.buildDebugPanelState());
 
     this.playerManager.update(runtimeGrids, parsedMap);
     this.interactionManager.update();
@@ -655,7 +659,7 @@ update() {
         }
         case "triggerCurrentFixedEvent":
           this.menuManager?.showNotice(
-            this.storyEventManager?.tryStartCurrentFixedEvent() ? "고정 이벤트 실행" : "실행 가능한 고정 이벤트가 없습니다"
+            this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() ? "고정 이벤트 실행" : "실행 가능한 고정 이벤트가 없습니다"
           );
           break;
         case "jumpToFixedEvent":

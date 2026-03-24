@@ -29,7 +29,9 @@ type PlaceActionManagerOptions = {
   getTimeCycleIndex: () => number;
   getActionPoint: () => number;
   getMaxActionPoint: () => number;
+  getActionPointBlockMessage?: () => string | null;
   consumeActionPoint: () => boolean;
+  onHomeTimeAdvanced?: () => void;
 };
 
 const FONT_FAMILY =
@@ -44,7 +46,9 @@ export class PlaceActionManager {
   private readonly getTimeCycleIndex: () => number;
   private readonly getActionPoint: () => number;
   private readonly getMaxActionPoint: () => number;
+  private readonly getActionPointBlockMessage?: () => string | null;
   private readonly consumeActionPoint: () => boolean;
+  private readonly onHomeTimeAdvanced?: () => void;
   private popupRoot?: Phaser.GameObjects.Container;
   private popupRequestId = 0;
 
@@ -57,7 +61,9 @@ export class PlaceActionManager {
     this.getTimeCycleIndex = options.getTimeCycleIndex;
     this.getActionPoint = options.getActionPoint;
     this.getMaxActionPoint = options.getMaxActionPoint;
+    this.getActionPointBlockMessage = options.getActionPointBlockMessage;
     this.consumeActionPoint = options.consumeActionPoint;
+    this.onHomeTimeAdvanced = options.onHomeTimeAdvanced;
     this.scene.game.events.on(LOTTO_COMPLETED_EVENT, this.handleLottoCompleted, this);
   }
 
@@ -181,6 +187,11 @@ export class PlaceActionManager {
 
   private useHomeAction(action: HomeActionId): void {
     if (!this.consumeActionPoint()) {
+      const blockedMessage = this.getActionPointBlockMessage?.();
+      if (blockedMessage) {
+        this.openInfoModal("이벤트 진행 필요", blockedMessage, "home");
+        return;
+      }
       this.openInfoModal("행동력 부족", "행동력이 부족해서 집 행동을 수행할 수 없습니다.", "home");
       return;
     }
@@ -193,6 +204,7 @@ export class PlaceActionManager {
       stress: Phaser.Math.Clamp(hudState.stress + result.stressDelta, 0, 100)
     });
     this.close();
+    this.onHomeTimeAdvanced?.();
   }
 
   private usePlace(placeId: Exclude<PlaceId, "campus" | "downtown" | "home" | "store">): void {
@@ -210,6 +222,11 @@ export class PlaceActionManager {
     }
 
     if (!this.consumeActionPoint()) {
+      const blockedMessage = this.getActionPointBlockMessage?.();
+      if (blockedMessage) {
+        this.openInfoModal("이벤트 진행 필요", blockedMessage, placeId);
+        return;
+      }
       this.openInfoModal("행동력 부족", "행동력이 부족해서 이용할 수 없습니다.", placeId);
       return;
     }
