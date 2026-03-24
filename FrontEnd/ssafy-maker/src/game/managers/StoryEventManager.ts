@@ -112,7 +112,7 @@ export class StoryEventManager {
     }
 
     return getFixedEventEntries(rawData)
-      .filter((event) => event.eventType === "FIXED")
+      .filter((event) => event.eventType === "FIXED" || event.eventType === "ROMANCE")
       .map((event) =>
         buildFixedEventDebugEntry(event, {
           completedEventIds: this.completedFixedEventIds
@@ -163,7 +163,12 @@ export class StoryEventManager {
 
     entries.forEach((event) => {
       const timing = event.triggerTiming;
-      if (!timing || event.eventType !== "FIXED") {
+      if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) {
+        return;
+      }
+
+      const sameWeek = Math.round(timing.week ?? -1) === week;
+      if (!sameWeek) {
         return;
       }
 
@@ -286,7 +291,7 @@ export class StoryEventManager {
     return (
       getFixedEventEntries(rawData).find((event) => {
         const rawEventId = event.id ?? event.eventId;
-        return event.eventType === "FIXED" && typeof rawEventId === "string" && rawEventId.trim() === normalizedEventId;
+        return (event.eventType === "FIXED" || event.eventType === "ROMANCE") && typeof rawEventId === "string" && rawEventId.trim() === normalizedEventId;
       }) ?? null
     );
   }

@@ -399,7 +399,7 @@ export function findMatchingFixedEvent(
   return (
     getFixedEventEntries(rawData).find((event) => {
       const timing = event.triggerTiming;
-      if (!timing || event.eventType !== "FIXED") return false;
+      if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) return false;
 
       const rawEventId = event.id ?? event.eventId;
       const eventId = typeof rawEventId === "string" ? rawEventId : "";
