@@ -503,7 +503,7 @@ update() {
       !debugPanelVisible &&
       !dialoguePlaying
     ) {
-      this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
+      this.storyEventManager?.refreshCurrentWeekLoadState();
       fixedEventStarted = this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() === true;
     }
 

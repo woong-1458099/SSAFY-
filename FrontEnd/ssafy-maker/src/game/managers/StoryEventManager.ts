@@ -37,7 +37,6 @@ type StoryEventManagerOptions = {
 export class StoryEventManager {
   private static readonly FIXED_EVENT_DIALOGUE_ID = createRuntimeDialogueId("fixed_event");
   private static readonly LOAD_FAILURE_RETRY_COOLDOWN_MS = 5000;
-  private static readonly MAX_BLOCKING_LOAD_FAILURES = 3;
 
   private readonly scene: Phaser.Scene;
   private readonly getHudState: () => HudState;
@@ -53,9 +52,7 @@ export class StoryEventManager {
   private readonly weekData = new Map<number, unknown>();
   private readonly weekLoads = new Map<number, Promise<unknown>>();
   private readonly weekLoadErrors = new Map<number, string>();
-  private readonly weekLoadFailureCounts = new Map<number, number>();
   private readonly weekLoadRetryAvailableAt = new Map<number, number>();
-  private readonly weekLoadBypassNotified = new Set<number>();
   private completedFixedEventIds: string[] = [];
   private activeFixedEventId: string | null = null;
   private pendingTriggerLocation: string | null = null;
@@ -82,7 +79,6 @@ export class StoryEventManager {
     this.activeFixedEventId = null;
     this.pendingTriggerLocation = null;
     this.starting = false;
-    this.weekLoadBypassNotified.clear();
     this.removeRuntimeDialogueScript(StoryEventManager.FIXED_EVENT_DIALOGUE_ID);
   }
 
@@ -217,28 +213,21 @@ export class StoryEventManager {
     return this.tryStartFixedEventForLocation(this.getCurrentLocation());
   }
 
+  refreshCurrentWeekLoadState(): void {
+    const normalizedWeek = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
+    this.retryWeekLoadIfNeeded(normalizedWeek);
+  }
+
   getTimeAdvanceBlockedMessage(): string | null {
     const week = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
     if (!this.weekData.has(week)) {
       const loadError = this.weekLoadErrors.get(week);
-      const failureCount = this.weekLoadFailureCounts.get(week) ?? 0;
-      if (loadError && failureCount >= StoryEventManager.MAX_BLOCKING_LOAD_FAILURES) {
-        if (!this.weekLoadBypassNotified.has(week)) {
-          this.weekLoadBypassNotified.add(week);
-          this.onNotice?.("고정 이벤트 정보를 반복해서 불러오지 못해 이번 시간대 차단을 해제합니다.");
-        }
-        return null;
-      }
-
-      const retryAvailableAt = this.weekLoadRetryAvailableAt.get(week) ?? 0;
-      if (Date.now() >= retryAvailableAt) {
-        this.syncWeek(week);
-      }
-
       if (loadError) {
         return `${loadError} 잠시 후 다시 시도해 주세요.`;
       }
-      return "고정 이벤트 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.";
+      return this.weekLoads.has(week)
+        ? "고정 이벤트 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요."
+        : "고정 이벤트 정보를 준비하는 중입니다. 잠시 후 다시 시도해 주세요.";
     }
 
     const event = this.findPendingFixedEventForCurrentTime();
@@ -318,9 +307,7 @@ export class StoryEventManager {
       .then((rawData) => {
         this.weekData.set(normalizedWeek, rawData);
         this.weekLoadErrors.delete(normalizedWeek);
-        this.weekLoadFailureCounts.delete(normalizedWeek);
         this.weekLoadRetryAvailableAt.delete(normalizedWeek);
-        this.weekLoadBypassNotified.delete(normalizedWeek);
         this.weekLoads.delete(normalizedWeek);
         return rawData;
       })
@@ -336,7 +323,6 @@ export class StoryEventManager {
     } catch (error) {
       const message = error instanceof Error ? error.message : "고정 이벤트 데이터를 불러오지 못했습니다";
       this.weekLoadErrors.set(normalizedWeek, message);
-      this.weekLoadFailureCounts.set(normalizedWeek, (this.weekLoadFailureCounts.get(normalizedWeek) ?? 0) + 1);
       this.weekLoadRetryAvailableAt.set(
         normalizedWeek,
         Date.now() + StoryEventManager.LOAD_FAILURE_RETRY_COOLDOWN_MS
@@ -488,6 +474,19 @@ export class StoryEventManager {
     }
 
     return started;
+  }
+
+  private retryWeekLoadIfNeeded(week: number): void {
+    if (this.weekData.has(week) || this.weekLoads.has(week)) {
+      return;
+    }
+
+    const retryAvailableAt = this.weekLoadRetryAvailableAt.get(week) ?? 0;
+    if (Date.now() < retryAvailableAt) {
+      return;
+    }
+
+    this.syncWeek(week);
   }
 
   private resolveDayIndex(dayLabel: string): number {
