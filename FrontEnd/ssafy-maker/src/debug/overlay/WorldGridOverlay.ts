@@ -30,12 +30,16 @@ export class WorldGridOverlay {
   }
 
   render(
-    runtimeGrids?: TmxRuntimeGrids,
-    parsedMap?: ParsedTmxMap,
-    renderBounds?: WorldRenderBounds,
-    player?: PlayerSnapshot,
-    staticPlaceTargets: RuntimeStaticPlaceTarget[] = []
+    runtimeGrids: TmxRuntimeGrids | undefined,
+    parsedMap: ParsedTmxMap | undefined,
+    renderBounds: WorldRenderBounds | undefined,
+    player: PlayerSnapshot | undefined,
+    staticPlaceTargets: RuntimeStaticPlaceTarget[]
   ) {
+    if (this.destroyed) {
+      return;
+    }
+
     this.walkableGraphics.clear();
     this.blockedGraphics.clear();
     this.manualBlockedGraphics.clear();

@@ -40,13 +40,31 @@ const WORLD_BLOCKED_TILE_ZONES: Rect[] = [
   { x: 0, y: 0, width: 32, height: 4 }
 ];
 
+export const WORLD_TMX_LAYER_NAMES = {
+  collision: ["root", "build"],
+  interaction: ["interaction(build)"],
+  foreground: ["tree"]
+} as const;
+
 const DOWNTOWN_BLOCKED_TILE_ZONES: Rect[] = [
   { x: 0, y: 0, width: 32, height: 4 }
 ];
 
+export const DOWNTOWN_TMX_LAYER_NAMES = {
+  collision: ["build(foul)", "collision(patch)"],
+  interaction: ["interaction(prompt)"],
+  foreground: ["build(hide)"]
+} as const;
+
 const CAMPUS_BLOCKED_TILE_ZONES: Rect[] = [
   { x: 0, y: 0, width: 32, height: 11 }
 ];
+
+export const CAMPUS_TMX_LAYER_NAMES = {
+  collision: ["tile layer 4(2)", "tile layer 3"],
+  interaction: ["tile layer 2", "tile layer 4(2)"],
+  foreground: []
+} as const;
 
 export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
   world: {
@@ -55,9 +73,9 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     map: {
       entryPoint: { x: 300, y: 360 },
       tmxKey: ASSET_KEYS.map.worldTmx,
-      collisionLayerNames: ["root", "build"],
-      interactionLayerNames: ["interaction(build)"],
-      foregroundLayerNames: ["tree"],
+      collisionLayerNames: [...WORLD_TMX_LAYER_NAMES.collision],
+      interactionLayerNames: [...WORLD_TMX_LAYER_NAMES.interaction],
+      foregroundLayerNames: [...WORLD_TMX_LAYER_NAMES.foreground],
       blockedTileZones: WORLD_BLOCKED_TILE_ZONES
     },
     presentation: {
@@ -71,9 +89,9 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     map: {
       entryPoint: { x: 216, y: 520 },
       tmxKey: ASSET_KEYS.map.downtownTmx,
-      collisionLayerNames: ["tile layer 5(4)", "tile layer 3", "build(foul)", "collision(patch)"],
-      interactionLayerNames: ["interaction(prompt)"],
-      foregroundLayerNames: ["build(hide)"],
+      collisionLayerNames: [...DOWNTOWN_TMX_LAYER_NAMES.collision],
+      interactionLayerNames: [...DOWNTOWN_TMX_LAYER_NAMES.interaction],
+      foregroundLayerNames: [...DOWNTOWN_TMX_LAYER_NAMES.foreground],
       blockedTileZones: DOWNTOWN_BLOCKED_TILE_ZONES
     },
     presentation: {
@@ -87,9 +105,9 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     map: {
       entryPoint: { x: 220, y: 520 },
       tmxKey: ASSET_KEYS.map.campusTmx,
-      collisionLayerNames: ["tile layer 4(2)", "tile layer 3"],
-      interactionLayerNames: ["tile layer 2", "tile layer 4(2)"],
-      foregroundLayerNames: [],
+      collisionLayerNames: [...CAMPUS_TMX_LAYER_NAMES.collision],
+      interactionLayerNames: [...CAMPUS_TMX_LAYER_NAMES.interaction],
+      foregroundLayerNames: [...CAMPUS_TMX_LAYER_NAMES.foreground],
       blockedTileZones: CAMPUS_BLOCKED_TILE_ZONES
     },
     presentation: {

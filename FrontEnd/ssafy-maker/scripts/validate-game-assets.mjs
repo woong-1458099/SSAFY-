@@ -10,6 +10,24 @@ const srcRoot = path.join(projectRoot, "src");
 const publicRoot = path.join(projectRoot, "public");
 const assetRoot = path.join(publicRoot, "assets", "game");
 const assetKeysPath = path.join(projectRoot, "src", "common", "assets", "assetKeys.ts");
+const REQUIRED_TMX_LAYERS = [
+  {
+    assetPath: "/assets/game/map/mainMap.tmx",
+    groups: {
+      collision: ["root", "build"],
+      interaction: ["interaction(build)"],
+      foreground: ["tree"]
+    }
+  },
+  {
+    assetPath: "/assets/game/map/city.tmx",
+    groups: {
+      collision: ["build(foul)", "collision(patch)"],
+      interaction: ["interaction(prompt)"],
+      foreground: ["build(hide)"]
+    }
+  }
+];
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 const MODULE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
@@ -533,6 +551,35 @@ function collectAssetReferences(filePath) {
   return { references, issues, assetKeyReferences, assetPathReferences };
 }
 
+function readTmxLayerNames(filePath) {
+  const rawTmx = fs.readFileSync(filePath, "utf8");
+  return [...rawTmx.matchAll(/<layer\b[^>]*\bname="([^"]+)"/g)].map((match) => match[1]);
+}
+
+function validateRequiredTmxLayers(issues) {
+  REQUIRED_TMX_LAYERS.forEach(({ assetPath, groups }) => {
+    const absolutePath = path.join(publicRoot, ...assetPath.replace(/^\//, "").split("/"));
+    if (!fs.existsSync(absolutePath)) {
+      issues.push(`[validate:game-assets] Missing TMX file for layer validation: ${assetPath}`);
+      return;
+    }
+
+    const layerNames = readTmxLayerNames(absolutePath);
+    const availableLayerSet = new Set(layerNames.map((name) => name.trim().toLowerCase()));
+
+    Object.entries(groups).forEach(([groupName, requiredNames]) => {
+      const missingNames = requiredNames.filter((name) => !availableLayerSet.has(name.trim().toLowerCase()));
+      if (missingNames.length === 0) {
+        return;
+      }
+
+      issues.push(
+        `[validate:game-assets] Missing ${groupName} layer(s) in ${assetPath}: ${missingNames.join(", ")}. Available layers: ${layerNames.join(", ")}`
+      );
+    });
+  });
+}
+
 function main() {
   const sourceFiles = walkFiles(srcRoot);
   const allReferences = [];
@@ -613,6 +660,8 @@ function main() {
     .map((entry) => entry.chain)
     .filter((chain) => !referencedAssetPaths.has(chain))
     .sort();
+
+  validateRequiredTmxLayers(issues);
 
   if (issues.length > 0) {
     console.error("[validate:game-assets] failed");

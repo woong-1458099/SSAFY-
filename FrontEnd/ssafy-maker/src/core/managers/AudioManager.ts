@@ -26,9 +26,19 @@ export class AudioManager {
     sfx: 0.8,
     ambience: 0.6
   };
-  private static bgmEnabled = AudioManager.loadBgmEnabled();
-  private static sfxEnabled = AudioManager.loadSfxEnabled();
-  private static volumes: VolumeState = AudioManager.loadVolumes();
+  private static readonly defaultSettings: AudioSettingsStore = {
+    ...AudioManager.defaultVolumes,
+    bgmEnabled: true,
+    sfxEnabled: true
+  };
+  private static readonly initialSettings = AudioManager.loadStoredSettingsSnapshot();
+  private static bgmEnabled = AudioManager.initialSettings.bgmEnabled;
+  private static sfxEnabled = AudioManager.initialSettings.sfxEnabled;
+  private static volumes: VolumeState = {
+    bgm: AudioManager.initialSettings.bgm,
+    sfx: AudioManager.initialSettings.sfx,
+    ambience: AudioManager.initialSettings.ambience
+  };
   private static managedSounds = new Set<ManagedSound>();
 
   setBgmVolume(value: number): void {
@@ -215,9 +225,9 @@ export class AudioManager {
     }
 
     return {
-      bgm: AudioManager.clamp(typeof value.bgm === "number" ? value.bgm : AudioManager.defaultVolumes.bgm),
-      sfx: AudioManager.clamp(typeof value.sfx === "number" ? value.sfx : AudioManager.defaultVolumes.sfx),
-      ambience: AudioManager.clamp(typeof value.ambience === "number" ? value.ambience : AudioManager.defaultVolumes.ambience),
+      bgm: AudioManager.clamp(typeof value.bgm === "number" ? value.bgm : AudioManager.defaultSettings.bgm),
+      sfx: AudioManager.clamp(typeof value.sfx === "number" ? value.sfx : AudioManager.defaultSettings.sfx),
+      ambience: AudioManager.clamp(typeof value.ambience === "number" ? value.ambience : AudioManager.defaultSettings.ambience),
       bgmEnabled: typeof value.bgmEnabled === "boolean" ? value.bgmEnabled : true,
       sfxEnabled: typeof value.sfxEnabled === "boolean" ? value.sfxEnabled : true
     };
@@ -249,23 +259,23 @@ export class AudioManager {
     }
   }
 
-  private static loadVolumes(): VolumeState {
+  private static loadStoredSettingsSnapshot(): AudioSettingsStore {
     const parsed = AudioManager.readStoredSettings();
-    return {
-      bgm: AudioManager.clamp(parsed?.bgm ?? AudioManager.defaultVolumes.bgm),
-      sfx: AudioManager.clamp(parsed?.sfx ?? AudioManager.defaultVolumes.sfx),
-      ambience: AudioManager.clamp(parsed?.ambience ?? AudioManager.defaultVolumes.ambience)
-    };
-  }
+    const normalized = parsed ?? AudioManager.defaultSettings;
 
-  private static loadBgmEnabled(): boolean {
-    const parsed = AudioManager.readStoredSettings();
-    return parsed?.bgmEnabled ?? true;
-  }
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(AudioManager.storageKey);
+        const serializedNormalized = JSON.stringify(normalized);
+        if (raw && raw !== serializedNormalized) {
+          window.localStorage.setItem(AudioManager.storageKey, serializedNormalized);
+        }
+      } catch {
+        // Ignore migration persistence failures and continue with in-memory defaults.
+      }
+    }
 
-  private static loadSfxEnabled(): boolean {
-    const parsed = AudioManager.readStoredSettings();
-    return parsed?.sfxEnabled ?? true;
+    return normalized;
   }
 
   private static persistSettings(): void {
