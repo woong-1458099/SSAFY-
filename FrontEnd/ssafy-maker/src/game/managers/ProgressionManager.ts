@@ -36,6 +36,7 @@ type ProgressionManagerOptions = {
   resolveTimeAdvanceBlockedMessage?: () => string | null;
   onNotice?: (message: string) => void;
   onStartEndingFlow?: () => void;
+  onDayPassed?: () => void;
 };
 
 export type ConsumeActionPointFailureReason = "no-action-point" | "blocked-time-advance" | "busy";
@@ -91,6 +92,7 @@ export class ProgressionManager {
   private readonly resolveTimeAdvanceBlockedMessage?: () => string | null;
   private readonly onNotice?: (message: string) => void;
   private readonly onStartEndingFlow?: () => void;
+  private readonly onDayPassed?: () => void;
 
   private timeState: TimeState = createDefaultTimeState();
   private weeklyPlan: WeeklyPlanOptionId[] = createDefaultWeeklyPlan();
@@ -110,6 +112,7 @@ export class ProgressionManager {
     this.resolveTimeAdvanceBlockedMessage = options.resolveTimeAdvanceBlockedMessage;
     this.onNotice = options.onNotice;
     this.onStartEndingFlow = options.onStartEndingFlow;
+    this.onDayPassed = options.onDayPassed;
   }
 
   initialize(): void {
@@ -210,6 +213,7 @@ export class ProgressionManager {
 
     if (result.dayPassed && this.timeState.dayCycleIndex === 0) {
       this.weeklyPlan = createDefaultWeeklyPlan();
+      this.onDayPassed?.();
     }
 
     this.grantWeeklySalaryIfDue();
@@ -229,6 +233,7 @@ export class ProgressionManager {
 
     if (result.dayPassed && this.timeState.dayCycleIndex === 0) {
       this.weeklyPlan = createDefaultWeeklyPlan();
+      this.onDayPassed?.();
     }
 
     this.grantWeeklySalaryIfDue();
@@ -395,7 +400,11 @@ export class ProgressionManager {
     if (previousState.dayCycleIndex < 5 && previousState.timeCycleIndex < 2) {
       const slotIndex = getWeeklyPlanSlotIndex(previousState.dayCycleIndex, previousState.timeCycleIndex);
       const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex]);
+      const hudState = this.getHudState();
       this.applyStatDelta(option.statDelta, 1);
+      this.patchHudState({
+        hp: Phaser.Math.Clamp(hudState.hp + option.hpDelta, 0, hudState.hpMax)
+      });
       this.onNotice?.(`${option.label} 완료`);
     } else {
       this.onNotice?.("이번 시간대에는 계획 보상이 없습니다");

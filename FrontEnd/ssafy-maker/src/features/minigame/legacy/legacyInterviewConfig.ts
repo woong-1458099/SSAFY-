@@ -35,10 +35,10 @@ export const LEGACY_INTERVIEW_CATEGORY_COLORS = {
 } as const;
 
 const LEGACY_INTERVIEW_RESULT_RULES = [
-  { minCorrect: LEGACY_INTERVIEW_QUESTION_COUNT, grade: "S", gradeColor: "#FFD700", message: "🏆 PERFECT! 면접 합격!", reward: "BE +5, GP +15" },
-  { minCorrect: 6, grade: "A", gradeColor: "#00ff88", message: "✅ 합격권!", reward: "BE +3, GP +10" },
-  { minCorrect: 4, grade: "B", gradeColor: "#4499ff", message: "😤 아슬아슬...", reward: "BE +2, GP +5" },
-  { minCorrect: 0, grade: "C", gradeColor: "#ff4466", message: "📚 공부가 필요해요", reward: "STRESS +3" },
+  { minCorrect: LEGACY_INTERVIEW_QUESTION_COUNT, grade: "S", gradeColor: "#FFD700", message: "🏆 PERFECT! 면접 합격!", reward: "BE +6, TEAMWORK +2" },
+  { minCorrect: 6, grade: "A", gradeColor: "#00ff88", message: "✅ 합격권!", reward: "BE +4, TEAMWORK +1" },
+  { minCorrect: 4, grade: "B", gradeColor: "#4499ff", message: "😤 아슬아슬...", reward: "BE +2" },
+  { minCorrect: 0, grade: "C", gradeColor: "#ff4466", message: "📚 공부가 필요해요", reward: "STRESS +4" },
 ] as const;
 
 export function resolveLegacyInterviewResult(correctCount: number) {

@@ -40,6 +40,9 @@ export class MinigameRewardManager {
     if (typeof parsed.hudDelta.hp === "number" && parsed.hudDelta.hp !== 0) {
       hudPatch.hp = hudState.hp + parsed.hudDelta.hp;
     }
+    if (typeof parsed.hudDelta.hpMax === "number" && parsed.hudDelta.hpMax !== 0) {
+      hudPatch.hpMax = hudState.hpMax + parsed.hudDelta.hpMax;
+    }
     if (typeof parsed.hudDelta.money === "number" && parsed.hudDelta.money !== 0) {
       hudPatch.money = hudState.money + parsed.hudDelta.money;
     }

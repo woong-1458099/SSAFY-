@@ -45,7 +45,7 @@
               ],
               "lockedReason": "사교력이 부족하거나 스트레스가 너무 높습니다.",
               "statChanges": {
-                "teamwork": 7
+                "teamwork": 3
               },
               "nextNodeId": "pro_c2_res1"
             },
@@ -63,7 +63,7 @@
               "lockedReason": "버틸 체력이 부족합니다.",
               "statChanges": {
                 "hp": -10,
-                "stress": 5
+                "stress": 10
               },
               "nextNodeId": "pro_c3_res1"
             },
@@ -80,9 +80,9 @@
               ],
               "lockedReason": "기적을 바랄 운이 부족합니다.",
               "statChanges": {
-                "fe": 3,
-                "be": 2,
-                "stress": 10
+                "fe": 2,
+                "be": 1,
+                "stress": 6
               },
               "nextNodeId": "pro_c4_res1"
             }
@@ -171,7 +171,7 @@
               "text": "식은땀을 흘리며 황급히 지우지만 이미 누군가 봤다. 아래로 조롱용 이모티콘들이 달린다.",
               "actionType": "NORMAL",
               "statChanges": {
-                "stress": 20,
+                "stress": 18,
                 "hp": -10
               },
               "nextNodeId": "mm_c1_res1"
@@ -194,8 +194,8 @@
               ],
               "lockedReason": "서버를 해킹할 코딩 지식이 부족합니다.",
               "statChanges": {
-                "fe": 8,
-                "be": 7
+                "fe": 5,
+                "be": 4
               },
               "nextNodeId": "mm_c2_res1"
             },
@@ -212,7 +212,7 @@
               ],
               "lockedReason": "기적의 타이밍을 잡지 못했습니다.",
               "statChanges": {
-                "luck": 15,
+                "luck": 5,
                 "stress": -10
               },
               "nextNodeId": "mm_c3_res1"
@@ -230,8 +230,8 @@
               ],
               "lockedReason": "순발력 있는 유머 감각이 부족합니다.",
               "statChanges": {
-                "teamwork": 10,
-                "stress": -5
+                "teamwork": 6,
+                "stress": -4
               },
               "nextNodeId": "mm_c4_res1"
             }

@@ -279,8 +279,8 @@
               ],
               "lockedReason": "문제의 핵심을 파악할 코딩 실력이 부족합니다.",
               "statChanges": {
-                "fe": 5,
-                "be": 5
+                "fe": 4,
+                "be": 4
               },
               "nextNodeId": "m_w2d2_c3_res1",
               "affectionChanges": {
@@ -800,7 +800,7 @@
               ],
               "lockedReason": "아직 피곤에 찌들지 않았습니다.",
               "statChanges": {
-                "hp": 20
+                "hp": 10
               },
               "nextNodeId": "m_w3d7_c4_res1",
               "affectionChanges": {
@@ -1045,8 +1045,8 @@
               ],
               "lockedReason": "민수의 실수를 짚어낼 코딩 실력이 부족합니다.",
               "statChanges": {
-                "fe": 8,
-                "be": 7
+                "fe": 6,
+                "be": 5
               },
               "nextNodeId": "m_w4d7_c3_res1",
               "affectionChanges": {
@@ -1066,7 +1066,7 @@
               ],
               "lockedReason": "아직 키보드에 머리를 박을 정도로 피곤하지 않습니다.",
               "statChanges": {
-                "hp": 15
+                "hp": 12
               },
               "nextNodeId": "m_w4d7_c4_res1",
               "affectionChanges": {
@@ -1273,7 +1273,7 @@
               "text": "[기본] \"어? 이거 네 노트였어? 표지가 똑같아서 몰랐네. (덮으며) 미안, 막 폈어!\"",
               "actionType": "NORMAL",
               "statChanges": {
-                "stress": -5
+                "stress": 8
               },
               "nextNodeId": "m_w5d5_c1_res1",
               "affectionChanges": {
@@ -1295,6 +1295,10 @@
               "nextNodeId": "m_w5d5_c2_res1",
               "affectionChanges": {
                 "NPC_CLASSMATE_MINSU": 15
+              },
+              "statChanges": {
+                "fe": 2,
+                "be": 1
               }
             },
             {
@@ -1312,6 +1316,11 @@
               "nextNodeId": "m_w5d5_c3_res1",
               "affectionChanges": {
                 "NPC_CLASSMATE_MINSU": 999
+              },
+              "statChanges": {
+                "fe": 5,
+                "be": 5,
+                "luck": 2
               }
             },
             {
@@ -1327,8 +1336,9 @@
               ],
               "lockedReason": "민수에게서 도망칠 체력이 없습니다.",
               "statChanges": {
-                "hp": -10,
-                "stress": -10
+                "fe": 3,
+                "be": 2,
+                "stress": 8
               },
               "nextNodeId": "m_w5d5_c4_res1",
               "affectionChanges": {

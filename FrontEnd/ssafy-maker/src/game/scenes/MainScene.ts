@@ -260,7 +260,8 @@ export class MainScene extends Phaser.Scene {
       getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
       resolveTimeAdvanceBlockedMessage: () => this.storyEventManager?.resolveTimeAdvanceBlockedMessage() ?? null,
       onNotice: (message) => this.menuManager?.showNotice(message),
-      onStartEndingFlow: () => this.startEndingFlow()
+      onStartEndingFlow: () => this.startEndingFlow(),
+      onDayPassed: () => this.inventoryService?.resetDailyConsumableUsage()
     });
     this.progressionManager.initialize();
     this.storyEventManager = new StoryEventManager({

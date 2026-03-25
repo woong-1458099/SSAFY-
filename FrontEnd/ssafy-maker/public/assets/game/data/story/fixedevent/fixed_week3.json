@@ -36,8 +36,8 @@
               "statChanges": {
                 "stress": 10,
                 "money": -15000,
-                "fe": 3,
-                "be": 2
+                "fe": 2,
+                "be": 1
               },
               "nextNodeId": "qnet_c1_res1"
             },
@@ -54,7 +54,7 @@
               ],
               "lockedReason": "밤을 새울 체력이 부족합니다.",
               "statChanges": {
-                "hp": -20,
+                "hp": -18,
                 "stress": -10
               },
               "feedbackText": "(근거 없는 패기로 무장했다. 뇌를 속이는 데 성공하여 스트레스는 줄었지만, 오늘 밤부터 지옥의 벼락치기 확정이다.)"
@@ -72,8 +72,8 @@
               ],
               "lockedReason": "자료를 구걸할 인맥과 사교력이 부족합니다.",
               "statChanges": {
-                "teamwork": 5,
-                "money": -10000
+                "teamwork": 3,
+                "money": -25000
               },
               "nextNodeId": "qnet_c3_res1"
             },
@@ -90,7 +90,7 @@
               ],
               "lockedReason": "찍기를 성공시킬 압도적인 운이 부족합니다.",
               "statChanges": {
-                "luck": 15,
+                "luck": 5,
                 "stress": -10
               },
               "feedbackText": "(공부를 뒤로 하고 우주의 기운을 모으는 '기도 메타'에 돌입했다.)"
@@ -154,9 +154,9 @@
               "text": "조용히 폴더를 통째로 지우고 다시 깐다. ”하… 머리가 나쁘면 몸이 고생이지”",
               "actionType": "NORMAL",
               "statChanges": {
-                "stress": 15,
-                "fe": 3,
-                "be": 2
+                "stress": 12,
+                "fe": 2,
+                "be": 1
               },
               "feedbackText": "(식은땀이 줄줄 나지만 아무튼 빨간 글씨는 없어졌다.)"
             },
@@ -173,9 +173,9 @@
               ],
               "lockedReason": "동기에게 도움을 청할 넉살이 부족합니다.",
               "statChanges": {
-                "teamwork": 10,
-                "fe": 3,
-                "be": 2,
+                "teamwork": 6,
+                "fe": 2,
+                "be": 1,
                 "stress": 10
               },
               "nextNodeId": "git_c2_res1"
@@ -193,10 +193,10 @@
               ],
               "lockedReason": "AI의 힘을 빌릴 자본이 부족합니다.",
               "statChanges": {
-                "fe": 5,
-                "be": 5,
+                "fe": 3,
+                "be": 3,
                 "stress": -10,
-                "money": -10000
+                "money": -15000
               },
               "feedbackText": "(스스로 해낸 (것 같은) 쾌감이다. ”오…이럴 땐 git rebase를 사용하면 되는 거군”)"
             },
@@ -263,7 +263,7 @@
               "actionType": "NORMAL",
               "statChanges": {
                 "hp": 10,
-                "stress": 15
+                "stress": 12
               },
               "nextNodeId": "sleep_c1_res1"
             },
@@ -280,9 +280,9 @@
               ],
               "lockedReason": "버틸 체력이 고갈되었습니다.",
               "statChanges": {
-                "hp": -20,
-                "fe": 5,
-                "be": 5
+                "hp": -18,
+                "fe": 3,
+                "be": 3
               },
               "feedbackText": "(고통스럽지만 잠은 참아야 한다.)"
             },
@@ -299,9 +299,9 @@
               ],
               "lockedReason": "음료수를 뽑아 먹을 돈이 없습니다.",
               "statChanges": {
-                "money": -3000,
-                "fe": 5,
-                "be": 5
+                "money": -5000,
+                "fe": 3,
+                "be": 3
               },
               "feedbackText": "(자본주의의 맛으로 강제 각성! 심장은 뛰지만 손가락은 돌아간다.)"
             },
@@ -318,9 +318,9 @@
               ],
               "lockedReason": "자연스럽게 나눌 사교력이 부족합니다.",
               "statChanges": {
-                "teamwork": 5,
-                "fe": 5,
-                "be": 5,
+                "teamwork": 3,
+                "fe": 3,
+                "be": 3,
                 "hp": -10
               },
               "nextNodeId": "sleep_c4_res1"
