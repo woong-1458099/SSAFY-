@@ -225,7 +225,7 @@ export class TutorialManager {
         this.advanceStep();
       });
 
-      launchMinigame(this.scene, "BusinessSmileScene", SCENE_KEYS.main);
+      launchMinigame(this.scene, "DontSmileScene", SCENE_KEYS.main);
     }
   }
 
