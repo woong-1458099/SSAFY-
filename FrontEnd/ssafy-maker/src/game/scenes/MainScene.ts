@@ -82,6 +82,8 @@ export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
   private static readonly PENDING_RESTORE_PAYLOAD_KEY = "pendingRestorePayload";
   private static readonly PENDING_DEBUG_FIXED_EVENT_KEY = "pendingDebugFixedEvent";
+  // Keep the Arcade Physics debug toggle across scene restarts and area changes.
+  private static readonly DEBUG_MODE_REGISTRY_KEY = "debug.arcadePhysics.enabled";
   private readonly audioManager = new AudioManager();
   private readonly displaySettingsManager = new DisplaySettingsManager();
   private initialized = false;
@@ -417,6 +419,7 @@ export class MainScene extends Phaser.Scene {
     this.areaTransitionOverlay.render(transitionTargets);
     this.ensureBrightnessOverlay();
     this.applyBrightnessOverlay();
+    this.applyDebugMode(this.isDebugModeEnabled(), { persist: false });
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
     this.bindDebugControls();
@@ -813,13 +816,7 @@ export class MainScene extends Phaser.Scene {
     this.unsubscribeDebugCommandBus = this.debugCommandBus?.subscribe((command) => {
       switch (command.type) {
         case "toggleDebugOverlay":
-          if (this.debugOverlay) {
-            const nextVisible = !this.debugOverlay.isVisible();
-            this.debugOverlay.setVisible(nextVisible);
-            if (!nextVisible) {
-              this.debugMinigameHud?.hide();
-            }
-          }
+          this.applyDebugMode(!this.isDebugModeEnabled());
           break;
         case "toggleDebugPanel":
           this.debugPanel?.toggle();
@@ -955,6 +952,40 @@ export class MainScene extends Phaser.Scene {
 
   private assertNeverDebugCommand(command: never): never {
     throw new Error(`Unhandled debug command: ${JSON.stringify(command)}`);
+  }
+
+  private isDebugModeEnabled(): boolean {
+    return this.registry.get(MainScene.DEBUG_MODE_REGISTRY_KEY) === true;
+  }
+
+  private applyDebugMode(enabled: boolean, options: { persist?: boolean } = {}): void {
+    if (options.persist !== false) {
+      this.registry.set(MainScene.DEBUG_MODE_REGISTRY_KEY, enabled);
+    }
+
+    // Sync Phaser Arcade Physics' built-in debug renderer with the global flag.
+    this.physics.world.drawDebug = enabled;
+
+    if (enabled) {
+      if (!this.physics.world.debugGraphic || !this.physics.world.debugGraphic.scene) {
+        this.physics.world.createDebugGraphic();
+      }
+      this.physics.world.debugGraphic.setVisible(true);
+    } else {
+      this.physics.world.debugGraphic?.clear();
+      this.physics.world.debugGraphic?.setVisible(false);
+    }
+
+    if (this.debugOverlay) {
+      this.debugOverlay.setVisible(enabled);
+    }
+
+    if (!enabled) {
+      this.debugMinigameHud?.hide();
+      this.debugPanel?.hide();
+      this.worldTileEditor?.setVisible(false);
+      this.worldGridOverlay?.setVisible(false);
+    }
   }
 
   private handleDebugTeleport(worldX: number, worldY: number) {
