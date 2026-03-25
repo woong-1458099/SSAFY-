@@ -782,6 +782,13 @@ update() {
 
     this.registry.set(MainScene.PENDING_RESTORE_PAYLOAD_KEY, {
       ...payload,
+      gameState: {
+        ...payload.gameState,
+        hud: {
+          ...payload.gameState.hud,
+          locationLabel: this.getAreaLabel(nextSceneScript.area)
+        }
+      },
       world: {
         ...payload.world,
         areaId: nextSceneScript.area,
@@ -793,6 +800,17 @@ update() {
     this.registry.set("startSceneId", sceneId);
 
     return true;
+  }
+
+  private resyncHudLocationLabel(areaId?: AreaId): void {
+    const resolvedAreaId = areaId ?? this.worldManager?.getCurrentAreaId();
+    if (!resolvedAreaId || !this.statSystemManager) {
+      return;
+    }
+
+    this.statSystemManager.patchHudState({
+      locationLabel: this.getAreaLabel(resolvedAreaId)
+    });
   }
 
   private handleAreaTransition(transitionId: AreaTransitionId) {
@@ -1100,6 +1118,7 @@ update() {
     this.inventoryService.restore(payload.inventory);
     this.progressionManager.restore(payload.progression);
     this.storyEventManager.restore(payload.story);
+    this.resyncHudLocationLabel(payload.world?.areaId);
     this.storyEventManager.syncWeek(payload.gameState.hud.week);
     this.menuManager?.refreshStatsUi();
     this.menuManager?.refreshInventoryUi();
@@ -1171,6 +1190,7 @@ update() {
     this.inventoryService.restore(payload.inventory);
     this.progressionManager.restore(payload.progression);
     this.storyEventManager.restore(payload.story);
+    this.resyncHudLocationLabel(payload.world?.areaId);
     this.storyEventManager.syncWeek(payload.gameState.hud.week);
     if (payload.world?.playerTile) {
       this.playerManager?.debugTeleportToTile(payload.world.playerTile.tileX, payload.world.playerTile.tileY);
@@ -1178,7 +1198,6 @@ update() {
     this.menuManager?.refreshStatsUi();
     this.menuManager?.refreshInventoryUi();
   }
-
   private handleDebugFixedEventJump(
     week: number,
     eventId: string,

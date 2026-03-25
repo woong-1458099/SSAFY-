@@ -127,7 +127,11 @@ export class DialogueManager {
             continue;
           }
           if (selectedChoice?.feedbackText) {
-            this.onNotice?.(selectedChoice.feedbackText);
+            this.dialogueBox?.renderNode(this.createFeedbackNode(selectedChoice.feedbackText));
+            await this.waitForAdvance();
+            if (this.destroyed) {
+              break;
+            }
           }
           if (selectedChoice?.action) {
             this.runAction?.(selectedChoice.action);
@@ -443,5 +447,14 @@ export class DialogueManager {
       default:
         return String(key);
     }
+  }
+
+  private createFeedbackNode(feedbackText: string): DialogueNode {
+    return {
+      id: "__choice_feedback__",
+      speaker: "안내",
+      speakerId: "SYSTEM",
+      text: feedbackText
+    };
   }
 }
