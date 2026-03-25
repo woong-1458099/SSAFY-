@@ -1,19 +1,20 @@
 package com.example.gameinfratest.api.controller;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.auth.BffSessionAuthenticationFilter;
 import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.config.SecurityConfig;
-import com.example.gameinfratest.save.SaveFile;
 import com.example.gameinfratest.service.AuthorizationService;
-import com.example.gameinfratest.service.SaveFileService;
 import com.example.gameinfratest.service.UserService;
-import com.example.gameinfratest.user.User;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -30,64 +31,76 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(SaveFileController.class)
+@WebMvcTest(UserController.class)
 @Import({
         SecurityConfig.class,
         AuthorizationService.class,
-        SaveFileControllerSessionSecurityTest.MockBeans.class
+        UserControllerSessionSecurityTest.MockBeans.class
 })
 @TestPropertySource(properties = {
         "app.security.jwt.enabled=true",
         "app.security.cors.allowed-origins=http://localhost:5173",
         "app.keycloak.client-id=test-client"
 })
-class SaveFileControllerSessionSecurityTest {
+class UserControllerSessionSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    private SaveFileService saveFileService;
-
-    @Autowired
     private UserService userService;
 
     @Test
-    void userSaveFilesRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/api/users/{userId}/save-files", UUID.randomUUID()))
+    void meRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/users/me"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void userSaveFilesRejectsOtherUserSession() throws Exception {
-        UserResponse signedInUser = user("signed-in@example.com");
-        when(userService.getCurrentUser(eq(signedInUser.id()))).thenReturn(signedInUser);
-
-        mockMvc.perform(get("/api/users/{userId}/save-files", UUID.randomUUID()).session(authenticatedSession(signedInUser)))
-                .andExpect(status().isForbidden());
+    void recordDeathRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/users/me/deaths"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void userSaveFilesAllowsCurrentUserSession() throws Exception {
-        UserResponse signedInUser = user("signed-in@example.com");
-        when(userService.getCurrentUser(eq(signedInUser.id()))).thenReturn(signedInUser);
-        when(saveFileService.getUserSaveFiles(eq(signedInUser.id()))).thenReturn(List.of());
+    void recordDeathUpdatesCurrentUserCount() throws Exception {
+        UserResponse signedInUser = user("signed-in@example.com", 3);
+        UserResponse updatedUser = new UserResponse(
+                signedInUser.id(),
+                signedInUser.email(),
+                signedInUser.username(),
+                signedInUser.emailVerified(),
+                signedInUser.phone(),
+                signedInUser.birthday(),
+                signedInUser.provider(),
+                signedInUser.lastLoginAt(),
+                4,
+                Instant.parse("2026-03-25T03:00:00Z"),
+                signedInUser.createdAt(),
+                signedInUser.updatedAt()
+        );
 
-        mockMvc.perform(get("/api/users/{userId}/save-files", signedInUser.id()).session(authenticatedSession(signedInUser)))
-                .andExpect(status().isOk());
+        when(userService.getCurrentUser(eq(signedInUser.id()))).thenReturn(signedInUser);
+        when(userService.recordDeath(eq(signedInUser.id()))).thenReturn(updatedUser);
+
+        mockMvc.perform(post("/api/users/me/deaths").session(authenticatedSession(signedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deathCount").value(4))
+                .andExpect(jsonPath("$.data.lastDeathAt").value("2026-03-25T03:00:00Z"));
+
+        verify(userService).recordDeath(eq(signedInUser.id()));
     }
 
     @Test
-    void saveFileRejectsOtherOwnerResource() throws Exception {
-        UserResponse signedInUser = user("signed-in@example.com");
+    void meReturnsDeathStats() throws Exception {
+        UserResponse signedInUser = user("signed-in@example.com", 2);
         when(userService.getCurrentUser(eq(signedInUser.id()))).thenReturn(signedInUser);
 
-        UUID ownerId = UUID.randomUUID();
-        SaveFile saveFile = saveFile(ownerId);
-        when(saveFileService.getSaveFileEntity(eq(saveFile.getId()))).thenReturn(saveFile);
+        mockMvc.perform(get("/api/users/me").session(authenticatedSession(signedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deathCount").value(2));
 
-        mockMvc.perform(get("/api/save-files/{saveFileId}", saveFile.getId()).session(authenticatedSession(signedInUser)))
-                .andExpect(status().isForbidden());
+        verify(userService, never()).recordDeath(Mockito.any());
     }
 
     private MockHttpSession authenticatedSession(UserResponse user) {
@@ -107,7 +120,7 @@ class SaveFileControllerSessionSecurityTest {
         return session;
     }
 
-    private UserResponse user(String email) {
+    private UserResponse user(String email, int deathCount) {
         Instant now = Instant.parse("2026-03-16T00:00:00Z");
         return new UserResponse(
                 UUID.randomUUID(),
@@ -118,34 +131,15 @@ class SaveFileControllerSessionSecurityTest {
                 null,
                 "keycloak",
                 now,
-                0,
+                deathCount,
                 null,
                 now,
                 now
         );
     }
 
-    private SaveFile saveFile(UUID ownerId) {
-        User owner = new User();
-        owner.setId(ownerId);
-
-        SaveFile saveFile = new SaveFile();
-        saveFile.setId(UUID.randomUUID());
-        saveFile.setUser(owner);
-        saveFile.setSlotNumber(1);
-        saveFile.setName("slot-1");
-        saveFile.setGameState("{}");
-        return saveFile;
-    }
-
     @TestConfiguration
     static class MockBeans {
-        @Bean
-        @Primary
-        SaveFileService saveFileService() {
-            return Mockito.mock(SaveFileService.class);
-        }
-
         @Bean
         @Primary
         UserService userService() {

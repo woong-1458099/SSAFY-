@@ -85,6 +85,17 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public UserResponse recordDeath(UUID userId) {
+        User user = userRepository.findById(userId)
+                .filter(current -> current.getDeletedAt() == null)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "user profile not found"));
+
+        user.setDeathCount(user.getDeathCount() + 1);
+        user.setLastDeathAt(Instant.now());
+        return UserResponse.from(userRepository.save(user));
+    }
+
     private JwtIdentity extractIdentity(Jwt jwt) {
         if (jwt == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "jwt is required");

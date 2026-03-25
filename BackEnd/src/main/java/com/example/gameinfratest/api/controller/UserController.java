@@ -33,6 +33,12 @@ public class UserController {
         return ApiResponse.ok("user fetch success", authorizationService.requireAuthenticatedUser());
     }
 
+    @PostMapping("/deaths")
+    public ApiResponse<UserResponse> recordDeath() {
+        UserResponse currentUser = authorizationService.requireAuthenticatedUser();
+        return ApiResponse.ok("user death count update success", userService.recordDeath(currentUser.id()));
+    }
+
     @DeleteMapping
     public ResponseEntity<ApiResponse<Void>> deleteMe() {
         UserResponse currentUser = authorizationService.requireAuthenticatedUser();
