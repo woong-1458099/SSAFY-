@@ -14,6 +14,10 @@ export default class DontSmileScene extends BaseSmileScene {
 
   private currentFilter: FilterMode = 'none';
   private lastFilterChangeTime = 0;
+  
+  // 🌟 스로틀링을 위한 타이머 및 캐시
+  private lastProcessTime = 0;
+  private lastImageData: ImageData | null = null;
 
   protected readonly title = LEGACY_DONT_SMILE_CONFIG.title;
   protected readonly subtitle = LEGACY_DONT_SMILE_CONFIG.subtitle;
@@ -39,7 +43,19 @@ export default class DontSmileScene extends BaseSmileScene {
    * 왜곡 필터 엔진 (수동 픽셀 매핑)
    */
   private applyDistortFilter(ctx: CanvasRenderingContext2D, mode: FilterMode): void {
-    if (mode === 'none') return;
+    if (mode === 'none') {
+      this.lastImageData = null;
+      return;
+    }
+
+    const now = Date.now();
+    if (now - this.lastProcessTime < 33) {
+      if (this.lastImageData) {
+        ctx.putImageData(this.lastImageData, 0, 0);
+      }
+      return;
+    }
+    this.lastProcessTime = now;
 
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
@@ -76,7 +92,7 @@ export default class DontSmileScene extends BaseSmileScene {
         } 
         else if (mode === 'mirror') {
           // 데칼코마니: 타겟의 x좌표가 중앙을 넘어가면, 소스의 왼쪽 픽셀을 반전해서 가져옴
-          srcX = x < cx ? x : width - x;
+          srcX = x < cx ? x : width - 1 - x;
           srcY = y;
         }
         else if (mode === 'wave') {
@@ -108,6 +124,7 @@ export default class DontSmileScene extends BaseSmileScene {
         dst[targetIdx + 3] = src[srcIdx + 3];
       }
     }
+    this.lastImageData = imageData;
     ctx.putImageData(imageData, 0, 0);
   }
 
