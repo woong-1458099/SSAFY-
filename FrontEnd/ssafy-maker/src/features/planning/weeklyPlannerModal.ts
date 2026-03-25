@@ -209,7 +209,9 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
     completionText.setVisible(isCompleted);
     updateSlotLayout();
     bg.disableInteractive();
-    bg.setInteractive({ useHandCursor: true });
+    if (!isCompleted) {
+      bg.setInteractive({ useHandCursor: true });
+    }
   };
 
   WEEKLY_PLAN_DAY_INDICES.forEach((dayIndex) => {
@@ -267,7 +269,7 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
         fixedEventSlots?.get(slotIndex)
       );
 
-      if (!fixedEventSlots?.has(slotIndex)) {
+      if (!fixedEventSlots?.has(slotIndex) && !completedSlotIndices?.has(slotIndex)) {
         bg.on("pointerdown", () => {
           const currentIndex = WEEKLY_PLAN_OPTIONS.findIndex((option) => option.id === draftPlan[slotIndex]);
           const nextIndex = (currentIndex + 1) % WEEKLY_PLAN_OPTIONS.length;
