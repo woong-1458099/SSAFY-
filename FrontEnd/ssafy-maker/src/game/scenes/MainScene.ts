@@ -419,6 +419,7 @@ export class MainScene extends Phaser.Scene {
     this.areaTransitionOverlay.render(transitionTargets);
     this.ensureBrightnessOverlay();
     this.applyBrightnessOverlay();
+    this.ensureDebugModeInitialized();
     this.applyDebugMode(this.isDebugModeEnabled(), { persist: false });
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
 
@@ -815,9 +816,13 @@ export class MainScene extends Phaser.Scene {
     this.unsubscribeDebugCommandBus?.();
     this.unsubscribeDebugCommandBus = this.debugCommandBus?.subscribe((command) => {
       switch (command.type) {
-        case "toggleDebugOverlay":
-          this.applyDebugMode(!this.isDebugModeEnabled());
+        case "toggleDebugOverlay": {
+          const nextEnabled = this.debugOverlay
+            ? !this.debugOverlay.isVisible()
+            : !this.isDebugModeEnabled();
+          this.applyDebugMode(nextEnabled);
           break;
+        }
         case "toggleDebugPanel":
           this.debugPanel?.toggle();
           if (this.debugPanel?.isVisible()) {
@@ -954,6 +959,12 @@ export class MainScene extends Phaser.Scene {
     throw new Error(`Unhandled debug command: ${JSON.stringify(command)}`);
   }
 
+  private ensureDebugModeInitialized(): void {
+    if (typeof this.registry.get(MainScene.DEBUG_MODE_REGISTRY_KEY) !== "boolean") {
+      this.registry.set(MainScene.DEBUG_MODE_REGISTRY_KEY, false);
+    }
+  }
+
   private isDebugModeEnabled(): boolean {
     return this.registry.get(MainScene.DEBUG_MODE_REGISTRY_KEY) === true;
   }
@@ -963,17 +974,20 @@ export class MainScene extends Phaser.Scene {
       this.registry.set(MainScene.DEBUG_MODE_REGISTRY_KEY, enabled);
     }
 
-    // Sync Phaser Arcade Physics' built-in debug renderer with the global flag.
-    this.physics.world.drawDebug = enabled;
+    const physicsWorld = this.physics?.world;
+    if (physicsWorld) {
+      // Sync Phaser Arcade Physics' built-in debug renderer with the global flag.
+      physicsWorld.drawDebug = enabled;
 
-    if (enabled) {
-      if (!this.physics.world.debugGraphic || !this.physics.world.debugGraphic.scene) {
-        this.physics.world.createDebugGraphic();
+      if (enabled) {
+        if (!physicsWorld.debugGraphic || !physicsWorld.debugGraphic.scene) {
+          physicsWorld.createDebugGraphic();
+        }
+        physicsWorld.debugGraphic?.setVisible(true);
+      } else {
+        physicsWorld.debugGraphic?.clear();
+        physicsWorld.debugGraphic?.setVisible(false);
       }
-      this.physics.world.debugGraphic.setVisible(true);
-    } else {
-      this.physics.world.debugGraphic?.clear();
-      this.physics.world.debugGraphic?.setVisible(false);
     }
 
     if (this.debugOverlay) {
