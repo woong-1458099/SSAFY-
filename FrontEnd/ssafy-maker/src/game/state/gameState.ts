@@ -20,6 +20,8 @@ export type PlayerStatsState = Record<PlayerStatKey, number>;
 export type RuntimeGameState = {
   hud: HudState;
   stats: PlayerStatsState;
+  affection: Record<string, number>;
+  flags: string[];
 };
 
 export const DEFAULT_HUD_STATE: HudState = {
@@ -32,7 +34,7 @@ export const DEFAULT_HUD_STATE: HudState = {
   hp: 82,
   hpMax: 100,
   money: 50000,
-  stress: 20
+  stress: 20,
 };
 
 export const DEFAULT_STATS_STATE: PlayerStatsState = {
@@ -40,20 +42,24 @@ export const DEFAULT_STATS_STATE: PlayerStatsState = {
   be: 20,
   teamwork: 40,
   luck: 10,
-  stress: 20
+  stress: 20,
 };
 
 export function createDefaultGameState(): RuntimeGameState {
   return {
     hud: { ...DEFAULT_HUD_STATE },
-    stats: { ...DEFAULT_STATS_STATE }
+    stats: { ...DEFAULT_STATS_STATE },
+    affection: {},
+    flags: []
   };
 }
 
 export function cloneGameState(state: RuntimeGameState): RuntimeGameState {
   return {
     hud: { ...state.hud },
-    stats: { ...state.stats }
+    stats: { ...state.stats },
+    affection: { ...(state.affection || {}) },
+    flags: [...(state.flags || [])]
   };
 }
 
@@ -78,6 +84,6 @@ export function clampStatsState(stats: PlayerStatsState): PlayerStatsState {
     be: Phaser.Math.Clamp(Math.round(stats.be), 0, 100),
     teamwork: Phaser.Math.Clamp(Math.round(stats.teamwork), 0, 100),
     luck: Phaser.Math.Clamp(Math.round(stats.luck), 0, 100),
-    stress: Phaser.Math.Clamp(Math.round(stats.stress), 0, 100)
+    stress: Phaser.Math.Clamp(Math.round(stats.stress), 0, 100),
   };
 }

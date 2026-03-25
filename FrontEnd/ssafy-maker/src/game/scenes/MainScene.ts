@@ -180,17 +180,22 @@ export class MainScene extends Phaser.Scene {
       getMetricValue: (stat) => {
         const hudState = this.statSystemManager!.getHudState();
         const statsState = this.statSystemManager!.getStatsState();
+        const playerData = this.registry.get("playerData") as { gender?: string } | undefined;
         switch (stat) {
           case "hp":
             return hudState.hp;
-          case "gold":
           case "money":
             return hudState.money;
+          case "playerGender":
+            return typeof playerData?.gender === "string" ? playerData.gender.toUpperCase() : "";
           default:
             return statsState[stat];
         }
       },
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      getAffectionValue: (npcId) => this.statSystemManager!.getAffection(npcId),
+      applyAffectionDelta: (changes) => this.statSystemManager!.applyAffectionDelta(changes),
+      setFlags: (flags) => this.statSystemManager!.addFlags(flags),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       onNotice: (message) => this.menuManager?.showNotice(message),
       runAction: (action) => {
@@ -263,6 +268,10 @@ export class MainScene extends Phaser.Scene {
       getHudState: () => this.statSystemManager!.getHudState(),
       getCurrentArea: () => this.worldManager?.getCurrentAreaId() ?? "world",
       getCurrentLocation: () => this.statSystemManager!.getHudState().locationLabel,
+      getPlayerGender: () => {
+        const raw = this.registry.get("playerData") as { gender?: string } | undefined;
+        return typeof raw?.gender === "string" ? raw.gender.toUpperCase() : "MALE";
+      },
       getPlayerName: () => {
         const raw = this.registry.get("playerData") as { name?: string } | undefined;
         const name = typeof raw?.name === "string" ? raw.name.trim() : "";
@@ -1047,6 +1056,13 @@ export class MainScene extends Phaser.Scene {
 
     this.registry.set(MainScene.PENDING_RESTORE_PAYLOAD_KEY, {
       ...payload,
+      gameState: {
+        ...payload.gameState,
+        hud: {
+          ...payload.gameState.hud,
+          locationLabel: this.getAreaLabel(nextSceneScript.area)
+        }
+      },
       world: {
         ...payload.world,
         areaId: nextSceneScript.area,
@@ -1058,6 +1074,17 @@ export class MainScene extends Phaser.Scene {
     this.registry.set("startSceneId", sceneId);
 
     return true;
+  }
+
+  private resyncHudLocationLabel(areaId?: AreaId): void {
+    const resolvedAreaId = areaId ?? this.worldManager?.getCurrentAreaId();
+    if (!resolvedAreaId || !this.statSystemManager) {
+      return;
+    }
+
+    this.statSystemManager.patchHudState({
+      locationLabel: this.getAreaLabel(resolvedAreaId)
+    });
   }
 
   private handleAreaTransition(transitionId: AreaTransitionId) {
@@ -1500,6 +1527,7 @@ export class MainScene extends Phaser.Scene {
     this.inventoryService.restore(payload.inventory);
     this.progressionManager.restore(payload.progression);
     this.storyEventManager.restore(payload.story);
+    this.resyncHudLocationLabel(payload.world?.areaId);
     this.storyEventManager.syncWeek(payload.gameState.hud.week);
     this.menuManager?.refreshStatsUi();
     this.menuManager?.refreshInventoryUi();
@@ -1571,6 +1599,7 @@ export class MainScene extends Phaser.Scene {
     this.inventoryService.restore(payload.inventory);
     this.progressionManager.restore(payload.progression);
     this.storyEventManager.restore(payload.story);
+    this.resyncHudLocationLabel(payload.world?.areaId);
     this.storyEventManager.syncWeek(payload.gameState.hud.week);
     if (payload.world?.playerTile) {
       this.playerManager?.debugTeleportToTile(payload.world.playerTile.tileX, payload.world.playerTile.tileY);
@@ -1578,7 +1607,6 @@ export class MainScene extends Phaser.Scene {
     this.menuManager?.refreshStatsUi();
     this.menuManager?.refreshInventoryUi();
   }
-
   private handleDebugFixedEventJump(
     week: number,
     eventId: string,

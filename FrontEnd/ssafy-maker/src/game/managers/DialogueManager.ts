@@ -5,6 +5,7 @@ import type {
   DialogueChoice,
   DialogueNode,
   DialogueRequirement,
+  DialogueRequirementStatKey,
   DialogueScript,
   DialogueStatKey
 } from "../../common/types/dialogue";
@@ -18,8 +19,11 @@ import type { HudState, PlayerStatKey } from "../state/gameState";
 import { resolveRegisteredDialogue } from "../scripts/dialogues/dialogueRegistry";
 
 type DialogueRuntimeHooks = {
-  getMetricValue?: (stat: DialogueStatKey) => number;
+  getMetricValue?: (stat: DialogueRequirementStatKey) => number | string;
+  getAffectionValue?: (npcId: string) => number;
   applyStatDelta?: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  applyAffectionDelta?: (changes: Record<string, number>) => void;
+  setFlags?: (flags: string[]) => void;
   patchHudState?: (next: Partial<HudState>) => void;
   onNotice?: (message: string) => void;
   runAction?: (action: DialogueAction) => void;
@@ -40,7 +44,10 @@ export class DialogueManager {
   private digitKeys: Phaser.Input.Keyboard.Key[] = [];
   private pendingWaitCancel?: () => void;
   private getMetricValue?: DialogueRuntimeHooks["getMetricValue"];
+  private getAffectionValue?: DialogueRuntimeHooks["getAffectionValue"];
   private applyStatDelta?: DialogueRuntimeHooks["applyStatDelta"];
+  private applyAffectionDelta?: DialogueRuntimeHooks["applyAffectionDelta"];
+  private setFlags?: DialogueRuntimeHooks["setFlags"];
   private patchHudState?: DialogueRuntimeHooks["patchHudState"];
   private onNotice?: DialogueRuntimeHooks["onNotice"];
   private runAction?: DialogueRuntimeHooks["runAction"];
@@ -75,7 +82,10 @@ export class DialogueManager {
 
   setRuntimeHooks(hooks: DialogueRuntimeHooks): void {
     this.getMetricValue = hooks.getMetricValue;
+    this.getAffectionValue = hooks.getAffectionValue;
     this.applyStatDelta = hooks.applyStatDelta;
+    this.applyAffectionDelta = hooks.applyAffectionDelta;
+    this.setFlags = hooks.setFlags;
     this.patchHudState = hooks.patchHudState;
     this.onNotice = hooks.onNotice;
     this.runAction = hooks.runAction;
@@ -117,7 +127,11 @@ export class DialogueManager {
             continue;
           }
           if (selectedChoice?.feedbackText) {
-            this.onNotice?.(selectedChoice.feedbackText);
+            this.dialogueBox?.renderNode(this.createFeedbackNode(selectedChoice.feedbackText));
+            await this.waitForAdvance();
+            if (this.destroyed) {
+              break;
+            }
           }
           if (selectedChoice?.action) {
             this.runAction?.(selectedChoice.action);
@@ -276,8 +290,28 @@ export class DialogueManager {
 
   private isChoiceAvailable(choice: DialogueChoice): boolean {
     const requirements = choice.requirements ?? [];
-    return requirements.every((req) => {
+    const statReqMet = requirements.every((req) => {
       const value = this.getMetricValue?.(req.stat) ?? 0;
+      if (typeof req.equals === "string") {
+        return String(value).toUpperCase() === req.equals.trim().toUpperCase();
+      }
+      if (typeof value !== "number") {
+        return false;
+      }
+      if (typeof req.min === "number" && value < req.min) {
+        return false;
+      }
+      if (typeof req.max === "number" && value > req.max) {
+        return false;
+      }
+      return true;
+    });
+
+    if (!statReqMet) return false;
+
+    const affectionRequirements = choice.affectionRequirements ?? [];
+    return affectionRequirements.every((req) => {
+      const value = this.getAffectionValue?.(req.npcId) ?? 0;
       if (typeof req.min === "number" && value < req.min) {
         return false;
       }
@@ -290,11 +324,16 @@ export class DialogueManager {
 
   private getRequirementText(choice: DialogueChoice): string {
     const requirements = choice.requirements ?? [];
-    if (requirements.length === 0) {
+    const affectionReqs = choice.affectionRequirements ?? [];
+    
+    if (requirements.length === 0 && affectionReqs.length === 0) {
       return "";
     }
 
-    return requirements.map((req) => this.describeRequirement(req)).join(", ");
+    const reqTexts = requirements.map((req) => this.describeRequirement(req));
+    const affTexts = affectionReqs.map((req) => req.label ?? `${req.npcId} 호감도 조건`);
+    
+    return [...reqTexts, ...affTexts].join(", ");
   }
 
   private describeRequirement(req: DialogueRequirement): string {
@@ -305,7 +344,9 @@ export class DialogueManager {
     const label =
       req.stat === "hp"
         ? "HP"
-        : isDialogueCurrencyStatKey(req.stat)
+        : req.stat === "playerGender"
+          ? "성별"
+          : req.stat === "money"
           ? "재화"
           : req.stat === "fe"
             ? "FE"
@@ -317,6 +358,9 @@ export class DialogueManager {
                   ? "운"
                   : "스트레스";
 
+    if (typeof req.equals === "string") {
+      return `${label} ${req.equals}`;
+    }
     if (typeof req.min === "number" && typeof req.max === "number") {
       return `${label} ${req.min}~${req.max}`;
     }
@@ -330,37 +374,48 @@ export class DialogueManager {
   }
 
   private applyChoiceStatChanges(choice: DialogueChoice): void {
-    if (!choice.statChanges) {
-      return;
-    }
-
     const hudPatch: Partial<HudState> = {};
     const statDelta: Partial<Record<PlayerStatKey, number>> = {};
     const summary: string[] = [];
 
-    (Object.entries(choice.statChanges) as Array<[DialogueStatKey, number]>).forEach(([key, value]) => {
-      if (!value) {
-        return;
-      }
+    if (choice.statChanges) {
+      (Object.entries(choice.statChanges) as Array<[DialogueStatKey, number]>).forEach(([key, value]) => {
+        if (!value) {
+          return;
+        }
 
-      if (key === "hp") {
-        const currentHp = this.getMetricValue?.("hp") ?? 0;
-        hudPatch.hp = currentHp + value;
-        summary.push(`HP ${value > 0 ? "+" : ""}${value}`);
-        return;
-      }
+        if (key === "hp") {
+          const currentHp = Number(this.getMetricValue?.("hp") ?? 0);
+          hudPatch.hp = currentHp + value;
+          summary.push(`HP ${value > 0 ? "+" : ""}${value}`);
+          return;
+        }
 
-      if (isDialogueCurrencyStatKey(key)) {
-        const hudCurrencyKey = toDialogueCurrencyHudKey(key);
-        const currentMoney = this.getMetricValue?.(key) ?? 0;
-        hudPatch[hudCurrencyKey] = Math.max(0, currentMoney + value);
-        summary.push(`재화 ${value > 0 ? "+" : ""}${value}`);
-        return;
-      }
+        if (isDialogueCurrencyStatKey(key)) {
+          const hudCurrencyKey = toDialogueCurrencyHudKey(key);
+          const currentMoney = Number(this.getMetricValue?.(key) ?? 0);
+          hudPatch[hudCurrencyKey] = Math.max(0, currentMoney + value);
+          summary.push(`재화 ${value > 0 ? "+" : ""}${value}`);
+          return;
+        }
 
-      statDelta[key] = value;
-      summary.push(`${this.describeStatKey(key)} ${value > 0 ? "+" : ""}${value}`);
-    });
+        statDelta[key] = value;
+        summary.push(`${this.describeStatKey(key)} ${value > 0 ? "+" : ""}${value}`);
+      });
+    }
+
+    if (choice.affectionChanges && this.applyAffectionDelta && Object.keys(choice.affectionChanges).length > 0) {
+      this.applyAffectionDelta(choice.affectionChanges);
+      Object.entries(choice.affectionChanges).forEach(([npcId, value]) => {
+        if (value) {
+          summary.push(`호감도 ${value > 0 ? "+" : ""}${value}`);
+        }
+      });
+    }
+
+    if (choice.setFlags && choice.setFlags.length > 0 && this.setFlags) {
+      this.setFlags(choice.setFlags);
+    }
 
     if (Object.keys(statDelta).length > 0) {
       this.applyStatDelta?.(statDelta, 1);
@@ -369,7 +424,7 @@ export class DialogueManager {
       this.patchHudState?.(hudPatch);
     }
     if (summary.length > 0) {
-      this.onNotice?.(`능력치 변화: ${summary.join(", ")}`);
+      this.onNotice?.(`변화: ${summary.join(", ")}`);
     }
   }
 
@@ -377,7 +432,6 @@ export class DialogueManager {
     switch (key) {
       case "hp":
         return "HP";
-      case "gold":
       case "money":
         return "재화";
       case "fe":
@@ -390,6 +444,17 @@ export class DialogueManager {
         return "운";
       case "stress":
         return "스트레스";
+      default:
+        return String(key);
     }
+  }
+
+  private createFeedbackNode(feedbackText: string): DialogueNode {
+    return {
+      id: "__choice_feedback__",
+      speaker: "안내",
+      speakerId: "SYSTEM",
+      text: feedbackText
+    };
   }
 }

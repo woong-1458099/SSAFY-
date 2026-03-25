@@ -186,11 +186,75 @@ function parseExportedStringArray(sourceText, filePath, exportName) {
   throw new Error(`${exportName} 상수를 찾지 못했습니다.`);
 }
 
+function parseExportedIdentifierBackedStringMap(sourceText, filePath, exportName) {
+  const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) {
+      continue;
+    }
+
+    const isExported = statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) === true;
+    if (!isExported) {
+      continue;
+    }
+
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportName || !declaration.initializer) {
+        continue;
+      }
+
+      const initializer = unwrapExpression(declaration.initializer);
+      if (!ts.isObjectLiteralExpression(initializer)) {
+        throw new Error(`${exportName} must be an object literal.`);
+      }
+
+      const values = new Map();
+
+      for (const property of initializer.properties) {
+        if (!ts.isPropertyAssignment(property)) {
+          throw new Error(`${exportName} contains unsupported property syntax.`);
+        }
+
+        const propertyName = getPropertyNameText(property.name, sourceFile);
+        const propertyValue = unwrapExpression(property.initializer);
+
+        if (ts.isStringLiteralLike(propertyValue)) {
+          values.set(propertyName, propertyValue.text);
+          continue;
+        }
+
+        if (ts.isPropertyAccessExpression(propertyValue)) {
+          values.set(propertyName, propertyValue.name.text);
+          continue;
+        }
+
+        throw new Error(`${exportName}.${propertyName} must resolve to a string literal.`);
+      }
+
+      return values;
+    }
+  }
+
+  throw new Error(`${exportName} export not found.`);
+}
+
 function formatSchemaErrors(schemaName, errors) {
   return ensureArray(errors).map((error) => {
     const instancePath = error.instancePath || "/";
     return `[schema:${schemaName}] ${instancePath} ${error.message ?? "유효하지 않습니다."}`.trim();
   });
+}
+
+function compareStringSets(label, actualValues, expectedValues, issues) {
+  const actual = [...actualValues].sort();
+  const expected = [...expectedValues].sort();
+
+  if (actual.length === expected.length && actual.every((value, index) => value === expected[index])) {
+    return;
+  }
+
+  issues.push(`[schema-sync] ${label} mismatch. actual=${JSON.stringify(actual)} expected=${JSON.stringify(expected)}`);
 }
 
 function findReachableNodes(startNodeId, successorsByNode) {
@@ -518,7 +582,14 @@ export async function validateAuthoredStory(options = {}) {
 
   const requiredAreaIds = new Set(parseExportedStringMap(areaEnumSource, areaEnumPath, "AREA_IDS").values());
   const npcIds = new Set(parseExportedStringMap(npcEnumSource, npcEnumPath, "NPC_IDS").values());
+  const affectionNpcIds = new Set(parseExportedIdentifierBackedStringMap(npcEnumSource, npcEnumPath, "AFFECTION_NPC_IDS").values());
   const requiredDialogueIds = new Set(parseExportedStringMap(dialogueEnumSource, dialogueEnumPath, "DIALOGUE_IDS").values());
+  const dialogueRequirementStatKeys = new Set(
+    parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_REQUIREMENT_STAT_KEYS")
+  );
+  const dialogueMetricKeys = new Set(
+    parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_METRIC_KEYS")
+  );
   const allowedActions = new Set(parseExportedStringArray(dialogueTypesSource, dialogueTypesPath, "DIALOGUE_ACTIONS"));
   const requiredSceneStateIds = new Set(parseExportedStringMap(sceneStateIdsSource, sceneStateIdsPath, "SCENE_STATE_IDS").values());
   const ajv = new Ajv2020({
@@ -537,6 +608,37 @@ export async function validateAuthoredStory(options = {}) {
   if (!sceneStatesSchemaValidator(sceneStatesJson)) {
     issues.push(...formatSchemaErrors("sceneStates", sceneStatesSchemaValidator.errors));
   }
+
+  compareStringSets(
+    "authored-dialogues.dialogueRequirement.stat",
+    new Set(dialoguesSchema?.$defs?.dialogueRequirement?.properties?.stat?.enum ?? []),
+    dialogueRequirementStatKeys,
+    issues
+  );
+  compareStringSets(
+    "authored-dialogues.affectionRequirement.npcId",
+    new Set(dialoguesSchema?.$defs?.affectionRequirement?.properties?.npcId?.enum ?? []),
+    affectionNpcIds,
+    issues
+  );
+  compareStringSets(
+    "authored-dialogues.node.affectionChanges keys",
+    new Set(dialoguesSchema?.$defs?.dialogueNode?.properties?.affectionChanges?.propertyNames?.enum ?? []),
+    affectionNpcIds,
+    issues
+  );
+  compareStringSets(
+    "authored-dialogues.choice.affectionChanges keys",
+    new Set(dialoguesSchema?.$defs?.dialogueChoice?.properties?.affectionChanges?.propertyNames?.enum ?? []),
+    affectionNpcIds,
+    issues
+  );
+  compareStringSets(
+    "authored-dialogues.choice.statChanges keys",
+    new Set(dialoguesSchema?.$defs?.dialogueChoice?.properties?.statChanges?.propertyNames?.enum ?? []),
+    dialogueMetricKeys,
+    issues
+  );
 
   const dialogueIds = collectDialogueIds(dialoguesJson, requiredDialogueIds, allowedActions, issues);
   validateSceneStates(sceneStatesJson, npcIds, dialogueIds, requiredSceneStateIds, requiredAreaIds, issues);

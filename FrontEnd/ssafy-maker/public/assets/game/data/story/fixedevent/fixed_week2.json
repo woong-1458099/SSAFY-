@@ -1,256 +1,313 @@
-[
-  {
-    "eventId": "EVT_MAIN_W2_D1_MORNING_PRO",
-    "eventName": "프로님 1:1 면담",
-    "eventType": "FIXED",
-    "triggerTiming": {
-      "week": 2,
-      "day": 1,
-      "timeOfDay": "오전"
+{
+  "dialogues": [
+    {
+      "id": "EVT_MAIN_W2_D1_MORNING_PRO",
+      "label": "프로님 1:1 면담",
+      "startNodeId": "pro_n1",
+      "nodes": {
+        "pro_n1": {
+          "id": "pro_n1",
+          "speaker": "SYSTEM",
+          "text": "조선미 프로님이 나를 불렀다.",
+          "nextNodeId": "pro_n2"
+        },
+        "pro_n2": {
+          "id": "pro_n2",
+          "speaker": "조선미 프로",
+          "speakerId": "NPC_PRO_SUNMI",
+          "emotion": "SERIOUS",
+          "text": "\"다른 분들에 비해 진도 따라가는 걸 버거워하시는 것 같네요.\"",
+          "choices": [
+            {
+              "id": "pro_c1",
+              "text": "\"너무 어렵습니다... 자격증도 병행하려 했는데 무리네요.\"",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": -10
+              },
+              "nextNodeId": "pro_c1_res1"
+            },
+            {
+              "id": "pro_c2",
+              "text": "🔒 [사교 50, 스트레스 40 이하] \"초반 적응기라 힘든 것 같아요. 차근차근 열심히 하다보면 금방 따라잡겠죠!\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 50,
+                  "label": "사교(teamwork) 50 이상"
+                },
+                {
+                  "stat": "stress",
+                  "max": 40,
+                  "label": "스트레스 40 이하"
+                }
+              ],
+              "lockedReason": "사교력이 부족하거나 스트레스가 너무 높습니다.",
+              "statChanges": {
+                "teamwork": 7
+              },
+              "nextNodeId": "pro_c2_res1"
+            },
+            {
+              "id": "pro_c3",
+              "text": "🔒 [HP 50] \"걱정 마십시오! 쓰러져도 키보드 위에서 쓰러지겠습니다!\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "hp",
+                  "min": 50,
+                  "label": "체력(HP) 50 이상"
+                }
+              ],
+              "lockedReason": "버틸 체력이 부족합니다.",
+              "statChanges": {
+                "hp": -10,
+                "stress": 5
+              },
+              "nextNodeId": "pro_c3_res1"
+            },
+            {
+              "id": "pro_c4",
+              "text": "🔒 [운 50] 프로님이 조심스럽게 말씀한다. “이건 사실 제가 교육생 시절에 공부하려고 만들었던 건데…”",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "luck",
+                  "min": 50,
+                  "label": "운빨 50 이상"
+                }
+              ],
+              "lockedReason": "기적을 바랄 운이 부족합니다.",
+              "statChanges": {
+                "fe": 3,
+                "be": 2,
+                "stress": 10
+              },
+              "nextNodeId": "pro_c4_res1"
+            }
+          ]
+        },
+        "pro_c1_res1": {
+          "id": "pro_c1_res1",
+          "speaker": "조선미 프로",
+          "speakerId": "NPC_PRO_SUNMI",
+          "emotion": "NORMAL",
+          "text": "\"솔직하게 말씀해 주셔서 감사합니다. 일단 자격증보다는 정규 과정에 집중하는 방향으로 스케줄을 조정해 봐야겠네요...\"",
+          "nextNodeId": "pro_c1_res2"
+        },
+        "pro_c1_res2": {
+          "id": "pro_c1_res2",
+          "speaker": "SYSTEM",
+          "text": "(솔직한 고백 덕분에 프로님의 집중 관리 대상이 되었다.)"
+        },
+        "pro_c2_res1": {
+          "id": "pro_c2_res1",
+          "speaker": "조선미 프로",
+          "speakerId": "NPC_PRO_SUNMI",
+          "emotion": "SMILE",
+          "text": "\"긍정적인 마인드가 좋네요! 모르는 게 있으면 언제든 질문하시고, 페이스 조절 잘하시기 바랍니다. 화이팅!\"",
+          "nextNodeId": "pro_c2_res2"
+        },
+        "pro_c2_res2": {
+          "id": "pro_c2_res2",
+          "speaker": "SYSTEM",
+          "text": "(프로님의 든든한 신뢰를 획득했다.)"
+        },
+        "pro_c3_res1": {
+          "id": "pro_c3_res1",
+          "speaker": "조선미 프로",
+          "speakerId": "NPC_PRO_SUNMI",
+          "emotion": "TIRED",
+          "text": "\"열정은 높이 사지만... 쓰러지면 곤란합니다. 건강 관리도 개발자의 실력이에요.\"",
+          "nextNodeId": "pro_c3_res2"
+        },
+        "pro_c3_res2": {
+          "id": "pro_c3_res2",
+          "speaker": "SYSTEM",
+          "text": "(무식한 패기를 어필했다. 살짝 민망하다.)"
+        },
+        "pro_c4_res1": {
+          "id": "pro_c4_res1",
+          "speaker": "조선미 프로",
+          "speakerId": "NPC_PRO_SUNMI",
+          "emotion": "SMILE",
+          "text": "\"{playerName}님께만 특별히 빌려드리는 거니까, 꼭 도움 받으셨으면 좋겠네요.\"",
+          "nextNodeId": "pro_c4_res2"
+        },
+        "pro_c4_res2": {
+          "id": "pro_c4_res2",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"헉... 귀한 걸...! 뼈를 묻겠습니다!\"",
+          "nextNodeId": "pro_c4_res3"
+        },
+        "pro_c4_res3": {
+          "id": "pro_c4_res3",
+          "speaker": "SYSTEM",
+          "text": "(프로님이 본인의 교육생 시절 만들어둔 학습 노트를 건네준다. 도움은 되겠지만 이걸 받은 이상 잘해야 한다는 압박감이 크다.)"
+        }
+      },
+      "triggerTiming": {
+        "week": 2,
+        "day": 1,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     },
-    "location": "캠퍼스",
-    "isRepeatable": false,
-    "dialogues": [
-      {
-        "speakerId": "SYSTEM",
-        "text": "조선미 프로님이 나를 불렀다."
-      },
-      {
-        "speakerId": "NPC_PRO_SUNMI",
-        "speakerName": "조선미 프로",
-        "emotion": "SERIOUS",
-        "text": "\"다른 분들에 비해 진도 따라가는 걸 버거워하시는 것 같네요.\""
-      }
-    ],
-    "choices": [
-      {
-        "choiceId": 1,
-        "actionType": "NORMAL",
-        "condition": null,
-        "text": "\"너무 어렵습니다... 자격증도 병행하려 했는데 무리네요.\"",
-        "result": {
-          "statChanges": {
-            "stress": -10
-          },
-          "feedbackDialogues": [
+    {
+      "id": "EVT_MAIN_W2_D4_MORNING_MM",
+      "label": "MM 대참사",
+      "startNodeId": "mm_n1",
+      "nodes": {
+        "mm_n1": {
+          "id": "mm_n1",
+          "speaker": "SYSTEM",
+          "text": "친구에게 보낼 불평(\"집 가고 싶다ㅋㅋ\")을 단체 매터모스트 공지 채널에 보냈다.",
+          "choices": [
             {
-              "speakerId": "NPC_PRO_SUNMI",
-              "speakerName": "조선미 프로",
-              "emotion": "NORMAL",
-              "text": "\"솔직하게 말씀해 주셔서 감사합니다. 일단 자격증보다는 정규 과정에 집중하는 방향으로 스케줄을 조정해 봐야겠네요...\""
+              "id": "mm_c1",
+              "text": "식은땀을 흘리며 황급히 지우지만 이미 누군가 봤다. 아래로 조롱용 이모티콘들이 달린다.",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": 20,
+                "hp": -10
+              },
+              "nextNodeId": "mm_c1_res1"
             },
             {
-              "speakerId": "SYSTEM",
-              "text": "(솔직한 고백 덕분에 프로님의 집중 관리 대상이 되었다.)"
+              "id": "mm_c2",
+              "text": "🔒 [코딩 60] 매터모스트 서버 해킹을 시도해 기록을 삭제한다.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "be",
+                  "min": 60,
+                  "label": "백엔드(BE) 60 이상"
+                },
+                {
+                  "stat": "fe",
+                  "min": 60,
+                  "label": "프론트엔드(FE) 60 이상"
+                }
+              ],
+              "lockedReason": "서버를 해킹할 코딩 지식이 부족합니다.",
+              "statChanges": {
+                "fe": 8,
+                "be": 7
+              },
+              "nextNodeId": "mm_c2_res1"
+            },
+            {
+              "id": "mm_c3",
+              "text": "🔒 [운 40] 아무도 안 본 1초 찰나에 빛의 속도로 삭제 성공.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "luck",
+                  "min": 40,
+                  "label": "운빨 40 이상"
+                }
+              ],
+              "lockedReason": "기적의 타이밍을 잡지 못했습니다.",
+              "statChanges": {
+                "luck": 15,
+                "stress": -10
+              },
+              "nextNodeId": "mm_c3_res1"
+            },
+            {
+              "id": "mm_c4",
+              "text": "🔒 [사교 65] 재빠르게 그 밑에 \"...라고 할 뻔~\" 이라고 덧붙인다.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 65,
+                  "label": "사교 65 이상"
+                }
+              ],
+              "lockedReason": "순발력 있는 유머 감각이 부족합니다.",
+              "statChanges": {
+                "teamwork": 10,
+                "stress": -5
+              },
+              "nextNodeId": "mm_c4_res1"
             }
           ]
-        }
-      },
-      {
-        "choiceId": 2,
-        "actionType": "LOCKED",
-        "condition": {
-          "social": 50,
-          "stress_max": 40
         },
-        "text": "🔒 [사교력 50, 스트레스 40 이하만 가능] \"초반 적응기라 힘든 것 같아요. 차근차근 열심히 하다보면 금방 따라잡겠죠!\"",
-        "result": {
-          "statChanges": {
-            "social": 5
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_PRO_SUNMI",
-              "speakerName": "조선미 프로",
-              "emotion": "SMILE",
-              "text": "\"긍정적인 마인드가 좋네요! 모르는 게 있으면 언제든 질문하시고, 페이스 조절 잘하시기 바랍니다. 화이팅!\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(프로님의 든든한 신뢰를 획득했다.)"
-            }
-          ]
+        "mm_c1_res1": {
+          "id": "mm_c1_res1",
+          "speaker": "종민",
+          "speakerId": "NPC_CLASSMATE_JONGMIN",
+          "emotion": "PLAYFUL",
+          "text": "\"[MM 댓글] ㅋㅋㅋㅋ 이걸 공지 방에 올리네. 스크린샷 박제 완료요~\"",
+          "nextNodeId": "mm_c1_res2"
+        },
+        "mm_c1_res2": {
+          "id": "mm_c1_res2",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"아... 내 인생...\"",
+          "nextNodeId": "mm_c1_res3"
+        },
+        "mm_c1_res3": {
+          "id": "mm_c1_res3",
+          "speaker": "SYSTEM",
+          "text": "(동기들의 놀림이 시작되었다. 오늘 밤 이불킥 예약이다.)"
+        },
+        "mm_c2_res1": {
+          "id": "mm_c2_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"(토독토독...) 서버의 취약점을 파고들어서 DB를 날려버리면...!\"",
+          "nextNodeId": "mm_c2_res2"
+        },
+        "mm_c2_res2": {
+          "id": "mm_c2_res2",
+          "speaker": "SYSTEM",
+          "text": "(System Error: 접근 권한이 없습니다.)",
+          "nextNodeId": "mm_c2_res3"
+        },
+        "mm_c2_res3": {
+          "id": "mm_c2_res3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"되겠냐고...\""
+        },
+        "mm_c3_res1": {
+          "id": "mm_c3_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"후... 1초 만에 지웠으니 아무도 못 봤겠지?\"",
+          "nextNodeId": "mm_c3_res2"
+        },
+        "mm_c3_res2": {
+          "id": "mm_c3_res2",
+          "speaker": "SYSTEM",
+          "text": "(완벽 범죄다. 아무도 눈치채지 못한 듯하다.)"
+        },
+        "mm_c4_res1": {
+          "id": "mm_c4_res1",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"휴... 살았다...\"",
+          "nextNodeId": "mm_c4_res2"
+        },
+        "mm_c4_res2": {
+          "id": "mm_c4_res2",
+          "speaker": "SYSTEM",
+          "text": "(자연스러운 대처였다. 하마터면 나락쇼가 될 뻔했다…)"
         }
       },
-      {
-        "choiceId": 3,
-        "actionType": "LOCKED",
-        "condition": {
-          "hp": 50
-        },
-        "text": "🔒 [HP 50] \"걱정 마십시오! 쓰러져도 키보드 위에서 쓰러지겠습니다!\"",
-        "result": {
-          "statChanges": {
-            "hp": -10,
-            "stress": 5
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_PRO_SUNMI",
-              "speakerName": "조선미 프로",
-              "emotion": "TIRED",
-              "text": "\"열정은 높이 사지만... 쓰러지면 곤란합니다. 건강 관리도 개발자의 실력이에요.\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(무식한 패기를 어필했다. 살짝 민망하다.)"
-            }
-          ]
-        }
+      "triggerTiming": {
+        "week": 2,
+        "day": 4,
+        "timeOfDay": "오전"
       },
-      {
-        "choiceId": 4,
-        "actionType": "LOCKED",
-        "condition": {
-          "luck": 50
-        },
-        "text": "🔒 [운 50] 프로님이 조심스럽게 말씀한다. “이건 사실 제가 교육생 시절에 공부하려고 만들었던 건데…”",
-        "result": {
-          "statChanges": {
-            "code": 5,
-            "stress": 10
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_PRO_SUNMI",
-              "speakerName": "조선미 프로",
-              "emotion": "SMILE",
-              "text": "\"{playerName}님께만 특별히 빌려드리는 거니까, 꼭 도움 받으셨으면 좋겠네요.\""
-            },
-            {
-              "speakerId": "PLAYER",
-              "text": "\"헉... 귀한 걸...! 뼈를 묻겠습니다!\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(프로님이 본인의 교육생 시절 만들어둔 학습 노트를 건네준다. 도움은 되겠지만 이걸 받은 이상 잘해야 한다는 압박감이 크다.)"
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "eventId": "EVT_MAIN_W2_D4_MORNING_MM",
-    "eventName": "MM 대참사",
-    "eventType": "FIXED",
-    "triggerTiming": {
-      "week": 2,
-      "day": 4,
-      "timeOfDay": "오전"
-    },
-    "location": "캠퍼스",
-    "isRepeatable": false,
-    "dialogues": [
-      {
-        "speakerId": "SYSTEM",
-        "text": "친구에게 보낼 불평(\"집 가고 싶다ㅋㅋ\")을 단체 매터모스트 공지 채널에 보냈다."
-      }
-    ],
-    "choices": [
-      {
-        "choiceId": 1,
-        "actionType": "NORMAL",
-        "condition": null,
-        "text": "식은땀을 흘리며 황급히 지우지만 이미 누군가 봤다. 아래로 조롱용 이모티콘들이 달린다.",
-        "result": {
-          "statChanges": {
-            "stress": 20,
-            "hp": -10
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_CLASSMATE_JONGMIN",
-              "speakerName": "종민",
-              "emotion": "PLAYFUL",
-              "text": "\"[MM 댓글] ㅋㅋㅋㅋ 이걸 공지 방에 올리네. 스크린샷 박제 완료요~\""
-            },
-            {
-              "speakerId": "PLAYER",
-              "text": "\"아... 내 인생...\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(동기들의 놀림이 시작되었다. 오늘 밤 이불킥 예약이다.)"
-            }
-          ]
-        }
-      },
-      {
-        "choiceId": 2,
-        "actionType": "LOCKED",
-        "condition": {
-          "code": 60
-        },
-        "text": "🔒 [코딩 60] 매터모스트 서버 해킹을 시도해 기록을 삭제한다.",
-        "result": {
-          "statChanges": {
-            "code": 15
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "PLAYER",
-              "text": "\"(토독토독...) 서버의 취약점을 파고들어서 DB를 날려버리면...!\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(System Error: 접근 권한이 없습니다.)"
-            },
-            {
-              "speakerId": "PLAYER",
-              "text": "\"되겠냐고...\""
-            }
-          ]
-        }
-      },
-      {
-        "choiceId": 3,
-        "actionType": "LOCKED",
-        "condition": {
-          "luck": 40
-        },
-        "text": "🔒 [운 40] 아무도 안 본 1초 찰나에 빛의 속도로 삭제 성공.",
-        "result": {
-          "statChanges": {
-            "luck": 15,
-            "stress": -10
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "PLAYER",
-              "text": "\"후... 1초 만에 지웠으니 아무도 못 봤겠지?\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(완벽 범죄다. 아무도 눈치채지 못한 듯하다.)"
-            }
-          ]
-        }
-      },
-      {
-        "choiceId": 4,
-        "actionType": "LOCKED",
-        "condition": {
-          "social": 65
-        },
-        "text": "🔒 [사교 65] 재빠르게 그 밑에 \"...라고 할 뻔~\" 이라고 덧붙인다.",
-        "result": {
-          "statChanges": {
-            "social": 10,
-            "stress": -5
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "PLAYER",
-              "text": "\"휴... 살았다...\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(자연스러운 대처였다. 하마터면 나락쇼가 될 뻔했다…)"
-            }
-          ]
-        }
-      }
-    ]
-  }
-]
+      "location": "캠퍼스",
+      "eventType": "FIXED"
+    }
+  ]
+}

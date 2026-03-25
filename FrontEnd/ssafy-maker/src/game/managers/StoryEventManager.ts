@@ -26,6 +26,7 @@ type StoryEventManagerOptions = {
   getHudState: () => HudState;
   getCurrentArea: () => AreaId;
   getCurrentLocation: () => string;
+  getPlayerGender: () => string;
   getPlayerName: () => string;
   setRuntimeDialogueScript: (script: DialogueScript) => void;
   removeRuntimeDialogueScript: (dialogueId: string) => void;
@@ -43,6 +44,7 @@ export class StoryEventManager {
   private readonly getHudState: () => HudState;
   private readonly getCurrentArea: () => AreaId;
   private readonly getCurrentLocation: () => string;
+  private readonly getPlayerGender: () => string;
   private readonly getPlayerName: () => string;
   private readonly setRuntimeDialogueScript: (script: DialogueScript) => void;
   private readonly removeRuntimeDialogueScript: (dialogueId: string) => void;
@@ -66,6 +68,7 @@ export class StoryEventManager {
     this.getHudState = options.getHudState;
     this.getCurrentArea = options.getCurrentArea;
     this.getCurrentLocation = options.getCurrentLocation;
+    this.getPlayerGender = options.getPlayerGender;
     this.getPlayerName = options.getPlayerName;
     this.setRuntimeDialogueScript = options.setRuntimeDialogueScript;
     this.removeRuntimeDialogueScript = options.removeRuntimeDialogueScript;
@@ -126,7 +129,16 @@ export class StoryEventManager {
     }
 
     return getFixedEventEntries(rawData)
-      .filter((event) => event.eventType === "FIXED")
+      .filter((event) => {
+        if (event.eventType !== "FIXED" && event.eventType !== "ROMANCE") return false;
+        if (event.eventType === "ROMANCE") {
+          const eventId = String((event.id ?? event.eventId) || "");
+          const gender = this.getPlayerGender();
+          if (gender === "MALE" && eventId.includes("_MINSU_")) return false;
+          if (gender === "FEMALE" && eventId.includes("_HYO_")) return false;
+        }
+        return true;
+      })
       .map((event) =>
         buildFixedEventDebugEntry(event, {
           completedEventIds: this.completedFixedEventIds
@@ -177,7 +189,19 @@ export class StoryEventManager {
 
     entries.forEach((event) => {
       const timing = event.triggerTiming;
-      if (!timing || event.eventType !== "FIXED") {
+      if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) {
+        return;
+      }
+
+      if (event.eventType === "ROMANCE") {
+        const eventId = String((event.id ?? event.eventId) || "");
+        const gender = this.getPlayerGender();
+        if (gender === "MALE" && eventId.includes("_MINSU_")) return;
+        if (gender === "FEMALE" && eventId.includes("_HYO_")) return;
+      }
+
+      const sameWeek = Math.round(timing.week ?? -1) === week;
+      if (!sameWeek) {
         return;
       }
 
@@ -193,9 +217,10 @@ export class StoryEventManager {
       }
 
       const slotIndex = getWeeklyPlanSlotIndex(day - 1, timeIndex);
+      const rawEventName = event.label ?? event.eventName;
       const eventName =
-        typeof event.eventName === "string" && event.eventName.trim().length > 0
-          ? event.eventName.trim()
+        typeof rawEventName === "string" && rawEventName.trim().length > 0
+          ? rawEventName.trim()
           : "고정 이벤트";
       slots.set(slotIndex, eventName);
     });
@@ -219,7 +244,7 @@ export class StoryEventManager {
   }
 
   tryStartCurrentFixedEvent(): boolean {
-    return this.tryStartFixedEventForLocation(this.getCurrentLocation());
+    return this.tryStartFixedEventForLocation(this.getCurrentArea());
   }
 
   refreshCurrentWeekLoadState(): void {
@@ -384,7 +409,16 @@ export class StoryEventManager {
 
     return (
       getFixedEventEntries(rawData).find((event) => {
-        return event.eventType === "FIXED" && typeof event.eventId === "string" && event.eventId.trim() === normalizedEventId;
+        const rawEventId = event.id ?? event.eventId;
+        const eventIdStr = typeof rawEventId === "string" ? rawEventId : "";
+        
+        if (event.eventType === "ROMANCE") {
+          const gender = this.getPlayerGender();
+          if (gender === "MALE" && eventIdStr.includes("_MINSU_")) return false;
+          if (gender === "FEMALE" && eventIdStr.includes("_HYO_")) return false;
+        }
+
+        return (event.eventType === "FIXED" || event.eventType === "ROMANCE") && typeof rawEventId === "string" && rawEventId.trim() === normalizedEventId;
       }) ?? null
     );
   }
@@ -405,7 +439,8 @@ export class StoryEventManager {
         week,
         day: this.resolveDayIndex(hudState.dayLabel) + 1,
         timeOfDay: hudState.timeLabel,
-        location
+        location,
+        playerGender: this.getPlayerGender()
       },
       this.completedFixedEventIds
     );
@@ -423,11 +458,19 @@ export class StoryEventManager {
     return (
       getFixedEventEntries(rawData).find((event) => {
         const timing = event.triggerTiming;
-        if (!timing || event.eventType !== "FIXED") {
+        if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) {
           return false;
         }
 
-        const eventId = typeof event.eventId === "string" ? event.eventId : "";
+        const rawEventId = event.id ?? event.eventId;
+        const eventId = typeof rawEventId === "string" ? rawEventId : "";
+        
+        if (event.eventType === "ROMANCE") {
+          const gender = this.getPlayerGender();
+          if (gender === "MALE" && eventId.includes("_MINSU_")) return false;
+          if (gender === "FEMALE" && eventId.includes("_HYO_")) return false;
+        }
+
         if (event.isRepeatable !== true && eventId && this.completedFixedEventIds.includes(eventId)) {
           return false;
         }
@@ -479,9 +522,11 @@ export class StoryEventManager {
   }
 
   private startFixedEvent(event: FixedEventEntry): boolean {
-    const eventId = typeof event.eventId === "string" ? event.eventId : null;
+    const rawEventId = event.id ?? event.eventId;
+    const eventId = typeof rawEventId === "string" ? rawEventId : null;
+    const rawEventName = event.label ?? event.eventName;
     const runtimeScript = buildDialogueScriptFromFixedEventEntry(StoryEventManager.FIXED_EVENT_DIALOGUE_ID, event, {
-      fallbackNpcLabel: typeof event.eventName === "string" ? event.eventName : "이벤트",
+      fallbackNpcLabel: typeof rawEventName === "string" ? rawEventName : "이벤트",
       playerName: this.getPlayerName()
     });
 
