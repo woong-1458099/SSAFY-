@@ -66,6 +66,12 @@ export const CAMPUS_TMX_LAYER_NAMES = {
   foreground: []
 } as const;
 
+export const CLASSROOM_TMX_LAYER_NAMES = {
+  collision: ["tile layer 3", "tile layer 4"],
+  interaction: [],
+  foreground: ["tile layer 4"]
+} as const;
+
 export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
   world: {
     id: "world",
@@ -120,6 +126,21 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
           alpha: 0.88
         }
       ]
+    }
+  },
+  classroom: {
+    id: "classroom",
+    label: "교실",
+    map: {
+      entryPoint: { x: 480, y: 528 },
+      tmxKey: ASSET_KEYS.map.classroomTmx,
+      collisionLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.collision],
+      interactionLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.interaction],
+      foregroundLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.foreground]
+    },
+    presentation: {
+      backgroundKey: ASSET_KEYS.background.campus,
+      npcScale: DEFAULT_AREA_NPC_SCALE
     }
   }
 };

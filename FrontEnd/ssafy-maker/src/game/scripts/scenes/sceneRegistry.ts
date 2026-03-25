@@ -4,6 +4,7 @@ import type { AreaId } from "../../../common/enums/area";
 import type { SceneId } from "./sceneIds";
 import { SCENE_IDS } from "./sceneIds";
 import { SCENE_CAMPUS_DEFAULT } from "./scene_campus_default";
+import { SCENE_CLASSROOM_DEFAULT } from "./scene_classroom_default";
 import { SCENE_DOWNTOWN_DEFAULT } from "./scene_downtown_default";
 import { SCENE_WORLD_DEFAULT } from "./scene_world_default";
 import { SCENE_001 } from "./scene_001";
@@ -14,6 +15,7 @@ export const SCENE_REGISTRY = {
   [SCENE_IDS.worldDefault]: SCENE_WORLD_DEFAULT,
   [SCENE_IDS.downtownDefault]: SCENE_DOWNTOWN_DEFAULT,
   [SCENE_IDS.campusDefault]: SCENE_CAMPUS_DEFAULT,
+  [SCENE_IDS.classroomDefault]: SCENE_CLASSROOM_DEFAULT,
   [SCENE_IDS.campusSample]: SCENE_001
 } satisfies Record<SceneId, SceneScript>;
 
@@ -29,5 +31,7 @@ export function getDefaultSceneIdForArea(areaId: AreaId): SceneId {
       return SCENE_IDS.downtownDefault;
     case "campus":
       return SCENE_IDS.campusDefault;
+    case "classroom":
+      return SCENE_IDS.classroomDefault;
   }
 }

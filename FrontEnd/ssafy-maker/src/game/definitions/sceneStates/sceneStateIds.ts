@@ -2,13 +2,15 @@
 export const SCENE_STATE_IDS = {
   worldDefault: "world_default",
   downtownDefault: "downtown_default",
-  campusDefault: "campus_default"
+  campusDefault: "campus_default",
+  classroomDefault: "classroom_default"
 } as const;
 
 export const LEGACY_SCENE_STATE_ID_ALIASES = {
   scene_world_default: SCENE_STATE_IDS.worldDefault,
   scene_downtown_default: SCENE_STATE_IDS.downtownDefault,
-  scene_campus_default: SCENE_STATE_IDS.campusDefault
+  scene_campus_default: SCENE_STATE_IDS.campusDefault,
+  scene_classroom_default: SCENE_STATE_IDS.classroomDefault
 } as const;
 
 export type SceneStateId = (typeof SCENE_STATE_IDS)[keyof typeof SCENE_STATE_IDS];

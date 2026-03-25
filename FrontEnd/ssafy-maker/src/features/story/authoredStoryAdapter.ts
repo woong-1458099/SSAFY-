@@ -78,7 +78,7 @@ type SceneStateNpcJson = {
   dialogueId?: string;
 };
 
-const AREA_ID_SET = new Set<AreaId>(["world", "downtown", "campus"]);
+const AREA_ID_SET = new Set<AreaId>(["world", "downtown", "campus", "classroom"]);
 const REQUIRED_DIALOGUE_IDS = new Set<string>(Object.values(DIALOGUE_IDS));
 const REQUIRED_SCENE_STATE_IDS = new Set<SceneStateId>(Object.values(SCENE_STATE_IDS));
 export const AUTHORED_DIALOGUE_FALLBACK_ID = createRuntimeDialogueId("authored_dialogue_missing");

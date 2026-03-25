@@ -1,6 +1,6 @@
 // 게임 시작 전에 공통 에셋과 TMX/TSX, NPC sprite 리소스를 미리 로드하는 씬이다.
 import Phaser from "phaser";
-import { ASSET_KEYS, ASSET_PATHS } from "../../common/assets/assetKeys";
+import { ASSET_KEYS, ASSET_PATHS, MAP_TILESET_ASSETS } from "../../common/assets/assetKeys";
 import { SCENE_KEYS } from "../../common/enums/scene";
 import { getAuthBootstrapState } from "../../features/auth/AuthGateway";
 import { preloadInventoryUiAssets } from "../../features/inventory/inventoryAssets";
@@ -18,10 +18,10 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
-    // 실제 파일명 변경에 맞춰 tileset 이미지 경로를 수정한다.
-    this.load.image(ASSET_KEYS.map.tilesetImage, ASSET_PATHS.map.tilesetImage);
-    // 캠퍼스 TMX가 참조하는 external TSX를 텍스트로 로드한다.
-    this.load.text(ASSET_KEYS.map.tilesetTsx, ASSET_PATHS.map.tilesetTsx);
+    MAP_TILESET_ASSETS.forEach((tilesetAsset) => {
+      this.load.image(tilesetAsset.imageKey, tilesetAsset.imagePath);
+      this.load.text(tilesetAsset.tsxKey, tilesetAsset.tsxPath);
+    });
     this.load.spritesheet(ASSET_KEYS.ui.buttons, ASSET_PATHS.ui.buttons, {
       frameWidth: AREA_TRANSITION_MARKER_SPRITE.frameWidth,
       frameHeight: AREA_TRANSITION_MARKER_SPRITE.frameHeight
@@ -40,6 +40,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.text(ASSET_KEYS.map.worldTmx, ASSET_PATHS.map.worldTmx);
     this.load.text(ASSET_KEYS.map.downtownTmx, ASSET_PATHS.map.downtownTmx);
     this.load.text(ASSET_KEYS.map.campusTmx, ASSET_PATHS.map.campusTmx);
+    this.load.text(ASSET_KEYS.map.classroomTmx, ASSET_PATHS.map.classroomTmx);
     this.load.json(ASSET_KEYS.story.authoredDialogues, ASSET_PATHS.story.authoredDialogues);
     this.load.json(ASSET_KEYS.story.authoredSceneStates, ASSET_PATHS.story.authoredSceneStates);
 
