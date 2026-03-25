@@ -28,6 +28,7 @@ type ProgressionSnapshot = {
   weeklyPlan: WeeklyPlanOptionId[];
   weeklyPlanWeek: number;
   lastPaidWeeklySalaryWeek: number;
+  completedPlanSlotIndices: number[];
 };
 
 type WeeklyPlanActivityPayload = {
@@ -45,6 +46,7 @@ type ProgressionManagerOptions = {
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
+  getCompletedFixedEventSlotIndices?: (week: number) => ReadonlySet<number>;
   resolveTimeAdvanceBlockedMessage?: () => string | null;
   onNotice?: (message: string) => void;
   onStartEndingFlow?: () => void;
@@ -101,6 +103,7 @@ export class ProgressionManager {
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   private readonly getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
+  private readonly getCompletedFixedEventSlotIndices?: (week: number) => ReadonlySet<number>;
   private readonly resolveTimeAdvanceBlockedMessage?: () => string | null;
   private readonly onNotice?: (message: string) => void;
   private readonly onStartEndingFlow?: () => void;
@@ -110,6 +113,7 @@ export class ProgressionManager {
   private weeklyPlan: WeeklyPlanOptionId[] = createDefaultWeeklyPlan();
   private weeklyPlanWeek = 0;
   private lastPaidWeeklySalaryWeek = 0;
+  private completedPlanSlotIndices = new Set<number>();
   private pendingWeeklySalaryWeek: number | null = null;
   private plannerRoot?: Phaser.GameObjects.Container;
   private activityRoot?: Phaser.GameObjects.Container;
@@ -122,6 +126,7 @@ export class ProgressionManager {
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
     this.getFixedEventSlots = options.getFixedEventSlots;
+    this.getCompletedFixedEventSlotIndices = options.getCompletedFixedEventSlotIndices;
     this.resolveTimeAdvanceBlockedMessage = options.resolveTimeAdvanceBlockedMessage;
     this.onNotice = options.onNotice;
     this.onStartEndingFlow = options.onStartEndingFlow;
@@ -230,6 +235,7 @@ export class ProgressionManager {
 
     if (result.dayPassed && this.timeState.dayCycleIndex === 0) {
       this.weeklyPlan = createDefaultWeeklyPlan();
+      this.completedPlanSlotIndices.clear();
       this.onDayPassed?.();
     }
 
@@ -251,6 +257,7 @@ export class ProgressionManager {
 
     if (result.dayPassed && this.timeState.dayCycleIndex === 0) {
       this.weeklyPlan = createDefaultWeeklyPlan();
+      this.completedPlanSlotIndices.clear();
       this.onDayPassed?.();
     }
 
@@ -264,6 +271,7 @@ export class ProgressionManager {
     this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
+    const previousWeek = this.timeState.week;
 
     const maxActionPoint = Math.max(0, Math.round(next.maxActionPoint ?? this.timeState.maxActionPoint));
     const actionPoint = Phaser.Math.Clamp(
@@ -290,6 +298,9 @@ export class ProgressionManager {
       week: Math.max(1, Math.round(next.week ?? this.timeState.week))
     };
 
+    if (this.timeState.week !== previousWeek) {
+      this.completedPlanSlotIndices.clear();
+    }
     this.pendingWeeklySalaryWeek = null;
     this.endingFlowStarted = false;
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
@@ -320,7 +331,8 @@ export class ProgressionManager {
       timeState: { ...this.timeState },
       weeklyPlan: [...this.weeklyPlan],
       weeklyPlanWeek: this.weeklyPlanWeek,
-      lastPaidWeeklySalaryWeek: this.lastPaidWeeklySalaryWeek
+      lastPaidWeeklySalaryWeek: this.lastPaidWeeklySalaryWeek,
+      completedPlanSlotIndices: [...this.completedPlanSlotIndices]
     };
   }
 
@@ -339,6 +351,16 @@ export class ProgressionManager {
     if (typeof snapshot?.lastPaidWeeklySalaryWeek === "number") {
       this.lastPaidWeeklySalaryWeek = Math.max(0, Math.round(snapshot.lastPaidWeeklySalaryWeek));
     }
+    this.completedPlanSlotIndices = new Set(
+      Array.isArray(snapshot?.completedPlanSlotIndices)
+        ? snapshot.completedPlanSlotIndices
+            .map((value) => Math.round(value))
+            .filter((value) => Number.isFinite(value) && value >= 0 && value < this.weeklyPlan.length)
+        : []
+    );
+    if (this.weeklyPlanWeek !== this.timeState.week) {
+      this.completedPlanSlotIndices.clear();
+    }
     this.pendingWeeklySalaryWeek = null;
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
   }
@@ -356,7 +378,16 @@ export class ProgressionManager {
       return false;
     }
 
-    this.openWeeklyPlanActivity(activity);
+    const completedSlotIndex = getWeeklyPlanSlotIndex(this.timeState.dayCycleIndex, this.timeState.timeCycleIndex);
+    this.openWeeklyPlanActivity(activity, () => {
+      this.completedPlanSlotIndices.add(completedSlotIndex);
+      const hudState = this.getHudState();
+      this.applyStatDelta(activity.option.statDelta, 1);
+      this.patchHudState({
+        hp: Phaser.Math.Clamp(hudState.hp + activity.option.hpDelta, 0, hudState.hpMax)
+      });
+      this.onNotice?.(`${activity.option.label} 완료`);
+    });
     return true;
   }
 
@@ -377,6 +408,7 @@ export class ProgressionManager {
       actionPoint: this.timeState.actionPoint,
       maxActionPoint: this.timeState.maxActionPoint,
       fixedEventSlots: this.getFixedEventSlots?.(this.timeState.week) ?? new Map(),
+      completedSlotIndices: this.buildCompletedSlotIndices(this.timeState.week),
       initialPlan: this.weeklyPlan,
       onConfirm: (plan) => {
         this.weeklyPlan = [...plan];
@@ -429,6 +461,7 @@ export class ProgressionManager {
       dayCycleIndex: this.timeState.dayCycleIndex,
       timeCycleIndex: this.timeState.timeCycleIndex
     };
+    const completedSlotIndex = getWeeklyPlanSlotIndex(previousState.dayCycleIndex, previousState.timeCycleIndex);
     const activity = this.buildWeeklyPlanActivityPayload(previousState.dayCycleIndex, previousState.timeCycleIndex);
     const failure = this.getConsumeActionPointFailureForActivity();
 
@@ -442,6 +475,7 @@ export class ProgressionManager {
       if (!result.ok) {
         return;
       }
+      this.completedPlanSlotIndices.add(completedSlotIndex);
       this.onNotice?.("이번 시간대에는 계획 보상이 없습니다");
       return;
     }
@@ -452,6 +486,7 @@ export class ProgressionManager {
         return;
       }
 
+      this.completedPlanSlotIndices.add(completedSlotIndex);
       const hudState = this.getHudState();
       this.applyStatDelta(activity.option.statDelta, 1);
       this.patchHudState({
@@ -549,5 +584,14 @@ export class ProgressionManager {
 
   private shouldOpenWeeklyPlanner(): boolean {
     return this.timeState.dayCycleIndex === 0 && this.weeklyPlanWeek < this.timeState.week;
+  }
+
+  private buildCompletedSlotIndices(week: number): ReadonlySet<number> {
+    const completedSlotIndices = new Set(this.completedPlanSlotIndices);
+    const completedFixedEventSlotIndices = this.getCompletedFixedEventSlotIndices?.(week);
+    completedFixedEventSlotIndices?.forEach((slotIndex) => {
+      completedSlotIndices.add(slotIndex);
+    });
+    return completedSlotIndices;
   }
 }
