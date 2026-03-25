@@ -11,7 +11,9 @@
 
 - 앱 시작점은 `src/app/main.ts`다.
 - Phaser 씬 등록은 `src/app/registry/sceneRegistry.ts`에서 묶는다.
-- 실제 게임 조립 중심은 `src/game/scenes/MainScene.ts`다.
+- 실제 게임 조립 중심은 `src/game/scenes/MainScene.ts`와 `src/game/scenes/InGameUIScene.ts`다.
+- `MainScene`은 월드 로직과 상태를, `InGameUIScene`은 모든 UI(HUD, 메뉴, 대화창 등)를 전담하여 병렬로 실행된다.
+- 이 두 씬은 Phaser 이벤트를 통해 상태를 주고받는 느슨한 결합(Loose Coupling) 구조를 가진다.
 - 시작 씬 선택과 scene script 등록은 `src/game/scripts/scenes/sceneRegistry.ts`에서 관리한다.
 - 데이터 정의는 `definitions`, 실행 순서는 `scripts`, 실제 동작은 `managers`가 담당한다.
 - `scene state`는 "맵이 열리자마자 깔리는 기본 상태"다.
@@ -30,7 +32,8 @@
 3. `src/app/registry/sceneRegistry.ts`
 4. `src/game/scripts/scenes/sceneRegistry.ts`
 5. `src/game/scenes/MainScene.ts`
-6. `src/game/managers/InteractionManager.ts`
+6. `src/game/scenes/InGameUIScene.ts`
+7. `src/game/managers/InteractionManager.ts`
 7. `src/game/managers/NpcManager.ts`
 8. `src/game/directors/SceneDirector.ts`
 9. `src/game/systems/sceneStateRuntime.ts`
@@ -90,7 +93,7 @@
 3. `src/app/registry/sceneRegistry.ts`의 `SCENE_REGISTRY`가 씬 클래스를 등록한다.
 4. `src/game/scripts/scenes/sceneRegistry.ts`가 시작 씬과 scene script를 해석한다.
 5. `BootScene`와 `PreloadScene`이 선행되고, 이후 메인 게임 또는 미니게임 씬으로 넘어간다.
-6. `MainScene`에서 world, player, NPC, dialogue, interaction, debug가 조립된다.
+6. `MainScene`과 `InGameUIScene`이 동시에 실행되어 월드 객체와 UI 요소가 각각 조립된다.
 
 ## 작업 시 판단 기준
 

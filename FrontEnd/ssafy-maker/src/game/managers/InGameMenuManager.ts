@@ -35,7 +35,7 @@ import { createSaveConfirmDialog } from "../../features/save/components/saveConf
 import type { HudState, PlayerStatsState, PlayerStatKey } from "../state/gameState";
 import { UI_DEPTH } from "../systems/uiDepth";
 
-type InGameMenuManagerOptions = {
+export type InGameMenuManagerOptions = {
   scene: Phaser.Scene;
   getStatsState: () => PlayerStatsState;
   getHudState: () => HudState;

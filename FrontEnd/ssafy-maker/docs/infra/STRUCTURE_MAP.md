@@ -20,7 +20,7 @@
 - Authored Story Loader: `src/infra/story/authoredStoryRepository.ts`
 - App bootstrap: `src/app`
 - Shared scene layer: `src/game/scenes`
-- Main orchestration scene: `src/game/scenes/MainScene.ts`
+- Main orchestration scene: `src/game/scenes/MainScene.ts` (World Logic) & `src/game/scenes/InGameUIScene.ts` (UI Layer)
 - Runtime state: `src/game/state`
 - External integration boundary: `src/infra`
 
