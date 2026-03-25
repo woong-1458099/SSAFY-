@@ -166,12 +166,12 @@ export class StartScene extends Phaser.Scene {
     this.sound.stopAll();
 
     this.clearAuthRegistry();
+    clearStoredSession();
 
     try {
       await beginLogout();
     } catch (error) {
       console.error("[StartScene] logout failed, falling back to local logout", error);
-      clearStoredSession();
       this.scene.start(SceneKey.Login);
     }
   }
