@@ -6,10 +6,10 @@ import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import { LEGACY_TANK_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
 import {
-  LEGACY_TANK_ENDINGS,
   LEGACY_TANK_INITIAL_LIVES,
   LEGACY_TANK_INITIAL_PLAYER_AIM_ANGLE,
-  LEGACY_TANK_SHOOT_COOLDOWN_MS
+  LEGACY_TANK_SHOOT_COOLDOWN_MS,
+  resolveLegacyTankEnding
 } from '@features/minigame/legacy/legacyTankConfig';
 import { SCREEN, PIXEL_FONT, COLORS, createBackground, createGridBackground, createPanel, createButton } from './utils';
 import { showMinigameTutorial } from './utils/minigameTutorial';
@@ -478,7 +478,7 @@ export default class TankScene extends Phaser.Scene {
     this.children.removeAll();
     this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a1a);
 
-    const ending = playerWon ? LEGACY_TANK_ENDINGS.victory : LEGACY_TANK_ENDINGS.defeat;
+    const ending = resolveLegacyTankEnding(playerWon, this.playerLives);
     this.completedRewardText = ending.reward;
     this.add.text(W / 2, H / 2 - 80, ending.title, { fontSize: '42px', color: ending.titleColor, fontFamily: PIXEL_FONT }).setOrigin(0.5);
     this.add.text(W / 2, H / 2 - 20, ending.subtitle, { fontSize: '16px', color: '#ffffff', fontFamily: PIXEL_FONT }).setOrigin(0.5);

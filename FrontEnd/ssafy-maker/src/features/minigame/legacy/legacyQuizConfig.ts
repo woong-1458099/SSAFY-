@@ -23,9 +23,9 @@ export const LEGACY_QUIZ_QUESTIONS = [
 ] as const;
 
 const LEGACY_QUIZ_RESULT_RULES = [
-  { minRatio: 0.8, grade: "🏆 EXCELLENT!", color: "#FFD700", reward: "BE +5, GP +15" },
-  { minRatio: 0.6, grade: "✅ GOOD!", color: "#00ff88", reward: "BE +3, GP +8" },
-  { minRatio: 0, grade: "📚 TRY AGAIN", color: "#ff8844", reward: "BE +1, STRESS +3" },
+  { minRatio: 0.8, grade: "🏆 EXCELLENT!", color: "#FFD700", reward: "BE +6, TEAMWORK +2" },
+  { minRatio: 0.6, grade: "✅ GOOD!", color: "#00ff88", reward: "BE +4, TEAMWORK +1" },
+  { minRatio: 0, grade: "📚 TRY AGAIN", color: "#ff8844", reward: "BE +2" },
 ] as const;
 
 export function resolveLegacyQuizResult(score: number, total: number) {

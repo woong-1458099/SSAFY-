@@ -17,7 +17,7 @@
               "text": "\"하얗게 불태웠어...\" 어젯밤 벼락치기로 잃어버린 수면을 보충하기 위해 책상에 엎드려 기절한다.",
               "actionType": "NORMAL",
               "statChanges": {
-                "hp": 20,
+                "hp": 18,
                 "stress": -10
               },
               "nextNodeId": "c1_res1"
@@ -35,10 +35,10 @@
               ],
               "lockedReason": "구현 지식이나 스탯이 부족합니다.",
               "statChanges": {
-                "stress": 15,
-                "teamwork": 10,
+                "stress": 12,
+                "teamwork": 6,
                 "fe": 2,
-                "be": 3
+                "be": 1
               },
               "nextNodeId": "c2_res1"
             },
@@ -61,8 +61,8 @@
               "lockedReason": "구현 지식이나 스탯이 부족합니다.",
               "statChanges": {
                 "hp": -10,
-                "fe": 7,
-                "be": 8
+                "fe": 5,
+                "be": 4
               },
               "nextNodeId": "c3_res1"
             },
@@ -79,8 +79,8 @@
               ],
               "lockedReason": "구현 지식이나 스탯이 부족합니다.",
               "statChanges": {
-                "luck": 15,
-                "stress": -20
+                "luck": 5,
+                "stress": -18
               },
               "nextNodeId": "c4_res1"
             }
@@ -310,7 +310,8 @@
               ],
               "lockedReason": "구현 지식이나 스탯이 부족합니다.",
               "statChanges": {
-                "stress": -10
+                "stress": -10,
+                "teamwork": 8
               },
               "nextNodeId": "c2_res1"
             },
@@ -332,9 +333,9 @@
               ],
               "lockedReason": "구현 지식이나 스탯이 부족합니다.",
               "statChanges": {
-                "hp": -20,
-                "fe": 10,
-                "be": 10
+                "hp": -18,
+                "fe": 6,
+                "be": 6
               },
               "nextNodeId": "c3_res1"
             },
@@ -342,7 +343,10 @@
               "id": "c4",
               "text": "🤪 [광기] \"서류로 안 된다면... 지원 회사의 인사망을 해킹해서 제 이력서를 DB 1번에 INSERT 하겠습니다.\"",
               "actionType": "MADNESS",
-              "statChanges": {},
+              "statChanges": {
+                "teamwork": -6,
+                "hp": -12
+              },
               "nextNodeId": "c4_res1"
             }
           ]

@@ -15,8 +15,8 @@
               "text": "[기본] 패키지를 지웠다 깔았다 무한 반복한다.",
               "actionType": "NORMAL",
               "statChanges": {
-                "hp": -20,
-                "stress": 20
+                "hp": -18,
+                "stress": 18
               },
               "nextNodeId": "setup_c1_res1"
             },
@@ -38,9 +38,9 @@
               ],
               "lockedReason": "환경 설정을 다룰 풀스택 지식이 부족합니다.",
               "statChanges": {
-                "fe": 7,
-                "be": 8,
-                "teamwork": 5
+                "fe": 5,
+                "be": 4,
+                "teamwork": 3
               },
               "nextNodeId": "setup_c2_res1"
             },
@@ -57,7 +57,7 @@
               ],
               "lockedReason": "기적의 스크립트를 찾을 운이 없습니다.",
               "statChanges": {
-                "luck": 20
+                "luck": 6
               },
               "nextNodeId": "setup_c3_res1"
             },
@@ -144,9 +144,9 @@
               "text": "[기본] 머리를 쥐어뜯으며 1시간째 코드만 뗐다 붙였다 한다.",
               "actionType": "NORMAL",
               "statChanges": {
-                "stress": 25,
+                "stress": 20,
                 "fe": -2,
-                "be": -3
+                "be": -2
               },
               "nextNodeId": "bug_c1_res1"
             },
@@ -168,8 +168,8 @@
               ],
               "lockedReason": "정규식을 자유자재로 다룰 실력이 부족합니다.",
               "statChanges": {
-                "fe": 10,
-                "be": 10
+                "fe": 6,
+                "be": 6
               },
               "nextNodeId": "bug_c2_res1"
             },
@@ -186,7 +186,7 @@
               ],
               "lockedReason": "오타가 정답이 될 확률은 극히 희박합니다.",
               "statChanges": {
-                "luck": 20
+                "luck": 6
               },
               "nextNodeId": "bug_c3_res1"
             },
@@ -195,8 +195,9 @@
               "text": "🤪 [광기] \"비밀번호는 모두 '1234'로 통일한다. 보안은 유저의 몫이다.\" 얼렁뚱땅 넘어간다.",
               "actionType": "MADNESS",
               "statChanges": {
-                "fe": -15,
-                "be": -15
+                "fe": -8,
+                "be": -8,
+                "stress": 18
               },
               "nextNodeId": "bug_c4_res1"
             }
@@ -322,8 +323,8 @@
               ],
               "lockedReason": "회식을 주도할 사교력이 부족합니다.",
               "statChanges": {
-                "teamwork": 15,
-                "stress": -20
+                "teamwork": 8,
+                "stress": -18
               },
               "nextNodeId": "rem_c2_res1"
             },
@@ -345,8 +346,8 @@
               ],
               "lockedReason": "프로젝트를 고도화할 코딩 실력이 부족합니다.",
               "statChanges": {
-                "fe": 7,
-                "be": 8,
+                "fe": 5,
+                "be": 4,
                 "hp": -10
               },
               "nextNodeId": "rem_c3_res1"
@@ -365,7 +366,7 @@
               "lockedReason": "선택할 수 없는 성별입니다.",
               "statChanges": {
                 "stress": -10,
-                "teamwork": 10
+                "teamwork": 6
               },
               "nextNodeId": "rem_c4_res1",
               "affectionChanges": {
@@ -386,7 +387,7 @@
               "lockedReason": "선택할 수 없는 성별입니다.",
               "statChanges": {
                 "stress": -10,
-                "teamwork": 10
+                "teamwork": 6
               },
               "nextNodeId": "rem_c5_res1",
               "affectionChanges": {

@@ -80,10 +80,10 @@ export function clampHudState(hud: HudState): HudState {
 
 export function clampStatsState(stats: PlayerStatsState): PlayerStatsState {
   return {
-    fe: Phaser.Math.Clamp(Math.round(stats.fe), 0, 100),
-    be: Phaser.Math.Clamp(Math.round(stats.be), 0, 100),
-    teamwork: Phaser.Math.Clamp(Math.round(stats.teamwork), 0, 100),
-    luck: Phaser.Math.Clamp(Math.round(stats.luck), 0, 100),
+    fe: Phaser.Math.Clamp(Math.round(stats.fe), 0, 150),
+    be: Phaser.Math.Clamp(Math.round(stats.be), 0, 150),
+    teamwork: Phaser.Math.Clamp(Math.round(stats.teamwork), 0, 150),
+    luck: Phaser.Math.Clamp(Math.round(stats.luck), 0, 150),
     stress: Phaser.Math.Clamp(Math.round(stats.stress), 0, 100),
   };
 }

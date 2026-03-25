@@ -15,7 +15,7 @@
               "text": "\"돈도 없는데 무슨... 기세로 버티자.\" 목을 우두둑 꺾고 다시 키보드를 잡는다.",
               "actionType": "NORMAL",
               "statChanges": {
-                "hp": -15,
+                "hp": -12,
                 "stress": 10
               },
               "nextNodeId": "health_c1_res1"
@@ -33,8 +33,8 @@
               ],
               "lockedReason": "장비를 구매할 재화가 부족합니다.",
               "statChanges": {
-                "money": -30000,
-                "hp": 20
+                "money": -25000,
+                "hp": 18
               },
               "nextNodeId": "health_c2_res1"
             },
@@ -51,8 +51,8 @@
               ],
               "lockedReason": "스트레칭을 할 최소한의 기력조차 없습니다.",
               "statChanges": {
-                "hp": 20,
-                "stress": -20
+                "hp": 18,
+                "stress": -18
               },
               "nextNodeId": "health_c3_res1"
             },
@@ -69,8 +69,8 @@
               ],
               "lockedReason": "마사지건을 빌릴 만큼 친하지 않습니다.",
               "statChanges": {
-                "money": -2000,
-                "hp": 15
+                "money": -5000,
+                "hp": 12
               },
               "nextNodeId": "health_c4_res1"
             }
@@ -166,8 +166,8 @@
               "actionType": "NORMAL",
               "statChanges": {
                 "stress": 10,
-                "fe": 3,
-                "be": 2
+                "fe": 2,
+                "be": 1
               },
               "nextNodeId": "speed_c1_res1"
             },
@@ -189,8 +189,8 @@
               ],
               "lockedReason": "투 포인터 알고리즘을 구현할 실력이 부족합니다.",
               "statChanges": {
-                "fe": 8,
-                "be": 7,
+                "fe": 5,
+                "be": 4,
                 "stress": -10
               },
               "nextNodeId": "speed_c2_res1"
@@ -208,7 +208,7 @@
               ],
               "lockedReason": "기적의 타이밍을 잡지 못했습니다.",
               "statChanges": {
-                "luck": 15,
+                "luck": 5,
                 "hp": 5
               },
               "nextNodeId": "speed_c3_res1"
@@ -218,7 +218,7 @@
               "text": "🤪 [광기] \"컨설턴트님, O(N^3)은 미학입니다. 배열의 모든 데이터를 다정하게 쓰다듬는 제 감수성이 안 느껴지시나요?\"",
               "actionType": "MADNESS",
               "statChanges": {
-                "stress": -15
+                "stress": -10
               },
               "nextNodeId": "speed_c4_res1"
             }
@@ -276,9 +276,9 @@
               "text": "멘붕에 빠져 try-except로 에러를 다 무시하게 하드코딩한다.",
               "actionType": "NORMAL",
               "statChanges": {
-                "stress": 25,
-                "fe": -3,
-                "be": -2
+                "stress": 20,
+                "fe": -2,
+                "be": -1
               },
               "nextNodeId": "mock_c1_res1"
             },
@@ -300,9 +300,9 @@
               ],
               "lockedReason": "델타 탐색을 활용할 코딩 지식이 부족합니다.",
               "statChanges": {
-                "fe": 15,
-                "be": 15,
-                "stress": -20
+                "fe": 8,
+                "be": 8,
+                "stress": -18
               },
               "nextNodeId": "mock_c2_res1"
             },
@@ -319,9 +319,7 @@
               ],
               "lockedReason": "무식한 코드가 우연히 정답일 확률이 매우 낮습니다.",
               "statChanges": {
-                "luck": 30,
-                "fe": 5,
-                "be": 5
+                "luck": 8
               },
               "nextNodeId": "mock_c3_res1"
             },

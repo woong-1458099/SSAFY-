@@ -24,16 +24,16 @@ export function createHomeActionModal(scene: Phaser.Scene, options: {
   const centerX = Math.round(scene.scale.width / 2);
   const centerY = Math.round(scene.scale.height / 2);
   const overlay = scene.add.rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x04101d, 0.58);
-  const panel = scene.add.rectangle(centerX, centerY, 640, 500, 0x14314f, 0.98);
+  const panel = scene.add.rectangle(centerX, centerY, 640, 560, 0x14314f, 0.98);
   panel.setStrokeStyle(3, 0x8ed2ff, 1);
-  const title = scene.add.text(centerX, centerY - 190, "집 행동", {
+  const title = scene.add.text(centerX, centerY - 210, "집 행동", {
     fontFamily: FONT_FAMILY,
     fontSize: "34px",
     fontStyle: "bold",
     color: "#eef7ff",
     resolution: 2
   }).setOrigin(0.5);
-  const apText = scene.add.text(centerX, centerY - 148, `행동력 ${options.actionPoint}/${options.maxActionPoint}`, {
+  const apText = scene.add.text(centerX, centerY - 168, `행동력 ${options.actionPoint}/${options.maxActionPoint}`, {
     fontFamily: FONT_FAMILY,
     fontSize: "20px",
     fontStyle: "bold",
@@ -43,23 +43,31 @@ export function createHomeActionModal(scene: Phaser.Scene, options: {
 
   const sleepButton = options.createButton({
     x: centerX,
-    y: centerY - 54,
+    y: centerY - 88,
     width: 430,
     height: 66,
     text: HOME_ACTION_LABELS.sleep,
     onClick: () => options.onAction("sleep")
   });
-  const studyButton = options.createButton({
+  const frontendStudyButton = options.createButton({
     x: centerX,
-    y: centerY + 30,
+    y: centerY - 4,
     width: 430,
     height: 66,
-    text: HOME_ACTION_LABELS.study,
-    onClick: () => options.onAction("study")
+    text: HOME_ACTION_LABELS.frontendStudy,
+    onClick: () => options.onAction("frontendStudy")
+  });
+  const backendStudyButton = options.createButton({
+    x: centerX,
+    y: centerY + 80,
+    width: 430,
+    height: 66,
+    text: HOME_ACTION_LABELS.backendStudy,
+    onClick: () => options.onAction("backendStudy")
   });
   const gameButton = options.createButton({
     x: centerX,
-    y: centerY + 114,
+    y: centerY + 164,
     width: 430,
     height: 66,
     text: HOME_ACTION_LABELS.game,
@@ -67,7 +75,7 @@ export function createHomeActionModal(scene: Phaser.Scene, options: {
   });
   const closeButton = options.createButton({
     x: centerX,
-    y: centerY + 206,
+    y: centerY + 248,
     width: 220,
     height: 52,
     text: "닫기",
@@ -80,7 +88,8 @@ export function createHomeActionModal(scene: Phaser.Scene, options: {
     title,
     apText,
     sleepButton,
-    studyButton,
+    frontendStudyButton,
+    backendStudyButton,
     gameButton,
     closeButton
   ];

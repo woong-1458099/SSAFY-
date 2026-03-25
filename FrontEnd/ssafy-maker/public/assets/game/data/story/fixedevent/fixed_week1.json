@@ -37,7 +37,7 @@
               "actionType": "NORMAL",
               "statChanges": {
                 "stress": 10,
-                "teamwork": 3
+                "teamwork": 2
               },
               "feedbackText": "(평범하고 소극적인 첫인상. 존재감이 흐려졌다.)"
             },
@@ -54,7 +54,7 @@
               ],
               "lockedReason": "사교 능력이 부족합니다.",
               "statChanges": {
-                "teamwork": 5
+                "teamwork": 3
               },
               "feedbackText": "(솔직한 어필이 오히려 호감으로 받아들여진 것 같다)"
             },
@@ -71,8 +71,8 @@
               ],
               "lockedReason": "보유 재화가 부족합니다.",
               "statChanges": {
-                "money": -3000,
-                "teamwork": 7
+                "money": -5000,
+                "teamwork": 4
               },
               "feedbackText": "(역시 먹는 거 준다는데 싫다는 사람은 없다. 마이쮸를 나눔 받은 사람들이 호응해줬다.)"
             },
@@ -145,7 +145,7 @@
               ],
               "lockedReason": "팀을 조율할 사교 능력이 부족합니다.",
               "statChanges": {
-                "teamwork": 8
+                "teamwork": 3
               },
               "feedbackText": "(나의 약점을 인정하고 효율적인 분업을 제시하며, 자연스럽게 팀의 사령탑 역할을 잘 해냈다!)"
             },
@@ -162,9 +162,9 @@
               ],
               "lockedReason": "기적을 바랄 운이 부족합니다.",
               "statChanges": {
-                "be": 5,
-                "fe": 5,
-                "teamwork": 5
+                "fe": 2,
+                "be": 1,
+                "teamwork": 2
               },
               "nextNodeId": "robo_c3_res1"
             },
@@ -174,7 +174,7 @@
               "actionType": "MADNESS",
               "statChanges": {
                 "hp": -10,
-                "teamwork": -10
+                "teamwork": -6
               },
               "nextNodeId": "robo_c4_res1"
             }
@@ -250,9 +250,9 @@
               "text": "3중 for문을 손가락으로 짚어가며 노가다로 친다.",
               "actionType": "NORMAL",
               "statChanges": {
-                "hp": -20,
-                "be": 5,
-                "fe": 5
+                "hp": -18,
+                "fe": 2,
+                "be": 1
               },
               "feedbackText": "(무식하지만 끈기 있게 완성했다. 지저분한 코드지만 일단 돌아가긴 한다.)"
             },
@@ -274,8 +274,8 @@
               ],
               "lockedReason": "전반적인 코딩 능력(FE/BE)이 부족합니다.",
               "statChanges": {
-                "be": 15,
-                "fe": 15,
+                "fe": 6,
+                "be": 6,
                 "stress": -10
               },
               "feedbackText": "(나 어쩌면… 알고리즘에 재능이 있을지도? 문제를 빠르게 풀면서 자신감이 생긴다.)"
@@ -293,9 +293,9 @@
               ],
               "lockedReason": "도움을 요청할 친화력이 부족합니다.",
               "statChanges": {
-                "teamwork": 5,
-                "be": 5,
-                "fe": 5
+                "teamwork": 3,
+                "fe": 3,
+                "be": 3
               },
               "nextNodeId": "algo_c3_res1"
             },
@@ -304,9 +304,9 @@
               "text": "🤪 [광기] \"반복문은 나약한 자들이나 쓰는 거다.\" 테스트 케이스의 출력 결과물을 보고 print(\" * \"), print(\" *** \") 50줄을 전부 수작업으로 타이핑(하드코딩)한다.",
               "actionType": "MADNESS",
               "statChanges": {
-                "hp": -30,
-                "be": -10,
-                "fe": -10
+                "hp": -22,
+                "fe": -3,
+                "be": -3
               },
               "nextNodeId": "algo_c4_res1"
             }

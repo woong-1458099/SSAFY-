@@ -261,7 +261,15 @@ export default class DrinkingScene extends Phaser.Scene {
 
   emitRewardIfNeeded() {
     if (this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: 'STRESS -5, GP +10' });
+    let rewardText = 'TEAMWORK +1';
+    if (this.success >= 5) {
+      rewardText = 'TEAMWORK +4, STRESS -6';
+    } else if (this.success >= 4) {
+      rewardText = 'TEAMWORK +3, STRESS -4';
+    } else if (this.success >= 2) {
+      rewardText = 'TEAMWORK +2, STRESS -2';
+    }
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText });
     this.rewardEmitted = true;
   }
 }
