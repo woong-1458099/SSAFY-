@@ -1,10 +1,12 @@
 import Phaser from "phaser";
+import { createWeeklyPlanActivityModal } from "../../features/planning/weeklyPlanActivityModal";
 import { createWeeklyPlannerModal } from "../../features/planning/weeklyPlannerModal";
 import {
   createDefaultWeeklyPlan,
   getWeeklyPlanOption,
   getWeeklyPlanSlotIndex,
   parseWeeklyPlanOptionId,
+  type WeeklyPlanOption,
   type WeeklyPlanOptionId
 } from "../../features/planning/weeklyPlan";
 import { createWeeklySalaryModal } from "../../features/progression/weeklySalaryModal";
@@ -19,12 +21,21 @@ import {
 import type { HudState, PlayerStatKey } from "../state/gameState";
 
 const WEEKLY_SALARY_AMOUNT = 50000;
+const WEEKLY_PLAN_ACTIVITY_DURATION_MS = 2200;
 
 type ProgressionSnapshot = {
   timeState: TimeState;
   weeklyPlan: WeeklyPlanOptionId[];
   weeklyPlanWeek: number;
   lastPaidWeeklySalaryWeek: number;
+};
+
+type WeeklyPlanActivityPayload = {
+  title: string;
+  statusText: string;
+  description: string;
+  accentColor: number;
+  option: WeeklyPlanOption;
 };
 
 type ProgressionManagerOptions = {
@@ -100,6 +111,8 @@ export class ProgressionManager {
   private lastPaidWeeklySalaryWeek = 0;
   private pendingWeeklySalaryWeek: number | null = null;
   private plannerRoot?: Phaser.GameObjects.Container;
+  private activityRoot?: Phaser.GameObjects.Container;
+  private activityTimer?: Phaser.Time.TimerEvent;
   private salaryRoot?: Phaser.GameObjects.Container;
   private endingFlowStarted = false;
 
@@ -120,12 +133,13 @@ export class ProgressionManager {
   }
 
   destroy(): void {
+    this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
   }
 
   isPlannerOpen(): boolean {
-    return Boolean(this.plannerRoot?.visible || this.salaryRoot?.visible);
+    return Boolean(this.plannerRoot?.visible || this.activityRoot?.visible || this.salaryRoot?.visible);
   }
 
   getTimeCycleIndex(): number {
@@ -146,6 +160,9 @@ export class ProgressionManager {
 
   processAutomaticFlow(): boolean {
     if (this.endingFlowStarted) {
+      return false;
+    }
+    if (this.activityRoot?.visible) {
       return false;
     }
     this.grantWeeklySalaryIfDue();
@@ -224,6 +241,7 @@ export class ProgressionManager {
   }
 
   debugAdvanceTime(): void {
+    this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
 
@@ -243,6 +261,7 @@ export class ProgressionManager {
   }
 
   debugPatchTimeState(next: Partial<TimeState>): void {
+    this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
 
@@ -282,6 +301,7 @@ export class ProgressionManager {
     }
 
     this.endingFlowStarted = true;
+    this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
     this.onStartEndingFlow?.();
@@ -323,8 +343,25 @@ export class ProgressionManager {
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
   }
 
+  showCurrentWeeklyPlanActivity(): boolean {
+    if (this.endingFlowStarted || this.activityRoot?.visible || this.plannerRoot?.visible || this.salaryRoot?.visible) {
+      return false;
+    }
+    if (this.weeklyPlanWeek < this.timeState.week) {
+      return false;
+    }
+
+    const activity = this.buildWeeklyPlanActivityPayload(this.timeState.dayCycleIndex, this.timeState.timeCycleIndex);
+    if (!activity) {
+      return false;
+    }
+
+    this.openWeeklyPlanActivity(activity);
+    return true;
+  }
+
   private openPlanner(): void {
-    if (this.plannerRoot?.visible || this.salaryRoot?.visible) {
+    if (this.plannerRoot?.visible || this.activityRoot?.visible || this.salaryRoot?.visible) {
       return;
     }
 
@@ -350,8 +387,8 @@ export class ProgressionManager {
       onAdvance: (plan) => {
         this.weeklyPlan = [...plan];
         this.weeklyPlanWeek = this.timeState.week;
-        this.advanceCurrentSlot();
         this.closePlanner();
+        this.advanceCurrentSlot();
       }
     });
   }
@@ -392,23 +429,100 @@ export class ProgressionManager {
       dayCycleIndex: this.timeState.dayCycleIndex,
       timeCycleIndex: this.timeState.timeCycleIndex
     };
+    const activity = this.buildWeeklyPlanActivityPayload(previousState.dayCycleIndex, previousState.timeCycleIndex);
+    const failure = this.getConsumeActionPointFailureForActivity();
 
-    if (!this.consumeActionPoint()) {
+    if (failure) {
+      this.notifyConsumeActionPointFailure(failure);
       return;
     }
 
-    if (previousState.dayCycleIndex < 5 && previousState.timeCycleIndex < 2) {
-      const slotIndex = getWeeklyPlanSlotIndex(previousState.dayCycleIndex, previousState.timeCycleIndex);
-      const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex]);
-      const hudState = this.getHudState();
-      this.applyStatDelta(option.statDelta, 1);
-      this.patchHudState({
-        hp: Phaser.Math.Clamp(hudState.hp + option.hpDelta, 0, hudState.hpMax)
-      });
-      this.onNotice?.(`${option.label} 완료`);
-    } else {
+    if (!activity) {
+      const result = this.tryConsumeActionPoint({ notifyOnFailure: false });
+      if (!result.ok) {
+        return;
+      }
       this.onNotice?.("이번 시간대에는 계획 보상이 없습니다");
+      return;
     }
+
+    this.openWeeklyPlanActivity(activity, () => {
+      const result = this.tryConsumeActionPoint({ notifyOnFailure: false });
+      if (!result.ok) {
+        return;
+      }
+
+      const hudState = this.getHudState();
+      this.applyStatDelta(activity.option.statDelta, 1);
+      this.patchHudState({
+        hp: Phaser.Math.Clamp(hudState.hp + activity.option.hpDelta, 0, hudState.hpMax)
+      });
+      this.onNotice?.(`${activity.option.label} 완료`);
+    });
+  }
+
+  private getConsumeActionPointFailureForActivity(): Exclude<ConsumeActionPointResult, { ok: true }> | null {
+    if (this.timeState.actionPoint <= 0) {
+      return {
+        ok: false,
+        reason: "no-action-point",
+        message: "행동력이 부족합니다"
+      };
+    }
+    if (this.salaryRoot?.visible || this.activityRoot?.visible) {
+      return {
+        ok: false,
+        reason: "busy"
+      };
+    }
+
+    const blockedMessage = this.resolveTimeAdvanceBlockedMessage?.() ?? null;
+    if (blockedMessage) {
+      return {
+        ok: false,
+        reason: "blocked-time-advance",
+        message: blockedMessage
+      };
+    }
+
+    return null;
+  }
+
+  private notifyConsumeActionPointFailure(result: Exclude<ConsumeActionPointResult, { ok: true }>): void {
+    const presentation = getConsumeActionPointFailurePresentation(result);
+    this.onNotice?.(presentation.noticeMessage ?? result.message ?? "행동력이 부족합니다");
+  }
+
+  private buildWeeklyPlanActivityPayload(dayCycleIndex: number, timeCycleIndex: number): WeeklyPlanActivityPayload | null {
+    if (dayCycleIndex < 0 || dayCycleIndex >= 5 || timeCycleIndex < 0 || timeCycleIndex >= 2) {
+      return null;
+    }
+
+    const slotIndex = getWeeklyPlanSlotIndex(dayCycleIndex, timeCycleIndex);
+    const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex]);
+    return {
+      title: `${this.timeState.week}주차 ${DAY_CYCLE[dayCycleIndex]} ${TIME_CYCLE[timeCycleIndex]}`,
+      statusText: `${option.label} 진행 중...`,
+      description: option.description,
+      accentColor: option.color,
+      option
+    };
+  }
+
+  private openWeeklyPlanActivity(activity: WeeklyPlanActivityPayload, onComplete?: () => void): void {
+    this.closeWeeklyPlanActivity();
+    this.activityRoot = createWeeklyPlanActivityModal(this.scene, activity);
+    this.activityTimer = this.scene.time.delayedCall(WEEKLY_PLAN_ACTIVITY_DURATION_MS, () => {
+      this.closeWeeklyPlanActivity();
+      onComplete?.();
+    });
+  }
+
+  private closeWeeklyPlanActivity(): void {
+    this.activityTimer?.destroy();
+    this.activityTimer = undefined;
+    this.activityRoot?.destroy(true);
+    this.activityRoot = undefined;
   }
 
   private shouldPayWeeklySalary(): boolean {
