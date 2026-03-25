@@ -158,7 +158,7 @@ export class TutorialManager {
     }
 
     this.progress.currentStepIndex++;
-    this.moveCount = 0;
+    this.scene.registry.set("tutorialProgress", this.progress);
 
     if (this.progress.currentStepIndex >= TUTORIAL_STEP_COUNT) {
       this.completeTutorial();

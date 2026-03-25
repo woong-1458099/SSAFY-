@@ -20,10 +20,8 @@
 - `DialogueManager`는 등록된 대화 스크립트를 재생한다.
 - `WorldManager`는 area/TMX/레이어/그리드 해석을 맡는다.
 - 집/카페/편의점 같은 장소 행동 수치와 문구는 `src/game/definitions/places/placeActionDefinitions.ts`에서 한 번에 조정한다.
-- authored NPC 대사와 기본 scene state NPC 배치는 `public/assets/game/data/story/authored/*.json`이 소스 오브 트루스이고, 로드는 `src/infra/story/authoredStoryRepository.ts`가 맡는다.
-- `src/features`는 인증, 인벤토리, 미니게임, 저장, 진행 시스템 같은 기능 축이다.
-- `src/game/state`는 런타임 상태 모델을 담고, `src/game/view`는 오버레이/표시 레이어를 담당한다.
-- 미니게임은 `src/game/scenes/minigames`, `src/game/scenes/legacyMinigames`, `src/features/minigame` 축이 같이 존재한다.
+- 미니게임은 `src/game/scenes/minigames`, `src/features/minigame` 축이 같이 존재한다. (레거시 씬들은 점진적으로 이관 중)
+- 고정 이벤트 및 로맨스 데이터는 `public/assets/game/data/story/fixedevent/*.json`에 위치하며, `StoryEventManager`가 통합 로드한다.
 
 ## 가장 먼저 읽을 파일
 
@@ -59,7 +57,8 @@
 - `src/features`
   - 인증, 인벤토리, 미니게임, 저장, 진행 시스템 같은 기능별 모듈
 - `public/assets/game/data/story`
-  - authored dialogue JSON, scene state NPC 배치 JSON, fixed event JSON
+  - authored dialogue JSON, scene state NPC 배치 JSON
+  - fixedevent: 고정 주차 이벤트 및 캐릭터별 로맨스 이벤트 JSON
 - `src/game/definitions`
   - area, place, NPC, scene state 같은 정적 정의
   - 장소 행동 수치와 문구는 `places/placeActionDefinitions.ts`
@@ -110,8 +109,9 @@
 
 ## 현재 코드에서 특히 중요한 사실
 
-- `NpcDebugPanel.ts`, `SceneDebugPanel.ts`, `actionRunner.ts`는 현재 비어 있다. 실제 디버그와 씬 실행은 다른 파일을 봐야 한다.
-- 현재 scene action 타입은 제한적이다. 새 액션을 만들지 않는 한 지원되는 연출은 `spawnNpc`, `moveNpc`, `turnNpc`, `playDialogue`, `wait` 뿐이다.
+- `DebugPanel.ts`는 현재 3개 탭(기본, 스토리, 엔딩)으로 구성되어 실시간 데이터 조정 및 탐색 기능을 제공한다.
+- 현재 scene action 타입은 제한적이다. 지원되는 연출은 `spawnNpc`, `moveNpc`, `turnNpc`, `playDialogue`, `wait` 뿐이다.
+- 대화 선택지(Choice)는 `action` 필드를 통해 미니게임 실행(`playInterview` 등)이나 상점 열기(`openShop`) 등의 특수 동작과 연결된다.
 - 현재 대화 가능한 NPC는 scene state에 들어 있는 NPC 기준으로 잡힌다.
 - 새 NPC를 추가할 때는 ID, 정의, 에셋 정합성이 먼저 맞아야 한다.
 - `InteractionManager`는 NPC뿐 아니라 area transition과 static place 상호작용도 처리한다.

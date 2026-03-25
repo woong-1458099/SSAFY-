@@ -32,9 +32,9 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: 32
     });
 
-    this.load.audio("male_voice", "assets/game/audio/SoundEffect/voice_male.wav");
-    this.load.audio("female_voice", "assets/game/audio/SoundEffect/voice_female.wav");
-    this.load.audio("type_sfx", "assets/game/audio/SoundEffect/type.mp3");
+    this.load.audio("male_voice", "/assets/game/audio/SoundEffect/voice_male.wav");
+    this.load.audio("female_voice", "/assets/game/audio/SoundEffect/voice_female.wav");
+    this.load.audio("type_sfx", "/assets/game/audio/SoundEffect/type.mp3");
 
     // 각 영역 TMX를 텍스트로 로드한다.
     this.load.text(ASSET_KEYS.map.worldTmx, ASSET_PATHS.map.worldTmx);
