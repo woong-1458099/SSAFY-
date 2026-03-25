@@ -24,7 +24,7 @@ export const WEEKLY_PLAN_OPTIONS: WeeklyPlanOption[] = [
   },
   {
     id: "rest_api_db",
-    label: "REST API와 데이터베이스 설계",
+    label: "REST API와 DB 설계",
     description: "BE +2 / HP -20 / 스트레스 +2",
     statDelta: { be: 2, stress: 2 },
     hpDelta: -20,

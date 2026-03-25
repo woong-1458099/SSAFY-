@@ -17,6 +17,22 @@ const HUD_COLORS = {
   hintText: "#e6f3ff"
 } as const;
 
+const RIGHT_HUD_LAYOUT = {
+  width: 296,
+  height: 116,
+  labelColumnX: 14,
+  visualColumnX: 62,
+  visualLeadWidth: 42,
+  visualGap: 8,
+  valueColumnRightX: 278,
+  hpValueGap: 10,
+  conditionTextGap: 10,
+  rowStartY: 20,
+  rowHeight: 34,
+  conditionBarWidth: 124,
+  coinRadius: 8
+} as const;
+
 export class GameHud {
   private readonly scene: Phaser.Scene;
   private readonly root: Phaser.GameObjects.Container;
@@ -40,8 +56,11 @@ export class GameHud {
   private readonly hpBarFill: Phaser.GameObjects.Rectangle;
   private readonly stressBarFill: Phaser.GameObjects.Rectangle;
 
-  private readonly hpBarMaxWidth = 170;
-  private readonly stressBarMaxWidth = 110;
+  private readonly rightHudLayout = RIGHT_HUD_LAYOUT;
+  private readonly hpBarMaxWidth =
+    RIGHT_HUD_LAYOUT.valueColumnRightX -
+    (RIGHT_HUD_LAYOUT.visualColumnX + RIGHT_HUD_LAYOUT.visualLeadWidth + RIGHT_HUD_LAYOUT.visualGap);
+  private readonly stressBarMaxWidth = RIGHT_HUD_LAYOUT.conditionBarWidth;
   private readonly hintMinWidth = 128;
   private readonly hintMinHeight = 32;
   private readonly hintPaddingX = 18;
@@ -87,30 +106,48 @@ export class GameHud {
     this.dayText.setOrigin(0.5, 0);
     this.topCenterGroup.add([dayBg, this.dayText]);
 
-    const rightBg = scene.add.rectangle(0, 0, 250, 108, HUD_COLORS.panelBg, 0.88);
+    const rightLayout = this.rightHudLayout;
+    const getRowCenterY = (rowIndex: number) => rightLayout.rowStartY + rowIndex * rightLayout.rowHeight;
+    const hpRowY = getRowCenterY(0);
+    const moneyRowY = getRowCenterY(1);
+    const conditionRowY = getRowCenterY(2);
+    const hpBarStartX = rightLayout.visualColumnX + rightLayout.visualLeadWidth + rightLayout.visualGap;
+    const conditionBarStartX = hpBarStartX;
+    const hpValueX = hpBarStartX - rightLayout.hpValueGap;
+    const conditionTextX = conditionBarStartX - rightLayout.conditionTextGap;
+
+    const rightBg = scene.add.rectangle(0, 0, rightLayout.width, rightLayout.height, HUD_COLORS.panelBg, 0.88);
     rightBg.setOrigin(0, 0);
     rightBg.setStrokeStyle(2, HUD_COLORS.panelBorder, 1);
 
-    const hpLabel = scene.add.text(12, 10, "HP", this.getTextStyle(15, HUD_COLORS.textMain, "bold"));
-    const hpBarBg = scene.add.rectangle(74, 21, this.hpBarMaxWidth, 14, HUD_COLORS.hpBg, 1);
+    const hpLabel = scene.add.text(rightLayout.labelColumnX, hpRowY, "HP", this.getTextStyle(15, HUD_COLORS.textMain, "bold"));
+    hpLabel.setOrigin(0, 0.5);
+    const hpBarBg = scene.add.rectangle(hpBarStartX, hpRowY, this.hpBarMaxWidth, 14, HUD_COLORS.hpBg, 1);
     hpBarBg.setOrigin(0, 0.5);
     hpBarBg.setStrokeStyle(1, HUD_COLORS.panelBorder, 1);
-    this.hpBarFill = scene.add.rectangle(76, 21, this.hpBarMaxWidth - 4, 10, HUD_COLORS.hpFill, 1);
+    this.hpBarFill = scene.add.rectangle(hpBarStartX + 2, hpRowY, this.hpBarMaxWidth - 4, 10, HUD_COLORS.hpFill, 1);
     this.hpBarFill.setOrigin(0, 0.5);
-    this.hpText = scene.add.text(12, 28, "", this.getTextStyle(13, HUD_COLORS.textSoft));
+    this.hpText = scene.add.text(hpValueX, hpRowY, "", this.getTextStyle(13, HUD_COLORS.textSoft, "bold"));
+    this.hpText.setOrigin(1, 0.5);
 
-    const coin = scene.add.circle(24, 66, 9, HUD_COLORS.coin, 1);
+    const moneyLabel = scene.add.text(rightLayout.labelColumnX, moneyRowY, "돈", this.getTextStyle(14, HUD_COLORS.textSoft, "bold"));
+    moneyLabel.setOrigin(0, 0.5);
+    const coin = scene.add.circle(hpBarStartX + rightLayout.coinRadius, moneyRowY, rightLayout.coinRadius, HUD_COLORS.coin, 1);
     coin.setStrokeStyle(2, HUD_COLORS.coinEdge, 1);
-    this.moneyText = scene.add.text(40, 54, "", this.getTextStyle(18, HUD_COLORS.textMain, "bold"));
+    this.moneyText = scene.add.text(rightLayout.valueColumnRightX, moneyRowY, "", this.getTextStyle(18, HUD_COLORS.textMain, "bold"));
+    this.moneyText.setOrigin(1, 0.5);
 
-    const stressLabel = scene.add.text(12, 80, "스트레스", this.getTextStyle(13, HUD_COLORS.textSoft));
-    const stressBarBg = scene.add.rectangle(84, 89, this.stressBarMaxWidth, 10, HUD_COLORS.stressBg, 1);
+    const conditionLabel = scene.add.text(rightLayout.labelColumnX, conditionRowY, "컨디션", this.getTextStyle(13, HUD_COLORS.textSoft, "bold"));
+    conditionLabel.setOrigin(0, 0.5);
+    this.conditionText = scene.add.text(conditionTextX, conditionRowY, "", this.getTextStyle(13, HUD_COLORS.textMain, "bold"));
+    this.conditionText.setOrigin(1, 0.5);
+    const stressBarBg = scene.add.rectangle(conditionBarStartX, conditionRowY, this.stressBarMaxWidth, 10, HUD_COLORS.stressBg, 1);
     stressBarBg.setOrigin(0, 0.5);
     stressBarBg.setStrokeStyle(1, HUD_COLORS.panelBorder, 1);
-    this.stressBarFill = scene.add.rectangle(86, 89, this.stressBarMaxWidth - 4, 6, HUD_COLORS.stressFill, 1);
+    this.stressBarFill = scene.add.rectangle(conditionBarStartX + 2, conditionRowY, this.stressBarMaxWidth - 4, 6, HUD_COLORS.stressFill, 1);
     this.stressBarFill.setOrigin(0, 0.5);
-    this.stressText = scene.add.text(190, 80, "", this.getTextStyle(13, HUD_COLORS.textSoft));
-    this.conditionText = scene.add.text(12, 92, "", this.getTextStyle(12, HUD_COLORS.textSoft));
+    this.stressText = scene.add.text(rightLayout.valueColumnRightX, conditionRowY, "", this.getTextStyle(13, HUD_COLORS.textSoft, "bold"));
+    this.stressText.setOrigin(1, 0.5);
 
     this.rightGroup.add([
       rightBg,
@@ -118,13 +155,14 @@ export class GameHud {
       hpBarBg,
       this.hpBarFill,
       this.hpText,
+      moneyLabel,
       coin,
       this.moneyText,
-      stressLabel,
+      conditionLabel,
+      this.conditionText,
       stressBarBg,
       this.stressBarFill,
-      this.stressText,
-      this.conditionText
+      this.stressText
     ]);
 
     this.hintBg = scene.add.rectangle(0, 0, this.hintMinWidth, this.hintMinHeight, HUD_COLORS.hintBg, 0.92);
@@ -206,7 +244,7 @@ export class GameHud {
     const safe = Math.max(12, Math.round(Math.min(width, height) * 0.02));
 
     this.leftGroup.setPosition(safe, safe);
-    this.rightGroup.setPosition(Math.round(width - safe - 250), safe);
+    this.rightGroup.setPosition(Math.round(width - safe - this.rightHudLayout.width), safe);
     this.topCenterGroup.setPosition(Math.round(width * 0.5), safe);
     this.hintGroup.setPosition(Math.round(width * 0.5), Math.round(height - safe - 24));
     this.updateHintGeometry();
@@ -230,9 +268,9 @@ export class GameHud {
   }
 
   private getConditionLabel(stress: number): string {
-    if (stress <= 25) return "컨디션: 여유";
-    if (stress <= 60) return "컨디션: 보통";
-    return "컨디션: 피곤";
+    if (stress <= 25) return "여유";
+    if (stress <= 60) return "보통";
+    return "피곤";
   }
 
   private getTextStyle(
