@@ -1,321 +1,367 @@
-[
-  {
-    "eventId": "EVT_MAIN_W3_D1_MORNING_QNET",
-    "eventName": "정처기 시험의 압박",
-    "eventType": "FIXED",
-    "triggerTiming": {
-      "week": 3,
-      "day": 1,
-      "timeOfDay": "오전"
+{
+  "dialogues": [
+    {
+      "id": "EVT_MAIN_W3_D1_MORNING_QNET",
+      "label": "정처기 시험의 압박",
+      "startNodeId": "qnet_n1",
+      "nodes": {
+        "qnet_n1": {
+          "id": "qnet_n1",
+          "speaker": "SYSTEM",
+          "text": "[시스템: 요란한 스마트폰 진동]\n(징징-)\n\n월요일 아침, 단잠을 깨우는 스마트폰 진동 소리. 잠결에 화면을 켜보니 불길한 카카오톡 알림이 떠 있다.",
+          "nextNodeId": "qnet_n2"
+        },
+        "qnet_n2": {
+          "id": "qnet_n2",
+          "speaker": "SYSTEM",
+          "text": "[카카오톡] 큐넷(Q-Net)\n국가기술자격 정기 기사 시험 안내\n- 종목: 정보처리기사\n- 일시: 이번 주 토요일 09:00\n- 수험표를 반드시 출력 지참 바랍니다.",
+          "nextNodeId": "qnet_n3"
+        },
+        "qnet_n3": {
+          "id": "qnet_n3",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"아 미친... 이번 주 토요일이 벌써 정처기 시험이라고?!\"",
+          "nextNodeId": "qnet_n4"
+        },
+        "qnet_n4": {
+          "id": "qnet_n4",
+          "speaker": "SYSTEM",
+          "text": "엊그제 접수한 것 같은데... 언제 시간이 이렇게... 진도 따라가느라 기출문제는 커녕 책 표지도 제대로 못 봤는데!! 등줄기에 식은땀이 흐르며 잠이 확 깬다.",
+          "choices": [
+            {
+              "id": "qnet_c1",
+              "text": "\"일단 당근마켓에서 기출문제집부터 사야겠다...\" (황급히 중고 거래 앱을 켠다)",
+              "actionType": "NORMAL",
+              "action": "playQuiz",
+              "statChanges": {
+                "stress": 10,
+                "money": -15000,
+                "fe": 2,
+                "be": 1
+              },
+              "nextNodeId": "qnet_c1_res1"
+            },
+            {
+              "id": "qnet_c2",
+              "text": "🔒 [체력 60] \"부트캠프생에게 5일이면 120시간이다! 오늘부터 수면은 사치다!!\"",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "hp",
+                  "min": 60,
+                  "label": "체력(HP) 60 이상"
+                }
+              ],
+              "lockedReason": "밤을 새울 체력이 부족합니다.",
+              "statChanges": {
+                "hp": -18,
+                "stress": -10
+              },
+              "feedbackText": "(근거 없는 패기로 무장했다. 뇌를 속이는 데 성공하여 스트레스는 줄었지만, 오늘 밤부터 지옥의 벼락치기 확정이다.)"
+            },
+            {
+              "id": "qnet_c3",
+              "text": "🔒 [사교 70] 동기 단톡방에 \"정처기 기출 요약본(PDF) 던져주실 천사님 구합니다 ㅠㅠ 밥 쏠게요!\"라고 간절하게 올린다.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 70,
+                  "label": "사교 70 이상"
+                }
+              ],
+              "lockedReason": "자료를 구걸할 인맥과 사교력이 부족합니다.",
+              "statChanges": {
+                "teamwork": 3,
+                "money": -25000
+              },
+              "nextNodeId": "qnet_c3_res1"
+            },
+            {
+              "id": "qnet_c4",
+              "text": "🔒 [운빨 75] \"CBT(컴퓨터 기반 시험)는 어차피 문제은행 뺑뺑이다. 나의 4지선다 찍기 스킬을 믿어보자!\" 핸드폰 배경화면을 '행운의 합격 부적'으로 바꾼다.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "luck",
+                  "min": 75,
+                  "label": "운빨 75 이상"
+                }
+              ],
+              "lockedReason": "찍기를 성공시킬 압도적인 운이 부족합니다.",
+              "statChanges": {
+                "luck": 5,
+                "stress": -10
+              },
+              "feedbackText": "(공부를 뒤로 하고 우주의 기운을 모으는 '기도 메타'에 돌입했다.)"
+            }
+          ]
+        },
+        "qnet_c1_res1": {
+          "id": "qnet_c1_res1",
+          "speaker": "당근 판매자",
+          "speakerId": "NPC_CLASSMATE_UNKNOWN",
+          "emotion": "NORMAL",
+          "text": "\"[당근 채팅] 이거 전공책 수준으로 두꺼운데 괜찮으시죠? 무거워서 환불 안 됩니다~\"",
+          "nextNodeId": "qnet_c1_res2"
+        },
+        "qnet_c1_res2": {
+          "id": "qnet_c1_res2",
+          "speaker": "PLAYER",
+          "speakerId": "PLAYER",
+          "text": "\"...네, 주십쇼.\"",
+          "nextNodeId": "qnet_c1_res3"
+        },
+        "qnet_c1_res3": {
+          "id": "qnet_c1_res3",
+          "speaker": "SYSTEM",
+          "text": "(어떻게든 책은 구했지만, 흉기 수준의 두께를 보니 숨이 턱 막힌다.)"
+        },
+        "qnet_c3_res1": {
+          "id": "qnet_c3_res1",
+          "speaker": "명진",
+          "speakerId": "NPC_CLASSMATE_MYUNGJIN",
+          "emotion": "SMILE",
+          "text": "\"[MM] 제가 예전에 쓰던 요약본 PDF 보냈어요. 메뉴 기대하겠습니다!\"",
+          "nextNodeId": "qnet_c3_res2"
+        },
+        "qnet_c3_res2": {
+          "id": "qnet_c3_res2",
+          "speaker": "SYSTEM",
+          "text": "(10분 뒤 50페이지짜리 빛과 같은 요약본을 얻었다! 벼락치기에 한 줄기 희망이 보인다.)"
+        }
+      },
+      "triggerTiming": {
+        "week": 3,
+        "day": 1,
+        "timeOfDay": "오전"
+      },
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     },
-    "location": "자취방",
-    "isRepeatable": false,
-    "dialogues": [
-      {
-        "speakerId": "SYSTEM",
-        "text": "[시스템: 요란한 스마트폰 진동]\n(징징-)\n\n월요일 아침, 단잠을 깨우는 스마트폰 진동 소리. 잠결에 화면을 켜보니 불길한 카카오톡 알림이 떠 있다."
-      },
-      {
-        "speakerId": "SYSTEM",
-        "text": "[카카오톡] 큐넷(Q-Net)\n국가기술자격 정기 기사 시험 안내\n- 종목: 정보처리기사\n- 일시: 이번 주 토요일 09:00\n- 수험표를 반드시 출력 지참 바랍니다."
-      },
-      {
-        "speakerId": "PLAYER",
-        "text": "\"아 미친... 이번 주 토요일이 벌써 정처기 시험이라고?!\""
-      },
-      {
-        "speakerId": "SYSTEM",
-        "text": "엊그제 접수한 것 같은데... 언제 시간이 이렇게... 진도 따라가느라 기출문제는 커녕 책 표지도 제대로 못 봤는데!! 등줄기에 식은땀이 흐르며 잠이 확 깬다."
-      }
-    ],
-    "choices": [
-      {
-        "choiceId": 1,
-        "actionType": "NORMAL",
-        "condition": null,
-        "text": "\"일단 당근마켓에서 기출문제집부터 사야겠다...\" (황급히 중고 거래 앱을 켠다)",
-        "action": "playQuiz",
-        "result": {
-          "statChanges": {
-            "stress": 10,
-            "gold": -125000,
-            "code": 5
-          },
-          "feedbackDialogues": [
+    {
+      "id": "EVT_MAIN_W3_D2_MORNING_GIT",
+      "label": "Git 대참사",
+      "startNodeId": "git_n1",
+      "nodes": {
+        "git_n1": {
+          "id": "git_n1",
+          "speaker": "SYSTEM",
+          "text": "코치님이 GitLab 클론을 지시했다. 내 터미널에는 빨간 글씨로 Merge Conflict가 터졌다.",
+          "choices": [
             {
-              "speakerId": "NPC_CLASSMATE_UNKNOWN",
-              "speakerName": "당근 판매자",
-              "emotion": "NORMAL",
-              "text": "\"[당근 채팅] 이거 전공책 수준으로 두꺼운데 괜찮으시죠? 무거워서 환불 안 됩니다~\""
+              "id": "git_c1",
+              "text": "조용히 폴더를 통째로 지우고 다시 깐다. ”하… 머리가 나쁘면 몸이 고생이지”",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "stress": 12,
+                "fe": 2,
+                "be": 1
+              },
+              "feedbackText": "(식은땀이 줄줄 나지만 아무튼 빨간 글씨는 없어졌다.)"
             },
             {
-              "speakerId": "PLAYER",
-              "text": "\"...네, 주십쇼.\""
+              "id": "git_c2",
+              "text": "🔒 [사교 65] 누가봐도 개발자 관상인 옆자리 동기에게 SOS를 친다. ”고맙습니다… 덕분에 살았어요”",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 65,
+                  "label": "사교 65 이상"
+                }
+              ],
+              "lockedReason": "동기에게 도움을 청할 넉살이 부족합니다.",
+              "statChanges": {
+                "teamwork": 6,
+                "fe": 2,
+                "be": 1,
+                "stress": 10
+              },
+              "nextNodeId": "git_c2_res1"
             },
             {
-              "speakerId": "SYSTEM",
-              "text": "(어떻게든 책은 구했지만, 흉기 수준의 두께를 보니 숨이 턱 막힌다.)"
+              "id": "git_c3",
+              "text": "🔒 [재화 10000] 이럴 때 사용하려고 미리 GPT 프로를 결제해뒀지. 지피티와의 진대를 통해 어떻게든 해결한다.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "money",
+                  "min": 10000,
+                  "label": "재화 10000 이상"
+                }
+              ],
+              "lockedReason": "AI의 힘을 빌릴 자본이 부족합니다.",
+              "statChanges": {
+                "fe": 3,
+                "be": 3,
+                "stress": -10,
+                "money": -15000
+              },
+              "feedbackText": "(스스로 해낸 (것 같은) 쾌감이다. ”오…이럴 땐 git rebase를 사용하면 되는 거군”)"
+            },
+            {
+              "id": "git_c4",
+              "text": "🤪 [광기] rm -rf / (전체 삭제)를 치고 조용히 하차를 고민한다.",
+              "actionType": "MADNESS",
+              "statChanges": {
+                "hp": -10,
+                "stress": -10
+              },
+              "nextNodeId": "git_c4_res1"
             }
           ]
+        },
+        "git_c2_res1": {
+          "id": "git_c2_res1",
+          "speaker": "지우",
+          "speakerId": "NPC_CLASSMATE_JIWOO",
+          "emotion": "NORMAL",
+          "text": "\"아, 그거 충돌 난 파일 가서 `<<<<<<< HEAD` 적힌 부분 지우고 다시 커밋하시면 돼요. 마우스 잠깐 줘보실래요?\"",
+          "nextNodeId": "git_c2_res2"
+        },
+        "git_c2_res2": {
+          "id": "git_c2_res2",
+          "speaker": "SYSTEM",
+          "text": "(3분 만에 해결했지만, 어쩐지 강렬한 무력감이 든다…)"
+        },
+        "git_c4_res1": {
+          "id": "git_c4_res1",
+          "speaker": "이혜원 코치",
+          "speakerId": "NPC_COACH_HYEWON",
+          "emotion": "FLUSTERED",
+          "text": "\"어어어!! {playerName}님 지금 터미널에 무슨 명령어를 치시는 거예요?! 당장 손 떼요, 엔터 누르지 마요!!!\"",
+          "nextNodeId": "git_c4_res2"
+        },
+        "git_c4_res2": {
+          "id": "git_c4_res2",
+          "speaker": "SYSTEM",
+          "text": "(인생 종료 위기… 빛의 속도로 달려오신 코치님의 도움으로 겨우 넘겼다.)"
         }
       },
-      {
-        "choiceId": 2,
-        "actionType": "LOCKED",
-        "condition": {
-          "hp": 50
-        },
-        "text": "🔒 [체력 50] \"부트캠프생에게 5일이면 120시간이다! 오늘부터 수면은 사치다!!\"",
-        "result": {
-          "statChanges": {
-            "hp": -20,
-            "stress": -10
-          },
-          "feedbackText": "(근거 없는 패기로 무장했다. 뇌를 속이는 데 성공하여 스트레스는 줄었지만, 오늘 밤부터 지옥의 벼락치기 확정이다.)"
-        }
+      "triggerTiming": {
+        "week": 3,
+        "day": 2,
+        "timeOfDay": "오전"
       },
-      {
-        "choiceId": 3,
-        "actionType": "LOCKED",
-        "condition": {
-          "social": 50
-        },
-        "text": "🔒 [사교 50] 동기 단톡방에 \"정처기 기출 요약본(PDF) 던져주실 천사님 구합니다 ㅠㅠ 밥 쏠게요!\"라고 간절하게 올린다.",
-        "result": {
-          "statChanges": {
-            "social": 5,
-            "gold": -80000
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_CLASSMATE_MYUNGJIN",
-              "speakerName": "명진",
-              "emotion": "SMILE",
-              "text": "\"[MM] 제가 예전에 쓰던 요약본 PDF 보냈어요. 메뉴 기대하겠습니다!\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(10분 뒤 50페이지짜리 빛과 같은 요약본을 얻었다! 벼락치기에 한 줄기 희망이 보인다.)"
-            }
-          ]
-        }
-      },
-      {
-        "choiceId": 4,
-        "actionType": "LOCKED",
-        "condition": {
-          "luck": 60
-        },
-        "text": "🔒 [운 60] \"CBT(컴퓨터 기반 시험)는 어차피 문제은행 뺑뺑이다. 나의 4지선다 찍기 스킬을 믿어보자!\" 핸드폰 배경화면을 '행운의 합격 부적'으로 바꾸고 토요일까지 기를 모으자.",
-        "result": {
-          "statChanges": {
-            "luck": 15,
-            "stress": -10
-          },
-          "feedbackText": "(공부를 뒤로 하고 우주의 기운을 모으는 '기도 메타'에 돌입했다.)"
-        }
-      }
-    ]
-  },
-  {
-    "eventId": "EVT_MAIN_W3_D2_MORNING_GIT",
-    "eventName": "Git 대참사",
-    "eventType": "FIXED",
-    "triggerTiming": {
-      "week": 3,
-      "day": 2,
-      "timeOfDay": "오전"
+      "location": "캠퍼스",
+      "eventType": "FIXED"
     },
-    "location": "캠퍼스",
-    "isRepeatable": false,
-    "dialogues": [
-      {
-        "speakerId": "SYSTEM",
-        "text": "코치님이 GitLab 클론을 지시했다. 내 터미널에는 빨간 글씨로 Merge Conflict가 터졌다."
-      }
-    ],
-    "choices": [
-      {
-        "choiceId": 1,
-        "actionType": "NORMAL",
-        "condition": null,
-        "text": "조용히 폴더를 통째로 지우고 다시 깐다. ”하… 머리가 나쁘면 몸이 고생이지”",
-        "result": {
-          "statChanges": {
-            "stress": 15,
-            "code": 5
-          },
-          "feedbackText": "(식은땀이 줄줄 나지만 아무튼 빨간 글씨는 없어졌다.)"
-        }
-      },
-      {
-        "choiceId": 2,
-        "actionType": "LOCKED",
-        "condition": {
-          "social": 30
-        },
-        "text": "🔒 [사교 30] 누가봐도 개발자 관상인 옆자리 동기에게 SOS를 친다. ”고맙습니다… 덕분에 살았어요”",
-        "result": {
-          "statChanges": {
-            "social": 10,
-            "code": 5,
-            "stress": 10
-          },
-          "feedbackDialogues": [
+    {
+      "id": "EVT_MAIN_W3_D3_AFTERNOON_SLEEPY",
+      "label": "식곤증의 늪",
+      "startNodeId": "sleep_n1",
+      "nodes": {
+        "sleep_n1": {
+          "id": "sleep_n1",
+          "speaker": "SYSTEM",
+          "text": "웰스토리에서 돈가스를 무한 리필로 퍼먹었다. 오후 수업 시작 10분 만에 미친 듯한 식곤증이 몰려온다.",
+          "choices": [
             {
-              "speakerId": "NPC_CLASSMATE_JIWOO",
-              "speakerName": "지우",
-              "emotion": "NORMAL",
-              "text": "\"아, 그거 충돌 난 파일 가서 `<<<<<<< HEAD` 적힌 부분 지우고 다시 커밋하시면 돼요. 마우스 잠깐 줘보실래요?\""
+              "id": "sleep_c1",
+              "text": "졸다가 흠칫 깨어났는데, 컨설턴트님과 정확히 눈이 마주친다.",
+              "actionType": "NORMAL",
+              "statChanges": {
+                "hp": 10,
+                "stress": 12
+              },
+              "nextNodeId": "sleep_c1_res1"
             },
             {
-              "speakerId": "SYSTEM",
-              "text": "(3분 만에 해결했지만, 어쩐지 강렬한 무력감이 든다…)"
-            }
-          ]
-        }
-      },
-      {
-        "choiceId": 3,
-        "actionType": "LOCKED",
-        "condition": {
-          "gold": 80000
-        },
-        "text": "🔒 [재화 10000] 이럴 때 사용하려고 미리 GPT 프로를 결제해뒀지. 지피티와의 진대를 통해 어떻게든 해결한다. ”오…이럴 땐 git rebase를 사용하면 되는 거군”",
-        "result": {
-          "statChanges": {
-            "code": 10,
-            "stress": -10,
-            "gold": -80000
-          },
-          "feedbackText": "(스스로 해낸 (것 같은) 쾌감이다.)"
-        }
-      },
-      {
-        "choiceId": 4,
-        "actionType": "MADNESS",
-        "condition": null,
-        "text": "🤪 [광기] rm -rf / (전체 삭제)를 치고 조용히 하차를 고민한다.",
-        "result": {
-          "statChanges": {
-            "hp": -10,
-            "stress": -10
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_COACH_HYEWON",
-              "speakerName": "이혜원 코치",
-              "emotion": "FLUSTERED",
-              "text": "\"어어어!! {playerName}님 지금 터미널에 무슨 명령어를 치시는 거예요?! 당장 손 떼요, 엔터 누르지 마요!!!\""
+              "id": "sleep_c2",
+              "text": "🔒 [체력 60] 허벅지를 꼬집어가며 억지로 버티고 코드를 친다.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "hp",
+                  "min": 60,
+                  "label": "체력(HP) 60 이상"
+                }
+              ],
+              "lockedReason": "버틸 체력이 고갈되었습니다.",
+              "statChanges": {
+                "hp": -18,
+                "fe": 3,
+                "be": 3
+              },
+              "feedbackText": "(고통스럽지만 잠은 참아야 한다.)"
             },
             {
-              "speakerId": "SYSTEM",
-              "text": "(인생 종료 위기… 빛의 속도로 달려오신 코치님의 도움으로 겨우 넘겼다.)"
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "eventId": "EVT_MAIN_W3_D3_AFTERNOON_SLEEPY",
-    "eventName": "식곤증의 늪",
-    "eventType": "FIXED",
-    "triggerTiming": {
-      "week": 3,
-      "day": 3,
-      "timeOfDay": "오후"
-    },
-    "location": "캠퍼스",
-    "isRepeatable": false,
-    "dialogues": [
-      {
-        "speakerId": "SYSTEM",
-        "text": "웰스토리에서 돈가스를 무한 리필로 퍼먹었다. 오후 수업 시작 10분 만에 미친 듯한 식곤증이 몰려온다."
-      }
-    ],
-    "choices": [
-      {
-        "choiceId": 1,
-        "actionType": "NORMAL",
-        "condition": null,
-        "text": "졸다가 흠칫 깨어났는데, 컨설턴트님과 정확히 눈이 마주친다.",
-        "result": {
-          "statChanges": {
-            "hp": 10,
-            "stress": 15
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_CONSULTANT_HYUNSEOK",
-              "speakerName": "이현석 컨설턴트",
-              "emotion": "NORMAL",
-              "text": "\"{playerName}님, 오늘 웰스토리 돈가스가 많이 맛있었나 보네요.\""
+              "id": "sleep_c3",
+              "text": "🔒 [재화 3000] 자판기에서 몬스터 에너지를 뽑아 원샷한다.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "money",
+                  "min": 3000,
+                  "label": "재화 3000 이상"
+                }
+              ],
+              "lockedReason": "음료수를 뽑아 먹을 돈이 없습니다.",
+              "statChanges": {
+                "money": -5000,
+                "fe": 3,
+                "be": 3
+              },
+              "feedbackText": "(자본주의의 맛으로 강제 각성! 심장은 뛰지만 손가락은 돌아간다.)"
             },
             {
-              "speakerId": "SYSTEM",
-              "text": "(꿀잠은 잤지만 민망함이 밀려온다.)"
+              "id": "sleep_c4",
+              "text": "🔒 [사교 70] 졸려 죽겠는데 조심스럽게 옆 자리에서 졸음껌을 건넨다.",
+              "actionType": "LOCKED",
+              "requirements": [
+                {
+                  "stat": "teamwork",
+                  "min": 70,
+                  "label": "사교 70 이상"
+                }
+              ],
+              "lockedReason": "자연스럽게 나눌 사교력이 부족합니다.",
+              "statChanges": {
+                "teamwork": 3,
+                "fe": 3,
+                "be": 3,
+                "hp": -10
+              },
+              "nextNodeId": "sleep_c4_res1"
             }
           ]
+        },
+        "sleep_c1_res1": {
+          "id": "sleep_c1_res1",
+          "speaker": "이현석 컨설턴트",
+          "speakerId": "NPC_CONSULTANT_HYUNSEOK",
+          "emotion": "NORMAL",
+          "text": "\"{playerName}님, 오늘 웰스토리 돈가스가 많이 맛있었나 보네요.\"",
+          "nextNodeId": "sleep_c1_res2"
+        },
+        "sleep_c1_res2": {
+          "id": "sleep_c1_res2",
+          "speaker": "SYSTEM",
+          "text": "(꿀잠은 잤지만 민망함이 밀려온다.)"
+        },
+        "sleep_c4_res1": {
+          "id": "sleep_c4_res1",
+          "speaker": "연웅",
+          "speakerId": "NPC_CLASSMATE_YEONWOONG",
+          "emotion": "SMILE",
+          "text": "\"저기... 이거 엄청 매운 껌인데 하나 드실래요? 저도 방금 씹고 극락 다녀왔습니다.\"",
+          "nextNodeId": "sleep_c4_res2"
+        },
+        "sleep_c4_res2": {
+          "id": "sleep_c4_res2",
+          "speaker": "SYSTEM",
+          "text": "(덕분에 잠이 확 깼다. 동기에게 고맙다는 인사를 건네고 다시 집중한다.)"
         }
       },
-      {
-        "choiceId": 2,
-        "actionType": "LOCKED",
-        "condition": {
-          "hp": 40
-        },
-        "text": "🔒 [HP 40] 허벅지를 꼬집어가며 억지로 버티고 코드를 친다.",
-        "result": {
-          "statChanges": {
-            "hp": -20,
-            "code": 10
-          },
-          "feedbackText": "(고통스럽지만 잠은 참아야 한다.)"
-        }
+      "triggerTiming": {
+        "week": 3,
+        "day": 3,
+        "timeOfDay": "오후"
       },
-      {
-        "choiceId": 3,
-        "actionType": "LOCKED",
-        "condition": {
-          "gold": 25000
-        },
-        "text": "🔒 [재화 3000] 자판기에서 몬스터 에너지를 뽑아 원샷한다.",
-        "result": {
-          "statChanges": {
-            "gold": -25000,
-            "code": 10
-          },
-          "feedbackText": "(자본주의의 맛으로 강제 각성! 심장은 뛰지만 손가락은 돌아간다.)"
-        }
-      },
-      {
-        "choiceId": 4,
-        "actionType": "LOCKED",
-        "condition": {
-          "social": 40
-        },
-        "text": "🔒 [사교 40] 졸려 죽겠는데 조심스럽게 옆 자리에서 졸음껌을 건넨다.",
-        "result": {
-          "statChanges": {
-            "social": 5,
-            "code": 10,
-            "hp": -10
-          },
-          "feedbackDialogues": [
-            {
-              "speakerId": "NPC_CLASSMATE_YEONWOONG",
-              "speakerName": "연웅",
-              "emotion": "SMILE",
-              "text": "\"저기... 이거 엄청 매운 껌인데 하나 드실래요? 저도 방금 씹고 극락 다녀왔습니다.\""
-            },
-            {
-              "speakerId": "SYSTEM",
-              "text": "(덕분에 잠이 확 깼다. 동기에게 고맙다는 인사를 건네고 다시 집중한다.)"
-            }
-          ]
-        }
-      }
-    ]
-  }
-]
+      "location": "캠퍼스",
+      "eventType": "FIXED"
+    }
+  ]
+}

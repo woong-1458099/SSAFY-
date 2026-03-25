@@ -32,6 +32,7 @@ export type SerializedInventoryStack = {
 export type InventorySnapshot = {
   inventorySlots: Array<SerializedInventoryStack | null>;
   equippedSlots: Record<EquipmentSlotKey, string | null>;
+  consumablesUsedToday: number;
 };
 
 export type InventoryEffectResult = {
@@ -46,6 +47,7 @@ export type InventoryPurchaseResult = {
 };
 
 const INVENTORY_CAPACITY = 16;
+const MAX_CONSUMABLE_USES_PER_DAY = 2;
 
 export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
   {
@@ -68,8 +70,8 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     shortLabel: "MS",
     kind: "equipment",
     equipSlot: "mouse",
-    price: 27000,
-    sellPrice: 13500,
+    price: 35000,
+    sellPrice: 17500,
     effect: "BE 능력치 +5",
     stackable: false,
     color: 0x9a86d4,
@@ -81,8 +83,8 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     name: "초코릿",
     shortLabel: "CH",
     kind: "consumable",
-    price: 6000,
-    sellPrice: 3000,
+    price: 3500,
+    sellPrice: 1750,
     effect: "HP +4, 스트레스 -3, 운 +1",
     stackable: true,
     color: 0xd89a66,
@@ -96,13 +98,13 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     name: "라면",
     shortLabel: "RA",
     kind: "consumable",
-    price: 12000,
-    sellPrice: 6000,
-    effect: "HP +9, 스트레스 -2",
+    price: 6000,
+    sellPrice: 3000,
+    effect: "HP +10, 스트레스 -2",
     stackable: true,
     color: 0xb17b4d,
     iconKey: "shop-item-ramen",
-    hpDelta: 9,
+    hpDelta: 10,
     stressDelta: -2
   },
   {
@@ -110,13 +112,13 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     name: "도시락",
     shortLabel: "DO",
     kind: "consumable",
-    price: 18000,
-    sellPrice: 9000,
-    effect: "HP +14, 스트레스 -4, 협업 +1",
+    price: 9000,
+    sellPrice: 4500,
+    effect: "HP +15, 스트레스 -4, 협업 +1",
     stackable: true,
     color: 0xc9936a,
     iconKey: "shop-item-dosirak",
-    hpDelta: 14,
+    hpDelta: 15,
     stressDelta: -4,
     statDelta: { teamwork: 1 }
   },
@@ -125,14 +127,14 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     name: "에너지 드링크",
     shortLabel: "ED",
     kind: "consumable",
-    price: 13000,
-    sellPrice: 6500,
-    effect: "HP +7, 스트레스 +5, FE +1",
+    price: 5000,
+    sellPrice: 2500,
+    effect: "HP +6, 스트레스 +6, FE +1",
     stackable: true,
     color: 0x7dd2d4,
     iconKey: "shop-item-energy-drink",
-    hpDelta: 7,
-    stressDelta: 5,
+    hpDelta: 6,
+    stressDelta: 6,
     statDelta: { fe: 1 }
   },
   {
@@ -140,13 +142,13 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     name: "과자",
     shortLabel: "SN",
     kind: "consumable",
-    price: 7500,
-    sellPrice: 3750,
-    effect: "HP +4, 스트레스 -2, 운 +1",
+    price: 3000,
+    sellPrice: 1500,
+    effect: "HP +3, 스트레스 -2, 운 +1",
     stackable: true,
     color: 0xf0b75d,
     iconKey: "shop-item-snack",
-    hpDelta: 4,
+    hpDelta: 3,
     stressDelta: -2,
     statDelta: { luck: 1 }
   },
@@ -155,28 +157,28 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     name: "담배",
     shortLabel: "CG",
     kind: "consumable",
-    price: 11000,
-    sellPrice: 5500,
-    effect: "HP -8, 스트레스 -7",
+    price: 2500,
+    sellPrice: 1250,
+    effect: "HP -6, 스트레스 -6",
     stackable: true,
     color: 0xb7bcc9,
     iconKey: "shop-item-cigarette",
-    hpDelta: -8,
-    stressDelta: -7
+    hpDelta: -6,
+    stressDelta: -6
   },
   {
     templateId: "item-soju",
     name: "소주",
     shortLabel: "SJ",
     kind: "consumable",
-    price: 14000,
-    sellPrice: 7000,
-    effect: "HP -5, 스트레스 -8, 협업 +1",
+    price: 4500,
+    sellPrice: 2250,
+    effect: "HP -4, 스트레스 -7, 협업 +1",
     stackable: true,
     color: 0x85d5b8,
     iconKey: "shop-item-soju",
-    hpDelta: -5,
-    stressDelta: -8,
+    hpDelta: -4,
+    stressDelta: -7,
     statDelta: { teamwork: 1 }
   }
 ];
@@ -240,6 +242,7 @@ export class InventoryService {
     keyboard: null,
     mouse: null
   };
+  private consumablesUsedToday = 0;
   private onChange?: () => void;
 
   constructor() {
@@ -256,6 +259,7 @@ export class InventoryService {
   reset(): void {
     this.inventorySlots = createEmptyInventorySlots();
     this.equippedSlots = { keyboard: null, mouse: null };
+    this.consumablesUsedToday = 0;
     STARTER_ITEM_TEMPLATE_IDS.forEach((templateId, index) => {
       const template = this.templateMap.get(templateId);
       if (template) {
@@ -364,13 +368,15 @@ export class InventoryService {
       equippedSlots: {
         keyboard: this.equippedSlots.keyboard?.templateId ?? null,
         mouse: this.equippedSlots.mouse?.templateId ?? null
-      }
+      },
+      consumablesUsedToday: this.consumablesUsedToday
     };
   }
 
   restore(snapshot?: Partial<InventorySnapshot> | null): void {
     this.inventorySlots = createEmptyInventorySlots();
     this.equippedSlots = { keyboard: null, mouse: null };
+    this.consumablesUsedToday = Math.max(0, Math.round(snapshot?.consumablesUsedToday ?? 0));
 
     const slots = Array.isArray(snapshot?.inventorySlots) ? snapshot.inventorySlots : [];
     for (let index = 0; index < Math.min(slots.length, INVENTORY_CAPACITY); index += 1) {
@@ -401,6 +407,11 @@ export class InventoryService {
     this.onChange?.();
   }
 
+  resetDailyConsumableUsage(): void {
+    this.consumablesUsedToday = 0;
+    this.onChange?.();
+  }
+
   private equipFromInventory(index: number): InventoryEffectResult {
     const slot = this.inventorySlots[index];
     if (!slot || slot.template.kind !== "equipment" || !slot.template.equipSlot) {
@@ -425,6 +436,12 @@ export class InventoryService {
       return { toastMessage: "사용할 수 없는 아이템입니다" };
     }
 
+    if (this.consumablesUsedToday >= MAX_CONSUMABLE_USES_PER_DAY) {
+      return {
+        toastMessage: "소모품은 하루에 2개까지만 사용할 수 있습니다"
+      };
+    }
+
     const nextQuantity = slot.quantity - 1;
     if (nextQuantity <= 0) {
       this.inventorySlots[index] = null;
@@ -435,6 +452,7 @@ export class InventoryService {
       };
     }
 
+    this.consumablesUsedToday += 1;
     this.onChange?.();
     return {
       hudPatch: {

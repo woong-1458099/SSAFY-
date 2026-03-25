@@ -7,6 +7,11 @@ type EndingComicSceneData = {
   ending?: EndingResult;
 };
 
+type EndingCreditScenePayload = {
+  payload: EndingFlowPayload;
+  ending: EndingResult;
+};
+
 const FONT_FAMILY = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 const PANEL_BG = 0x17355a;
 const PANEL_BORDER = 0x7dc9ff;
@@ -123,8 +128,11 @@ export class EndingComicScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createButton(width / 2 - 130, height - 70, "다시보기", () => this.replayComic());
-    this.createButton(width / 2 + 130, height - 70, "타이틀로", () => {
-      this.scene.start(SceneKey.Start);
+    this.createButton(width / 2 + 130, height - 70, "엔딩 크레딧", () => {
+      this.scene.start(SceneKey.EndingCredit, {
+        payload: this.payload,
+        ending: this.ending
+      } satisfies EndingCreditScenePayload);
     });
   }
 

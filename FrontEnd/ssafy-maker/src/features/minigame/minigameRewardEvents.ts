@@ -11,6 +11,7 @@ export type MinigameRewardPayload = {
 export type ParsedMinigameReward = {
   hudDelta: {
     hp?: number;
+    hpMax?: number;
     money?: number;
     stress?: number;
   };
@@ -18,14 +19,12 @@ export type ParsedMinigameReward = {
 };
 
 const STAT_LABEL_TO_KEY: Record<string, PlayerStatKey> = {
-  // 영문 스탯명 (권장)
   FE: "fe",
   BE: "be",
   LUCK: "luck",
   TEAMWORK: "teamwork",
-  // 한글 스탯명
-  "협업": "teamwork",
-  "운": "luck"
+  협업: "teamwork",
+  운: "luck"
 };
 
 export function emitMinigameReward(scene: Phaser.Scene, payload: MinigameRewardPayload): void {
@@ -54,8 +53,13 @@ export function parseMinigameRewardText(rewardText: string): ParsedMinigameRewar
       continue;
     }
 
-    if (upperLabel === "HP" || rawLabel === "체력") {
+    if (upperLabel === "HP") {
       hudDelta.hp = (hudDelta.hp ?? 0) + delta;
+      continue;
+    }
+
+    if (upperLabel === "HPMAX") {
+      hudDelta.hpMax = (hudDelta.hpMax ?? 0) + delta;
       continue;
     }
 
