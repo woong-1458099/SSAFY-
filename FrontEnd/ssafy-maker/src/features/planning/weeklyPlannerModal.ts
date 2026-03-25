@@ -65,7 +65,9 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   const objects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, subtitle];
   const contentWidth = panelWidth - 100;
   const gridColumnGap = 22;
+  const minGridColumnGap = 12;
   const legendGap = 38;
+  const minLegendGap = 16;
   const dayColumnWidth = 78;
   const slotWidth = 280;
   const slotHeight = 70;
@@ -75,22 +77,49 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   const legendPaddingTop = 24;
   const legendTitleGap = 28;
   const legendRowHeight = 64;
+  const fixedColumnWidth = dayColumnWidth + slotWidth * 2 + legendPanelWidth;
+  const desiredGapBudget = gridColumnGap * 2 + legendGap;
+  const minimumGapBudget = minGridColumnGap * 2 + minLegendGap;
+  const availableGapBudget = Math.max(0, contentWidth - fixedColumnWidth);
+  const gapBudget = Math.max(minimumGapBudget, availableGapBudget);
+  let effectiveGridColumnGap = gridColumnGap;
+  let effectiveLegendGap = legendGap;
+
+  const excessGap = Math.max(0, desiredGapBudget - gapBudget);
+  if (excessGap > 0) {
+    const legendReduction = Math.min(excessGap, effectiveLegendGap - minLegendGap);
+    effectiveLegendGap -= legendReduction;
+
+    const remainingExcess = excessGap - legendReduction;
+    if (remainingExcess > 0) {
+      const perColumnReduction = Math.min(
+        effectiveGridColumnGap - minGridColumnGap,
+        Math.ceil(remainingExcess / 2)
+      );
+      effectiveGridColumnGap -= perColumnReduction;
+    }
+
+    console.warn("[weeklyPlannerModal] planner grid exceeded content width, reduced gaps to keep modal visible.", {
+      contentWidth,
+      fixedColumnWidth,
+      desiredGapBudget,
+      effectiveGridColumnGap,
+      effectiveLegendGap
+    });
+  }
+
   const plannerGridWidth =
-    dayColumnWidth + gridColumnGap + slotWidth + gridColumnGap + slotWidth + legendGap + legendPanelWidth;
+    fixedColumnWidth + effectiveGridColumnGap * 2 + effectiveLegendGap;
   const plannerGridLeft = centerX - plannerGridWidth / 2;
   const dayColumnRightX = plannerGridLeft + dayColumnWidth;
-  const amX = dayColumnRightX + gridColumnGap + slotWidth / 2;
-  const pmX = amX + slotWidth / 2 + gridColumnGap + slotWidth / 2;
-  const legendPanelX = pmX + slotWidth / 2 + legendGap + legendPanelWidth / 2;
+  const amX = dayColumnRightX + effectiveGridColumnGap + slotWidth / 2;
+  const pmX = amX + slotWidth / 2 + effectiveGridColumnGap + slotWidth / 2;
+  const legendPanelX = pmX + slotWidth / 2 + effectiveLegendGap + legendPanelWidth / 2;
   const headerY = centerY - 180;
   const rowStartY = centerY - 126;
   const rowGap = 84;
   const slotInfoWidth = slotWidth - 112;
   const legendPanelY = centerY + 12;
-
-  if (plannerGridWidth > contentWidth) {
-    throw new Error("Weekly planner layout exceeds panel content width.");
-  }
 
   const amHeader = scene.add.text(amX, headerY, "오전 일정", {
     fontFamily: FONT_FAMILY,
