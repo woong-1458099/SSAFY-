@@ -254,7 +254,7 @@
 
 - 도메인: 도전과제
 - 메서드: `GET`
-- 경로: `/users/{user_id}/challenges`
+- 경로: `/api/users/{user_id}/challenges`
 - 설명: 유저의 도전과제 진행 상태를 조회합니다.
 - Path Parameter
   - `user_id`: 조회할 유저 ID
@@ -263,7 +263,7 @@
 
 - 도메인: 도전과제
 - 메서드: `POST`
-- 경로: `/users/{user_id}/challenges`
+- 경로: `/api/users/{user_id}/challenges`
 - 설명: 유저에게 도전과제를 할당합니다.
 - Path Parameter
   - `user_id`: 대상 유저 ID
