@@ -171,7 +171,9 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager = new StatSystemManager();
     this.inventoryService = new InventoryService();
     this.saveService = new SaveService();
-    await this.saveService.hydrate(true);
+    void this.saveService.hydrate(true).catch((error) => {
+      console.error("[MainScene] background save hydrate failed", error);
+    });
     this.dialogueBox = new DialogueBox(this);
     this.hud = new GameHud(this);
     this.fixedEventNpcManager = new FixedEventNpcManager(this);
