@@ -1,4 +1,3 @@
-import type { GameHud } from "../../features/ui/components/GameHud";
 import { normalizeAffectionNpcId } from "../../common/enums/npc";
 import {
   clampHudState,
@@ -11,9 +10,13 @@ import {
   type RuntimeGameState
 } from "../state/gameState";
 
+export interface HudProxy {
+  applyState(state: Partial<HudState>): void;
+}
+
 export class StatSystemManager {
   private state: RuntimeGameState;
-  private hud?: GameHud;
+  private hud?: HudProxy;
   private onStatsChanged?: (stats: PlayerStatsState) => void;
 
   constructor(initialState: RuntimeGameState = createDefaultGameState()) {
@@ -21,7 +24,7 @@ export class StatSystemManager {
     this.state.affection = this.normalizeAffectionState(this.state.affection);
   }
 
-  attachHud(hud: GameHud): void {
+  attachHud(hud: HudProxy): void {
     this.hud = hud;
     this.hud.applyState(this.state.hud);
   }
@@ -104,6 +107,7 @@ export class StatSystemManager {
   }
 
   patchHudState(next: Partial<HudState>): void {
+    const oldHud = { ...this.state.hud };
     this.state.hud = clampHudState({ ...this.state.hud, ...next });
     let statsChanged = false;
 
@@ -115,6 +119,7 @@ export class StatSystemManager {
       statsChanged = true;
     }
 
+    // Only emit if something actually changed
     this.emitChanges(statsChanged);
   }
 

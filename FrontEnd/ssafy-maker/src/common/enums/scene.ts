@@ -10,7 +10,8 @@ export const SCENE_KEYS = {
   finalSummary: "finalSummary",
   endingIntro: "endingIntro",
   endingComic: "endingComic",
-  endingCredit: "endingCredit"
+  endingCredit: "endingCredit",
+  inGameUI: "inGameUI"
 } as const;
 
 export type SceneKey = (typeof SCENE_KEYS)[keyof typeof SCENE_KEYS];

@@ -27,10 +27,6 @@ import { resolveEnding } from "../../features/progression/services/endingResolve
 import { beginLogout, clearAuthRegistry, clearStoredSession } from "../../features/auth/authSession";
 import { SceneKey } from "../../shared/enums/sceneKey";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
-import { TutorialManager } from "../../features/tutorial";
-import { DialogueBox } from "../../features/ui/components/DialogueBox";
-import { GameHud } from "../../features/ui/components/GameHud";
-import { GameGuideUI } from "../../features/ui/components/GameGuideUI";
 import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
@@ -44,19 +40,18 @@ import { resolvePlayerAppearanceDefinition } from "../definitions/player/playerA
 import { getSceneState } from "../definitions/sceneStates/sceneStateRegistry";
 import { DialogueManager } from "../managers/DialogueManager";
 import { FixedEventNpcManager } from "../managers/FixedEventNpcManager";
-import { InGameMenuManager } from "../managers/InGameMenuManager";
 import {
   InteractionManager,
   type RuntimeStaticPlaceTarget
 } from "../managers/InteractionManager";
 import { NpcManager } from "../managers/NpcManager";
 import { MinigameRewardManager } from "../managers/MinigameRewardManager";
-import { PlaceActionManager } from "../managers/PlaceActionManager";
 import { ProgressionManager } from "../managers/ProgressionManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { StatSystemManager } from "../managers/StatSystemManager";
 import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
+import { InGameUIScene } from "./InGameUIScene";
 import type { SceneId } from "../scripts/scenes/sceneIds";
 import { playPlaceBgm, playWorldBgm, createSkyBackground, createCampusBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
 import {
@@ -101,17 +96,12 @@ export class MainScene extends Phaser.Scene {
   private statSystemManager?: StatSystemManager;
   private inventoryService?: InventoryService;
   private saveService?: SaveService;
-  private dialogueBox?: DialogueBox;
-  private hud?: GameHud;
-  private gameGuide?: GameGuideUI;
-  private menuManager?: InGameMenuManager;
+  private uiScene?: InGameUIScene;
   private fixedEventNpcManager?: FixedEventNpcManager;
   private minigameRewardManager?: MinigameRewardManager;
-  private placeActionManager?: PlaceActionManager;
   private progressionManager?: ProgressionManager;
   private interactionManager?: InteractionManager;
   private storyEventManager?: StoryEventManager;
-  private areaTransitionOverlay?: AreaTransitionOverlay;
   private debugCommandBus?: DebugCommandBus;
   private debugInputController?: DebugInputController;
   private unsubscribeDebugCommandBus?: () => void;
@@ -126,7 +116,6 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
-  private tutorialManager?: TutorialManager;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -141,8 +130,8 @@ export class MainScene extends Phaser.Scene {
       const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
       const debugPanelVisible = this.debugPanel?.isVisible() === true;
       const debugTileEditorVisible = this.worldTileEditor?.isVisible() === true;
-      const menuOpen = this.menuManager?.isOpen() === true;
-      const placePopupOpen = this.placeActionManager?.isOpen() === true;
+      const menuOpen = this.uiScene?.isMenuOpen() === true;
+      const placePopupOpen = this.uiScene?.isPlaceActionOpen() === true;
       const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
       const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
 
@@ -178,11 +167,7 @@ export class MainScene extends Phaser.Scene {
     void this.saveService.hydrate(true).catch((error) => {
       console.error("[MainScene] background save hydrate failed", error);
     });
-    this.dialogueBox = new DialogueBox(this);
-    this.hud = new GameHud(this);
-    this.gameGuide = new GameGuideUI(this);
     this.fixedEventNpcManager = new FixedEventNpcManager(this);
-    this.dialogueManager.setDialogueBox(this.dialogueBox);
     this.dialogueManager.setRuntimeHooks({
       getMetricValue: (stat) => {
         const hudState = this.statSystemManager!.getHudState();
@@ -199,46 +184,22 @@ export class MainScene extends Phaser.Scene {
             return statsState[stat];
         }
       },
-      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier as 1 | -1),
       getAffectionValue: (npcId) => this.statSystemManager!.getAffection(npcId),
       applyAffectionDelta: (changes) => this.statSystemManager!.applyAffectionDelta(changes),
       setFlags: (flags) => this.statSystemManager!.addFlags(flags),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
-      onNotice: (message) => this.menuManager?.showNotice(message),
+      onNotice: (message) => this.events.emit("ui:showNotice", message),
       runAction: createDialogueActionRunner({
         scene: this,
         returnSceneKey: SCENE_KEYS.main,
-        openShop: () => this.placeActionManager?.openShop()
+        openShop: () => this.events.emit("ui:openPlaceAction", "shop") // Adjusted if needed
       })
       
     });
-    this.menuManager = new InGameMenuManager({
-      scene: this,
-      getStatsState: () => this.statSystemManager!.getStatsState(),
-      getHudState: () => this.statSystemManager!.getHudState(),
-      patchHudState: (next) => this.statSystemManager!.patchHudState(next),
-      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
-      inventoryService: this.inventoryService,
-      saveService: this.saveService,
-      buildSavePayload: () => this.buildSavePayload(),
-      restoreSavePayload: (payload) => this.restoreSavePayload(payload),
-      getSettingsState: () => ({
-        bgmVolume: this.audioManager.getVolumes().bgm,
-        bgmEnabled: this.audioManager.isBgmEnabled(),
-        sfxVolume: this.audioManager.getVolumes().sfx,
-        sfxEnabled: this.audioManager.isSfxEnabled(),
-        brightness: this.displaySettingsManager.getBrightness()
-      }),
-      onAdjustBgmVolume: (delta) => this.adjustBgmVolume(delta),
-      onToggleBgm: () => this.toggleBgmEnabled(),
-      onAdjustSfxVolume: (delta) => this.adjustSfxVolume(delta),
-      onToggleSfx: () => this.toggleSfxEnabled(),
-      onAdjustBrightness: (delta) => this.adjustBrightness(delta),
-      onLogout: () => {
-        void this.handleLogout();
-      }
+    this.statSystemManager.attachHud({
+      applyState: (patch) => this.events.emit("ui:patchHud", patch)
     });
-    this.statSystemManager.attachHud(this.hud);
     this.progressionManager = new ProgressionManager({
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
@@ -246,7 +207,7 @@ export class MainScene extends Phaser.Scene {
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
       getFixedEventSlots: (week) => this.storyEventManager?.getFixedEventSlotsForWeek(week) ?? new Map(),
       resolveTimeAdvanceBlockedMessage: () => this.storyEventManager?.resolveTimeAdvanceBlockedMessage() ?? null,
-      onNotice: (message) => this.menuManager?.showNotice(message),
+      onNotice: (message) => this.events.emit("ui:showNotice", message),
       onStartEndingFlow: () => this.startEndingFlow(),
       onDayPassed: () => this.inventoryService?.resetDailyConsumableUsage()
     });
@@ -279,7 +240,7 @@ export class MainScene extends Phaser.Scene {
         // 레지스트리에 데이터가 있고, 아직 완료되지 않았다면 활성 상태로 간주 (재시작 시 안정성 확보)
         return progress && !progress.completedAt;
       },
-      onNotice: (message) => this.menuManager?.showNotice(message)
+      onNotice: (message) => this.events.emit("ui:showNotice", message)
     });
     await this.storyEventManager.initialize(this.statSystemManager.getHudState().week);
     this.minigameRewardManager = new MinigameRewardManager({
@@ -288,19 +249,7 @@ export class MainScene extends Phaser.Scene {
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier)
     });
-    this.placeActionManager = new PlaceActionManager({
-      scene: this,
-      audioManager: this.audioManager,
-      getHudState: () => this.statSystemManager!.getHudState(),
-      patchHudState: (next) => this.statSystemManager!.patchHudState(next),
-      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
-      inventoryService: this.inventoryService,
-      getTimeCycleIndex: () => this.progressionManager!.getTimeCycleIndex(),
-      getActionPoint: () => this.progressionManager!.getActionPoint(),
-      getMaxActionPoint: () => this.progressionManager!.getMaxActionPoint(),
-      tryConsumeActionPoint: () => this.progressionManager!.tryConsumeActionPoint({ notifyOnFailure: false }),
-      onHomeTimeAdvanced: () => this.storyEventManager?.requestFixedEventTrigger("home")
-    });
+    // PlaceActionManager is now in InGameUIScene
     this.interactionManager = new InteractionManager(
       this,
       this.playerManager,
@@ -308,21 +257,49 @@ export class MainScene extends Phaser.Scene {
       this.dialogueManager,
       this.debugLogger
     );
-    this.interactionManager.setHud(this.hud);
     this.interactionManager.setPlaceInteractHandler((placeId) => {
       if (this.storyEventManager?.tryStartFixedEventForLocation(placeId) === true) {
         return true;
       }
 
-      return this.placeActionManager?.open(placeId) === true;
+      this.events.emit("ui:openPlaceAction", placeId);
+      return true;
     });
     this.escapeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.plannerKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.statSystemManager.setStatsChangedListener(() => {
-      this.menuManager?.refreshStatsUi();
+      this.events.emit("ui:refreshStats");
     });
     this.inventoryService.setChangeListener(() => {
-      this.menuManager?.refreshInventoryUi();
+      this.events.emit("ui:refreshInventory");
+    });
+
+    // Launch UI Scene
+    this.scene.launch(SCENE_KEYS.inGameUI, {
+      mainScene: this,
+      getHudState: () => this.statSystemManager!.getHudState(),
+      patchHudState: (next: any) => this.statSystemManager!.patchHudState(next),
+      getStatsState: () => this.statSystemManager!.getStatsState(),
+      applyStatDelta: (delta: any, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier as 1 | -1),
+      inventoryService: this.inventoryService,
+      saveService: this.saveService,
+      audioManager: this.audioManager,
+      displaySettingsManager: this.displaySettingsManager,
+      progressionManager: this.progressionManager,
+      storyEventManager: this.storyEventManager,
+      buildSavePayload: () => this.buildSavePayload(),
+      restoreSavePayload: (payload: any) => this.restoreSavePayload(payload),
+      handleLogout: () => this.handleLogout(),
+      adjustBgmVolume: (delta: number) => this.adjustBgmVolume(delta),
+      toggleBgmEnabled: () => this.toggleBgmEnabled(),
+      adjustSfxVolume: (delta: number) => this.adjustSfxVolume(delta),
+      toggleSfxEnabled: () => this.toggleSfxEnabled(),
+      adjustBrightness: (delta: number) => this.adjustBrightness(delta)
+    });
+
+    this.events.once("ui:ready", (uiScene: InGameUIScene) => {
+      this.uiScene = uiScene;
+      this.dialogueManager?.setDialogueBox(uiScene.getDialogueBox());
     });
 
     const director = new SceneDirector(
@@ -404,8 +381,7 @@ export class MainScene extends Phaser.Scene {
       );
     }
 
-    this.areaTransitionOverlay = new AreaTransitionOverlay(this);
-    this.areaTransitionOverlay.render(transitionTargets);
+    this.events.emit("ui:renderTransitions", transitionTargets);
     this.ensureBrightnessOverlay();
     this.applyBrightnessOverlay();
     this.ensureDebugModeInitialized();
@@ -431,21 +407,20 @@ export class MainScene extends Phaser.Scene {
       this.worldTileEditor?.destroy();
       this.debugInputController?.destroy();
       this.dialogueManager?.destroy();
-      this.dialogueBox?.destroy();
       this.fixedEventNpcManager?.destroy();
       this.minigameRewardManager?.destroy();
-      this.placeActionManager?.destroy();
       this.progressionManager?.destroy();
       this.storyEventManager?.destroy();
-      this.menuManager?.destroy();
-      this.hud?.destroy();
-      this.gameGuide?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
-      this.tutorialManager?.destroy();
       this.destroySkyBackground?.();
       this.destroySkyBackground = undefined;
+
+      // Stop the UI scene if it's running
+      if (this.scene.isActive(SCENE_KEYS.inGameUI)) {
+        this.scene.stop(SCENE_KEYS.inGameUI);
+      }
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupSceneResources);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupSceneResources);
@@ -484,29 +459,21 @@ export class MainScene extends Phaser.Scene {
     }
 
     // Initialize tutorial for new games (after scene is fully set up)
+    // Tutorial is now handled by InGameUIScene via events
     if (this.shouldStartTutorial()) {
       const isNewCharacter = this.registry.get("isNewCharacter") === true;
-      // Clear the flag immediately so tutorial doesn't restart completely on map transitions
       this.registry.set("isNewCharacter", false);
 
-      this.tutorialManager = new TutorialManager({
-        scene: this,
-        onComplete: () => {
-          // Tutorial completed
-        }
-      });
+      const startTutorial = () => {
+        this.events.emit("ui:startTutorial", {
+          onComplete: () => { /* Tutorial completed */ }
+        });
+      };
 
       if (isNewCharacter) {
-        // 첫 게임 시작 시에는 주간 계획표 선택 후(모달 닫힘) 시작
-        this.events.once("tutorial:plannerClosed", () => {
-          this.tutorialManager?.start();
-        });
+        this.events.once("tutorial:plannerClosed", startTutorial);
       } else {
-        // 이미 진행 중이던 튜토리얼(건물 맵 이동 등) — FADE_IN_COMPLETE 이벤트는
-        // 카메라 페이드 애니메이션이 없을 때 영영 오지 않으므로, 짧은 타이머로 대체
-        this.time.delayedCall(200, () => {
-          this.tutorialManager?.start();
-        });
+        this.time.delayedCall(200, startTutorial);
       }
     }
   }
@@ -518,7 +485,7 @@ export class MainScene extends Phaser.Scene {
 
     this.logoutInProgress = true;
     this.input.enabled = false;
-    this.menuManager?.close();
+    this.events.emit("ui:closeMenu");
     this.sound.stopAll();
     clearAuthRegistry(this.registry);
     clearStoredSession();
@@ -638,8 +605,8 @@ export class MainScene extends Phaser.Scene {
     const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
     const debugPanelVisible = this.debugPanel?.isVisible() === true;
     const debugTileEditorVisible = this.worldTileEditor?.isVisible() === true;
-    const menuOpen = this.menuManager?.isOpen() === true;
-    const placePopupOpen = this.placeActionManager?.isOpen() === true;
+    const menuOpen = this.uiScene?.isMenuOpen() === true;
+    const placePopupOpen = this.uiScene?.isPlaceActionOpen() === true;
 
     if (this.wasPlacePopupOpen && !placePopupOpen) {
       const area = this.worldManager?.getCurrentAreaId() ?? "world";
@@ -677,10 +644,10 @@ export class MainScene extends Phaser.Scene {
         return;
       }
       if (placePopupOpen) {
-        this.placeActionManager?.close();
+        this.events.emit("ui:closePlaceAction");
         return;
       }
-      this.menuManager?.toggle();
+      this.events.emit("ui:toggleMenu");
     }
 
     if (
@@ -734,10 +701,7 @@ export class MainScene extends Phaser.Scene {
       );
     }
 
-    this.areaTransitionOverlay?.render(
-      this.resolveAreaTransitionTargets(this.worldManager.getCurrentAreaId() ?? "world", renderBounds),
-      this.interactionManager.getCurrentTargetTransitionId()
-    );
+    this.events.emit("ui:renderTransitions", this.resolveAreaTransitionTargets(this.worldManager.getCurrentAreaId() ?? "world", renderBounds));
 
     const player = this.playerManager.getSnapshot();
     if (player) {
@@ -778,37 +742,32 @@ export class MainScene extends Phaser.Scene {
   }
 
   private updateGameGuide(): void {
-    if (!this.gameGuide || !this.progressionManager || !this.storyEventManager) {
+    if (!this.progressionManager || !this.storyEventManager) {
       return;
     }
 
     const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
     const debugPanelVisible = this.debugPanel?.isVisible() === true;
     const debugTileEditorVisible = this.worldTileEditor?.isVisible() === true;
-    const menuOpen = this.menuManager?.isOpen() === true;
-    const placePopupOpen = this.placeActionManager?.isOpen() === true;
+    const menuOpen = this.uiScene?.isMenuOpen() === true;
+    const placePopupOpen = this.uiScene?.isPlaceActionOpen() === true;
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
 
-    // 대화 중이거나 메뉴가 열려있을 때는 가이드를 숨김 (또는 정보만 업데이트)
-    this.gameGuide.setVisible(!menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible && !debugTileEditorVisible);
+    this.events.emit("ui:setGuideVisible", !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible && !debugTileEditorVisible);
 
-    if (this.tutorialManager?.getIsActive()) {
-      const stepIndex = this.tutorialManager.getCurrentStepIndex();
-      this.gameGuide.applyState({
+    const tutorialProgress = this.registry.get("tutorialProgress");
+    if (tutorialProgress && !tutorialProgress.completedAt) {
+      this.events.emit("ui:updateGuide", {
         objective: "튜토리얼 진행 중",
-        location: undefined,
-        npc: undefined,
-        action: `단계: ${stepIndex + 1}`
+        action: "튜토리얼 단계를 따르세요"
       });
       return;
     }
 
     if (this.progressionManager.isPlannerOpen()) {
-      this.gameGuide.applyState({
+      this.events.emit("ui:updateGuide", {
         objective: "주간 계획 세우기",
-        location: undefined,
-        npc: undefined,
         action: "이번 주 일정을 계획하세요"
       });
       return;
@@ -816,7 +775,7 @@ export class MainScene extends Phaser.Scene {
 
     const pendingEvent = this.storyEventManager.getPendingFixedEventInfo();
     if (pendingEvent) {
-      this.gameGuide.applyState({
+      this.events.emit("ui:updateGuide", {
         objective: pendingEvent.eventName,
         location: pendingEvent.location,
         npc: pendingEvent.participants.join(", "),
@@ -826,20 +785,17 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (this.progressionManager.getActionPoint() <= 0) {
-       this.gameGuide.applyState({
+      this.events.emit("ui:updateGuide", {
         objective: "하루 일과 마무리",
         location: "집",
-        npc: undefined,
         action: "집으로 가서 휴식하세요"
       });
       return;
     }
 
-    // 기본 상태
-    this.gameGuide.applyState({
+    this.events.emit("ui:updateGuide", {
       objective: "자유 시간",
       location: "전체 지도",
-      npc: undefined,
       action: "NPC와 대화하거나 장소를 방문하세요"
     });
   }
@@ -914,17 +870,17 @@ export class MainScene extends Phaser.Scene {
           this.statSystemManager.patchHudState({
             [command.key]: hudState[command.key] + command.delta
           });
-          this.menuManager?.showNotice(`디버그 ${command.key} ${command.delta > 0 ? "+" : ""}${command.delta}`);
+          this.events.emit("ui:showNotice", `디버그 ${command.key} ${command.delta > 0 ? "+" : ""}${command.delta}`);
           break;
         }
         case "adjustStatValue":
           this.statSystemManager?.applyStatDelta({ [command.key]: command.delta });
-          this.menuManager?.showNotice(`디버그 ${command.key} ${command.delta > 0 ? "+" : ""}${command.delta}`);
+          this.events.emit("ui:showNotice", `디버그 ${command.key} ${command.delta > 0 ? "+" : ""}${command.delta}`);
           break;
         case "advanceTime":
           this.progressionManager?.debugAdvanceTime();
           this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
-          this.menuManager?.showNotice("디버그 시간 진행");
+          this.events.emit("ui:showNotice", "디버그 시간 진행");
           break;
         case "adjustWeek": {
           const timeState = this.progressionManager?.getTimeState();
@@ -935,7 +891,7 @@ export class MainScene extends Phaser.Scene {
             week: timeState.week + command.delta
           });
           this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
-          this.menuManager?.showNotice(`디버그 주차 ${command.delta > 0 ? "+" : ""}${command.delta}`);
+          this.events.emit("ui:showNotice", `디버그 주차 ${command.delta > 0 ? "+" : ""}${command.delta}`);
           break;
         }
         case "adjustActionPoint": {
@@ -946,7 +902,7 @@ export class MainScene extends Phaser.Scene {
           this.progressionManager?.debugPatchTimeState({
             actionPoint: timeState.actionPoint + command.delta
           });
-          this.menuManager?.showNotice(`디버그 행동력 ${command.delta > 0 ? "+" : ""}${command.delta}`);
+          this.events.emit("ui:showNotice", `디버그 행동력 ${command.delta > 0 ? "+" : ""}${command.delta}`);
           break;
         }
         case "refillActionPoint": {
@@ -957,18 +913,18 @@ export class MainScene extends Phaser.Scene {
           this.progressionManager?.debugPatchTimeState({
             actionPoint: timeState.maxActionPoint
           });
-          this.menuManager?.showNotice("디버그 행동력 최대치");
+          this.events.emit("ui:showNotice", "디버그 행동력 최대치");
           break;
         }
         case "giveInventoryItem": {
           const result = this.inventoryService?.debugGrantItem(command.templateId);
           if (result) {
-            this.menuManager?.showNotice(result.message);
+            this.events.emit("ui:showNotice", result.message);
           }
           break;
         }
         case "triggerCurrentFixedEvent":
-          this.menuManager?.showNotice(
+          this.events.emit("ui:showNotice", 
             this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() ? "고정 이벤트 실행" : "실행 가능한 고정 이벤트가 없습니다"
           );
           break;
@@ -986,12 +942,12 @@ export class MainScene extends Phaser.Scene {
           break;
         case "resetFixedEventCompletion": {
           const changed = this.storyEventManager?.debugResetFixedEventCompletion(command.eventId) === true;
-          this.menuManager?.showNotice(changed ? `이벤트 완료 기록 초기화: ${command.eventId}` : `완료 기록이 없습니다: ${command.eventId}`);
+          this.events.emit("ui:showNotice", changed ? `이벤트 완료 기록 초기화: ${command.eventId}` : `완료 기록이 없습니다: ${command.eventId}`);
           break;
         }
         case "resetFixedEventCompletionsForWeek": {
           const cleared = this.storyEventManager?.debugResetFixedEventCompletionsForWeek(command.week) ?? 0;
-          this.menuManager?.showNotice(cleared > 0 ? `${command.week}주차 완료 기록 ${cleared}건 초기화` : `${command.week}주차 완료 기록이 없습니다`);
+          this.events.emit("ui:showNotice", cleared > 0 ? `${command.week}주차 완료 기록 ${cleared}건 초기화` : `${command.week}주차 완료 기록이 없습니다`);
           break;
         }
         case "saveAuto":
@@ -1001,11 +957,11 @@ export class MainScene extends Phaser.Scene {
           break;
         case "startEndingFlow":
           this.startDebugEndingFlow();
-          this.menuManager?.showNotice("디버그 엔딩 진입");
+          this.events.emit("ui:showNotice", "디버그 엔딩 진입");
           break;
         case "startEndingFlowPreset":
           this.startDebugEndingFlow(command.endingId);
-          this.menuManager?.showNotice(`디버그 엔딩 진입: ${command.endingId}`);
+          this.events.emit("ui:showNotice", `디버그 엔딩 진입: ${command.endingId}`);
           break;
         default:
           this.assertNeverDebugCommand(command);
@@ -1500,7 +1456,7 @@ export class MainScene extends Phaser.Scene {
       await this.saveService.saveSlot("auto", this.buildSavePayload());
     } catch (error) {
       console.error("[MainScene] ending auto save failed", error);
-      this.menuManager?.showNotice("엔딩 진입 전 오토 세이브에 실패했습니다.");
+      this.events.emit("ui:showNotice", "엔딩 진입 전 오토 세이브에 실패했습니다.");
     }
 
     this.scene.start(SceneKey.Completion, this.buildEndingPayload());
@@ -1513,10 +1469,10 @@ export class MainScene extends Phaser.Scene {
 
     try {
       await this.saveService.saveSlot("auto", this.buildSavePayload());
-      this.menuManager?.showNotice("오토 세이브 완료");
+      this.events.emit("ui:showNotice", "오토 세이브 완료");
     } catch (error) {
       console.error("[MainScene] auto save failed", error);
-      this.menuManager?.showNotice("오토 세이브에 실패했습니다.");
+      this.events.emit("ui:showNotice", "오토 세이브에 실패했습니다.");
     }
   }
 
@@ -1635,8 +1591,8 @@ export class MainScene extends Phaser.Scene {
     this.storyEventManager.restore(payload.story);
     this.resyncHudLocationLabel(payload.world?.areaId);
     this.storyEventManager.syncWeek(payload.gameState.hud.week);
-    this.menuManager?.refreshStatsUi();
-    this.menuManager?.refreshInventoryUi();
+    this.events.emit("ui:refreshStats");
+    this.events.emit("ui:refreshInventory");
     return true;
   }
 
@@ -1710,8 +1666,8 @@ export class MainScene extends Phaser.Scene {
     if (payload.world?.playerTile) {
       this.playerManager?.debugTeleportToTile(payload.world.playerTile.tileX, payload.world.playerTile.tileY);
     }
-    this.menuManager?.refreshStatsUi();
-    this.menuManager?.refreshInventoryUi();
+    this.events.emit("ui:refreshStats");
+    this.events.emit("ui:refreshInventory");
   }
   private handleDebugFixedEventJump(
     week: number,
@@ -1723,7 +1679,7 @@ export class MainScene extends Phaser.Scene {
   ): void {
     const event = this.storyEventManager?.getFixedEventDebugEntry(week, eventId);
     if (!event) {
-      this.menuManager?.showNotice("선택한 이벤트 데이터를 아직 불러오지 못했습니다");
+      this.events.emit("ui:showNotice", "선택한 이벤트 데이터를 아직 불러오지 못했습니다");
       this.storyEventManager?.syncWeek(week);
       return;
     }
@@ -1779,7 +1735,7 @@ export class MainScene extends Phaser.Scene {
 
     const moved = this.restoreSavePayload(payload);
     if (moved) {
-      this.menuManager?.showNotice(
+      this.events.emit("ui:showNotice", 
         options.runImmediately
           ? `이벤트 실행 준비: ${event.eventName}`
           : `이벤트 조건으로 이동: ${event.eventName}`
@@ -1801,7 +1757,7 @@ export class MainScene extends Phaser.Scene {
 
     this.registry.remove(MainScene.PENDING_DEBUG_FIXED_EVENT_KEY);
     const started = this.storyEventManager?.debugStartFixedEventById(pending.week, pending.eventId) === true;
-    this.menuManager?.showNotice(started ? `고정 이벤트 실행: ${pending.eventId}` : `고정 이벤트 실행 실패: ${pending.eventId}`);
+    this.events.emit("ui:showNotice", started ? `고정 이벤트 실행: ${pending.eventId}` : `고정 이벤트 실행 실패: ${pending.eventId}`);
   }
 
   private shouldStartTutorial(): boolean {
