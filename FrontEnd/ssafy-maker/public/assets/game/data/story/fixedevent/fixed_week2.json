@@ -28,6 +28,7 @@
         "actionType": "NORMAL",
         "condition": null,
         "text": "\"너무 어렵습니다... 자격증도 병행하려 했는데 무리네요.\"",
+        "action": "playTank",
         "result": {
           "statChanges": {
             "stress": -10

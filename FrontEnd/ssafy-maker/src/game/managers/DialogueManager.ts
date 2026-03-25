@@ -112,15 +112,19 @@ export class DialogueManager {
           if (selectedChoice) {
             this.applyChoiceStatChanges(selectedChoice);
           }
+          if (selectedChoice?.action) {
+            this.runAction?.(selectedChoice.action);
+            // action이 미니게임을 실행하면 씬이 pause되어 UPDATE 이벤트가 멈춤
+            // 따라서 대화를 즉시 종료하고 feedbackDialogues/nextNodeId는 따라가지 않음
+            currentNode = undefined;
+            continue;
+          }
           if (selectedChoice?.nextNodeId) {
             currentNode = script.nodes[selectedChoice.nextNodeId];
             continue;
           }
           if (selectedChoice?.feedbackText) {
             this.onNotice?.(selectedChoice.feedbackText);
-          }
-          if (selectedChoice?.action) {
-            this.runAction?.(selectedChoice.action);
           }
           currentNode = undefined;
           continue;

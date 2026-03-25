@@ -22,6 +22,7 @@
         "actionType": "NORMAL",
         "condition": null,
         "text": "[기본] 패키지를 지웠다 깔았다 무한 반복한다.",
+        "action": "playTyping",
         "result": {
           "statChanges": {
             "hp": -20,

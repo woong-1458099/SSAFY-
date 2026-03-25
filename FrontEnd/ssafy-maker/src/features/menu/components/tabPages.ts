@@ -388,6 +388,11 @@ export function createSettingsPage(
   applyScroll();
 
   const destroyInteractiveTree = (object: Phaser.GameObjects.GameObject): void => {
+    // 객체의 scene이 유효한지 확인 (이미 파괴된 객체는 건너뜀)
+    if (!object || !object.scene?.sys) {
+      return;
+    }
+
     if ("removeAllListeners" in object && typeof object.removeAllListeners === "function") {
       object.removeAllListeners();
     }

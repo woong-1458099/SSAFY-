@@ -23,7 +23,7 @@ import {
   LEGACY_RHYTHM_SCENE_KEY,
   LEGACY_RUNNER_SCENE_KEY,
   LEGACY_TANK_SCENE_KEY,
-  // LEGACY_TYPING_SCENE_KEY, // 타이핑 게임 비활성화
+  LEGACY_TYPING_SCENE_KEY,
   isDeprecatedMinigameSceneKey,
   SUPPORTED_MINIGAME_SCENE_KEYS
 } from "../../features/minigame/minigameSceneKeys";
@@ -52,7 +52,7 @@ import LegacyQuizScene from "../../game/scenes/minigames/QuizScene";
 import LegacyRhythmScene from "../../game/scenes/minigames/RhythmScene";
 import LegacyRunnerScene from "../../game/scenes/minigames/RunnerScene";
 import LegacyTankScene from "../../game/scenes/minigames/TankScene";
-// import LegacyTypingScene from "../../game/scenes/minigames/TypingScene"; // 타이핑 게임 비활성화
+import LegacyTypingScene from "../../game/scenes/minigames/TypingScene";
 
 type SceneConstructor = new () => Phaser.Scene;
 
@@ -80,7 +80,7 @@ const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: LEGACY_INTERVIEW_SCENE_KEY, scene: LegacyInterviewScene },
   { key: LEGACY_RUNNER_SCENE_KEY, scene: LegacyRunnerScene },
   { key: LEGACY_TANK_SCENE_KEY, scene: LegacyTankScene },
-  // 타이핑 게임 비활성화 (TypingScene)
+  { key: LEGACY_TYPING_SCENE_KEY, scene: LegacyTypingScene },
   { key: LEGACY_BUSINESS_SMILE_SCENE_KEY, scene: LegacyBusinessSmileScene },
   { key: LEGACY_DONT_SMILE_SCENE_KEY, scene: LegacyDontSmileScene },
   { key: LEGACY_GYM_SCENE_KEY, scene: LegacyGymScene },

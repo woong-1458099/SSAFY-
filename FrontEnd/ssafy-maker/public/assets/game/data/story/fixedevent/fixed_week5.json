@@ -290,12 +290,12 @@
         "actionType": "NORMAL",
         "condition": null,
         "text": "[기본] (안면 근육에 경련이 일어나는 억지 미소로) \"솔직히... 찬밥 더운밥 가릴 처지가 아닌 것 같습니다. 어디든 붙여주시는 곳으로 가겠습니다 ㅠㅠ\"",
+        "action": "playBusinessSmile",
         "result": {
           "statChanges": {
             "stress": 20,
             "hp": -10
           },
-          "triggerMiniGame": "SMILE_DETECTION_START",
           "feedbackDialogues": [
             {
               "speakerId": "PLAYER",
