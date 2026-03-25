@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { createWeeklyPlanActivityModal } from "../../features/planning/weeklyPlanActivityModal";
+import { getWeeklyPlanActivityImageKey } from "../../features/planning/planningAssets";
 import { createWeeklyPlannerModal } from "../../features/planning/weeklyPlannerModal";
 import {
   createDefaultWeeklyPlan,
@@ -21,7 +22,6 @@ import {
 import type { HudState, PlayerStatKey } from "../state/gameState";
 
 const WEEKLY_SALARY_AMOUNT = 50000;
-const WEEKLY_PLAN_ACTIVITY_DURATION_MS = 2200;
 
 type ProgressionSnapshot = {
   timeState: TimeState;
@@ -35,6 +35,7 @@ type WeeklyPlanActivityPayload = {
   statusText: string;
   description: string;
   accentColor: number;
+  imageKey: string;
   option: WeeklyPlanOption;
 };
 
@@ -112,7 +113,6 @@ export class ProgressionManager {
   private pendingWeeklySalaryWeek: number | null = null;
   private plannerRoot?: Phaser.GameObjects.Container;
   private activityRoot?: Phaser.GameObjects.Container;
-  private activityTimer?: Phaser.Time.TimerEvent;
   private salaryRoot?: Phaser.GameObjects.Container;
   private endingFlowStarted = false;
 
@@ -505,22 +505,26 @@ export class ProgressionManager {
       statusText: `${option.label} 진행 중...`,
       description: option.description,
       accentColor: option.color,
+      imageKey: getWeeklyPlanActivityImageKey(option.id),
       option
     };
   }
 
   private openWeeklyPlanActivity(activity: WeeklyPlanActivityPayload, onComplete?: () => void): void {
     this.closeWeeklyPlanActivity();
-    this.activityRoot = createWeeklyPlanActivityModal(this.scene, activity);
-    this.activityTimer = this.scene.time.delayedCall(WEEKLY_PLAN_ACTIVITY_DURATION_MS, () => {
-      this.closeWeeklyPlanActivity();
-      onComplete?.();
+    this.activityRoot = createWeeklyPlanActivityModal(this.scene, {
+      ...activity,
+      onClose: () => {
+        if (!this.activityRoot) {
+          return;
+        }
+        this.closeWeeklyPlanActivity();
+        onComplete?.();
+      }
     });
   }
 
   private closeWeeklyPlanActivity(): void {
-    this.activityTimer?.destroy();
-    this.activityTimer = undefined;
     this.activityRoot?.destroy(true);
     this.activityRoot = undefined;
   }
