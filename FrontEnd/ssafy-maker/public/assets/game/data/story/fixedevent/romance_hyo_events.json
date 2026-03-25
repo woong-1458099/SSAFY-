@@ -291,7 +291,7 @@
               ],
               "lockedReason": "처음부터 다시 칠 체력이 고갈되었습니다.",
               "statChanges": {
-                "hp": 6
+                "hp": 0
               },
               "nextNodeId": "w2d2_c4_res1",
               "affectionChanges": {
@@ -643,7 +643,7 @@
               ],
               "lockedReason": "겉옷을 양보할 여력이 없습니다.",
               "statChanges": {
-                "hp": 4
+                "hp": 0
               },
               "nextNodeId": "w3d7_c2_res1",
               "affectionChanges": {
@@ -918,7 +918,7 @@
               "text": "[기본] \"앗, 어, 책 바뀌었더라. 미안 미안, 여기 있어.\"",
               "actionType": "NORMAL",
               "statChanges": {
-                "hp": 4
+                "hp": 0
               },
               "nextNodeId": "w5d5_c1_res1",
               "affectionChanges": {
@@ -972,7 +972,7 @@
               ],
               "lockedReason": "도망칠 체력이 없습니다.",
               "statChanges": {
-                "hp": 8,
+                "hp": 0,
                 "stress": -15
               },
               "nextNodeId": "w5d5_c4_res1",

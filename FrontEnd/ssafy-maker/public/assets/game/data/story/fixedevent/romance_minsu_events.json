@@ -1273,7 +1273,7 @@
               "text": "[기본] \"어? 이거 네 노트였어? 표지가 똑같아서 몰랐네. (덮으며) 미안, 막 폈어!\"",
               "actionType": "NORMAL",
               "statChanges": {
-                "stress": 8
+                "stress": -5
               },
               "nextNodeId": "m_w5d5_c1_res1",
               "affectionChanges": {

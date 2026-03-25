@@ -66,7 +66,7 @@
               "text": "🤪 [광기] 모니터 앞에 제사상을 차리고 npm run serve를 누르며 합장한다.",
               "actionType": "MADNESS",
               "statChanges": {
-                "stress": 8
+                "stress": -10
               },
               "nextNodeId": "setup_c4_res1"
             }
