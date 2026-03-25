@@ -50,8 +50,8 @@ export class AreaTransitionOverlay {
       const view = this.views.get(target.id) ?? this.createView(target);
       const isActive = target.id === activeId;
       this.drawZone(view.zone, target, isActive, view.pulsePhase);
-      view.label.setPosition(target.centerX, target.zoneY + target.zoneHeight + 8);
       view.label.setText(`🚪 ${target.label}`);
+      this.positionLabel(view.label, target);
       view.label.setAlpha(isActive ? 1 : 0.85);
       view.arrow.setPosition(target.centerX, target.centerY);
       view.arrow.setAlpha(isActive ? 1 : 0.7);
@@ -90,7 +90,7 @@ export class AreaTransitionOverlay {
           fill: true
         }
       })
-      .setOrigin(0.5, 0)
+      .setOrigin(0, 0)
       .setDepth(UI_DEPTH.areaTransitionLabel);
 
     // 화살표 아이콘 (위쪽 방향)
@@ -132,6 +132,15 @@ export class AreaTransitionOverlay {
 
     this.views.set(target.id, view);
     return view;
+  }
+
+  private positionLabel(label: Phaser.GameObjects.Text, target: RuntimeAreaTransitionTarget) {
+    const { worldView } = this.scene.cameras.main;
+    const desiredX = target.centerX - label.width / 2;
+    const minX = worldView.x;
+    const maxX = Math.max(minX, worldView.right - label.width);
+    const clampedX = Phaser.Math.Clamp(desiredX, minX, maxX);
+    label.setPosition(clampedX, target.zoneY + target.zoneHeight + 8);
   }
 
   private drawZone(

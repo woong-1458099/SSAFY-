@@ -28,7 +28,14 @@ export const DIALOGUE_ACTIONS = [
   "playInterview",
   "playGym",
   "playRhythm",
-  "playCooking"
+  "playCooking",
+  "playTank",
+  "playQuiz",
+  "playRunner",
+  "playBusinessSmile",
+  "playTyping",
+  "playLotto",
+  "playDontSmile"
 ] as const;
 export type DialogueAction = (typeof DIALOGUE_ACTIONS)[number];
 

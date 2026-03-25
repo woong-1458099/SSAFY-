@@ -95,6 +95,20 @@ export const LEGACY_MINIGAME_CARDS: readonly LegacyMinigameCard[] = [
     }
   },
   {
+    key: "TypingScene",
+    title: "타이핑",
+    sub: "코드 타이핑 챌린지",
+    desc: "빠르고 정확하게",
+    reward: "FE +5, GP +15",
+    bgColor: 0x1a1a2e,
+    borderColor: 0x00ff88,
+    glowColor: 0x0f3460,
+    howToPlay: {
+      instructions: ["화면에 나타나는 코드를 타이핑하세요", "정확도와 속도가 중요합니다"],
+      controls: ["키보드 타이핑"]
+    }
+  },
+  {
     key: "BusinessSmileScene",
     title: "비즈니스 미소",
     sub: "표정 인식 챌린지",
