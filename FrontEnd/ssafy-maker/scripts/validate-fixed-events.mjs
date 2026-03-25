@@ -135,6 +135,26 @@ function normalizeFixedEventPayload(rawJson) {
   return rawJson;
 }
 
+function getFixedEventEntries(rawJson) {
+  if (Array.isArray(rawJson)) {
+    return rawJson.filter((entry) => entry && typeof entry === "object");
+  }
+
+  if (!rawJson || typeof rawJson !== "object") {
+    return [];
+  }
+
+  if (Array.isArray(rawJson.dialogues)) {
+    return rawJson.dialogues.filter((entry) => entry && typeof entry === "object");
+  }
+
+  if (Array.isArray(rawJson.events)) {
+    return rawJson.events.filter((entry) => entry && typeof entry === "object");
+  }
+
+  return [];
+}
+
 function normalizeAuthoredDialoguePayload(rawJson) {
   return rawJson;
 }
@@ -171,6 +191,85 @@ function collectStatChangeKeysDeep(value, target = new Set()) {
 
   Object.values(value).forEach((entry) => collectStatChangeKeysDeep(entry, target));
   return target;
+}
+
+function validateFixedEventGraphIntegrity(filePath, rawJson, issues) {
+  const entries = getFixedEventEntries(rawJson);
+
+  entries.forEach((event, index) => {
+    if (!event || typeof event !== "object") {
+      return;
+    }
+
+    const eventId =
+      typeof event.id === "string" && event.id.trim().length > 0
+        ? event.id.trim()
+        : typeof event.eventId === "string" && event.eventId.trim().length > 0
+          ? event.eventId.trim()
+          : `event#${index + 1}`;
+
+    if (!("startNodeId" in event) || !("nodes" in event)) {
+      return;
+    }
+
+    const startNodeId = typeof event.startNodeId === "string" ? event.startNodeId.trim() : "";
+    const nodes = event.nodes && typeof event.nodes === "object" && !Array.isArray(event.nodes) ? event.nodes : null;
+
+    if (!startNodeId || !nodes) {
+      issues.push(`[graph:${path.relative(projectRoot, filePath)}] ${eventId} has invalid startNodeId/nodes payload`);
+      return;
+    }
+
+    if (!nodes[startNodeId]) {
+      issues.push(`[graph:${path.relative(projectRoot, filePath)}] ${eventId} startNodeId "${startNodeId}" is missing`);
+    }
+
+    const referencedNodeIds = new Set();
+
+    Object.entries(nodes).forEach(([nodeKey, node]) => {
+      if (!node || typeof node !== "object") {
+        issues.push(`[graph:${path.relative(projectRoot, filePath)}] ${eventId} node "${nodeKey}" is not an object`);
+        return;
+      }
+
+      if (node.id !== nodeKey) {
+        issues.push(`[graph:${path.relative(projectRoot, filePath)}] ${eventId} node id mismatch for "${nodeKey}"`);
+      }
+
+      if (typeof node.nextNodeId === "string" && node.nextNodeId.trim().length > 0) {
+        referencedNodeIds.add(node.nextNodeId.trim());
+      }
+
+      if (!Array.isArray(node.choices)) {
+        return;
+      }
+
+      node.choices.forEach((choice, choiceIndex) => {
+        if (!choice || typeof choice !== "object") {
+          issues.push(
+            `[graph:${path.relative(projectRoot, filePath)}] ${eventId} node "${nodeKey}" choice #${choiceIndex + 1} is not an object`
+          );
+          return;
+        }
+
+        if (typeof choice.id !== "string" || choice.id.trim().length === 0) {
+          issues.push(
+            `[graph:${path.relative(projectRoot, filePath)}] ${eventId} node "${nodeKey}" choice #${choiceIndex + 1} has empty id`
+          );
+        }
+
+        if (typeof choice.nextNodeId === "string" && choice.nextNodeId.trim().length > 0) {
+          referencedNodeIds.add(choice.nextNodeId.trim());
+        }
+      });
+    });
+
+    referencedNodeIds.forEach((nodeId) => {
+      if (!nodes[nodeId]) {
+        issues.push(`[graph:${path.relative(projectRoot, filePath)}] ${eventId} references missing node "${nodeId}"`);
+      }
+    });
+  });
 }
 
 async function main() {
@@ -251,7 +350,7 @@ async function main() {
     allErrors: true,
     strict: false
   });
-  const validateFixedEvents = ajv.compile(authoredDialoguesSchema);
+  const validateFixedEvents = ajv.compile(fixedEventsSchema);
   const filesToValidate = [storySamplePath, ...fixedEventJsonPaths];
 
   for (const filePath of filesToValidate) {
@@ -262,6 +361,8 @@ async function main() {
     if (!validator(payload)) {
       issues.push(...formatSchemaErrors(filePath, validator.errors));
     }
+
+    validateFixedEventGraphIntegrity(filePath, rawJson, issues);
   }
 
   for (const filePath of romanceJsonPaths) {

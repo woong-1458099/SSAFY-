@@ -2,10 +2,22 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["events"],
+  "oneOf": [
+    { "required": ["dialogues"] },
+    { "required": ["events"] }
+  ],
   "properties": {
     "meta": {
       "type": "object"
+    },
+    "schemaVersion": {
+      "type": ["string", "integer"]
+    },
+    "dialogues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fixedEvent"
+      }
     },
     "events": {
       "type": "array",
@@ -18,11 +30,22 @@
     "dialogueEntry": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["text"],
       "properties": {
         "speakerId": { "type": "string", "minLength": 1 },
         "speakerName": { "type": "string", "minLength": 1 },
         "emotion": { "type": "string", "minLength": 1 },
         "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "triggerTiming": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["week", "day", "timeOfDay"],
+      "properties": {
+        "week": { "type": "integer" },
+        "day": { "type": "integer" },
+        "timeOfDay": { "type": "string", "minLength": 1 }
       }
     },
     "choiceCondition": {
@@ -81,7 +104,6 @@
               "social",
               "code",
               "nunchi",
-              
               "money",
               "hp",
               "stress",
@@ -120,7 +142,7 @@
         }
       }
     },
-    "choiceEntry": {
+    "legacyChoiceEntry": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -149,26 +171,158 @@
         }
       }
     },
-    "fixedEvent": {
+    "dialogueChoice": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nextNodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actionType": {
+          "type": "string",
+          "enum": ["NORMAL", "LOCKED", "MADNESS", "ROMANCE_EVENT"]
+        },
+        "statChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "money"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueRequirement"
+          }
+        },
+        "affectionRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/affectionRequirement"
+          }
+        },
+        "lockedReason": {
+          "type": "string"
+        },
+        "feedbackText": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "setFlags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "affectionChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "dialogueNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "speaker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "speakerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "emotion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nextNodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueChoice"
+          }
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affectionChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "authoredFixedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "startNodeId", "nodes", "eventType", "triggerTiming", "location"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "eventType": { "type": "string", "minLength": 1 },
+        "triggerTiming": { "$ref": "#/$defs/triggerTiming" },
+        "location": { "type": "string", "minLength": 1 },
+        "isRepeatable": { "type": "boolean" },
+        "startNodeId": { "type": "string", "minLength": 1 },
+        "nodes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/dialogueNode"
+          }
+        }
+      }
+    },
+    "legacyFixedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "eventName", "eventType", "triggerTiming", "location", "dialogues"],
       "properties": {
         "eventId": { "type": "string", "minLength": 1 },
         "eventName": { "type": "string", "minLength": 1 },
         "eventType": { "type": "string", "minLength": 1 },
-        "triggerTiming": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "week": { "type": "number" },
-            "day": { "type": "number" },
-            "timeOfDay": { "type": "string", "minLength": 1 }
-          }
-        },
+        "triggerTiming": { "$ref": "#/$defs/triggerTiming" },
         "location": { "type": "string", "minLength": 1 },
         "isRepeatable": { "type": "boolean" },
         "dialogues": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/dialogueEntry"
           }
@@ -176,10 +330,16 @@
         "choices": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/choiceEntry"
+            "$ref": "#/$defs/legacyChoiceEntry"
           }
         }
       }
+    },
+    "fixedEvent": {
+      "oneOf": [
+        { "$ref": "#/$defs/authoredFixedEvent" },
+        { "$ref": "#/$defs/legacyFixedEvent" }
+      ]
     }
   }
 }
