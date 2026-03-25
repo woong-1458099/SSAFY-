@@ -264,6 +264,9 @@ export class StoryEventManager {
   getTimeAdvanceBlockedMessage(): string | null {
     const week = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
     if (!this.weekData.has(week)) {
+      return null;
+    }
+    if (!this.weekData.has(week)) {
       if (this.weekLoads.has(week)) {
         return "고정 이벤트 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.";
       }
