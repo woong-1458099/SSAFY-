@@ -306,7 +306,7 @@ export class DebugPanel {
     this.updatePageVisibility();
   }
 
-  render(state: DebugPanelState): void {
+  render(state: DebugPanelState, options?: { force?: boolean }): void {
     if (!this.visible) {
       this.latestState = state;
       return;
@@ -325,7 +325,7 @@ export class DebugPanel {
       this.latestState.stats.fe === state.stats.fe &&
       this.latestState.stats.be === state.stats.be;
 
-    if (isStatiallyEqual) {
+    if (!options?.force && isStatiallyEqual) {
       // 얕은 비교에서 같다고 판단되면 전체를 직렬화하여 한 번 더 확인합니다. (정밀 검사)
       const stateString = JSON.stringify(state);
       if (stateString === this.lastStateString && this.lastRenderedVersion === this.renderVersion) {
@@ -390,7 +390,7 @@ export class DebugPanel {
     }
     this.updatePageVisibility();
     if (this.visible && this.latestState) {
-      this.render(this.latestState);
+      this.render(this.latestState, { force: true });
     }
   }
 
@@ -741,7 +741,7 @@ export class DebugPanel {
       1,
       Math.max(this.latestState.storyDebug.weeks.length, 1)
     );
-    this.render(this.latestState);
+    this.render(this.latestState, { force: true });
   }
 
   private shiftStoryEvent(delta: number): void {
@@ -757,7 +757,7 @@ export class DebugPanel {
     this.renderVersion += 1;
     const currentIndex = this.storySelectedEventIndexByWeek[weekState.week] ?? 0;
     this.storySelectedEventIndexByWeek[weekState.week] = Phaser.Math.Clamp(currentIndex + delta, 0, weekState.events.length - 1);
-    this.render(this.latestState);
+    this.render(this.latestState, { force: true });
   }
 
   private emitSelectedEventCommand(type: "jumpToFixedEvent" | "runFixedEvent", resetCompletion: boolean): void {

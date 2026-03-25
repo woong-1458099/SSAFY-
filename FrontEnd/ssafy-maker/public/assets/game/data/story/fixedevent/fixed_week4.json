@@ -14,6 +14,7 @@
               "id": "health_c1",
               "text": "\"돈도 없는데 무슨... 기세로 버티자.\" 목을 우두둑 꺾고 다시 키보드를 잡는다.",
               "actionType": "NORMAL",
+              "action": "playRunner",
               "statChanges": {
                 "hp": -12,
                 "stress": 10

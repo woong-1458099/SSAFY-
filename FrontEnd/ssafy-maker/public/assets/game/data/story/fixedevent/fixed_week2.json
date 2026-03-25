@@ -22,6 +22,7 @@
               "id": "pro_c1",
               "text": "\"너무 어렵습니다... 자격증도 병행하려 했는데 무리네요.\"",
               "actionType": "NORMAL",
+              "action": "playTank",
               "statChanges": {
                 "stress": -10
               },

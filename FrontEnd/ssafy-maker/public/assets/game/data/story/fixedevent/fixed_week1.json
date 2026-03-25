@@ -35,6 +35,7 @@
               "id": "intro_c1",
               "text": "\"다들 스펙이 엄청나시네요…, 저는 비전공자라 모든 게 처음이지만 열심히 하겠습니다...\"",
               "actionType": "NORMAL",
+              "action": "playInterview",
               "statChanges": {
                 "stress": 10,
                 "teamwork": 2

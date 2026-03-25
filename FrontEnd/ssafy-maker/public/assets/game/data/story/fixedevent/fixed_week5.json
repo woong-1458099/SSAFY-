@@ -16,6 +16,7 @@
               "id": "c1",
               "text": "\"하얗게 불태웠어...\" 어젯밤 벼락치기로 잃어버린 수면을 보충하기 위해 책상에 엎드려 기절한다.",
               "actionType": "NORMAL",
+              "action": "playBusinessSmile",
               "statChanges": {
                 "hp": 18,
                 "stress": -10

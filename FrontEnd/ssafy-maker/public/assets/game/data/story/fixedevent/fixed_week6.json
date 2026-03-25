@@ -14,6 +14,7 @@
               "id": "setup_c1",
               "text": "[기본] 패키지를 지웠다 깔았다 무한 반복한다.",
               "actionType": "NORMAL",
+              "action": "playTyping",
               "statChanges": {
                 "hp": -18,
                 "stress": 18

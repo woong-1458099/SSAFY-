@@ -19,7 +19,7 @@ import { isRuntimeDialogueId, type DialogueScript } from "../../common/types/dia
 import type { SceneState } from "../../common/types/sceneState";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
-import { launchMinigame, openMinigameMenu } from "../../features/minigame/MinigameGateway";
+import { createDialogueActionRunner } from "../../features/minigame/dialogueActionHandler";
 import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../features/progression/TimeService";
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
 import type { EndingId } from "../../features/progression/types/ending";
@@ -202,31 +202,11 @@ export class MainScene extends Phaser.Scene {
       setFlags: (flags) => this.statSystemManager!.addFlags(flags),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
       onNotice: (message) => this.menuManager?.showNotice(message),
-      runAction: (action) => {
-        switch (action) {
-          case "openShop":
-            this.placeActionManager?.openShop();
-            return;
-          case "openMiniGame":
-            openMinigameMenu(this, SCENE_KEYS.main);
-            return;
-          case "playDrinking":
-            launchMinigame(this, "DrinkingScene", SCENE_KEYS.main);
-            return;
-          case "playInterview":
-            launchMinigame(this, "InterviewScene", SCENE_KEYS.main);
-            return;
-          case "playGym":
-            launchMinigame(this, "GymScene", SCENE_KEYS.main);
-            return;
-          case "playRhythm":
-            launchMinigame(this, "RhythmScene", SCENE_KEYS.main);
-            return;
-          case "playCooking":
-            launchMinigame(this, "CookingScene", SCENE_KEYS.main);
-            return;
-        }
-      }
+      runAction: createDialogueActionRunner({
+        scene: this,
+        returnSceneKey: SCENE_KEYS.main,
+        openShop: () => this.placeActionManager?.openShop()
+      })
       
     });
     this.menuManager = new InGameMenuManager({
