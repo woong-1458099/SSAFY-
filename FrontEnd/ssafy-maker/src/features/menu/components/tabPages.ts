@@ -392,12 +392,22 @@ export function createSettingsPage(
       object.removeAllListeners();
     }
 
-    if ("disableInteractive" in object && typeof object.disableInteractive === "function") {
-      object.disableInteractive();
+    const interactiveObject = object as Phaser.GameObjects.GameObject & {
+      input?: unknown;
+      scene?: Phaser.Scene;
+      disableInteractive?: () => void;
+    };
+
+    if (interactiveObject.input && interactiveObject.scene?.input && typeof interactiveObject.disableInteractive === "function") {
+      try {
+        interactiveObject.disableInteractive();
+      } catch {
+        // Scene shutdown can invalidate Phaser input internals before menu cleanup runs.
+      }
     }
 
     if (object instanceof Phaser.GameObjects.Container) {
-      object.list.forEach((child) => {
+      [...object.list].forEach((child) => {
         destroyInteractiveTree(child as Phaser.GameObjects.GameObject);
       });
     }

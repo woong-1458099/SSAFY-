@@ -16,6 +16,7 @@ export const SceneKey = {
   FinalSummary: SCENE_KEYS.finalSummary,
   EndingIntro: SCENE_KEYS.endingIntro,
   EndingComic: SCENE_KEYS.endingComic,
+  EndingCredit: SCENE_KEYS.endingCredit,
   MiniGameCenter: EXPERIMENTAL_MINIGAME_CENTER_SCENE_KEY
   // MiniGameTyping: LEGACY_TYPING_SCENE_KEY // 타이핑 게임 비활성화
 } as const;

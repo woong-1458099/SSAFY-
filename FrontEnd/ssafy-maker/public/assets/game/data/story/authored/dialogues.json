@@ -104,6 +104,7 @@
         "start": {
           "id": "start",
           "speaker": "민수",
+          "emotion": "NORMAL",
           "text": "모르는 건 바로 묻는 게 빠르다. 혼자 끌어안지 말고."
         }
       }
@@ -146,6 +147,7 @@
         "intro": {
           "id": "intro",
           "speaker": "명진",
+          "emotion": "NORMAL",
           "text": "오늘도 팀 일은 차분하게 정리하면 돼.",
           "choices": [
             {
@@ -164,6 +166,7 @@
         "intro": {
           "id": "intro",
           "speaker": "연웅",
+          "emotion": "NORMAL",
           "text": "와이리 할 게 많노",
           "choices": [
             {
@@ -182,6 +185,7 @@
         "intro": {
           "id": "intro",
           "speaker": "효련",
+          "emotion": "NORMAL",
           "text": "에셋 찍다 쿨타임 오면 딴짓하는 게 국룰이지",
           "choices": [
             {
@@ -200,6 +204,7 @@
         "intro": {
           "id": "intro",
           "speaker": "지우",
+          "emotion": "NORMAL",
           "text": "스크립트 짜다가 막히면 바로바로 말해줘.",
           "choices": [
             {
@@ -218,6 +223,7 @@
         "intro": {
           "id": "intro",
           "speaker": "종민",
+          "emotion": "NORMAL",
           "text": " UI Explain and fix problem ",
           "choices": [
             {
@@ -236,6 +242,7 @@
         "intro": {
           "id": "intro",
           "speaker": "민수",
+          "emotion": "NORMAL",
           "text": "진짜 장~담~ 모한다~",
           "choices": [
             {

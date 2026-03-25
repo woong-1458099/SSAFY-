@@ -8,6 +8,7 @@ import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "../../features/minigame/minigame
 import { preloadPlaceBackgroundAssets } from "../../features/place/placeBackgrounds";
 import { AREA_TRANSITION_MARKER_SPRITE } from "../definitions/assets/areaTransitionAssetCatalog";
 import { NPC_ASSET_LIST } from "../definitions/assets/npcAssetCatalog";
+import { PORTRAIT_ASSET_LIST, PORTRAIT_FRAME_CONFIG } from "../definitions/assets/portraitAssetCatalog";
 import { preloadNpcVisualAsset, registerNpcAnimations } from "../systems/npcAnimation";
 import { preloadPlayerVisualAssets } from "../systems/playerVisual";
 
@@ -45,6 +46,13 @@ export class PreloadScene extends Phaser.Scene {
     // NPC 비주얼 에셋 로드는 전용 시스템으로 위임한다.
     for (const npcAsset of NPC_ASSET_LIST) {
       preloadNpcVisualAsset(this, npcAsset);
+    }
+
+    for (const portraitAsset of PORTRAIT_ASSET_LIST) {
+      this.load.spritesheet(portraitAsset.textureKey, portraitAsset.assetPath, {
+        frameWidth: PORTRAIT_FRAME_CONFIG.frameWidth,
+        frameHeight: PORTRAIT_FRAME_CONFIG.frameHeight
+      });
     }
 
     // 플레이어 기본 비주얼 에셋은 전용 시스템에서 로드한다.
