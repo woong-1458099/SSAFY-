@@ -194,6 +194,7 @@ export class DebugPanel {
     deltaY: number
   ) => void;
   private latestState?: DebugPanelState;
+  private lastStateString?: string;
   private visible = false;
   private page: PanelPage = "stats";
   private storySelectedWeek = 1;
@@ -304,18 +305,45 @@ export class DebugPanel {
   }
 
   render(state: DebugPanelState): void {
+    if (!this.visible) {
+      this.latestState = state;
+      return;
+    }
+
+    // 간단한 값 위주로 변경 전후를 비교하여 불필요한 JSON 직렬화와 리렌더링을 최소화합니다.
+    const isStatiallyEqual = 
+      this.latestState &&
+      this.latestState.currentSceneId === state.currentSceneId &&
+      this.latestState.currentAreaId === state.currentAreaId &&
+      this.latestState.hud.hp === state.hud.hp &&
+      this.latestState.hud.money === state.hud.money &&
+      this.latestState.hud.week === state.hud.week &&
+      this.latestState.hud.timeLabel === state.hud.timeLabel &&
+      this.latestState.fixedEventId === state.fixedEventId &&
+      this.latestState.stats.fe === state.stats.fe &&
+      this.latestState.stats.be === state.stats.be;
+
+    if (isStatiallyEqual) {
+      // 얕은 비교에서 같다고 판단되면 전체를 직렬화하여 한 번 더 확인합니다. (정밀 검사)
+      const stateString = JSON.stringify(state);
+      if (stateString === this.lastStateString) {
+        return;
+      }
+      this.lastStateString = stateString;
+    } else {
+      this.lastStateString = JSON.stringify(state);
+    }
+
     this.latestState = state;
     if (this.storySelectedWeek < 1) {
       this.storySelectedWeek = state.storyDebug.currentWeek;
-    }
-    if (!this.visible) {
-      return;
     }
 
     this.renderStatsState(state);
     this.renderStoryState(state);
     this.renderEndingState(state);
     this.layout();
+
     this.footer.setText(
       this.page === "stats"
         ? "F3 패널 토글 | 상단 탭에서 스토리 디버그 페이지로 전환"

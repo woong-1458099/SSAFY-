@@ -9,9 +9,10 @@ import type {
   DialogueNode,
   DialogueRequirement,
   DialogueScript,
+  DialogueScriptId,
   DialogueStatKey
 } from "../../common/types/dialogue";
-import { createRuntimeDialogueId } from "../../common/types/dialogue";
+import { createRuntimeDialogueId, normalizeDialogueScriptId } from "../../common/types/dialogue";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import {
   SCENE_STATE_IDS,
@@ -232,9 +233,11 @@ export function buildDialogueRegistryFromJson(
   const seenDialogueIds = new Set<string>();
 
   dialogues.forEach((entry, index) => {
-    const id = normalizeString(entry.id);
-    if (!id) {
-      fatalIssues.push(`[dialogues.${index}] id가 비어 있습니다.`);
+    let id: DialogueScriptId;
+    try {
+      id = normalizeDialogueScriptId(normalizeString(entry.id));
+    } catch (error) {
+      fatalIssues.push(`[dialogues.${index}] id="${entry.id}" 이 유효한 형식이 아닙니다.`);
       return;
     }
 

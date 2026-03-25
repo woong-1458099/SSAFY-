@@ -39,7 +39,6 @@ export class DebugInputController {
     private canHandleCommand: (command: DebugCommand) => boolean = () => true
   ) {
     this.keyboard = scene.input.keyboard;
-    this.sceneSwitchKeys = this.createSceneSwitchKeys();
     this.bindSceneLifecycle();
   }
 
@@ -48,9 +47,10 @@ export class DebugInputController {
       return;
     }
 
-    this.clearBindings();
     this.bound = true;
+    this.sceneSwitchKeys = this.createSceneSwitchKeys();
     this.keyboard.addCapture(DEBUG_CAPTURE_KEY_CODES);
+
     this.bindings = [
       this.register("keydown-F1", (event) => {
         this.emitIfAllowed({ type: "toggleDebugOverlay" }, event);
@@ -82,7 +82,7 @@ export class DebugInputController {
   }
 
   update() {
-    if (!this.bound || this.destroyed) {
+    if (!this.bound || this.destroyed || !this.keyboard) {
       return;
     }
 
@@ -106,16 +106,20 @@ export class DebugInputController {
       return;
     }
 
-    this.bound = false;
     this.destroyed = true;
+    this.bound = false;
     this.clearBindings();
-    this.keyboard?.removeCapture(DEBUG_CAPTURE_KEY_CODES);
-    Object.values(this.sceneSwitchKeys).forEach((key) => {
-      if (key) {
-        key.reset();
-        this.keyboard?.removeKey(key, false, false);
-      }
-    });
+
+    if (this.keyboard) {
+      this.keyboard.removeCapture(DEBUG_CAPTURE_KEY_CODES);
+      Object.values(this.sceneSwitchKeys).forEach((key) => {
+        if (key) {
+          key.reset();
+          this.keyboard?.removeKey(key, false, false);
+        }
+      });
+    }
+
     this.bindings = [];
     this.sceneSwitchKeys = {};
   }

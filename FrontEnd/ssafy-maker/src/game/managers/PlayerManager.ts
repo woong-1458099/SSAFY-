@@ -26,7 +26,7 @@ export class PlayerManager {
   private tileSize = 32;
   private currentTileX = 0;
   private currentTileY = 0;
-  private moveSpeed = 180;
+  private moveSpeed = 260;
   private renderBounds?: WorldRenderBounds;
   private currentFacing: Facing = "down";
   private appearance: PlayerAppearanceDefinition = getDefaultPlayerAppearanceDefinition();
@@ -120,8 +120,17 @@ export class PlayerManager {
     const didMove = nextX !== this.player.root.x || nextY !== this.player.root.y;
     this.player.root.setPosition(nextX, nextY);
     this.player.root.setDepth(getActorDepth(nextY));
+
+    // Track tile position change for tutorial event
+    const prevTileX = this.currentTileX;
+    const prevTileY = this.currentTileY;
     this.syncTilePositionFromWorldPosition(nextX, nextY, parsedMap);
     updatePlayerVisualFrame(this.player, this.currentFacing, didMove, this.scene.time.now);
+
+    // Emit tutorial event only when tile position changes (not every frame)
+    if (this.currentTileX !== prevTileX || this.currentTileY !== prevTileY) {
+      this.scene.events.emit("tutorial:playerMoved");
+    }
   }
 
   getSnapshot(): PlayerSnapshot | undefined {

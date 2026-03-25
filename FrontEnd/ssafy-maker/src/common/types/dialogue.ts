@@ -88,3 +88,31 @@ export function createRuntimeDialogueId(value: string): RuntimeDialogueId {
 
   return runtimeId as RuntimeDialogueId;
 }
+
+export function isDialogueScriptId(value: string): value is DialogueScriptId {
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  // Runtime ID pattern
+  if (isRuntimeDialogueId(normalized)) {
+    return true;
+  }
+
+  // Authored ID pattern (npc_ prefix, place_ prefix or etc)
+  if (/^[a-z0-9_]+$/.test(normalized)) {
+    return true;
+  }
+
+  return false;
+}
+
+export function normalizeDialogueScriptId(value: string): DialogueScriptId {
+  const normalized = value.trim();
+  if (!isDialogueScriptId(normalized)) {
+    throw new Error(`Invalid DialogueScriptId format: ${value}. Expected alphanumeric with underscores.`);
+  }
+
+  return normalized as DialogueScriptId;
+}
