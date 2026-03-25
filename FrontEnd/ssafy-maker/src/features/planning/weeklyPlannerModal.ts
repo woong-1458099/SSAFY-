@@ -25,11 +25,12 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   actionPoint: number;
   maxActionPoint: number;
   fixedEventSlots?: ReadonlyMap<number, string>;
+  completedSlotIndices?: ReadonlySet<number>;
   initialPlan: WeeklyPlanOptionId[];
   onConfirm: (plan: WeeklyPlanOptionId[]) => void;
   onAdvance: (plan: WeeklyPlanOptionId[]) => void;
 }): Phaser.GameObjects.Container {
-  const { week, dayLabels, currentDayLabel, currentTimeLabel, actionPoint, maxActionPoint, fixedEventSlots, initialPlan, onConfirm, onAdvance } =
+  const { week, dayLabels, currentDayLabel, currentTimeLabel, actionPoint, maxActionPoint, fixedEventSlots, completedSlotIndices, initialPlan, onConfirm, onAdvance } =
     options;
 
   const centerX = Math.round(scene.scale.width / 2);
@@ -153,15 +154,19 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   badgeMeasureText.destroy();
 
   const refreshSlot = (
+    slotIndex: number,
     bg: Phaser.GameObjects.Rectangle,
     badgeBg: Phaser.GameObjects.Rectangle,
     badgeText: Phaser.GameObjects.Text,
     infoText: Phaser.GameObjects.Text,
+    completionBadge: Phaser.GameObjects.Arc,
+    completionText: Phaser.GameObjects.Text,
     optionId: WeeklyPlanOptionId,
     fixedEventName?: string
   ): void => {
     const option = getWeeklyPlanOption(optionId);
     const isFixedEvent = typeof fixedEventName === "string" && fixedEventName.trim().length > 0;
+    const isCompleted = completedSlotIndices?.has(slotIndex) === true;
 
     const updateSlotLayout = () => {
       const badgeWidth = Math.max(slotBadgeBaseWidth, badgeText.width + SLOT_BADGE_HORIZONTAL_PADDING * 2);
@@ -178,27 +183,35 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
       badgeText.setPosition(badgeCenterX, bg.y);
       infoText.setPosition(infoX, bg.y);
       infoText.setWordWrapWidth(infoWidth);
+      completionBadge.setPosition(bg.x + bg.width / 2 - 24, bg.y - bg.height / 2 + 22);
+      completionText.setPosition(completionBadge.x, completionBadge.y - 1);
     };
 
     if (isFixedEvent) {
-      bg.setFillStyle(FIXED_EVENT_SLOT_COLOR, 0.96);
-      bg.setStrokeStyle(2, 0xffaacb, 1);
+      bg.setFillStyle(isCompleted ? 0x4d2640 : FIXED_EVENT_SLOT_COLOR, 0.96);
+      bg.setStrokeStyle(2, isCompleted ? 0xffdced : 0xffaacb, 1);
       badgeBg.setFillStyle(0x321631, 0.98);
       badgeText.setText(`${badgeText.text.replace(" 이벤트", "")} 이벤트`);
       infoText.setText(`${fixedEventName}\n고정 이벤트`);
+      completionBadge.setVisible(isCompleted);
+      completionText.setVisible(isCompleted);
       updateSlotLayout();
       bg.disableInteractive();
       return;
     }
 
-    bg.setFillStyle(option.color, 0.95);
-    bg.setStrokeStyle(2, 0x8ed2ff, 1);
+    bg.setFillStyle(isCompleted ? Phaser.Display.Color.IntegerToColor(option.color).darken(28).color : option.color, 0.95);
+    bg.setStrokeStyle(2, isCompleted ? 0xeaf6ff : 0x8ed2ff, 1);
     badgeBg.setFillStyle(0x133150, 0.96);
     badgeText.setText(badgeText.text.replace(" 이벤트", ""));
     infoText.setText(`${option.label}\n${option.description}`);
+    completionBadge.setVisible(isCompleted);
+    completionText.setVisible(isCompleted);
     updateSlotLayout();
     bg.disableInteractive();
-    bg.setInteractive({ useHandCursor: true });
+    if (!isCompleted) {
+      bg.setInteractive({ useHandCursor: true });
+    }
   };
 
   WEEKLY_PLAN_DAY_INDICES.forEach((dayIndex) => {
@@ -235,18 +248,37 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
         wordWrap: { width: slotInfoWidth }
       }).setOrigin(0, 0.5).setScrollFactor(0);
       infoText.setLineSpacing(2);
-      refreshSlot(bg, badge, badgeText, infoText, draftPlan[slotIndex], fixedEventSlots?.get(slotIndex));
+      const completionBadge = scene.add.circle(x + slotWidth / 2 - 24, rowY - slotHeight / 2 + 22, 14, 0xeaf6ff, 0.95).setScrollFactor(0);
+      completionBadge.setStrokeStyle(2, 0x123150, 1);
+      const completionText = scene.add.text(completionBadge.x, completionBadge.y - 1, "V", {
+        fontFamily: FONT_FAMILY,
+        fontSize: "16px",
+        fontStyle: "bold",
+        color: "#123150",
+        resolution: 2
+      }).setOrigin(0.5).setScrollFactor(0);
+      refreshSlot(
+        slotIndex,
+        bg,
+        badge,
+        badgeText,
+        infoText,
+        completionBadge,
+        completionText,
+        draftPlan[slotIndex],
+        fixedEventSlots?.get(slotIndex)
+      );
 
-      if (!fixedEventSlots?.has(slotIndex)) {
+      if (!fixedEventSlots?.has(slotIndex) && !completedSlotIndices?.has(slotIndex)) {
         bg.on("pointerdown", () => {
           const currentIndex = WEEKLY_PLAN_OPTIONS.findIndex((option) => option.id === draftPlan[slotIndex]);
           const nextIndex = (currentIndex + 1) % WEEKLY_PLAN_OPTIONS.length;
           draftPlan[slotIndex] = WEEKLY_PLAN_OPTIONS[nextIndex].id;
-          refreshSlot(bg, badge, badgeText, infoText, draftPlan[slotIndex]);
+          refreshSlot(slotIndex, bg, badge, badgeText, infoText, completionBadge, completionText, draftPlan[slotIndex]);
         });
       }
 
-      objects.push(bg, badge, badgeText, infoText);
+      objects.push(bg, badge, badgeText, infoText, completionBadge, completionText);
     });
   });
 

@@ -231,6 +231,55 @@ export class StoryEventManager {
     return slots;
   }
 
+  getCompletedFixedEventSlotIndicesForWeek(week: number): ReadonlySet<number> {
+    const rawData = this.weekData.get(week);
+    if (!rawData) {
+      this.syncWeek(week);
+      return new Set();
+    }
+
+    const completedSlots = new Set<number>();
+
+    getFixedEventEntries(rawData).forEach((event) => {
+      const timing = event.triggerTiming;
+      if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) {
+        return;
+      }
+
+      const rawEventId = event.id ?? event.eventId;
+      const eventId = typeof rawEventId === "string" ? rawEventId.trim() : "";
+      if (!eventId || !this.completedFixedEventIds.includes(eventId)) {
+        return;
+      }
+
+      if (event.eventType === "ROMANCE") {
+        const gender = this.getPlayerGender();
+        if (gender === "MALE" && eventId.includes("_MINSU_")) return;
+        if (gender === "FEMALE" && eventId.includes("_HYO_")) return;
+      }
+
+      const sameWeek = Math.round(timing.week ?? -1) === week;
+      if (!sameWeek) {
+        return;
+      }
+
+      const day = Math.round(timing.day ?? -1);
+      if (day < 1 || day > 5) {
+        return;
+      }
+
+      const normalizedTime = typeof timing.timeOfDay === "string" ? timing.timeOfDay.trim() : "";
+      const timeIndex = TIME_CYCLE.findIndex((label) => label === normalizedTime);
+      if (timeIndex < 0 || timeIndex >= WEEKLY_PLAN_TIME_LABELS.length) {
+        return;
+      }
+
+      completedSlots.add(getWeeklyPlanSlotIndex(day - 1, timeIndex));
+    });
+
+    return completedSlots;
+  }
+
   getCurrentFixedEventPresentation(): FixedEventNpcPresentation | null {
     if (this.starting || this.activeFixedEventId || this.isTutorialActive()) {
       return null;

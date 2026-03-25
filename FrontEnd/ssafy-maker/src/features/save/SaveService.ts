@@ -24,6 +24,7 @@ export type SavePayload = {
     weeklyPlan: WeeklyPlanOptionId[];
     weeklyPlanWeek: number;
     lastPaidWeeklySalaryWeek: number;
+    completedPlanSlotIndices?: number[];
   };
   world?: {
     areaId: AreaId;
