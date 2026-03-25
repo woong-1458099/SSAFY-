@@ -271,6 +271,11 @@ export class MainScene extends Phaser.Scene {
           this.progressionManager?.showCurrentWeeklyPlanActivity();
         }
       },
+      isTutorialActive: () => {
+        const progress = this.registry.get("tutorialProgress");
+        // 레지스트리에 데이터가 있고, 아직 완료되지 않았다면 활성 상태로 간주 (재시작 시 안정성 확보)
+        return progress && !progress.completedAt;
+      },
       onNotice: (message) => this.menuManager?.showNotice(message)
     });
     await this.storyEventManager.initialize(this.statSystemManager.getHudState().week);
@@ -343,6 +348,7 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager.patchHudState({
       locationLabel: this.getAreaLabel(runtimeSceneScript.area)
     });
+    this.storyEventManager?.requestFixedEventTrigger(this.getAreaLabel(runtimeSceneScript.area));
 
     const tmxConfig = this.worldManager.getCurrentTmxConfig();
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
@@ -372,7 +378,6 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager.patchHudState({
       locationLabel: this.getAreaLabel(runtimeSceneScript.area)
     });
-    this.storyEventManager?.requestFixedEventTrigger(this.getAreaLabel(runtimeSceneScript.area));
 
     if (DEBUG_FLAGS.overlayEnabled && this.debugLogger && this.npcManager) {
       this.debugOverlay = new DebugOverlay(this, this.debugLogger, this.npcManager);

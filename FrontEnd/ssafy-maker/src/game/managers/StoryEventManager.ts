@@ -32,6 +32,7 @@ type StoryEventManagerOptions = {
   removeRuntimeDialogueScript: (dialogueId: string) => void;
   playDialogue: (dialogueId: string) => Promise<void>;
   advanceTimeAfterFixedEvent: () => void;
+  isTutorialActive: () => boolean;
   onNotice?: (message: string) => void;
 };
 
@@ -50,6 +51,7 @@ export class StoryEventManager {
   private readonly removeRuntimeDialogueScript: (dialogueId: string) => void;
   private readonly playDialogue: (dialogueId: string) => Promise<void>;
   private readonly advanceTimeAfterFixedEvent: () => void;
+  private readonly isTutorialActive: () => boolean;
   private readonly onNotice?: (message: string) => void;
 
   private readonly weekData = new Map<number, unknown>();
@@ -74,6 +76,7 @@ export class StoryEventManager {
     this.removeRuntimeDialogueScript = options.removeRuntimeDialogueScript;
     this.playDialogue = options.playDialogue;
     this.advanceTimeAfterFixedEvent = options.advanceTimeAfterFixedEvent;
+    this.isTutorialActive = options.isTutorialActive;
     this.onNotice = options.onNotice;
   }
 
@@ -229,7 +232,7 @@ export class StoryEventManager {
   }
 
   getCurrentFixedEventPresentation(): FixedEventNpcPresentation | null {
-    if (this.starting || this.activeFixedEventId) {
+    if (this.starting || this.activeFixedEventId || this.isTutorialActive()) {
       return null;
     }
 
@@ -304,12 +307,19 @@ export class StoryEventManager {
   }
 
   requestFixedEventTrigger(location: string): void {
+    if (this.isTutorialActive()) {
+      return;
+    }
     this.queueFixedEventTrigger(location);
     const normalizedWeek = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
     this.requestWeekLoadIfNeeded(normalizedWeek, { ignoreRetryCooldown: true });
   }
 
   tryStartQueuedOrCurrentFixedEvent(): boolean {
+    if (this.isTutorialActive()) {
+      return false;
+    }
+
     if (this.tryStartQueuedFixedEvent()) {
       return true;
     }
@@ -318,6 +328,10 @@ export class StoryEventManager {
   }
 
   tryStartFixedEventForLocation(location: string): boolean {
+    if (this.isTutorialActive()) {
+      return false;
+    }
+
     const event = this.findMatchingFixedEventForLocation(location);
     if (!event) {
       return false;
@@ -523,6 +537,9 @@ export class StoryEventManager {
   }
 
   private startFixedEvent(event: FixedEventEntry): boolean {
+    if (this.isTutorialActive()) {
+      return false;
+    }
     const rawEventId = event.id ?? event.eventId;
     const eventId = typeof rawEventId === "string" ? rawEventId : null;
     const rawEventName = event.label ?? event.eventName;

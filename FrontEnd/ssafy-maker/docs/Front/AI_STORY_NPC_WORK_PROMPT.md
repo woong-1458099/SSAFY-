@@ -38,121 +38,48 @@
 - `2` 또는 `NumPad 2`: 시작 씬을 `scene_downtown_default`로 바꾸고 재시작
 - `3` 또는 `NumPad 3`: 시작 씬을 `scene_campus_default`로 바꾸고 재시작
 
-`F3` 패널은 2페이지 구조다.
+`F3` 패널은 3페이지 구조입니다.
 
 - `기본 디버그`: HP, 돈, 행동력, 주차 같은 런타임 수치 조정
-- `스토리 디버그`: 주차별 고정 이벤트 탐색, 설명/요구 스탯 확인, 조건 점프, 즉시 실행, 완료 기록 초기화
+- `스토리 디버그`: 주차별 고정 이벤트 및 로맨스 이벤트 탐색, 설명/요구 스탯 확인, 조건 점프, 즉시 실행, 완료 기록 초기화
+- `엔딩 디버그`: 현재까지 쌓인 스탯을 기반으로 도출되는 엔딩 정보 확인
 
-오버레이에서 바로 확인 가능한 정보:
+---
 
-- 현재 area
-- 현재 TMX 키
-- 맵 크기
-- collision / interaction / foreground 레이어 수
-- blocked / interaction 그리드 셀 수
-- 플레이어 좌표와 타일 좌표
-- 상호작용 대상 NPC
-- 현재 실행 중인 scene script 와 action index
-- 현재 씬의 NPC 좌표 목록
+### 고정 이벤트/로맨스 JSON 구조 (Choice Actions)
 
-주의:
+고정 이벤트(`fixed_week*.json`)나 로맨스 데이터(`romance_*.json`) 내의 선택지(`choices`)는 이제 단순 텍스트 이상의 행동을 할 수 있습니다.
 
-- 디버그는 `src/debug/config/debugFlags.ts`의 `overlayEnabled`, `worldGridEnabled`가 `true`여야 보인다.
-- NPC 배치 좌표는 현재 코드상 픽셀 단위다. 타일 단위로 착각하지 말 것.
+**주요 필드:**
+- `action`: 선택 시 실행되는 특수 동작 (`playInterview`, `playQuiz`, `openShop` 등)
+- `statChanges`: 선택 시 변하는 스탯
+- `affectionChanges`: 선택 시 변하는 NPC 호감도
+
+예시:
+```json
+{
+  "text": "\"열심히 하겠습니다!\"",
+  "action": "playInterview",
+  "result": {
+    "statChanges": { "stress": 10 }
+  }
+}
+```
+
 
 ## 현재 NPC에 먹일 수 있는 액션 종류
 
 `src/common/types/sceneAction.ts` 기준 현재 지원 액션은 아래 5개뿐이다.
 
-### 1. `spawnNpc`
-
-새 NPC를 씬에 생성한다.
-
-필드:
-
-- `npcId`
-- `x`
-- `y`
-- `facing?`
-
-예시:
-
-```ts
-const action = { type: "spawnNpc", npcId: "minsu", x: 220, y: 430, facing: "down" };
-```
-
-### 2. `moveNpc`
-
-이미 생성된 NPC를 지정 좌표로 이동시킨다.
-
-필드:
-
-- `npcId`
-- `toX`
-- `toY`
-- `duration`
-
-예시:
-
-```ts
-const action = { type: "moveNpc", npcId: "minsu", toX: 320, toY: 430, duration: 1000 };
-```
-
-### 3. `turnNpc`
-
-NPC가 바라보는 방향만 바꾼다.
-
-필드:
-
-- `npcId`
-- `facing`
-
-예시:
-
-```ts
-const action = { type: "turnNpc", npcId: "minsu", facing: "left" };
-```
-
-### 4. `playDialogue`
-
-등록된 대화 스크립트를 재생한다.
-
-필드:
-
-- `dialogueId`
-
-예시:
-
-```ts
-const action = { type: "playDialogue", dialogueId: "minsu_intro" };
-```
-
-### 5. `wait`
-
-다음 액션으로 넘어가기 전 대기한다.
-
-필드:
-
-- `duration`
-
-예시:
-
-```ts
-const action = { type: "wait", duration: 500 };
-```
+### 1. `spawnNpc`, 2. `moveNpc`, 3. `turnNpc`, 4. `playDialogue`, 5. `wait`
+(세부 필드는 `src/common/types/sceneAction.ts` 참조)
 
 ## 중요한 제약
 
-- 현재 `NpcId`는 `minsu`, `hyewon`, `hyunseok`, `hyoryeon`, `jiwoo`, `jongmin`, `myungjin`, `yeonwoong`, `doyeon`, `sunmi`가 정의되어 있다.
-- 새로운 NPC를 추가하려면 최소한 아래를 같이 수정해야 한다.
-  - `src/common/enums/npc.ts`
-  - `src/game/definitions/npcs/npcDefinitions.ts`
-  - 필요 시 NPC 에셋 카탈로그와 실제 이미지
-- 맵에서 대화 가능한 NPC는 `SceneState.npcs`에 있어야 한다.
-- 컷신 액션에서 `moveNpc`를 쓰려면 그 NPC가 먼저 spawn 되어 있어야 한다.
-- `dialogueId`는 authored JSON 또는 런타임 대화 ID와 맞아야 한다.
-- authored 대화는 `public/assets/game/data/story/authored/dialogues.json`에서 관리되고, 고정 이벤트 JSON은 `src/features/story/jsonDialogueAdapter.ts`와 `StoryEventManager`를 통해 런타임 대화 ID로 주입된다.
-- 현재 `DialogueManager`는 방향키/W/S, 숫자키, Enter/Space로 선택지를 고를 수 있다. 디버그 씬 전환도 `1/2/3`를 함께 사용하지만, 대화/메뉴 중에는 `MainScene` guard가 먼저 막아서 선택 입력과 직접 충돌하지 않게 한다.
+- **NpcId 정의**: `src/common/enums/npc.ts`와 `npcDefinitions.ts`에 정의된 ID만 사용 가능.
+- **씬 상태**: 맵에서 상호작용 가능한 NPC는 `SceneState.npcs`에 등록되어야 함.
+- **컷신**: `moveNpc` 등은 해당 NPC가 먼저 `spawn`된 상태여야 함.
+- **선택지**: `DialogueManager`는 이제 다중 선택지와 `action` 필드를 통한 특수 동작 실행을 지원함.
 
 ## 작업 위치 빠른 안내
 

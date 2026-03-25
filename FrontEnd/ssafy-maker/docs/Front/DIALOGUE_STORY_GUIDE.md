@@ -27,4 +27,5 @@
 
 - 새 대화를 만들면 enum과 registry를 같이 본다.
 - scene state 의 NPC 대화와 scene script 의 `playDialogue`는 둘 다 같은 dialogue registry를 쓴다.
-- 현재 선택지가 있어도 `DialogueManager`는 첫 choice만 따라간다. 복잡한 분기형 스토리는 이 제약을 먼저 해결하지 않으면 기대대로 동작하지 않는다.
+- **분기 및 액션 체계**: `DialogueManager`는 이제 다중 선택지(choices)와 조건부 렌더링을 완벽히 지원합니다. 선택지 결과로 스탯 변화(`statChanges`), 호감도 변화(`affectionChanges`), 플래그 설정(`setFlags`), 그리고 특수한 동작(`action`)을 실행할 수 있습니다.
+- **로맨스 이벤트**: 고정 이벤트 외에 캐릭터별 로맨스 이벤트 데이터(`romance_*.json`)가 존재하며, 성별에 따라 필터링되어 재생됩니다.
