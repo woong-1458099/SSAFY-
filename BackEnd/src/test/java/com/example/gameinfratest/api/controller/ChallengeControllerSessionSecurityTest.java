@@ -52,7 +52,7 @@ class ChallengeControllerSessionSecurityTest {
 
     @Test
     void userChallengesRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/users/{userId}/challenges", UUID.randomUUID()))
+        mockMvc.perform(get("/api/users/{userId}/challenges", UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -61,7 +61,7 @@ class ChallengeControllerSessionSecurityTest {
         UserResponse signedInUser = user("signed-in@example.com");
         when(userService.getCurrentUser(eq(signedInUser.id()))).thenReturn(signedInUser);
 
-        mockMvc.perform(get("/users/{userId}/challenges", UUID.randomUUID()).session(authenticatedSession(signedInUser)))
+        mockMvc.perform(get("/api/users/{userId}/challenges", UUID.randomUUID()).session(authenticatedSession(signedInUser)))
                 .andExpect(status().isForbidden());
     }
 
@@ -71,7 +71,7 @@ class ChallengeControllerSessionSecurityTest {
         when(userService.getCurrentUser(eq(signedInUser.id()))).thenReturn(signedInUser);
         when(challengeService.getUserChallenges(eq(signedInUser.id()))).thenReturn(List.of());
 
-        mockMvc.perform(get("/users/{userId}/challenges", signedInUser.id()).session(authenticatedSession(signedInUser)))
+        mockMvc.perform(get("/api/users/{userId}/challenges", signedInUser.id()).session(authenticatedSession(signedInUser)))
                 .andExpect(status().isOk());
     }
 
