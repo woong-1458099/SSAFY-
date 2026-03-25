@@ -4,6 +4,11 @@ import type {
   DialogueChoiceActionType,
   DialogueNode
 } from "../../../common/types/dialogue";
+import { ASSET_KEYS } from "../../../common/assets/assetKeys";
+import {
+  resolveDialoguePortraitDefinition,
+  resolveDialoguePortraitFrame
+} from "../../../game/definitions/assets/portraitAssetCatalog";
 import { UI_DEPTH } from "../../../game/systems/uiDepth";
 
 const FONT_FAMILY =
@@ -40,10 +45,16 @@ type DialogueLayoutMetrics = {
   panelHeight: number;
   innerX: number;
   innerWidth: number;
+  contentX: number;
+  contentWidth: number;
   headerY: number;
   headerHeight: number;
   bodyY: number;
   bodyHeight: number;
+  portraitX: number;
+  portraitY: number;
+  portraitSize: number;
+  portraitVisible: boolean;
   choiceY: number;
   choiceWidth: number;
   choiceWrapWidth: number;
@@ -84,7 +95,9 @@ const DIALOGUE_GRID = {
   choicePaddingY: 10,
   minChoiceHeight: 42,
   minSpeakerBadgeWidth: 170,
-  maxSpeakerBadgeRatio: 0.42
+  maxSpeakerBadgeRatio: 0.42,
+  portraitSize: 156,
+  portraitGap: 18
 } as const;
 
 export class DialogueBox {
@@ -92,6 +105,8 @@ export class DialogueBox {
   private readonly root: Phaser.GameObjects.Container;
   private readonly overlay: Phaser.GameObjects.Rectangle;
   private readonly panel: Phaser.GameObjects.Rectangle;
+  private readonly portraitFrame: Phaser.GameObjects.Rectangle;
+  private readonly portraitSprite: Phaser.GameObjects.Sprite;
   private readonly speakerBadge: Phaser.GameObjects.Rectangle;
   private readonly speakerText: Phaser.GameObjects.Text;
   private readonly bodyText: Phaser.GameObjects.Text;
@@ -104,6 +119,9 @@ export class DialogueBox {
   private typingEvent?: Phaser.Time.TimerEvent;
   private currentFullText: string = "";
   private warnedMissingSoundKeys = new Set<string>();
+  private currentPortraitTextureKey?: string;
+  private currentPortraitFrameIndex = 2;
+  private portraitVisible = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -117,6 +135,17 @@ export class DialogueBox {
       .setOrigin(0)
       .setScrollFactor(0);
     this.panel.setStrokeStyle(3, 0x8ed2ff, 1);
+    this.portraitFrame = scene.add
+      .rectangle(0, 0, DIALOGUE_GRID.portraitSize, DIALOGUE_GRID.portraitSize, 0x17324f, 0.98)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setVisible(false);
+    this.portraitFrame.setStrokeStyle(2, 0xb5e5ff, 1);
+    this.portraitSprite = scene.add
+      .sprite(0, 0, ASSET_KEYS.ui.emotion, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setVisible(false);
     this.speakerBadge = scene.add
       .rectangle(0, 0, 170, 38, 0x234e79, 1)
       .setOrigin(0, 0.5)
@@ -149,6 +178,8 @@ export class DialogueBox {
     this.root.add([
       this.overlay,
       this.panel,
+      this.portraitFrame,
+      this.portraitSprite,
       this.speakerBadge,
       this.speakerText,
       this.bodyText,
@@ -173,6 +204,7 @@ export class DialogueBox {
   renderNode(node: DialogueNode, options: DialogueRenderOptions = {}): void {
     const selectedChoiceIndex = options.selectedChoiceIndex ?? 0;
     this.show();
+    this.updatePortrait(node);
     this.speakerText.setText(this.formatSpeakerTitle(node));
     this.speakerText.setColor(this.getSpeakerColor(node));
 
@@ -306,22 +338,31 @@ export class DialogueBox {
     this.panel.setPosition(metrics.panelX, metrics.panelY);
     this.panel.setSize(metrics.panelWidth, metrics.panelHeight);
     this.panel.setDisplaySize(metrics.panelWidth, metrics.panelHeight);
-    this.speakerBadge.setPosition(metrics.innerX, metrics.headerY + metrics.headerHeight / 2);
+    this.portraitFrame.setVisible(metrics.portraitVisible);
+    this.portraitSprite.setVisible(metrics.portraitVisible);
+    if (metrics.portraitVisible) {
+      this.portraitFrame.setPosition(metrics.portraitX, metrics.portraitY);
+      this.portraitFrame.setSize(metrics.portraitSize, metrics.portraitSize);
+      this.portraitFrame.setDisplaySize(metrics.portraitSize, metrics.portraitSize);
+      this.portraitSprite.setPosition(metrics.portraitX, metrics.portraitY);
+      this.portraitSprite.setDisplaySize(metrics.portraitSize, metrics.portraitSize);
+    }
+    this.speakerBadge.setPosition(metrics.contentX, metrics.headerY + metrics.headerHeight / 2);
     this.speakerBadge.setSize(metrics.speakerBadgeWidth, metrics.headerHeight);
     this.speakerBadge.setDisplaySize(metrics.speakerBadgeWidth, metrics.headerHeight);
-    this.speakerText.setPosition(metrics.innerX + 18, metrics.headerY + metrics.headerHeight / 2);
-    this.bodyText.setPosition(metrics.innerX, metrics.bodyY);
-    this.bodyText.setWordWrapWidth(metrics.innerWidth);
+    this.speakerText.setPosition(metrics.contentX + 18, metrics.headerY + metrics.headerHeight / 2);
+    this.bodyText.setPosition(metrics.contentX, metrics.bodyY);
+    this.bodyText.setWordWrapWidth(metrics.contentWidth);
     this.hintText.setPosition(metrics.hintX, metrics.hintY);
 
     let currentChoiceY = metrics.choiceY;
     this.choiceViews.forEach((view, index) => {
       const choiceHeight = metrics.choiceHeights[index] ?? DIALOGUE_GRID.minChoiceHeight;
-      view.bg.setPosition(metrics.innerX, currentChoiceY);
+      view.bg.setPosition(metrics.contentX, currentChoiceY);
       view.bg.setSize(metrics.choiceWidth, choiceHeight);
       view.bg.setDisplaySize(metrics.choiceWidth, choiceHeight);
       view.text.setPosition(
-        metrics.innerX + DIALOGUE_GRID.choicePaddingX,
+        metrics.contentX + DIALOGUE_GRID.choicePaddingX,
         currentChoiceY + DIALOGUE_GRID.choicePaddingY
       );
       view.text.setWordWrapWidth(metrics.choiceWrapWidth);
@@ -341,18 +382,27 @@ export class DialogueBox {
     const panelX = Math.round((this.scene.scale.width - panelWidth) / 2);
     const innerX = panelX + DIALOGUE_GRID.paddingX;
     const innerWidth = panelWidth - DIALOGUE_GRID.paddingX * 2;
+    const portraitVisible = this.portraitVisible;
+    const portraitSize = portraitVisible
+      ? Math.max(112, Math.min(DIALOGUE_GRID.portraitSize, Math.floor(innerWidth * 0.28)))
+      : DIALOGUE_GRID.portraitSize;
+    const contentX = portraitVisible ? innerX + portraitSize + DIALOGUE_GRID.portraitGap : innerX;
+    const contentWidth = portraitVisible
+      ? Math.max(180, innerWidth - portraitSize - DIALOGUE_GRID.portraitGap)
+      : innerWidth;
     const headerY = DIALOGUE_GRID.paddingTop;
     const bodyY = headerY + DIALOGUE_GRID.headerHeight + DIALOGUE_GRID.rowGap;
 
-    this.bodyText.setWordWrapWidth(innerWidth);
+    this.bodyText.setWordWrapWidth(contentWidth);
     const bodyHeight = Math.max(
       DIALOGUE_GRID.minBodyHeight,
       Math.ceil(this.bodyText.getBounds().height || this.bodyText.height || 0)
     );
+    const bodyBlockHeight = portraitVisible ? Math.max(bodyHeight, portraitSize) : bodyHeight;
 
     const choiceWrapWidth = Math.max(
       120,
-      innerWidth - DIALOGUE_GRID.choicePaddingX * 2
+      contentWidth - DIALOGUE_GRID.choicePaddingX * 2
     );
     const choiceHeights = this.choiceViews.map((view) =>
       this.measureChoiceHeight(view, choiceWrapWidth)
@@ -362,13 +412,22 @@ export class DialogueBox {
         ? choiceHeights.reduce((sum, height) => sum + height, 0) +
           DIALOGUE_GRID.choiceGap * Math.max(0, choiceHeights.length - 1)
         : 0;
-    const choiceY = bodyY + bodyHeight + (choiceHeights.length > 0 ? DIALOGUE_GRID.rowGap : 0);
+    const choiceY = bodyY + bodyBlockHeight + (choiceHeights.length > 0 ? DIALOGUE_GRID.rowGap : 0);
     const panelHeight = Math.max(
       DIALOGUE_GRID.minPanelHeight,
+      portraitVisible
+        ? DIALOGUE_GRID.paddingTop +
+            DIALOGUE_GRID.headerHeight +
+            DIALOGUE_GRID.rowGap +
+            portraitSize +
+            DIALOGUE_GRID.rowGap +
+            DIALOGUE_GRID.footerHeight +
+            DIALOGUE_GRID.paddingBottom
+        : 0,
       DIALOGUE_GRID.paddingTop +
         DIALOGUE_GRID.headerHeight +
         DIALOGUE_GRID.rowGap +
-        bodyHeight +
+        bodyBlockHeight +
         (choiceHeights.length > 0 ? DIALOGUE_GRID.rowGap + choiceBlockHeight : 0) +
         DIALOGUE_GRID.rowGap +
         DIALOGUE_GRID.footerHeight +
@@ -395,19 +454,43 @@ export class DialogueBox {
       panelHeight,
       innerX,
       innerWidth,
+      contentX,
+      contentWidth,
       headerY: panelY + headerY,
       headerHeight: DIALOGUE_GRID.headerHeight,
       bodyY: panelY + bodyY,
       bodyHeight,
+      portraitX: innerX,
+      portraitY: panelY + bodyY,
+      portraitSize,
+      portraitVisible,
       choiceY: panelY + choiceY,
-      choiceWidth: innerWidth,
+      choiceWidth: contentWidth,
       choiceWrapWidth,
       choiceGap: DIALOGUE_GRID.choiceGap,
       choiceHeights,
       hintX: innerX + innerWidth,
       hintY: panelY + panelHeight - DIALOGUE_GRID.paddingBottom,
       speakerBadgeWidth
-    };
+      };
+  }
+
+  private updatePortrait(node: DialogueNode): void {
+    const portrait = resolveDialoguePortraitDefinition(node.speakerId, node.speaker);
+    if (!portrait || !this.scene.textures.exists(portrait.textureKey)) {
+      this.portraitVisible = false;
+      this.currentPortraitTextureKey = undefined;
+      this.portraitFrame.setVisible(false);
+      this.portraitSprite.setVisible(false);
+      return;
+    }
+
+    this.currentPortraitTextureKey = portrait.textureKey;
+    this.currentPortraitFrameIndex = resolveDialoguePortraitFrame(node.emotion, portrait);
+    this.portraitSprite.setTexture(portrait.textureKey, this.currentPortraitFrameIndex);
+    this.portraitVisible = true;
+    this.portraitFrame.setVisible(true);
+    this.portraitSprite.setVisible(true);
   }
 
   private measureChoiceHeight(view: ChoiceView, wrapWidth: number): number {

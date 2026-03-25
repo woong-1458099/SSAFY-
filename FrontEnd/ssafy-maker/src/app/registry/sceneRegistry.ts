@@ -38,6 +38,7 @@ import { CompletionScene } from "../../scenes/CompletionScene";
 import { FinalSummaryScene } from "../../scenes/FinalSummaryScene";
 import { EndingIntroScene } from "../../scenes/EndingIntroScene";
 import { EndingComicScene } from "../../scenes/EndingComicScene";
+import { EndingCreditScene } from "../../scenes/EndingCreditScene";
 import { MiniGameCenterScene } from "../../game/scenes/minigames/MiniGameCenterScene";
 import LegacyBusinessSmileScene from "../../game/scenes/minigames/BusinessSmileScene";
 import LegacyCookingScene from "../../game/scenes/minigames/CookingScene";
@@ -73,6 +74,7 @@ const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: SCENE_KEYS.finalSummary, scene: FinalSummaryScene },
   { key: SCENE_KEYS.endingIntro, scene: EndingIntroScene },
   { key: SCENE_KEYS.endingComic, scene: EndingComicScene },
+  { key: SCENE_KEYS.endingCredit, scene: EndingCreditScene },
   { key: LEGACY_MINIGAME_MENU_SCENE_KEY, scene: LegacyMenuScene },
   { key: LEGACY_MINIGAME_PAUSE_SCENE_KEY, scene: LegacyMinigamePauseScene },
   { key: LEGACY_QUIZ_SCENE_KEY, scene: LegacyQuizScene },
@@ -138,7 +140,8 @@ export function assertSceneRegistryIntegrity(): void {
     SCENE_KEYS.completion,
     SCENE_KEYS.finalSummary,
     SCENE_KEYS.endingIntro,
-    SCENE_KEYS.endingComic
+    SCENE_KEYS.endingComic,
+    SCENE_KEYS.endingCredit
   ] as const;
   const registeredKeys = SCENE_REGISTRY_ENTRIES.map((entry) => entry.key);
   const declaredKeysByScene = SCENE_REGISTRY_ENTRIES.map((entry) => ({
