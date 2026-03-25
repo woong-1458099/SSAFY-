@@ -261,6 +261,35 @@ export class StoryEventManager {
     return this.getTimeAdvanceBlockedMessage();
   }
 
+  getPendingFixedEventInfo(): { eventName: string; location: string; participants: string[] } | null {
+    const event = this.findPendingFixedEventForCurrentTime();
+    if (!event) {
+      return null;
+    }
+
+    const eventName =
+      typeof event.eventName === "string" && event.eventName.trim().length > 0
+        ? event.eventName.trim()
+        : (event.label ?? "고정 이벤트");
+
+    const locationId = resolveFixedEventLocationId(event.location, this.getCurrentArea());
+    const presentation = buildFixedEventNpcPresentation(event, { fallbackLocation: locationId });
+    const participants = presentation?.participants.map(p => p.label) ?? [];
+
+    let locationName = event.location || "어딘가";
+    if (locationId === "campus") locationName = "캠퍼스";
+    else if (locationId === "downtown") locationName = "시내";
+    else if (locationId === "home") locationName = "집";
+    else if (locationId === "cafe") locationName = "카페";
+    else if (locationId === "store") locationName = "상점";
+
+    return {
+      eventName,
+      location: locationName,
+      participants
+    };
+  }
+
   getTimeAdvanceBlockedMessage(): string | null {
     const week = Phaser.Math.Clamp(Math.round(this.getHudState().week), 1, 6);
     if (!this.weekData.has(week)) {

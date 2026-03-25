@@ -30,6 +30,7 @@ import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { TutorialManager } from "../../features/tutorial";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
 import { GameHud } from "../../features/ui/components/GameHud";
+import { GameGuideUI } from "../../features/ui/components/GameGuideUI";
 import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
@@ -102,6 +103,7 @@ export class MainScene extends Phaser.Scene {
   private saveService?: SaveService;
   private dialogueBox?: DialogueBox;
   private hud?: GameHud;
+  private gameGuide?: GameGuideUI;
   private menuManager?: InGameMenuManager;
   private fixedEventNpcManager?: FixedEventNpcManager;
   private minigameRewardManager?: MinigameRewardManager;
@@ -178,6 +180,7 @@ export class MainScene extends Phaser.Scene {
     });
     this.dialogueBox = new DialogueBox(this);
     this.hud = new GameHud(this);
+    this.gameGuide = new GameGuideUI(this);
     this.fixedEventNpcManager = new FixedEventNpcManager(this);
     this.dialogueManager.setDialogueBox(this.dialogueBox);
     this.dialogueManager.setRuntimeHooks({
@@ -436,6 +439,7 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.destroy();
       this.menuManager?.destroy();
       this.hud?.destroy();
+      this.gameGuide?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
@@ -770,6 +774,74 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.debugOverlay?.render();
+    this.updateGameGuide();
+  }
+
+  private updateGameGuide(): void {
+    if (!this.gameGuide || !this.progressionManager || !this.storyEventManager) {
+      return;
+    }
+
+    const debugHudVisible = this.debugMinigameHud?.isVisible() === true;
+    const debugPanelVisible = this.debugPanel?.isVisible() === true;
+    const debugTileEditorVisible = this.worldTileEditor?.isVisible() === true;
+    const menuOpen = this.menuManager?.isOpen() === true;
+    const placePopupOpen = this.placeActionManager?.isOpen() === true;
+    const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
+    const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+
+    // 대화 중이거나 메뉴가 열려있을 때는 가이드를 숨김 (또는 정보만 업데이트)
+    this.gameGuide.setVisible(!menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible && !debugTileEditorVisible);
+
+    if (this.tutorialManager?.getIsActive()) {
+      const stepIndex = this.tutorialManager.getCurrentStepIndex();
+      this.gameGuide.applyState({
+        objective: "튜토리얼 진행 중",
+        location: undefined,
+        npc: undefined,
+        action: `단계: ${stepIndex + 1}`
+      });
+      return;
+    }
+
+    if (this.progressionManager.isPlannerOpen()) {
+      this.gameGuide.applyState({
+        objective: "주간 계획 세우기",
+        location: undefined,
+        npc: undefined,
+        action: "이번 주 일정을 계획하세요"
+      });
+      return;
+    }
+
+    const pendingEvent = this.storyEventManager.getPendingFixedEventInfo();
+    if (pendingEvent) {
+      this.gameGuide.applyState({
+        objective: pendingEvent.eventName,
+        location: pendingEvent.location,
+        npc: pendingEvent.participants.join(", "),
+        action: "고정 이벤트를 진행하세요"
+      });
+      return;
+    }
+
+    if (this.progressionManager.getActionPoint() <= 0) {
+       this.gameGuide.applyState({
+        objective: "하루 일과 마무리",
+        location: "집",
+        npc: undefined,
+        action: "집으로 가서 휴식하세요"
+      });
+      return;
+    }
+
+    // 기본 상태
+    this.gameGuide.applyState({
+      objective: "자유 시간",
+      location: "전체 지도",
+      npc: undefined,
+      action: "NPC와 대화하거나 장소를 방문하세요"
+    });
   }
 
   private syncDebugWorldState(): void {
