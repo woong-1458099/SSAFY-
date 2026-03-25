@@ -508,7 +508,8 @@ export class StoryEventManager {
           return false;
         }
 
-        const eventId = typeof event.eventId === "string" ? event.eventId : "";
+        const rawEventId = event.id ?? event.eventId;
+        const eventId = typeof rawEventId === "string" ? rawEventId : "";
         if (event.isRepeatable !== true && eventId && this.completedFixedEventIds.includes(eventId)) {
           return false;
         }

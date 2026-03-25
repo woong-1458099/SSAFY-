@@ -195,6 +195,8 @@ export class DebugPanel {
   ) => void;
   private latestState?: DebugPanelState;
   private lastStateString?: string;
+  private renderVersion = 0;
+  private lastRenderedVersion = -1;
   private visible = false;
   private page: PanelPage = "stats";
   private storySelectedWeek = 1;
@@ -326,7 +328,7 @@ export class DebugPanel {
     if (isStatiallyEqual) {
       // 얕은 비교에서 같다고 판단되면 전체를 직렬화하여 한 번 더 확인합니다. (정밀 검사)
       const stateString = JSON.stringify(state);
-      if (stateString === this.lastStateString) {
+      if (stateString === this.lastStateString && this.lastRenderedVersion === this.renderVersion) {
         return;
       }
       this.lastStateString = stateString;
@@ -343,6 +345,7 @@ export class DebugPanel {
     this.renderStoryState(state);
     this.renderEndingState(state);
     this.layout();
+    this.lastRenderedVersion = this.renderVersion;
 
     this.footer.setText(
       this.page === "stats"
@@ -381,6 +384,7 @@ export class DebugPanel {
 
   private setPage(page: PanelPage): void {
     this.page = page;
+    this.renderVersion += 1;
     if (page === "story" && this.latestState) {
       this.storySelectedWeek = this.latestState.storyDebug.currentWeek;
     }
@@ -731,6 +735,7 @@ export class DebugPanel {
       return;
     }
 
+    this.renderVersion += 1;
     this.storySelectedWeek = Phaser.Math.Clamp(
       this.storySelectedWeek + delta,
       1,
@@ -749,6 +754,7 @@ export class DebugPanel {
       return;
     }
 
+    this.renderVersion += 1;
     const currentIndex = this.storySelectedEventIndexByWeek[weekState.week] ?? 0;
     this.storySelectedEventIndexByWeek[weekState.week] = Phaser.Math.Clamp(currentIndex + delta, 0, weekState.events.length - 1);
     this.render(this.latestState);
