@@ -1,10 +1,10 @@
 package com.example.gameinfratest.user;
 
-import java.time.Instant;
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,14 +19,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByProviderAndProviderId(String provider, String providerId);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            update User user
-               set user.deathCount = user.deathCount + 1,
-                   user.lastDeathAt = :occurredAt,
-                   user.updatedAt = :occurredAt
+            select user
+              from User user
              where user.id = :userId
                and user.deletedAt is null
             """)
-    int incrementDeathCount(@Param("userId") UUID userId, @Param("occurredAt") Instant occurredAt);
+    Optional<User> findByIdAndDeletedAtIsNullForUpdate(@Param("userId") UUID userId);
 }

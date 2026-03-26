@@ -3,7 +3,6 @@ package com.example.gameinfratest.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,26 +31,27 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void recordDeathUsesAtomicIncrementAndReturnsUpdatedUser() {
+    void recordDeathLocksUserRowAndReturnsUpdatedUser() {
         UUID userId = UUID.randomUUID();
-        User user = activeUser(userId, 4, Instant.parse("2026-03-25T03:00:00Z"));
+        User lockedUser = activeUser(userId, 3, null);
+        User savedUser = activeUser(userId, 4, Instant.parse("2026-03-25T03:00:00Z"));
 
-        when(userRepository.incrementDeathCount(eq(userId), any(Instant.class))).thenReturn(1);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNullForUpdate(userId)).thenReturn(Optional.of(lockedUser));
+        when(userRepository.saveAndFlush(lockedUser)).thenReturn(savedUser);
 
         UserResponse response = userService.recordDeath(userId);
 
         assertThat(response.id()).isEqualTo(userId);
         assertThat(response.deathCount()).isEqualTo(4);
         assertThat(response.lastDeathAt()).isEqualTo(Instant.parse("2026-03-25T03:00:00Z"));
-        verify(userRepository).incrementDeathCount(eq(userId), any(Instant.class));
-        verify(userRepository).findById(userId);
+        verify(userRepository).findByIdAndDeletedAtIsNullForUpdate(userId);
+        verify(userRepository).saveAndFlush(lockedUser);
     }
 
     @Test
-    void recordDeathThrowsNotFoundWhenAtomicIncrementUpdatesNothing() {
+    void recordDeathThrowsNotFoundWhenLockedUserIsMissing() {
         UUID userId = UUID.randomUUID();
-        when(userRepository.incrementDeathCount(eq(userId), any(Instant.class))).thenReturn(0);
+        when(userRepository.findByIdAndDeletedAtIsNullForUpdate(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.recordDeath(userId))
                 .isInstanceOf(ApiException.class)
@@ -61,8 +61,8 @@ class UserServiceTest {
                     assertThat(apiException.getCode()).isEqualTo("USER_NOT_FOUND");
                 });
 
-        verify(userRepository).incrementDeathCount(eq(userId), any(Instant.class));
-        verify(userRepository, never()).findById(userId);
+        verify(userRepository).findByIdAndDeletedAtIsNullForUpdate(userId);
+        verify(userRepository, never()).saveAndFlush(any(User.class));
     }
 
     private User activeUser(UUID userId, int deathCount, Instant lastDeathAt) {
