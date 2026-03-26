@@ -125,6 +125,7 @@ export class MainScene extends Phaser.Scene {
   private pendingInitialAreaRefreshRequestId = 0;
   private deathSequenceActive = false;
   private pendingDeathSceneExit?: Phaser.Time.TimerEvent;
+  private endingFlowRequested = false;
   private pendingDialogueWeekMismatch?: {
     key: string;
     frame: number;
@@ -138,6 +139,7 @@ export class MainScene extends Phaser.Scene {
     this.initialized = false;
     this.logoutInProgress = false;
     this.deathSequenceActive = false;
+    this.endingFlowRequested = false;
     this.pendingDeathSceneExit?.remove(false);
     this.pendingDeathSceneExit = undefined;
     this.clearPendingInitialAreaRefresh();
@@ -293,6 +295,9 @@ export class MainScene extends Phaser.Scene {
     this.statSystemManager.setStatsChangedListener(() => {
       this.events.emit("ui:refreshStats");
     });
+    this.statSystemManager.setStateChangedListener(() => {
+      this.evaluateImmediateEndingTrigger();
+    });
     this.inventoryService.setChangeListener(() => {
       this.events.emit("ui:refreshInventory");
     });
@@ -304,6 +309,13 @@ export class MainScene extends Phaser.Scene {
       patchHudState: (next: any) => this.statSystemManager!.patchHudState(next),
       getStatsState: () => this.statSystemManager!.getStatsState(),
       applyStatDelta: (delta: any, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier as 1 | -1),
+      incrementGamePlayCount: () => {
+        const endingProgress = this.statSystemManager!.getEndingProgress();
+        this.statSystemManager!.patchEndingProgress({
+          gamePlayCount: endingProgress.gamePlayCount + 1
+        });
+      },
+      patchEndingProgress: (next: { lottoRank?: number | null }) => this.statSystemManager!.patchEndingProgress(next),
       inventoryService: this.inventoryService,
       saveService: this.saveService,
       audioManager: this.audioManager,
@@ -317,7 +329,10 @@ export class MainScene extends Phaser.Scene {
       toggleBgmEnabled: () => this.toggleBgmEnabled(),
       adjustSfxVolume: (delta: number) => this.adjustSfxVolume(delta),
       toggleSfxEnabled: () => this.toggleSfxEnabled(),
-      adjustBrightness: (delta: number) => this.adjustBrightness(delta)
+      adjustBrightness: (delta: number) => this.adjustBrightness(delta),
+      startLottoEndingFlow: () => {
+        void this.startEndingFlow(this.buildEndingPayload({ lottoRank: 1 }));
+      }
     });
 
     this.events.once("ui:ready", (uiScene: InGameUIScene) => {
@@ -1896,9 +1911,10 @@ export class MainScene extends Phaser.Scene {
     return hudWeek;
   }
 
-  private buildEndingPayload(): EndingFlowPayload {
+  private buildEndingPayload(overrides: Partial<EndingFlowPayload> = {}): EndingFlowPayload {
     const hudState = this.statSystemManager?.getHudState() ?? this.statSystemManager!.getHudState();
     const statsState = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
+    const endingProgress = this.statSystemManager?.getEndingProgress() ?? this.statSystemManager!.getEndingProgress();
 
     return {
       fe: statsState.fe,
@@ -1906,13 +1922,41 @@ export class MainScene extends Phaser.Scene {
       teamwork: statsState.teamwork,
       luck: statsState.luck,
       hp: hudState.hp,
+      hpMax: hudState.hpMax,
+      stress: hudState.stress,
+      gamePlayCount: endingProgress.gamePlayCount,
+      lottoRank: endingProgress.lottoRank,
       week: hudState.week,
       dayLabel: hudState.dayLabel,
-      timeLabel: hudState.timeLabel
+      timeLabel: hudState.timeLabel,
+      ...overrides
     };
   }
 
-  private async startEndingFlow(): Promise<void> {
+  private evaluateImmediateEndingTrigger(): void {
+    if (this.endingFlowRequested) {
+      return;
+    }
+
+    const payload = this.buildEndingPayload();
+    const ending = resolveEnding(payload);
+    if (ending.triggerMode !== "immediate") {
+      return;
+    }
+
+    this.endingFlowRequested = true;
+    void this.startEndingFlow(payload);
+  }
+
+  private async startEndingFlow(payload = this.buildEndingPayload()): Promise<void> {
+    const ending = resolveEnding(payload);
+    const entrySceneKey = ending.entryMode === "directSummary" ? SceneKey.FinalSummary : SceneKey.Completion;
+
+    if (this.endingFlowRequested && this.scene.isActive(entrySceneKey)) {
+      return;
+    }
+    this.endingFlowRequested = true;
+
     if (!this.saveService) {
       return;
     }
@@ -1925,7 +1969,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.clearPendingInitialAreaRefresh();
-    this.scene.start(SceneKey.Completion, this.buildEndingPayload());
+    this.scene.start(entrySceneKey, payload);
   }
 
   private async saveAutoWithNotice(): Promise<void> {
@@ -1944,30 +1988,48 @@ export class MainScene extends Phaser.Scene {
 
   private startDebugEndingFlow(endingId?: EndingId): void {
     const payload = endingId ? this.buildEndingPresetPayload(endingId) : this.buildEndingPayload();
+    const ending = resolveEnding(payload);
+    const entrySceneKey = ending.entryMode === "directSummary" ? SceneKey.FinalSummary : SceneKey.Completion;
     this.clearPendingInitialAreaRefresh();
-    this.scene.start(SceneKey.Completion, payload);
+    this.scene.start(entrySceneKey, payload);
   }
 
   private buildEndingPresetPayload(endingId: EndingId): EndingFlowPayload {
-    const base: Pick<EndingFlowPayload, "week" | "dayLabel" | "timeLabel"> = {
+    const base: Pick<EndingFlowPayload, "week" | "dayLabel" | "timeLabel" | "hpMax" | "stress" | "gamePlayCount" | "lottoRank"> = {
       week: 6,
+      hpMax: 100,
+      stress: 24,
+      gamePlayCount: 0,
+      lottoRank: null,
       dayLabel: "금요일",
       timeLabel: "밤"
     };
 
     switch (endingId) {
-      case "frontend-developer":
-        return { ...base, fe: 92, be: 36, teamwork: 58, luck: 28, hp: 62 };
-      case "backend-developer":
-        return { ...base, fe: 34, be: 92, teamwork: 56, luck: 30, hp: 60 };
-      case "team-player":
-        return { ...base, fe: 46, be: 40, teamwork: 91, luck: 36, hp: 63 };
-      case "stamina-survivor":
-        return { ...base, fe: 38, be: 36, teamwork: 44, luck: 30, hp: 95 };
-      case "lucky-break":
-        return { ...base, fe: 34, be: 32, teamwork: 42, luck: 96, hp: 58 };
-      case "frontend-leader":
-        return { ...base, fe: 88, be: 52, teamwork: 86, luck: 40, hp: 68 };
+      case "lotto":
+        return { ...base, fe: 30, be: 24, teamwork: 28, luck: 200, hp: 84, lottoRank: 1 };
+      case "game_over":
+        return { ...base, fe: 90, be: 84, teamwork: 72, luck: 40, hp: 0, stress: 92 };
+      case "runaway":
+        return { ...base, fe: 110, be: 106, teamwork: 104, luck: 52, hp: 38, stress: 100 };
+      case "largecompany":
+        return { ...base, fe: 180, be: 170, teamwork: 165, luck: 58, hp: 72 };
+      case "lucky_job":
+        return { ...base, fe: 88, be: 74, teamwork: 80, luck: 190, hp: 70 };
+      case "gamer":
+        return { ...base, fe: 70, be: 52, teamwork: 64, luck: 162, hp: 76, gamePlayCount: 18 };
+      case "frontend_master":
+        return { ...base, fe: 260, be: 92, teamwork: 118, luck: 46, hp: 68 };
+      case "backend_master":
+        return { ...base, fe: 82, be: 220, teamwork: 94, luck: 42, hp: 66 };
+      case "collaborative_dev":
+        return { ...base, fe: 170, be: 160, teamwork: 220, luck: 44, hp: 82 };
+      case "leader_type":
+        return { ...base, fe: 120, be: 118, teamwork: 260, luck: 40, hp: 88 };
+      case "health_trainer":
+        return { ...base, fe: 70, be: 68, teamwork: 108, luck: 34, hp: 96, hpMax: 210 };
+      case "normal":
+        return { ...base, fe: 118, be: 112, teamwork: 124, luck: 78, hp: 74 };
       default:
         return this.buildEndingPayload();
     }

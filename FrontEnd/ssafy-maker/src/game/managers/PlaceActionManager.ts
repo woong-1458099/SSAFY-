@@ -31,12 +31,15 @@ type PlaceActionManagerOptions = {
   getHudState: () => HudState;
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  incrementGamePlayCount: () => void;
+  patchEndingProgress: (next: { lottoRank?: number | null }) => void;
   inventoryService: InventoryService;
   getTimeCycleIndex: () => number;
   getActionPoint: () => number;
   getMaxActionPoint: () => number;
   tryConsumeActionPoint: () => ConsumeActionPointResult;
   onHomeTimeAdvanced?: () => void;
+  onLottoJackpot?: () => void;
 };
 
 const FONT_FAMILY =
@@ -48,12 +51,15 @@ export class PlaceActionManager {
   private readonly getHudState: () => HudState;
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  private readonly incrementGamePlayCount: () => void;
+  private readonly patchEndingProgress: (next: { lottoRank?: number | null }) => void;
   private readonly inventoryService: InventoryService;
   private readonly getTimeCycleIndex: () => number;
   private readonly getActionPoint: () => number;
   private readonly getMaxActionPoint: () => number;
   private readonly tryConsumeActionPoint: () => ConsumeActionPointResult;
   private readonly onHomeTimeAdvanced?: () => void;
+  private readonly onLottoJackpot?: () => void;
   private popupRoot?: Phaser.GameObjects.Container;
   private popupRequestId = 0;
   private homeTimeAdvanceScheduled = false;
@@ -64,12 +70,15 @@ export class PlaceActionManager {
     this.getHudState = options.getHudState;
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
+    this.incrementGamePlayCount = options.incrementGamePlayCount;
+    this.patchEndingProgress = options.patchEndingProgress;
     this.inventoryService = options.inventoryService;
     this.getTimeCycleIndex = options.getTimeCycleIndex;
     this.getActionPoint = options.getActionPoint;
     this.getMaxActionPoint = options.getMaxActionPoint;
     this.tryConsumeActionPoint = options.tryConsumeActionPoint;
     this.onHomeTimeAdvanced = options.onHomeTimeAdvanced;
+    this.onLottoJackpot = options.onLottoJackpot;
     this.scene.game.events.on(LOTTO_COMPLETED_EVENT, this.handleLottoCompleted, this);
   }
 
@@ -202,6 +211,9 @@ export class PlaceActionManager {
     const hudState = this.getHudState();
     const result = resolveHomeAction(action);
     this.applyStatDelta(result.statDelta);
+    if (action === "game") {
+      this.incrementGamePlayCount();
+    }
     this.patchHudState({
       hp: Phaser.Math.Clamp(hudState.hp + result.hpDelta, 0, hudState.hpMax),
       stress: Phaser.Math.Clamp(hudState.stress + result.stressDelta, 0, 100)
@@ -319,6 +331,12 @@ export class PlaceActionManager {
   }
 
   private handleLottoCompleted(outcome: LottoOutcome): void {
+    this.patchEndingProgress({ lottoRank: getLottoRank(outcome) });
+
+    if (outcome.isJackpot) {
+      this.onLottoJackpot?.();
+    }
+
     if (outcome.rewardMoney <= 0) {
       return;
     }
@@ -375,5 +393,23 @@ export class PlaceActionManager {
     bg.on("pointerover", () => bg.setFillStyle(0x34679d, 1));
     bg.on("pointerout", () => bg.setFillStyle(0x29527d, 1));
     return container;
+  }
+}
+
+function getLottoRank(outcome: LottoOutcome): number | null {
+  switch (outcome.tier) {
+    case "first":
+      return 1;
+    case "second":
+      return 2;
+    case "third":
+      return 3;
+    case "fourth":
+      return 4;
+    case "fifth":
+      return 5;
+    case "none":
+    default:
+      return null;
   }
 }

@@ -1,9 +1,12 @@
+import Phaser from "phaser";
 import { normalizeAffectionNpcId } from "../../common/enums/npc";
 import {
   clampHudState,
   clampStatsState,
   cloneGameState,
   createDefaultGameState,
+  DEFAULT_ENDING_PROGRESS_STATE,
+  type EndingProgressState,
   type HudState,
   type PlayerStatsState,
   type PlayerStatKey,
@@ -18,6 +21,7 @@ export class StatSystemManager {
   private state: RuntimeGameState;
   private hud?: HudProxy;
   private onStatsChanged?: (stats: PlayerStatsState) => void;
+  private onStateChanged?: (state: RuntimeGameState) => void;
 
   constructor(initialState: RuntimeGameState = createDefaultGameState()) {
     this.state = cloneGameState(initialState);
@@ -33,6 +37,10 @@ export class StatSystemManager {
     this.onStatsChanged = listener;
   }
 
+  setStateChangedListener(listener?: (state: RuntimeGameState) => void): void {
+    this.onStateChanged = listener;
+  }
+
   getState(): RuntimeGameState {
     return cloneGameState(this.state);
   }
@@ -43,6 +51,10 @@ export class StatSystemManager {
 
   getStatsState(): PlayerStatsState {
     return { ...this.state.stats };
+  }
+
+  getEndingProgress(): EndingProgressState {
+    return { ...this.state.endingProgress };
   }
 
   getAffection(npcId: string): number {
@@ -79,6 +91,24 @@ export class StatSystemManager {
     }
   }
 
+  patchEndingProgress(next: Partial<EndingProgressState>): void {
+    const gamePlayCount =
+      typeof next.gamePlayCount === "number"
+        ? Math.max(0, Math.round(next.gamePlayCount))
+        : this.state.endingProgress.gamePlayCount;
+    const lottoRank =
+      typeof next.lottoRank === "number"
+        ? Phaser.Math.Clamp(Math.round(next.lottoRank), 1, 5)
+        : next.lottoRank === null
+          ? null
+          : this.state.endingProgress.lottoRank;
+
+    this.state.endingProgress = {
+      gamePlayCount,
+      lottoRank
+    };
+  }
+
   hasFlag(flag: string): boolean {
     return this.state.flags.includes(flag);
   }
@@ -93,7 +123,14 @@ export class StatSystemManager {
       hud: clampHudState({ ...nextState.hud }),
       stats: clampStatsState({ ...nextState.stats }),
       affection: this.normalizeAffectionState(nextState.affection || {}),
-      flags: [...(nextState.flags || [])]
+      flags: [...(nextState.flags || [])],
+      endingProgress: {
+        gamePlayCount: Math.max(0, Math.round(nextState.endingProgress?.gamePlayCount ?? DEFAULT_ENDING_PROGRESS_STATE.gamePlayCount)),
+        lottoRank:
+          typeof nextState.endingProgress?.lottoRank === "number"
+            ? Phaser.Math.Clamp(Math.round(nextState.endingProgress.lottoRank), 1, 5)
+            : DEFAULT_ENDING_PROGRESS_STATE.lottoRank
+      }
     };
 
     if (this.state.hud.stress !== this.state.stats.stress) {
@@ -156,6 +193,7 @@ export class StatSystemManager {
     if (statsChanged) {
       this.onStatsChanged?.({ ...this.state.stats });
     }
+    this.onStateChanged?.(cloneGameState(this.state));
   }
 
   private normalizeAffectionState(affection: Record<string, number>): Record<string, number> {
