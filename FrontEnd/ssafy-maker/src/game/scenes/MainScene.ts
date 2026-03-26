@@ -120,6 +120,12 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
+  private pendingInitialAreaRefreshHandler?: () => void;
+  private pendingInitialAreaRefreshEventName?: string;
+  private pendingInitialAreaRefreshRequestId = 0;
+  private deathSequenceActive = false;
+  private pendingDeathSceneExit?: Phaser.Time.TimerEvent;
+  private endingFlowRequested = false;
   private pendingDialogueWeekMismatch?: {
     key: string;
     frame: number;
@@ -132,6 +138,12 @@ export class MainScene extends Phaser.Scene {
   async create() {
     this.initialized = false;
     this.logoutInProgress = false;
+    this.deathSequenceActive = false;
+    this.endingFlowRequested = false;
+    this.pendingDeathSceneExit?.remove(false);
+    this.pendingDeathSceneExit = undefined;
+    this.clearPendingInitialAreaRefresh();
+    this.cameras.main.setRoundPixels(true);
     await ensureAuthoredStoryLoaded(this);
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
