@@ -321,6 +321,47 @@
           ]
         }
       }
+    },
+    {
+      "id": "npc_minigame_npc",
+      "label": "미니게임 NPC",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "미니게임 NPC",
+          "text": "이미 해금한 미니게임만 다시 연습할 수 있어. 스토리나 번화가에서 한 번 해본 게임부터 열릴 거야.",
+          "choices": [
+            {
+              "id": "open_menu",
+              "text": "해금한 미니게임 보기",
+              "action": "openMiniGame"
+            },
+            {
+              "id": "bye",
+              "text": "알겠어, 나중에 다시 올게."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_nayool",
+      "label": "김나율 프로",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "김나율 프로",
+          "text": "부탁할 게 있다구? 말만해!",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "고마워, 필요하면 부탁할게."
+            }
+          ]
+        }
+      }
     }
   ]
 }

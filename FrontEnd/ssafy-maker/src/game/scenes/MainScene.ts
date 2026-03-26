@@ -196,8 +196,8 @@ export class MainScene extends Phaser.Scene {
         scene: this,
         returnSceneKey: SCENE_KEYS.main,
         openShop: () => this.events.emit("ui:openPlaceAction", "shop") // Adjusted if needed
-      })
-      
+      }),
+      getHudState: () => this.statSystemManager!.getHudState()
     });
     this.statSystemManager.attachHud({
       applyState: (patch) => this.events.emit("ui:patchHud", patch)

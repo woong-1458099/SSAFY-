@@ -28,6 +28,7 @@ type DialogueRuntimeHooks = {
   patchHudState?: (next: Partial<HudState>) => void;
   onNotice?: (message: string) => void;
   runAction?: (action: DialogueAction) => void;
+  getHudState?: () => HudState;
 };
 
 export class DialogueManager {
@@ -52,6 +53,7 @@ export class DialogueManager {
   private patchHudState?: DialogueRuntimeHooks["patchHudState"];
   private onNotice?: DialogueRuntimeHooks["onNotice"];
   private runAction?: DialogueRuntimeHooks["runAction"];
+  private getHudState?: DialogueRuntimeHooks["getHudState"];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -90,6 +92,7 @@ export class DialogueManager {
     this.patchHudState = hooks.patchHudState;
     this.onNotice = hooks.onNotice;
     this.runAction = hooks.runAction;
+    this.getHudState = hooks.getHudState;
   }
 
   async play(dialogueId: string) {
@@ -200,6 +203,16 @@ export class DialogueManager {
 
     if (isRuntimeDialogueId(normalizedDialogueId)) {
       return this.runtimeDialogueScripts[normalizedDialogueId] ?? null;
+    }
+
+    // 주차별(Week) 가변 대화 지원: id_w1, id_w2 형태가 등록되어 있는지 우선 확인
+    if (this.getHudState) {
+      const week = this.getHudState().week;
+      const weekSpecificId = `${normalizedDialogueId}_w${week}`;
+      const weekScript = resolveRegisteredDialogue(weekSpecificId);
+      if (weekScript) {
+        return weekScript;
+      }
     }
 
     return resolveRegisteredDialogue(normalizedDialogueId);
