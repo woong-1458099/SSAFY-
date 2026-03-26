@@ -83,10 +83,10 @@
           "dialogueId": "npc_hyunseok"
         },
         {
-          "npcId": "minigame_npc",
+          "npcId": "nayool",
           "x": 976,
           "y": 384,
-          "dialogueId": "npc_minigame_npc"
+          "dialogueId": "npc_nayool"
         }
       ]
     },
@@ -99,12 +99,6 @@
           "x": 720,
           "y": 480,
           "dialogueId": "npc_minigame_npc"
-        },
-        {
-          "npcId": "nayool",
-          "x": 816,
-          "y": 480,
-          "dialogueId": "npc_nayool"
         }
       ]
     }
