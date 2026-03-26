@@ -4,6 +4,7 @@ import com.example.gameinfratest.api.dto.auth.UserResponse;
 import com.example.gameinfratest.support.ApiException;
 import com.example.gameinfratest.user.User;
 import com.example.gameinfratest.user.UserRepository;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserService {
     private static final String PROVIDER = "keycloak";
+    private static final Duration DEATH_RECORD_COOLDOWN = Duration.ofSeconds(3);
 
     private final UserRepository userRepository;
 
@@ -90,8 +92,18 @@ public class UserService {
         User user = userRepository.findByIdAndDeletedAtIsNullForUpdate(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "user profile not found"));
 
+        Instant now = Instant.now();
+        Instant lastDeathAt = user.getLastDeathAt();
+        if (lastDeathAt != null && lastDeathAt.plus(DEATH_RECORD_COOLDOWN).isAfter(now)) {
+            throw new ApiException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "DEATH_RECORD_COOLDOWN_ACTIVE",
+                    "death record cooldown is active"
+            );
+        }
+
         user.setDeathCount(user.getDeathCount() + 1);
-        user.setLastDeathAt(Instant.now());
+        user.setLastDeathAt(now);
 
         return UserResponse.from(userRepository.saveAndFlush(user));
     }
