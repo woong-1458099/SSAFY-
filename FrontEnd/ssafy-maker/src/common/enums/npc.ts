@@ -9,7 +9,8 @@ export const NPC_IDS = {
   yeonwoong: "yeonwoong",
   doyeon: "doyeon",
   sunmi: "sunmi",
-  minseok: "minseok"
+  minseok: "minseok",
+  minigameNpc: "minigame_npc"
 } as const;
 
 export type NpcId = (typeof NPC_IDS)[keyof typeof NPC_IDS];

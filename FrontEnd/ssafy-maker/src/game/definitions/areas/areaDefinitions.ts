@@ -57,7 +57,11 @@ export const DOWNTOWN_TMX_LAYER_NAMES = {
 } as const;
 
 const CAMPUS_BLOCKED_TILE_ZONES: Rect[] = [
-  { x: 0, y: 0, width: 32, height: 11 }
+  { x: 0, y: 0, width: 32, height: 9 },
+  { x: 0, y: 9, width: 23, height: 1 },
+  { x: 27, y: 9, width: 5, height: 1 },
+  { x: 0, y: 10, width: 23, height: 1 },
+  { x: 28, y: 10, width: 4, height: 1 }
 ];
 
 export const CAMPUS_TMX_LAYER_NAMES = {
@@ -119,13 +123,11 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
     presentation: {
       backgroundKey: ASSET_KEYS.background.campus,
       npcScale: DEFAULT_AREA_NPC_SCALE,
-      blockedOverlays: [
-        {
-          tileRect: { x: 0, y: 0, width: 32, height: 11 },
-          color: 0x5a5f69,
-          alpha: 0.88
-        }
-      ]
+      blockedOverlays: CAMPUS_BLOCKED_TILE_ZONES.map((tileRect) => ({
+        tileRect,
+        color: 0x5a5f69,
+        alpha: 0.88
+      }))
     }
   },
   classroom: {

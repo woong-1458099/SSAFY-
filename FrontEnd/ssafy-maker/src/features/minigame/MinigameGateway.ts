@@ -7,8 +7,12 @@ import {
   type SupportedMinigameSceneKey
 } from "./minigameSceneKeys";
 import { openLegacyMinigameMenu } from "./minigameLauncher";
+import { resolveUnlockableMinigameSceneKey } from "./minigameUnlocks";
 
 export type MinigameLaunchKey = SupportedMinigameSceneKey;
+export type MinigameLaunchOptions = {
+  unlockOnComplete?: boolean;
+};
 
 type ReturnSceneResolution = {
   requestedKey: string;
@@ -72,7 +76,12 @@ function normalizeReturnSceneKey(scene: Phaser.Scene, returnSceneKey: unknown): 
   };
 }
 
-export function launchMinigame(scene: Phaser.Scene, sceneKey: MinigameLaunchKey, returnSceneKey: string) {
+export function launchMinigame(
+  scene: Phaser.Scene,
+  sceneKey: MinigameLaunchKey,
+  returnSceneKey: string,
+  options: MinigameLaunchOptions = {}
+) {
   const resolution = normalizeReturnSceneKey(scene, returnSceneKey);
 
   if (scene.scene.isActive(sceneKey)) {
@@ -84,6 +93,7 @@ export function launchMinigame(scene: Phaser.Scene, sceneKey: MinigameLaunchKey,
   }
 
   const pauseSucceeded = scene.scene.isActive(resolution.resolvedKey);
+  const unlockableSceneKey = options.unlockOnComplete ? resolveUnlockableMinigameSceneKey(sceneKey) : null;
   if (pauseSucceeded) {
     scene.scene.pause(resolution.resolvedKey);
   } else {
@@ -96,7 +106,14 @@ export function launchMinigame(scene: Phaser.Scene, sceneKey: MinigameLaunchKey,
     resolvedReturnSceneKey: resolution.resolvedKey,
     returnScenePauseSucceeded: pauseSucceeded,
     returnSceneFallback: resolution.usedFallback,
+    unlockOnComplete: options.unlockOnComplete === true,
+    unlockSceneKey: unlockableSceneKey ?? undefined
   });
+
+  if (options.unlockOnComplete && !unlockableSceneKey) {
+    console.warn(`[minigame] unlock metadata skipped for non-legacy scene key: ${sceneKey}`);
+  }
+
   return true;
 }
 

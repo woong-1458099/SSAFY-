@@ -100,5 +100,13 @@ export const NPC_DEFINITIONS: Record<NpcId, NpcDefinition> = {
     defaultFacing: "down",
     moveSpeed: 140,
     defaultEmotionFrame: 7  // ⭐ (성취)
+  },
+  minigame_npc: {
+    id: "minigame_npc",
+    label: "미니게임 NPC",
+    visualAssetId: "minigame_npc",
+    defaultFacing: "down",
+    moveSpeed: 140,
+    defaultEmotionFrame: 2  // ! (상호작용 유도)
   }
 };

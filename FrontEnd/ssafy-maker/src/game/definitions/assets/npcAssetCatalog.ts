@@ -34,7 +34,8 @@ export type NpcVisualAssetId =
   | "sunmi"
   | "hyunseok"
   | "hyewon"
-  | "minseok";
+  | "minseok"
+  | "minigame_npc";
 
 export type NpcVisualAssetDefinition = {
   id: NpcVisualAssetId;
@@ -87,7 +88,8 @@ export const NPC_ASSET_CATALOG: Record<NpcVisualAssetId, NpcVisualAssetDefinitio
   sunmi: createNpcAssetDefinition("sunmi", "sunmi-pro.png", "walking-sunmi.png"),
   hyunseok: createNpcAssetDefinition("hyunseok", "hyunseok-consultant.png", "walking-hyeonsok.png"),
   hyewon: createNpcAssetDefinition("hyewon", "hyewonC.png", "walking-hyewon.png"),
-  minseok: createNpcAssetDefinition("minseok", "minseokC.png", "walking-minsok.png")
+  minseok: createNpcAssetDefinition("minseok", "minseokC.png", "walking-minsok.png"),
+  minigame_npc: createNpcAssetDefinition("minigame_npc", "minigame_npc.png", "walking-minigame_npc.png")
 };
 
 export const NPC_ASSET_LIST = Object.values(NPC_ASSET_CATALOG);
