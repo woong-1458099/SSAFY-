@@ -9,6 +9,7 @@ import {
   hasPendingAuthRedirect
 } from "@features/auth/authSession";
 import {
+  DeathDashboardUnavailableError,
   fetchDeathDashboard,
   type DeathRankingEntry,
   type DeathRecordEvent
@@ -248,7 +249,10 @@ export class LoginScene extends Phaser.Scene {
           return;
         }
 
-        if (getBackendApiStatus() === "unavailable") {
+        if (
+          getBackendApiStatus() === "unavailable" ||
+          error instanceof DeathDashboardUnavailableError
+        ) {
           renderDashboardUnavailable();
           return;
         }
