@@ -33,9 +33,43 @@ export interface RecordDeathRequest {
 export type BackendApiStatus = "unknown" | "available" | "unavailable";
 
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-const NORMALIZED_API_BASE_URL = RAW_API_BASE_URL
-  ? RAW_API_BASE_URL.replace(/\/+$/, "").replace(/\/api$/i, "") + "/api"
-  : "/api";
+const API_PATH_SEGMENT = "/api";
+
+function stripTrailingSlashes(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+function ensureApiSuffix(pathname: string): string {
+  const normalizedPath = stripTrailingSlashes(pathname) || "";
+  if (normalizedPath.toLowerCase().endsWith(API_PATH_SEGMENT)) {
+    return normalizedPath || API_PATH_SEGMENT;
+  }
+
+  return `${normalizedPath}${API_PATH_SEGMENT}`;
+}
+
+function normalizeApiBaseUrl(rawValue?: string): string {
+  if (!rawValue) {
+    return API_PATH_SEGMENT;
+  }
+
+  try {
+    if (/^https?:\/\//i.test(rawValue)) {
+      const url = new URL(rawValue);
+      const normalizedPath = ensureApiSuffix(url.pathname);
+      return `${url.origin}${normalizedPath}`;
+    }
+
+    return ensureApiSuffix(rawValue.split(/[?#]/, 1)[0] ?? API_PATH_SEGMENT);
+  } catch {
+    console.warn("[auth-api] invalid VITE_API_BASE_URL; falling back to /api", {
+      rawValue
+    });
+    return API_PATH_SEGMENT;
+  }
+}
+
+const NORMALIZED_API_BASE_URL = normalizeApiBaseUrl(RAW_API_BASE_URL);
 
 export const API_PREFIX = NORMALIZED_API_BASE_URL;
 let backendApiStatus: BackendApiStatus = "unknown";
