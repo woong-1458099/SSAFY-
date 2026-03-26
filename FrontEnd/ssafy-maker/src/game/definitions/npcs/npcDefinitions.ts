@@ -108,5 +108,13 @@ export const NPC_DEFINITIONS: Record<NpcId, NpcDefinition> = {
     defaultFacing: "down",
     moveSpeed: 140,
     defaultEmotionFrame: 2  // ! (상호작용 유도)
+  },
+  nayool: {
+    id: "nayool",
+    label: "나율",
+    visualAssetId: "nayool",
+    defaultFacing: "down",
+    moveSpeed: 140,
+    defaultEmotionFrame: 0  // 미소 (교실 대기)
   }
 };
