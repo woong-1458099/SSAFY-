@@ -52,8 +52,21 @@ function findCsvLayer(layers, layerName) {
       return false;
     }
 
-    return String(layer?.data?.["@_encoding"] ?? "").trim().toLowerCase() === "csv";
+    const encoding =
+      typeof layer?.data === "string"
+        ? "csv"
+        : String(layer?.data?.["@_encoding"] ?? "").trim().toLowerCase();
+
+    return encoding === "csv";
   });
+}
+
+function getCsvText(layer) {
+  if (typeof layer?.data === "string") {
+    return layer.data;
+  }
+
+  return layer?.data?.["#text"];
 }
 
 function countCsvCells(csvText) {
@@ -88,7 +101,7 @@ TMX_TARGETS.forEach(({ file, requiredLayers }) => {
       return;
     }
 
-    const actualCellCount = countCsvCells(layer.data?.["#text"]);
+    const actualCellCount = countCsvCells(getCsvText(layer));
     if (actualCellCount !== expectedCellCount) {
       console.error(
         `[validate-tmx-patch-layers] Invalid CSV cell count for ${file} :: ${layerName}. ` +
