@@ -13,6 +13,8 @@ npm install
 ```bash
 npm run dev
 ```
+기본 API 경로는 `/api` 이고, 로컬 개발 시 Vite 프록시가 `http://localhost:8080` 으로 전달합니다.
+배포 서버 기준 API 경로는 `VITE_API_BASE_URL` 로 덮어쓸 수 있습니다.
 4. 빌드
 ```bash
 npm run build
