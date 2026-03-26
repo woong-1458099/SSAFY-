@@ -61,11 +61,10 @@ export class WorldTileEditor {
   private static readonly COLLAPSED_PANEL_HEIGHT = 96;
   private static readonly VIEWPORT_MARGIN = 20;
   private static readonly HEADER_HEIGHT = 56;
-  private static readonly BUTTON_WIDTH = 124;
-  private static readonly BUTTON_HEIGHT = 36;
 
   private readonly root: Phaser.GameObjects.Container;
   private readonly panel: Phaser.GameObjects.Rectangle;
+  private readonly dragHandle: Phaser.GameObjects.Rectangle;
   private readonly titleText: Phaser.GameObjects.Text;
   private readonly subtitleText: Phaser.GameObjects.Text;
   private readonly collapseButton: ButtonEntry;
@@ -87,7 +86,7 @@ export class WorldTileEditor {
   private lastPaintKey?: string;
   private panelBounds = { left: 0, top: 0, width: 0, height: 0 };
   private panelPosition?: { left: number; top: number };
-  private dragState?: { pointerId: number; offsetX: number; offsetY: number };
+  private dragState?: { offsetX: number; offsetY: number };
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -95,6 +94,9 @@ export class WorldTileEditor {
   ) {
     this.panel = scene.add.rectangle(0, 0, 472, 356, 0x09131d, 0.94);
     this.panel.setStrokeStyle(2, 0x6ce7ff, 1);
+    this.dragHandle = scene.add
+      .rectangle(0, 0, 344, WorldTileEditor.HEADER_HEIGHT, 0x6ce7ff, 0.001)
+      .setInteractive({ useHandCursor: true, cursor: "grab" });
     this.titleText = createText(scene, "F4 TILE EDITOR", {
       fontSize: "20px",
       fontStyle: "bold",
@@ -147,6 +149,7 @@ export class WorldTileEditor {
 
     this.root = scene.add.container(0, 0, [
       this.panel,
+      this.dragHandle,
       this.titleText,
       this.subtitleText,
       this.collapseButton.shadow,
@@ -166,6 +169,7 @@ export class WorldTileEditor {
     this.root.setVisible(false);
 
     this.scene.input.mouse?.disableContextMenu();
+    this.scene.input.setDraggable(this.dragHandle);
     this.bindInput();
     this.layout();
   }
@@ -249,6 +253,9 @@ export class WorldTileEditor {
     keyboard?.on("keydown-M", this.handleSelectMouse, this);
     keyboard?.on("keydown-G", this.handleCopyShortcut, this);
     keyboard?.on("keydown-R", this.handleResetShortcut, this);
+    this.dragHandle.on("dragstart", this.handleDragStart, this);
+    this.dragHandle.on("drag", this.handleDrag, this);
+    this.dragHandle.on("dragend", this.handleDragEnd, this);
 
     this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scene.input.off(Phaser.Input.Events.POINTER_DOWN, this.handlePointerDown, this);
@@ -260,15 +267,14 @@ export class WorldTileEditor {
       keyboard?.off("keydown-M", this.handleSelectMouse, this);
       keyboard?.off("keydown-G", this.handleCopyShortcut, this);
       keyboard?.off("keydown-R", this.handleResetShortcut, this);
+      this.dragHandle.off("dragstart", this.handleDragStart, this);
+      this.dragHandle.off("drag", this.handleDrag, this);
+      this.dragHandle.off("dragend", this.handleDragEnd, this);
     });
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer) {
     if (!this.visible) {
-      return;
-    }
-
-    if (this.tryStartPanelDrag(pointer)) {
       return;
     }
 
@@ -280,7 +286,7 @@ export class WorldTileEditor {
       return;
     }
 
-    if (this.dragState?.pointerId === pointer.id) {
+    if (this.dragState) {
       this.updatePanelDrag(pointer);
       return;
     }
@@ -291,10 +297,32 @@ export class WorldTileEditor {
   }
 
   private handlePointerUp(pointer: Phaser.Input.Pointer) {
-    if (this.dragState?.pointerId === pointer.id) {
-      this.dragState = undefined;
-    }
+    void pointer;
     this.lastPaintKey = undefined;
+  }
+
+  private handleDragStart(pointer: Phaser.Input.Pointer) {
+    if (!this.visible) {
+      return;
+    }
+
+    this.dragState = {
+      offsetX: pointer.x - this.panelBounds.left,
+      offsetY: pointer.y - this.panelBounds.top
+    };
+    this.lastPaintKey = undefined;
+  }
+
+  private handleDrag(pointer: Phaser.Input.Pointer) {
+    if (!this.visible || !this.dragState) {
+      return;
+    }
+
+    this.updatePanelDrag(pointer);
+  }
+
+  private handleDragEnd() {
+    this.dragState = undefined;
   }
 
   private handleSelectCollision(event: KeyboardEvent) {
@@ -627,6 +655,8 @@ export class WorldTileEditor {
 
     this.panel.setPosition(x, y);
     this.panel.setSize(panelWidth, panelHeight);
+    this.dragHandle.setPosition(left + 172, top + WorldTileEditor.HEADER_HEIGHT / 2);
+    this.dragHandle.setSize(344, WorldTileEditor.HEADER_HEIGHT);
     this.titleText.setPosition(left + 20, top + 14);
     this.subtitleText.setPosition(left + 20, top + 40);
     this.collapseButton.setPosition(left + 406, top + 28);
@@ -675,20 +705,6 @@ export class WorldTileEditor {
     );
   }
 
-  private tryStartPanelDrag(pointer: Phaser.Input.Pointer) {
-    if (!pointer.leftButtonDown() || !this.isPointerOverDragHandle(pointer)) {
-      return false;
-    }
-
-    this.dragState = {
-      pointerId: pointer.id,
-      offsetX: pointer.x - this.panelBounds.left,
-      offsetY: pointer.y - this.panelBounds.top
-    };
-    this.lastPaintKey = undefined;
-    return true;
-  }
-
   private updatePanelDrag(pointer: Phaser.Input.Pointer) {
     const panelHeight = this.collapsed
       ? WorldTileEditor.COLLAPSED_PANEL_HEIGHT
@@ -709,33 +725,6 @@ export class WorldTileEditor {
 
     this.panelPosition = nextPosition;
     this.layout();
-  }
-
-  private isPointerOverDragHandle(pointer: Phaser.Input.Pointer) {
-    const { left, top, width } = this.panelBounds;
-    const withinHeader =
-      pointer.x >= left &&
-      pointer.x <= left + width &&
-      pointer.y >= top &&
-      pointer.y <= top + WorldTileEditor.HEADER_HEIGHT;
-
-    if (!withinHeader) {
-      return false;
-    }
-
-    return !this.isPointerOverCollapseButton(pointer);
-  }
-
-  private isPointerOverCollapseButton(pointer: Phaser.Input.Pointer) {
-    const left = this.panelBounds.left + 406 - WorldTileEditor.BUTTON_WIDTH / 2;
-    const top = this.panelBounds.top + 28 - WorldTileEditor.BUTTON_HEIGHT / 2;
-
-    return (
-      pointer.x >= left &&
-      pointer.x <= left + WorldTileEditor.BUTTON_WIDTH &&
-      pointer.y >= top &&
-      pointer.y <= top + WorldTileEditor.BUTTON_HEIGHT
-    );
   }
 
   private clampPanelPosition(left: number, top: number, width: number, height: number) {
