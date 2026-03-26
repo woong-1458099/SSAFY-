@@ -2,7 +2,9 @@ package com.example.gameinfratest.api.controller;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -85,10 +87,13 @@ class UserControllerSessionSecurityTest {
 
         mockMvc.perform(post("/api/users/me/deaths").session(authenticatedSession(signedInUser)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(signedInUser.id().toString()))
+                .andExpect(jsonPath("$.data.email").value(signedInUser.email()))
                 .andExpect(jsonPath("$.data.deathCount").value(4))
                 .andExpect(jsonPath("$.data.lastDeathAt").value("2026-03-25T03:00:00Z"));
 
-        verify(userService).recordDeath(eq(signedInUser.id()));
+        verify(userService, times(1)).recordDeath(eq(signedInUser.id()));
+        verifyNoMoreInteractions(userService);
     }
 
     @Test

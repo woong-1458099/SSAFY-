@@ -87,13 +87,16 @@ public class UserService {
 
     @Transactional
     public UserResponse recordDeath(UUID userId) {
+        Instant occurredAt = Instant.now();
+        int updatedRows = userRepository.incrementDeathCount(userId, occurredAt);
+        if (updatedRows == 0) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "user profile not found");
+        }
+
         User user = userRepository.findById(userId)
                 .filter(current -> current.getDeletedAt() == null)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "user profile not found"));
-
-        user.setDeathCount(user.getDeathCount() + 1);
-        user.setLastDeathAt(Instant.now());
-        return UserResponse.from(userRepository.save(user));
+        return UserResponse.from(user);
     }
 
     private JwtIdentity extractIdentity(Jwt jwt) {
