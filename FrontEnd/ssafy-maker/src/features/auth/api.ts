@@ -13,21 +13,53 @@ export interface UserProfile {
   birthday: string | null;
   provider: string;
   lastLoginAt: string | null;
+  deathCount: number;
+  lastDeathAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export const API_PREFIX = "/api";
+export interface DeathRecordTokenResponse {
+  token: string;
+  expiresAt: string;
+}
+
+export interface RecordDeathRequest {
+  areaId?: string;
+  sceneId?: string;
+  cause?: string;
+}
+
+export type BackendApiStatus = "unknown" | "available" | "unavailable";
+
+const RAW_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+const NORMALIZED_API_BASE_URL = RAW_API_BASE_URL
+  ? RAW_API_BASE_URL.replace(/\/+$/, "")
+  : "/api";
+
+export const API_PREFIX = NORMALIZED_API_BASE_URL;
+let backendApiStatus: BackendApiStatus = "unknown";
+
+export function getBackendApiStatus(): BackendApiStatus {
+  return backendApiStatus;
+}
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   console.log("[auth-api] request", {
     url: `${API_PREFIX}${path}`,
     method: init.method ?? "GET"
   });
-  const response = await fetch(`${API_PREFIX}${path}`, {
-    credentials: "include",
-    ...init
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_PREFIX}${path}`, {
+      credentials: "include",
+      ...init
+    });
+    backendApiStatus = "available";
+  } catch (error) {
+    backendApiStatus = "unavailable";
+    throw error;
+  }
   const raw = await response.text();
   console.log("[auth-api] response", {
     url: `${API_PREFIX}${path}`,
@@ -74,5 +106,27 @@ export function fetchBackendSession(): Promise<BackendAuthSession> {
   console.log("[auth-api] fetchBackendSession");
   return request<BackendAuthSession>("/auth/session", {
     method: "GET"
+  });
+}
+
+export function issueDeathRecordToken(): Promise<DeathRecordTokenResponse> {
+  console.log("[auth-api] issueDeathRecordToken");
+  return request<DeathRecordTokenResponse>("/users/me/deaths/token", {
+    method: "POST"
+  });
+}
+
+export function recordCurrentUserDeath(
+  token: string,
+  body: RecordDeathRequest = {}
+): Promise<UserProfile> {
+  console.log("[auth-api] recordCurrentUserDeath");
+  return request<UserProfile>("/users/me/deaths", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Death-Record-Token": token
+    },
+    body: JSON.stringify(body)
   });
 }

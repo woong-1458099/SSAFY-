@@ -88,6 +88,18 @@ export function persistSession(session: AuthSession): AuthSession {
   return session;
 }
 
+export function patchStoredSessionUser(user: UserProfile): void {
+  const current = readStoredSession();
+  if (!current) {
+    return;
+  }
+
+  persistSession({
+    ...current,
+    user
+  });
+}
+
 export function readStoredSession(): AuthSession | null {
   try {
     const raw = window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
