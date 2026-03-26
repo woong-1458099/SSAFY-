@@ -403,21 +403,21 @@ export function buildRuntimeGrids(
     resolvedLayers.collisionLayers
   );
   const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
+  const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones);
+  const blockedTilesAppliedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
   const walkablePatchGrid = buildBooleanGridFromLayers(
     parsedMap.width,
     parsedMap.height,
     resolvedLayers.walkableLayers
   );
-  const walkableLayerAppliedBlockedGrid = cloneBooleanGrid(walkableAppliedBlockedGrid);
-  for (let y = 0; y < walkableLayerAppliedBlockedGrid.length; y += 1) {
-    for (let x = 0; x < (walkableLayerAppliedBlockedGrid[y]?.length ?? 0); x += 1) {
+  const finalBlockedGrid = cloneBooleanGrid(blockedTilesAppliedGrid);
+  for (let y = 0; y < finalBlockedGrid.length; y += 1) {
+    for (let x = 0; x < (finalBlockedGrid[y]?.length ?? 0); x += 1) {
       if (walkablePatchGrid[y]?.[x]) {
-        walkableLayerAppliedBlockedGrid[y][x] = false;
+        finalBlockedGrid[y][x] = false;
       }
     }
   }
-  const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableLayerAppliedBlockedGrid, blockedTileZones);
-  const finalBlockedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
   const manualBlockedGrid = buildBooleanGridFromTiles(parsedMap.width, parsedMap.height, blockedTiles);
 
   return {
@@ -510,8 +510,13 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
     .sort((a, b) => a.firstgid - b.firstgid);
 
   const layers: ParsedTmxLayer[] = [];
+  let hasInvalidLayerData = false;
 
   Array.from(mapNode.getElementsByTagName("layer")).forEach((layerNode, index) => {
+    if (hasInvalidLayerData) {
+      return;
+    }
+
     const dataNode = layerNode.getElementsByTagName("data")[0];
     if (!dataNode) {
       return;
@@ -536,8 +541,13 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
       });
 
     const requiredCellCount = width * height;
-    while (values.length < requiredCellCount) {
-      values.push(0);
+    if (values.length !== requiredCellCount) {
+      console.error(
+        `[TMX] Invalid CSV cell count for layer "${layerNode.getAttribute("name") ?? `layer_${index + 1}`}". ` +
+          `Expected ${requiredCellCount}, received ${values.length}.`
+      );
+      hasInvalidLayerData = true;
+      return;
     }
 
     const rowData: number[][] = [];
@@ -552,6 +562,10 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
       data: rowData
     });
   });
+
+  if (hasInvalidLayerData) {
+    return null;
+  }
 
   return {
     width,
