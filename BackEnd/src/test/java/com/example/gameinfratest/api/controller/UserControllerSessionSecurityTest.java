@@ -17,7 +17,6 @@ import com.example.gameinfratest.auth.BffSessionState;
 import com.example.gameinfratest.config.SecurityConfig;
 import com.example.gameinfratest.service.AuthorizationService;
 import com.example.gameinfratest.service.UserService;
-import com.example.gameinfratest.support.ApiException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -30,7 +29,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -99,18 +97,28 @@ class UserControllerSessionSecurityTest {
     }
 
     @Test
-    void recordDeathRejectsDuplicateRequestsDuringCooldown() throws Exception {
+    void recordDeathReturnsCurrentStateDuringCooldown() throws Exception {
         UserResponse signedInUser = user("signed-in@example.com", 3);
-        when(userService.recordDeath(eq(signedInUser.id())))
-                .thenThrow(new ApiException(
-                        HttpStatus.TOO_MANY_REQUESTS,
-                        "DEATH_RECORD_COOLDOWN_ACTIVE",
-                        "death record cooldown is active"
-                ));
+        UserResponse currentState = new UserResponse(
+                signedInUser.id(),
+                signedInUser.email(),
+                signedInUser.username(),
+                signedInUser.emailVerified(),
+                signedInUser.phone(),
+                signedInUser.birthday(),
+                signedInUser.provider(),
+                signedInUser.lastLoginAt(),
+                3,
+                Instant.parse("2026-03-25T03:00:00Z"),
+                signedInUser.createdAt(),
+                signedInUser.updatedAt()
+        );
+        when(userService.recordDeath(eq(signedInUser.id()))).thenReturn(currentState);
 
         mockMvc.perform(post("/api/users/me/deaths").session(authenticatedSession(signedInUser)))
-                .andExpect(status().isTooManyRequests())
-                .andExpect(jsonPath("$.code").value("DEATH_RECORD_COOLDOWN_ACTIVE"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deathCount").value(3))
+                .andExpect(jsonPath("$.data.lastDeathAt").value("2026-03-25T03:00:00Z"));
 
         verify(userService, times(1)).recordDeath(eq(signedInUser.id()));
     }

@@ -66,20 +66,18 @@ class UserServiceTest {
     }
 
     @Test
-    void recordDeathRejectsDuplicateRequestDuringCooldown() {
+    void recordDeathReturnsCurrentStateDuringCooldown() {
         UUID userId = UUID.randomUUID();
-        User lockedUser = activeUser(userId, 3, Instant.now());
+        Instant lastDeathAt = Instant.now();
+        User lockedUser = activeUser(userId, 3, lastDeathAt);
 
         when(userRepository.findByIdAndDeletedAtIsNullForUpdate(userId)).thenReturn(Optional.of(lockedUser));
 
-        assertThatThrownBy(() -> userService.recordDeath(userId))
-                .isInstanceOf(ApiException.class)
-                .satisfies(error -> {
-                    ApiException apiException = (ApiException) error;
-                    assertThat(apiException.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
-                    assertThat(apiException.getCode()).isEqualTo("DEATH_RECORD_COOLDOWN_ACTIVE");
-                });
+        UserResponse response = userService.recordDeath(userId);
 
+        assertThat(response.id()).isEqualTo(userId);
+        assertThat(response.deathCount()).isEqualTo(3);
+        assertThat(response.lastDeathAt()).isEqualTo(lastDeathAt);
         verify(userRepository).findByIdAndDeletedAtIsNullForUpdate(userId);
         verify(userRepository, never()).saveAndFlush(any(User.class));
     }

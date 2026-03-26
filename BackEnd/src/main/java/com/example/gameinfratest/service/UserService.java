@@ -95,11 +95,7 @@ public class UserService {
         Instant now = Instant.now();
         Instant lastDeathAt = user.getLastDeathAt();
         if (lastDeathAt != null && lastDeathAt.plus(DEATH_RECORD_COOLDOWN).isAfter(now)) {
-            throw new ApiException(
-                    HttpStatus.TOO_MANY_REQUESTS,
-                    "DEATH_RECORD_COOLDOWN_ACTIVE",
-                    "death record cooldown is active"
-            );
+            return UserResponse.from(user);
         }
 
         user.setDeathCount(user.getDeathCount() + 1);
