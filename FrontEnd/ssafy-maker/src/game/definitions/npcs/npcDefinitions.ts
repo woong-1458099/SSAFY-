@@ -111,7 +111,7 @@ export const NPC_DEFINITIONS: Record<NpcId, NpcDefinition> = {
   },
   nayool: {
     id: "nayool",
-    label: "나율",
+    label: "김나율 프로",
     visualAssetId: "nayool",
     defaultFacing: "down",
     moveSpeed: 140,
