@@ -118,6 +118,7 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
+  private pendingInitialAreaRefresh?: Phaser.Time.TimerEvent;
   private pendingDialogueWeekMismatch?: {
     key: string;
     frame: number;
@@ -424,6 +425,8 @@ export class MainScene extends Phaser.Scene {
       this.progressionManager?.destroy();
       this.storyEventManager?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+      this.pendingInitialAreaRefresh?.remove(false);
+      this.pendingInitialAreaRefresh = undefined;
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
       this.destroySkyBackground?.();
@@ -491,8 +494,10 @@ export class MainScene extends Phaser.Scene {
 
     // 첫 진입 직후 한 프레임 뒤에 현재 맵을 같은 좌표계로 다시 맞춘다.
     // 다른 맵을 갔다 돌아오면 정상화되던 초기 렌더 불안정을 여기서 흡수한다.
-    this.time.delayedCall(0, () => {
-      this.refreshCurrentAreaPresentation();
+    this.pendingInitialAreaRefresh?.remove(false);
+    this.pendingInitialAreaRefresh = this.time.delayedCall(0, () => {
+      this.pendingInitialAreaRefresh = undefined;
+      this.refreshCurrentAreaPresentation(currentArea);
     });
   }
 
@@ -557,18 +562,20 @@ export class MainScene extends Phaser.Scene {
     this.brightnessOverlay.setVisible(overlayAlpha > 0.001);
   }
 
-  private refreshCurrentAreaPresentation(): void {
-    if (!this.worldManager || !this.playerManager || !this.interactionManager) {
+  private refreshCurrentAreaPresentation(expectedAreaId?: AreaId): void {
+    if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
       return;
     }
 
     const areaId = this.worldManager.getCurrentAreaId();
-    if (!areaId) {
+    if (!areaId || (expectedAreaId && areaId !== expectedAreaId)) {
       return;
     }
 
     const playerSnapshot = this.playerManager.getSnapshot();
-    this.worldManager.loadArea(areaId);
+    if (!this.worldManager.rerenderCurrentArea()) {
+      return;
+    }
 
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
@@ -576,8 +583,9 @@ export class MainScene extends Phaser.Scene {
 
     this.playerManager.setRenderBounds(renderBounds);
 
-    if (playerSnapshot) {
-      this.playerManager.debugTeleportToTile(playerSnapshot.tileX, playerSnapshot.tileY);
+    const safePlayerTile = this.resolveSafeRefreshTile(playerSnapshot, runtimeGrids, parsedMap);
+    if (safePlayerTile) {
+      this.playerManager.debugTeleportToTile(safePlayerTile.tileX, safePlayerTile.tileY);
     }
 
     const transitionTargets = this.resolveAreaTransitionTargets(areaId, renderBounds);
@@ -604,6 +612,65 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.events.emit("ui:renderTransitions", transitionTargets);
+  }
+
+  private resolveSafeRefreshTile(
+    playerSnapshot: { tileX: number; tileY: number } | undefined,
+    runtimeGrids?: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
+    parsedMap?: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
+  ) {
+    if (!playerSnapshot || !runtimeGrids || !parsedMap) {
+      return undefined;
+    }
+
+    if (this.isWalkableTile(playerSnapshot.tileX, playerSnapshot.tileY, runtimeGrids, parsedMap)) {
+      return {
+        tileX: playerSnapshot.tileX,
+        tileY: playerSnapshot.tileY
+      };
+    }
+
+    return this.findNearestWalkableTile(playerSnapshot.tileX, playerSnapshot.tileY, runtimeGrids, parsedMap);
+  }
+
+  private isWalkableTile(
+    tileX: number,
+    tileY: number,
+    runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
+    parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
+  ) {
+    if (tileX < 0 || tileY < 0 || tileX >= parsedMap.width || tileY >= parsedMap.height) {
+      return false;
+    }
+
+    return runtimeGrids.blockedGrid[tileY]?.[tileX] !== true;
+  }
+
+  private findNearestWalkableTile(
+    originTileX: number,
+    originTileY: number,
+    runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
+    parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
+  ) {
+    const maxRadius = Math.max(parsedMap.width, parsedMap.height);
+
+    for (let radius = 1; radius <= maxRadius; radius += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) {
+            continue;
+          }
+
+          const tileX = originTileX + dx;
+          const tileY = originTileY + dy;
+          if (this.isWalkableTile(tileX, tileY, runtimeGrids, parsedMap)) {
+            return { tileX, tileY };
+          }
+        }
+      }
+    }
+
+    return findFirstWalkableTile(runtimeGrids.blockedGrid);
   }
 
   private adjustBgmVolume(delta: number): void {
