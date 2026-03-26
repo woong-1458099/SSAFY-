@@ -244,12 +244,7 @@ export class PlayerManager {
   private isWithinWorldBounds(worldX: number, worldY: number, parsedMap: ParsedTmxMap) {
     const minPosition = this.getWorldPositionFromTile(0, 0);
     const maxPosition = this.getWorldPositionFromTile(parsedMap.width - 1, parsedMap.height - 1);
-    const epsilon = this.renderBounds
-      ? Math.max(0.5, Math.min(
-        this.renderBounds.tileWidth * this.renderBounds.scale,
-        this.renderBounds.tileHeight * this.renderBounds.scale
-      ) * 0.01)
-      : 0.5;
+    const epsilon = 2;
 
     return (
       worldX >= minPosition.x - epsilon &&

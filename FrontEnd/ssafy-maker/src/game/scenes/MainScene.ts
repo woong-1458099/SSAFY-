@@ -425,10 +425,7 @@ export class MainScene extends Phaser.Scene {
       this.progressionManager?.destroy();
       this.storyEventManager?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-      if (this.pendingInitialAreaRefreshHandler) {
-        this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.pendingInitialAreaRefreshHandler);
-        this.pendingInitialAreaRefreshHandler = undefined;
-      }
+      this.clearPendingInitialAreaRefresh();
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
       this.destroySkyBackground?.();
@@ -575,6 +572,55 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    this.syncAreaPresentationAfterRerender(areaId, playerSnapshot);
+  }
+
+  private queueInitialAreaRefresh(
+    expectedAreaId: AreaId,
+    expectedPlayerSnapshot?: { tileX: number; tileY: number }
+  ): void {
+    this.clearPendingInitialAreaRefresh();
+
+    const handler = () => {
+      this.events.off(Phaser.Scenes.Events.POST_UPDATE, handler);
+      this.pendingInitialAreaRefreshHandler = undefined;
+      const currentAreaId = this.worldManager?.getCurrentAreaId();
+      const currentPlayerSnapshot = this.playerManager?.getSnapshot();
+
+      if (
+        currentAreaId !== expectedAreaId ||
+        !currentPlayerSnapshot ||
+        !expectedPlayerSnapshot ||
+        currentPlayerSnapshot.tileX !== expectedPlayerSnapshot.tileX ||
+        currentPlayerSnapshot.tileY !== expectedPlayerSnapshot.tileY
+      ) {
+        return;
+      }
+
+      this.refreshCurrentAreaPresentation(expectedAreaId);
+    };
+
+    this.pendingInitialAreaRefreshHandler = handler;
+    this.events.once(Phaser.Scenes.Events.POST_UPDATE, handler);
+  }
+
+  private clearPendingInitialAreaRefresh(): void {
+    if (!this.pendingInitialAreaRefreshHandler) {
+      return;
+    }
+
+    this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.pendingInitialAreaRefreshHandler);
+    this.pendingInitialAreaRefreshHandler = undefined;
+  }
+
+  private syncAreaPresentationAfterRerender(
+    areaId: AreaId,
+    playerSnapshot?: { tileX: number; tileY: number }
+  ): void {
+    if (!this.worldManager || !this.playerManager || !this.interactionManager) {
+      return;
+    }
+
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
     const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
     const renderBounds = this.worldManager.getCurrentRenderBounds();
@@ -598,6 +644,7 @@ export class MainScene extends Phaser.Scene {
     this.interactionManager.setTransitionTargets(transitionTargets);
     this.interactionManager.setStaticPlaceTargets(staticPlaceTargets);
     this.syncDebugWorldState();
+    this.applyBrightnessOverlay();
 
     if (this.worldGridOverlay) {
       this.worldGridOverlay.render(
@@ -610,37 +657,6 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.events.emit("ui:renderTransitions", transitionTargets);
-  }
-
-  private queueInitialAreaRefresh(
-    expectedAreaId: AreaId,
-    expectedPlayerSnapshot?: { tileX: number; tileY: number }
-  ): void {
-    if (this.pendingInitialAreaRefreshHandler) {
-      this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.pendingInitialAreaRefreshHandler);
-      this.pendingInitialAreaRefreshHandler = undefined;
-    }
-
-    const handler = () => {
-      this.pendingInitialAreaRefreshHandler = undefined;
-      const currentAreaId = this.worldManager?.getCurrentAreaId();
-      const currentPlayerSnapshot = this.playerManager?.getSnapshot();
-
-      if (
-        currentAreaId !== expectedAreaId ||
-        !currentPlayerSnapshot ||
-        !expectedPlayerSnapshot ||
-        currentPlayerSnapshot.tileX !== expectedPlayerSnapshot.tileX ||
-        currentPlayerSnapshot.tileY !== expectedPlayerSnapshot.tileY
-      ) {
-        return;
-      }
-
-      this.refreshCurrentAreaPresentation(expectedAreaId);
-    };
-
-    this.pendingInitialAreaRefreshHandler = handler;
-    this.events.once(Phaser.Scenes.Events.POST_UPDATE, handler);
   }
 
   private resolveSafeRefreshTile(
