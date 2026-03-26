@@ -32,6 +32,7 @@ export class EndingComicScene extends Phaser.Scene {
     if (!data.payload || !data.ending) {
       throw new Error("EndingComicScene requires payload and ending data.");
     }
+
     this.revealEvent?.destroy();
     this.revealEvent = undefined;
     this.panelContainers = [];
@@ -152,16 +153,11 @@ export class EndingComicScene extends Phaser.Scene {
 
     const buttonY = centerY + panelHeight / 2 - 122;
     this.createButton(centerX, buttonY, "다시보기", () => this.restartEndingFlow(), panelWidth - 64, 50);
-    this.createButton(centerX, buttonY + 72, "엔딩 크레딧", () => {
-      this.scene.start(SceneKey.EndingCredit, {
-        payload: this.payload,
-        ending: this.ending
-      } satisfies EndingCreditScenePayload);
-    }, panelWidth - 64, 50);
+    this.createButton(centerX, buttonY + 72, this.getExitButtonLabel(), () => this.handlePostComicAction(), panelWidth - 64, 50);
   }
 
   private createFallbackTextLayout(width: number, height: number): void {
-    this.add.text(width / 2, 58, "엔딩 장면", {
+    this.add.text(width / 2, 58, "엔딩장면", {
       fontFamily: FONT_FAMILY,
       fontSize: "22px",
       color: TEXT_SUB,
@@ -242,12 +238,7 @@ export class EndingComicScene extends Phaser.Scene {
     ).setOrigin(0.5);
 
     this.createButton(width / 2 - 130, height - 70, "다시보기", () => this.restartEndingFlow());
-    this.createButton(width / 2 + 130, height - 70, "엔딩 크레딧", () => {
-      this.scene.start(SceneKey.EndingCredit, {
-        payload: this.payload,
-        ending: this.ending
-      } satisfies EndingCreditScenePayload);
-    });
+    this.createButton(width / 2 + 130, height - 70, this.getExitButtonLabel(), () => this.handlePostComicAction());
   }
 
   private createButton(x: number, y: number, label: string, onClick: () => void, width = 220, height = 52): void {
@@ -293,12 +284,25 @@ export class EndingComicScene extends Phaser.Scene {
     });
   }
 
-  private replayComic(): void {
-    this.playRevealSequence();
+  private restartEndingFlow(): void {
+    const entrySceneKey = this.ending.entryMode === "directSummary" ? SceneKey.FinalSummary : SceneKey.Completion;
+    this.scene.start(entrySceneKey, this.payload);
   }
 
-  private restartEndingFlow(): void {
-    this.scene.start(SceneKey.Completion, this.payload);
+  private getExitButtonLabel(): string {
+    return this.ending.postComicAction === "start" ? "시작 화면" : "엔딩 크레딧";
+  }
+
+  private handlePostComicAction(): void {
+    if (this.ending.postComicAction === "start") {
+      this.scene.start(SceneKey.Start);
+      return;
+    }
+
+    this.scene.start(SceneKey.EndingCredit, {
+      payload: this.payload,
+      ending: this.ending
+    } satisfies EndingCreditScenePayload);
   }
 }
 
