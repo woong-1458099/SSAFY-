@@ -122,6 +122,7 @@ VITE_KEYCLOAK_CLIENT_ID=ssafy-maker-bff
 ```
 
 STG 는 `ssafymaker.cloud` 대신 `stg.ssafymaker.cloud/api` 로 맞춘다.
+`VITE_API_BASE_URL` 에 query string 이나 hash 를 붙여도 무시되므로, 순수한 API base URL만 넣는다.
 
 ## 배포 전 체크리스트
 - Keycloak realm `app` 에 `ssafy-maker-bff` client 가 존재하는지 확인한다.

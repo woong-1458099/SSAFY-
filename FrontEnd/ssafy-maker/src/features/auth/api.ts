@@ -56,11 +56,22 @@ function normalizeApiBaseUrl(rawValue?: string): string {
   try {
     if (/^https?:\/\//i.test(rawValue)) {
       const url = new URL(rawValue);
+      if (url.search || url.hash) {
+        console.warn("[auth-api] VITE_API_BASE_URL query/hash is ignored during normalization", {
+          rawValue
+        });
+      }
       const normalizedPath = ensureApiSuffix(url.pathname);
       return `${url.origin}${normalizedPath}`;
     }
 
-    return ensureApiSuffix(rawValue.split(/[?#]/, 1)[0] ?? API_PATH_SEGMENT);
+    const sanitizedValue = rawValue.split(/[?#]/, 1)[0] ?? API_PATH_SEGMENT;
+    if (sanitizedValue !== rawValue) {
+      console.warn("[auth-api] VITE_API_BASE_URL query/hash is ignored during normalization", {
+        rawValue
+      });
+    }
+    return ensureApiSuffix(sanitizedValue);
   } catch {
     console.warn("[auth-api] invalid VITE_API_BASE_URL; falling back to /api", {
       rawValue
