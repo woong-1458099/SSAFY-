@@ -84,8 +84,8 @@
         },
         {
           "npcId": "minigame_npc",
-          "x": 1000,
-          "y": 259,
+          "x": 1008,
+          "y": 288,
           "dialogueId": "npc_minigame_npc"
         }
       ]
