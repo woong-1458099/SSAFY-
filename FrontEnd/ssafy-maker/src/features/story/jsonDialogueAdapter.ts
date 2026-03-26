@@ -1,6 +1,7 @@
 import {
   createRuntimeDialogueId,
   isRuntimeDialogueId,
+  type AffectionRequirement,
   type DialogueAction,
   type DialogueChoice,
   type DialogueChoiceActionType,
@@ -8,6 +9,13 @@ import {
   type DialogueRequirement,
   type DialogueScript
 } from "../../common/types/dialogue";
+import {
+  FIXED_EVENT_CONDITION_GENDER_VALUES,
+  FIXED_EVENT_STAT_CHANGE_KEYS,
+  type FixedEventConditionGenderValue,
+  type FixedEventStatChangeKey
+} from "../../common/types/fixedEvent";
+import { normalizeAffectionNpcId } from "../../common/enums/npc";
 import { matchesFixedEventLocation, normalizeFixedEventLocationToken } from "./fixedEventLocation";
 
 export type FixedEventDialogueEntry = {
@@ -20,39 +28,29 @@ export type FixedEventDialogueEntry = {
 export type FixedEventChoiceCondition = {
   social?: number;
   code?: number;
-  gold?: number;
+  nunchi?: number;
   money?: number;
   luck?: number;
   hp?: number;
   stress?: number;
   stress_max?: number;
   trait?: string;
+  playerGender?: FixedEventConditionGenderValue;
 };
-
-export type FixedEventStatChangeKey =
-  | "social"
-  | "code"
-  | "gold"
-  | "money"
-  | "hp"
-  | "stress"
-  | "luck"
-  | "favor_pro"
-  | "madness"
-  | "fe"
-  | "be"
-  | "teamwork";
 
 export type FixedEventChoiceResult = {
   statChanges?: Partial<Record<FixedEventStatChangeKey, number>>;
+  affectionChanges?: Record<string, number>;
   feedbackText?: string;
   feedbackDialogues?: FixedEventDialogueEntry[];
+  setFlags?: string[];
 };
 
 export type FixedEventChoiceEntry = {
   choiceId?: number;
   actionType?: string;
   condition?: FixedEventChoiceCondition | null;
+  affectionRequirements?: AffectionRequirement[];
   text?: string;
   result?: FixedEventChoiceResult;
   action?: DialogueAction;
@@ -65,14 +63,23 @@ export type FixedEventTriggerTiming = {
 };
 
 export type FixedEventEntry = {
+  // Legacy
   eventId?: string;
   eventName?: string;
+  dialogues?: FixedEventDialogueEntry[];
+  choices?: FixedEventChoiceEntry[];
+
+  // Authored Dialogue (New)
+  id?: string;
+  label?: string;
+  startNodeId?: string;
+  nodes?: Record<string, DialogueNode>;
+
+  // Common
   eventType?: string;
   triggerTiming?: FixedEventTriggerTiming;
   location?: string;
   isRepeatable?: boolean;
-  dialogues?: FixedEventDialogueEntry[];
-  choices?: FixedEventChoiceEntry[];
 };
 
 type FixedEventMatchContext = {
@@ -80,6 +87,7 @@ type FixedEventMatchContext = {
   day: number;
   timeOfDay: string;
   location: string;
+  playerGender?: string;
 };
 
 type BuildDialogueOptions = {
@@ -178,9 +186,12 @@ function mapConditionToRequirements(condition: FixedEventChoiceCondition | null 
     requirements.push({ stat: "fe", min: value, label: `코딩 ${value} 이상` });
     requirements.push({ stat: "be", min: value, label: `코딩 ${value} 이상` });
   }
-  const currencyRequirement = typeof condition.gold === "number" ? condition.gold : condition.money;
+  if (typeof condition.nunchi === "number") {
+    requirements.push({ stat: "luck", min: Math.round(condition.nunchi), label: `눈치 ${Math.round(condition.nunchi)} 이상` });
+  }
+  const currencyRequirement = condition.money;
   if (typeof currencyRequirement === "number") {
-    requirements.push({ stat: "gold", min: Math.round(currencyRequirement), label: `재화 ${Math.round(currencyRequirement)}` });
+    requirements.push({ stat: "money", min: Math.round(currencyRequirement), label: `재화 ${Math.round(currencyRequirement)}` });
   }
   if (typeof condition.luck === "number") {
     requirements.push({ stat: "luck", min: Math.round(condition.luck), label: `운 ${Math.round(condition.luck)} 이상` });
@@ -207,10 +218,14 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
     if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
     const value = Math.round(rawValue);
 
+    if (rawKey.startsWith("favor_")) return;
+
     switch (rawKey) {
       case "social":
-      case "favor_pro":
         mapped.teamwork = (mapped.teamwork ?? 0) + value;
+        break;
+      case "nunchi":
+        mapped.luck = (mapped.luck ?? 0) + value;
         break;
       case "code": {
         const feDelta = value >= 0 ? Math.ceil(value / 2) : Math.floor(value / 2);
@@ -222,9 +237,8 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
       case "madness":
         mapped.stress = (mapped.stress ?? 0) + value;
         break;
-      case "gold":
       case "money":
-        mapped.gold = (mapped.gold ?? 0) + value;
+        mapped.money = (mapped.money ?? 0) + value;
         break;
       case "hp":
         mapped.hp = (mapped.hp ?? 0) + value;
@@ -242,6 +256,69 @@ function mapStatChanges(changes: Partial<Record<FixedEventStatChangeKey, number>
   });
 
   return Object.keys(mapped).length > 0 ? mapped : undefined;
+}
+
+function normalizeAffectionChanges(
+  changes: Record<string, number> | undefined,
+  contextLabel: string
+): DialogueChoice["affectionChanges"] {
+  if (!changes || typeof changes !== "object") return undefined;
+
+  const normalized: NonNullable<DialogueChoice["affectionChanges"]> = {};
+
+  Object.entries(changes).forEach(([rawNpcId, rawValue]) => {
+    if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
+
+    const npcId = normalizeAffectionNpcId(rawNpcId);
+    if (!npcId) {
+      console.warn(`[story] Ignoring unknown affectionChanges key "${rawNpcId}" in ${contextLabel}.`);
+      return;
+    }
+
+    normalized[npcId] = (normalized[npcId] ?? 0) + Math.round(rawValue);
+  });
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function extractLegacyAffectionChanges(
+  changes: Partial<Record<FixedEventStatChangeKey, number>> | undefined,
+  contextLabel: string
+): DialogueChoice["affectionChanges"] {
+  if (!changes || typeof changes !== "object") return undefined;
+
+  const normalized: NonNullable<DialogueChoice["affectionChanges"]> = {};
+
+  Object.entries(changes).forEach(([rawKey, rawValue]) => {
+    if (!rawKey.startsWith("favor_") || typeof rawValue !== "number" || !Number.isFinite(rawValue)) return;
+
+    const npcId = normalizeAffectionNpcId(rawKey);
+    if (!npcId) {
+      console.warn(`[story] Ignoring unknown legacy affection key "${rawKey}" in ${contextLabel}.`);
+      return;
+    }
+
+    normalized[npcId] = (normalized[npcId] ?? 0) + Math.round(rawValue);
+  });
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function mergeAffectionChanges(
+  primary: DialogueChoice["affectionChanges"],
+  fallback: DialogueChoice["affectionChanges"]
+): DialogueChoice["affectionChanges"] {
+  if (!primary) return fallback;
+  if (!fallback) return primary;
+
+  const merged = { ...primary };
+  Object.entries(fallback).forEach(([npcId, value]) => {
+    if (!(npcId in merged)) {
+      merged[npcId] = value;
+    }
+  });
+
+  return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
 function validateDialogueScript(script: DialogueScript): DialogueScript {
@@ -293,10 +370,20 @@ export function getFixedEventEntries(rawData: unknown): FixedEventEntry[] {
     return rawData.filter((entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object"));
   }
 
-  if (rawData && typeof rawData === "object" && Array.isArray((rawData as { events?: unknown[] }).events)) {
-    return (rawData as { events: unknown[] }).events.filter(
-      (entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")
-    );
+  if (rawData && typeof rawData === "object") {
+    const dataAsObj = rawData as { dialogues?: unknown[]; events?: unknown[] };
+    
+    if (Array.isArray(dataAsObj.dialogues)) {
+      return dataAsObj.dialogues.filter(
+        (entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")
+      );
+    }
+    
+    if (Array.isArray(dataAsObj.events)) {
+      return dataAsObj.events.filter(
+        (entry): entry is FixedEventEntry => Boolean(entry && typeof entry === "object")
+      );
+    }
   }
 
   return [];
@@ -313,9 +400,10 @@ export function findMatchingFixedEvent(
   return (
     getFixedEventEntries(rawData).find((event) => {
       const timing = event.triggerTiming;
-      if (!timing || event.eventType !== "FIXED") return false;
+      if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) return false;
 
-      const eventId = typeof event.eventId === "string" ? event.eventId : "";
+      const rawEventId = event.id ?? event.eventId;
+      const eventId = typeof rawEventId === "string" ? rawEventId : "";
       if (event.isRepeatable !== true && eventId && completedSet.has(eventId)) {
         return false;
       }
@@ -324,7 +412,15 @@ export function findMatchingFixedEvent(
       const sameDay = Math.round(timing.day ?? -1) === context.day;
       const sameTime = normalizeToken(timing.timeOfDay) === targetTime;
       const sameLocation = matchesFixedEventLocation(event.location, context.location);
-      return sameWeek && sameDay && sameTime && sameLocation;
+      
+      if (sameWeek && sameDay && sameTime && sameLocation) {
+        if (event.eventType === "ROMANCE" && context.playerGender) {
+          if (context.playerGender === "MALE" && eventId.includes("_MINSU_")) return false;
+          if (context.playerGender === "FEMALE" && eventId.includes("_HYO_")) return false;
+        }
+        return true;
+      }
+      return false;
     }) ?? null
   );
 }
@@ -337,6 +433,34 @@ export function buildDialogueScriptFromFixedEventEntry(
   const runtimeDialogueId = createRuntimeDialogueId(dialogueId);
   const fallbackNpcLabel = options.fallbackNpcLabel;
   const playerName = options.playerName ?? "플레이어";
+
+  // Authored Dialogue (New Format) Handle
+  if (event.startNodeId && event.nodes && typeof event.nodes === "object") {
+    const parsedNodes: Record<string, DialogueNode> = {};
+    
+    Object.entries(event.nodes).forEach(([nodeId, node]) => {
+      parsedNodes[nodeId] = {
+        ...node,
+        text: normalizeTextWithPlayerName(node.text, "...", playerName)
+      };
+
+      if (parsedNodes[nodeId].choices) {
+        parsedNodes[nodeId].choices = parsedNodes[nodeId].choices?.map((choice) => ({
+          ...choice,
+          text: normalizeChoiceText(choice.text, "선택지", playerName, choice.actionType || "NORMAL"),
+          feedbackText: choice.feedbackText ? normalizeTextWithPlayerName(choice.feedbackText, "", playerName) : undefined
+        }));
+      }
+    });
+
+    return validateDialogueScript({
+      id: runtimeDialogueId,
+      label: event.label ?? (event.label ?? event.eventName) ?? fallbackNpcLabel,
+      startNodeId: event.startNodeId,
+      nodes: parsedNodes
+    });
+  }
+
   const dialogues = Array.isArray(event.dialogues) ? event.dialogues : [];
   const choices = Array.isArray(event.choices) ? event.choices : [];
   if (dialogues.length === 0) {
@@ -367,10 +491,15 @@ export function buildDialogueScriptFromFixedEventEntry(
     finalDialogueNode.nextNodeId = undefined;
     finalDialogueNode.choices = choices.map((choice, index): DialogueChoice => {
       const choiceId = choice.choiceId ?? index + 1;
+      const choiceContextLabel = `${(event.id ?? event.eventId) ?? dialogueId}:choice:${choiceId}`;
       const actionType = normalizeActionType(choice.actionType);
       const requirements = mapConditionToRequirements(choice.condition);
       const feedbackDialogues = Array.isArray(choice.result?.feedbackDialogues) ? choice.result.feedbackDialogues : [];
       const feedbackStartNodeId = feedbackDialogues.length > 0 ? `json_choice_feedback_${choiceId}_1` : undefined;
+      const affectionChanges = mergeAffectionChanges(
+        normalizeAffectionChanges(choice.result?.affectionChanges, choiceContextLabel),
+        extractLegacyAffectionChanges(choice.result?.statChanges, choiceContextLabel)
+      );
       const lockedReason =
         typeof choice.condition?.trait === "string" && choice.condition.trait.trim().length > 0
           ? `${choice.condition.trait} 조건은 아직 특성 시스템에 연결되지 않았습니다`
@@ -383,8 +512,11 @@ export function buildDialogueScriptFromFixedEventEntry(
         actionType,
         action: choice.action,
         requirements,
+        affectionRequirements: Array.isArray(choice.affectionRequirements) ? choice.affectionRequirements : undefined,
         lockedReason,
         statChanges: mapStatChanges(choice.result?.statChanges),
+        affectionChanges,
+        setFlags: Array.isArray(choice.result?.setFlags) ? choice.result?.setFlags : undefined,
         feedbackText:
           feedbackDialogues.length === 0
             ? normalizeTextWithPlayerName(choice.result?.feedbackText, "", playerName)
@@ -415,7 +547,7 @@ export function buildDialogueScriptFromFixedEventEntry(
 
   return validateDialogueScript({
     id: runtimeDialogueId,
-    label: event.eventName ?? fallbackNpcLabel,
+    label: (event.label ?? event.eventName) ?? fallbackNpcLabel,
     startNodeId: "json_dialogue_1",
     nodes
   });

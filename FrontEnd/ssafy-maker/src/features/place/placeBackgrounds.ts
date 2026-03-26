@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { buildGameAssetPath } from "../../common/assets/gameAssetPath";
 import type { AreaId, PlaceId } from "../../common/enums/area";
+import { AudioManager } from "../../core/managers/AudioManager";
 
 export type TimeOfDay = "오전" | "오후" | "저녁" | "밤";
 
@@ -12,7 +13,8 @@ export const PLACE_BACKGROUND_KEYS = {
   ramen: "place_bg_ramen",
   karaoke: "place_bg_karaoke",
   lotto: "place_bg_lotto",
-  beer: "place_bg_beer"
+  beer: "place_bg_beer",
+  campus: "place_bg_campus"
 } as const;
 
 export const PLACE_BGM_KEYS = {
@@ -65,6 +67,7 @@ const PLACE_BACKGROUND_ASSETS: Array<{ key: string; path: string }> = [
   { key: CLOUD_KEYS.evening_cloud2, path: buildGameAssetPath("backgrounds", "evening_cloud2.png") },
   { key: CLOUD_KEYS.night_cloud1, path: buildGameAssetPath("backgrounds", "night_cloud1.png") },
   { key: CLOUD_KEYS.night_cloud2, path: buildGameAssetPath("backgrounds", "night_cloud2.png") },
+  { key: PLACE_BACKGROUND_KEYS.campus, path: buildGameAssetPath("backgrounds", "background_ssafy.png") },
 ];
 
 const PLACE_BGM_ASSETS = [
@@ -96,7 +99,8 @@ const PLACE_BACKGROUND_KEY_BY_PLACE_ID: Partial<Record<PlaceId, string>> = {
   ramen: PLACE_BACKGROUND_KEYS.ramen,
   karaoke: PLACE_BACKGROUND_KEYS.karaoke,
   lotto: PLACE_BACKGROUND_KEYS.lotto,
-  beer: PLACE_BACKGROUND_KEYS.beer
+  beer: PLACE_BACKGROUND_KEYS.beer,
+  campus: PLACE_BACKGROUND_KEYS.campus
 };
 
 const PLACE_BGM_KEY_BY_PLACE_ID: Partial<Record<PlaceId, string>> = {
@@ -159,9 +163,42 @@ function resumeAudioContext(scene: Phaser.Scene): Promise<void> {
   return ctx.resume();
 }
 
+function isUsableExistingSound(
+  sound: Phaser.Sound.BaseSound | null,
+  scene: Phaser.Scene
+): sound is Phaser.Sound.BaseSound {
+  if (!sound) {
+    return false;
+  }
+
+  if (sound.manager !== scene.sound) {
+    return false;
+  }
+
+  if ((sound as { isDestroyed?: boolean }).isDestroyed === true) {
+    return false;
+  }
+
+  return typeof sound.play === "function";
+}
+
+function tryResumeExistingSound(
+  sound: Phaser.Sound.BaseSound,
+  bgmKey: string
+): boolean {
+  try {
+    sound.play();
+    return true;
+  } catch (error) {
+    console.warn(`[BGM] 기존 사운드 재생 실패, 재생성으로 폴백합니다: ${bgmKey}`, error);
+    return false;
+  }
+}
+
 export async function playPlaceBgm(
   scene: Phaser.Scene,
   placeId: PlaceId,
+  audioManager: AudioManager
 ): Promise<void> {
   const bgmKey = PLACE_BGM_KEY_BY_PLACE_ID[placeId];
   if (!bgmKey) return;
@@ -172,16 +209,30 @@ export async function playPlaceBgm(
   }
 
   const existing = scene.sound.get(bgmKey);
-  if (existing?.isPlaying) return;
+  const reusableExisting = isUsableExistingSound(existing, scene) ? existing : null;
+  if (reusableExisting) {
+    const existing = reusableExisting;
+    audioManager.registerManagedSound(existing, "bgm", 0.5);
+    audioManager.updateManagedSoundVolume(existing, "bgm", 0.5);
+    if (existing.isPlaying) {
+      return;
+    }
+  }
 
   await resumeAudioContext(scene);
-  scene.sound.stopAll();
-  scene.sound.play(bgmKey, { loop: true, volume: 0.5 });
+  audioManager.stopManagedSounds("bgm", { scene, exceptKey: bgmKey });
+  if (reusableExisting && tryResumeExistingSound(reusableExisting, bgmKey)) {
+    return;
+  }
+
+  const bgm = audioManager.add(scene, bgmKey, "bgm", { loop: true, volume: 0.5 });
+  bgm?.play();
 }
 
 export async function playWorldBgm(
   scene: Phaser.Scene,
-  timeOfDay: TimeOfDay
+  timeOfDay: TimeOfDay,
+  audioManager: AudioManager
 ): Promise<void> {
   const bgmKey = WORLD_BGM_KEY_BY_TIME[timeOfDay];
 
@@ -191,11 +242,24 @@ export async function playWorldBgm(
   }
 
   const existing = scene.sound.get(bgmKey);
-  if (existing?.isPlaying) return;
+  const reusableExisting = isUsableExistingSound(existing, scene) ? existing : null;
+  if (reusableExisting) {
+    const existing = reusableExisting;
+    audioManager.registerManagedSound(existing, "bgm", 0.5);
+    audioManager.updateManagedSoundVolume(existing, "bgm", 0.5);
+    if (existing.isPlaying) {
+      return;
+    }
+  }
 
   await resumeAudioContext(scene);
-  scene.sound.stopAll();
-  scene.sound.play(bgmKey, { loop: true, volume: 0.5 });
+  audioManager.stopManagedSounds("bgm", { scene, exceptKey: bgmKey });
+  if (reusableExisting && tryResumeExistingSound(reusableExisting, bgmKey)) {
+    return;
+  }
+
+  const bgm = audioManager.add(scene, bgmKey, "bgm", { loop: true, volume: 0.5 });
+  bgm?.play();
 }
 
 export function getPlaceBackgroundTextureKey(placeId: PlaceId): string | null {
@@ -205,6 +269,7 @@ export function getPlaceBackgroundTextureKey(placeId: PlaceId): string | null {
 export function ensurePlaceBackgroundTexture(
   scene: Phaser.Scene,
   placeId: PlaceId,
+  audioManager: AudioManager,
   onReady: (textureKey: string | null) => void,
 ): void {
   const textureKey = getPlaceBackgroundTextureKey(placeId);
@@ -212,7 +277,7 @@ export function ensurePlaceBackgroundTexture(
 
   if (!textureKey) {
     if (bgmKey && scene.cache.audio.exists(bgmKey)) {
-      playPlaceBgm(scene, placeId);
+      void playPlaceBgm(scene, placeId, audioManager);
     }
     onReady(null);
     return;
@@ -222,7 +287,7 @@ export function ensurePlaceBackgroundTexture(
   const isAudioLoaded = bgmKey ? scene.cache.audio.exists(bgmKey) : true;
 
   if (isTextureLoaded && isAudioLoaded) {
-    playPlaceBgm(scene, placeId);
+    void playPlaceBgm(scene, placeId, audioManager);
     onReady(textureKey);
     return;
   }
@@ -240,7 +305,7 @@ export function ensurePlaceBackgroundTexture(
   }
 
   scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
-    playPlaceBgm(scene, placeId);
+    void playPlaceBgm(scene, placeId, audioManager);
     onReady(textureKey);
   });
 
@@ -263,6 +328,30 @@ export function createPlaceBackgroundImage(
     .setScrollFactor(0);
 }
 
+export function createCampusBackground(
+  scene: Phaser.Scene,
+  depth: number = -10
+): () => void {
+  const bgKey = PLACE_BACKGROUND_KEYS.campus;
+
+  if (!scene.textures.exists(bgKey)) {
+    console.warn(`[Background] 캠퍼스 배경 텍스트가 로드되지 않았습니다: ${bgKey}`);
+  }
+
+  const w = scene.scale.width;
+  const h = scene.scale.height;
+
+const campusBg = scene.add
+    .image(w / 2, h / 2, bgKey)
+    .setDisplaySize(w, h) 
+    .setScrollFactor(0)   
+    .setDepth(depth);     
+
+
+  return () => {
+    campusBg.destroy();
+  };
+}
 
 export function createSkyBackground(
   scene: Phaser.Scene,

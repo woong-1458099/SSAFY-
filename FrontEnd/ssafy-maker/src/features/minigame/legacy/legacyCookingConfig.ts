@@ -29,10 +29,10 @@ export const LEGACY_COOKING_INGREDIENTS = [
 ];
 
 export const LEGACY_COOKING_DISHES = [
-  { minScore: 1100, name: "🏆 황금 라면", desc: "전설의 라면이 완성되었습니다!", color: "#FFD700", reward: "요리 +10, GP +40" },
-  { minScore: 900, name: "🍜 특제 라면", desc: "정말 맛있는 라면이네요!", color: "#ff8844", reward: "요리 +7, GP +25" },
-  { minScore: 700, name: "🍥 맛있는 라면", desc: "훌륭한 라면입니다!", color: "#44ff88", reward: "요리 +5, GP +15" },
-  { minScore: 400, name: "🥢 평범한 라면", desc: "그럭저럭 먹을만 해요", color: "#88ccff", reward: "요리 +3, GP +5" },
-  { minScore: 0, name: "😅 퍼진 라면", desc: "면이 좀 퍼졌네요...", color: "#aaaaaa", reward: "요리 +1" },
-  { minScore: -999, name: "💀 실패한 요리", desc: "이건 먹을 수 없어요...", color: "#ff4466", reward: "스트레스 +5" }
+  { minScore: 1100, name: "🏆 황금 라면", desc: "전설의 라면이 완성되었습니다!", color: "#FFD700", reward: "HP +10, TEAMWORK +4" },
+  { minScore: 900, name: "🍜 특제 라면", desc: "정말 맛있는 라면이네요!", color: "#ff8844", reward: "HP +8, TEAMWORK +3" },
+  { minScore: 700, name: "🍥 맛있는 라면", desc: "훌륭한 라면입니다!", color: "#44ff88", reward: "HP +6, TEAMWORK +2" },
+  { minScore: 400, name: "🥢 평범한 라면", desc: "그럭저럭 먹을만 해요", color: "#88ccff", reward: "HP +4, TEAMWORK +1" },
+  { minScore: 0, name: "😅 퍼진 라면", desc: "면이 좀 퍼졌네요...", color: "#aaaaaa", reward: "HP +2" },
+  { minScore: -999, name: "💀 실패한 요리", desc: "이건 먹을 수 없어요...", color: "#ff4466", reward: "STRESS +4" }
 ] as const;

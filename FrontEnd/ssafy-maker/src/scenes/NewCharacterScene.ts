@@ -125,6 +125,7 @@ export class NewCharacterScene extends Phaser.Scene {
         targets: startBtnContainer, scale: 0.95, duration: 80, yoyo: true,
         onComplete: () => {
           this.registry.set('playerData', { name: this.userName, gender: this.gender, hair: this.hairIndex, cloth: this.clothIndex });
+          this.registry.set('isNewCharacter', true);
           this.scene.start(SceneKey.Main);
         }
       });

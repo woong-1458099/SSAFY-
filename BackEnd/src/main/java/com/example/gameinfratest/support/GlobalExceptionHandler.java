@@ -2,6 +2,7 @@ package com.example.gameinfratest.support;
 
 import com.example.gameinfratest.api.dto.ApiResponse;
 import java.util.Optional;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+@Profile("!staging")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)

@@ -7,6 +7,7 @@ export type DebugCommand =
   | { type: "toggleDebugOverlay" }
   | { type: "toggleDebugPanel" }
   | { type: "toggleWorldGrid" }
+  | { type: "toggleWorldTileEditor" }
   | { type: "teleportPlayerToWorld"; worldX: number; worldY: number }
   | { type: "switchStartScene"; sceneId: SceneId }
   | { type: "toggleMinigameHud" }

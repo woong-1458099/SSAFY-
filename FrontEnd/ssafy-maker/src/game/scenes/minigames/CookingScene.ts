@@ -12,12 +12,15 @@ import {
   preloadLegacyCookingAssets,
 } from '@features/minigame/legacy/legacyCookingConfig';
 import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton } from './utils';
+import { showMinigameTutorial } from './utils/minigameTutorial';
+import { getMinigameCard } from '@features/minigame/minigameCatalog';
 
 const { W, H } = SCREEN;
 export default class CookingScene extends Phaser.Scene {
   private returnSceneKey = 'main';
   private completedRewardText = null;
   private rewardEmitted = false;
+  private tutorialContainer = null;
 
   constructor() { super({ key: LEGACY_COOKING_SCENE_KEY }); }
 
@@ -35,6 +38,28 @@ export default class CookingScene extends Phaser.Scene {
     applyLegacyViewport(this);
     installMinigamePause(this, this.returnSceneKey);
 
+    // 튜토리얼 표시
+    const catalogData = getMinigameCard(this.scene.key);
+    if (catalogData?.howToPlay) {
+      this.tutorialContainer = showMinigameTutorial(this, {
+        title: catalogData.title,
+        howToPlay: catalogData.howToPlay,
+        reward: catalogData.reward,
+        onStart: () => {
+          this.tutorialContainer?.destroy();
+          this.tutorialContainer = null;
+          this.startGame();
+        },
+        onBack: () => {
+          returnToScene(this, this.returnSceneKey);
+        }
+      });
+    } else {
+      this.startGame();
+    }
+  }
+
+  startGame() {
     this.score = 0;
     this.timeLeft = 25;
     this.gameOver = false;
@@ -130,7 +155,7 @@ export default class CookingScene extends Phaser.Scene {
   }
 
 update() {
-    if (this.gameOver) return;
+    if (this.gameOver || !this.cursors) return;
 
     const speed = 8.5;
     if (this.cursors.left.isDown) this.pot.x -= speed;

@@ -16,6 +16,8 @@ import {
   resolveLegacyDrinkingJudge
 } from '@features/minigame/legacy/legacyDrinkingConfig';
 import { SCREEN, PIXEL_FONT, COLORS, createBackground, createButton } from './utils';
+import { showMinigameTutorial } from './utils/minigameTutorial';
+import { getMinigameCard } from '@features/minigame/minigameCatalog';
 
 const { W, H } = SCREEN;
 
@@ -30,24 +32,25 @@ export default class DrinkingScene extends Phaser.Scene {
   private foamDir = 1;
   private foamActive = false;
   private foamClicked = false;
-  
+
   private bgm!: Phaser.Sound.BaseSound;
   private npcSprite!: Phaser.GameObjects.Sprite;
   private grandmaSprite!: Phaser.GameObjects.Sprite;
-  
-  private beerGlass!: Phaser.GameObjects.Sprite; 
-  private beerFillGraphic!: Phaser.GameObjects.Graphics; 
+
+  private beerGlass!: Phaser.GameObjects.Sprite;
+  private beerFillGraphic!: Phaser.GameObjects.Graphics;
   private foamBar!: Phaser.GameObjects.Rectangle;
   private roundTxt!: Phaser.GameObjects.Text;
   private scoreTxt!: Phaser.GameObjects.Text;
   private resultTxt!: Phaser.GameObjects.Text;
-  
+
   private bubbleGroup!: Phaser.GameObjects.Container;
   private npcChatTxt!: Phaser.GameObjects.Text;
   private bubbleBg!: Phaser.GameObjects.Graphics;
 
   private returnSceneKey: string = LEGACY_MINIGAME_MENU_SCENE_KEY;
   private rewardEmitted = false;
+  private tutorialContainer: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super({ key: LEGACY_DRINKING_SCENE_KEY });
@@ -65,6 +68,28 @@ export default class DrinkingScene extends Phaser.Scene {
     applyLegacyViewport(this);
     installMinigamePause(this, this.returnSceneKey);
 
+    // 튜토리얼 표시
+    const catalogData = getMinigameCard(this.scene.key);
+    if (catalogData?.howToPlay) {
+      this.tutorialContainer = showMinigameTutorial(this, {
+        title: catalogData.title,
+        howToPlay: catalogData.howToPlay,
+        reward: catalogData.reward,
+        onStart: () => {
+          this.tutorialContainer?.destroy();
+          this.tutorialContainer = null;
+          this.startGame();
+        },
+        onBack: () => {
+          returnToScene(this, this.returnSceneKey);
+        }
+      });
+    } else {
+      this.startGame();
+    }
+  }
+
+  startGame() {
     const W = 800, H = 600;
 
     this.sound.stopAll();
@@ -236,7 +261,15 @@ export default class DrinkingScene extends Phaser.Scene {
 
   emitRewardIfNeeded() {
     if (this.rewardEmitted) return;
-    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText: 'STRESS -20 GP +10' });
+    let rewardText = 'TEAMWORK +1';
+    if (this.success >= 5) {
+      rewardText = 'TEAMWORK +4, STRESS -6';
+    } else if (this.success >= 4) {
+      rewardText = 'TEAMWORK +3, STRESS -4';
+    } else if (this.success >= 2) {
+      rewardText = 'TEAMWORK +2, STRESS -2';
+    }
+    emitMinigameReward(this, { sceneKey: this.scene.key, rewardText });
     this.rewardEmitted = true;
   }
 }

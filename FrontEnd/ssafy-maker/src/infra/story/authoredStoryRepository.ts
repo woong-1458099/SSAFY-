@@ -80,6 +80,11 @@ function createFallbackAuthoredStoryAssets(): {
         id: SCENE_STATE_IDS.campusDefault,
         area: "campus",
         npcs: []
+      },
+      [SCENE_STATE_IDS.classroomDefault]: {
+        id: SCENE_STATE_IDS.classroomDefault,
+        area: "classroom",
+        npcs: []
       }
     }
   };
@@ -151,8 +156,8 @@ async function loadAuthoredStoryJson(scene?: Phaser.Scene): Promise<{
 
   try {
     const [dialoguesRaw, sceneStatesRaw] = await Promise.all([
-      loadJson(`/${ASSET_PATHS.story.authoredDialogues}`),
-      loadJson(`/${ASSET_PATHS.story.authoredSceneStates}`)
+      loadJson(`${ASSET_PATHS.story.authoredDialogues}`),
+      loadJson(`${ASSET_PATHS.story.authoredSceneStates}`)
     ]);
 
     return { dialoguesRaw, sceneStatesRaw };

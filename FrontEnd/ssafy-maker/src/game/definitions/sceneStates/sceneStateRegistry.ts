@@ -18,6 +18,11 @@ export const SCENE_STATE_REGISTRY: Record<SceneStateId, SceneState> = {
     id: SCENE_STATE_IDS.campusDefault,
     area: "campus",
     npcs: []
+  },
+  [SCENE_STATE_IDS.classroomDefault]: {
+    id: SCENE_STATE_IDS.classroomDefault,
+    area: "classroom",
+    npcs: []
   }
 };
 

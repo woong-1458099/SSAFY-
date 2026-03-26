@@ -14,6 +14,8 @@ import {
   resolveLegacyTypingResult
 } from '@features/minigame/legacy/legacyTypingConfig';
 import { SCREEN, PIXEL_FONT, COLORS, createBackground, createGridBackground, createPanel, createButton } from './utils';
+import { showMinigameTutorial } from './utils/minigameTutorial';
+import { getMinigameCard } from '@features/minigame/minigameCatalog';
 
 const { W, H } = SCREEN;
 
@@ -21,6 +23,7 @@ export default class TypingScene extends Phaser.Scene {
   private returnSceneKey = 'main';
   private completedRewardText = null;
   private rewardEmitted = false;
+  private tutorialContainer = null;
 
   constructor() {
     super({ key: LEGACY_TYPING_SCENE_KEY });
@@ -34,6 +37,28 @@ export default class TypingScene extends Phaser.Scene {
     applyLegacyViewport(this);
     installMinigamePause(this, this.returnSceneKey);
 
+    // 튜토리얼 표시
+    const catalogData = getMinigameCard(this.scene.key);
+    if (catalogData?.howToPlay) {
+      this.tutorialContainer = showMinigameTutorial(this, {
+        title: catalogData.title,
+        howToPlay: catalogData.howToPlay,
+        reward: catalogData.reward,
+        onStart: () => {
+          this.tutorialContainer?.destroy();
+          this.tutorialContainer = null;
+          this.startGame();
+        },
+        onBack: () => {
+          returnToScene(this, this.returnSceneKey);
+        }
+      });
+    } else {
+      this.startGame();
+    }
+  }
+
+  startGame() {
     this.completedRewardText = null;
     this.rewardEmitted = false;
     this.score = 0;
@@ -97,7 +122,7 @@ export default class TypingScene extends Phaser.Scene {
     });
 
     // 안내 문구
-    this.hintTxt = this.add.text(W / 2, H - 8, '떨어지는 단어를 입력하세요!', {
+    this.hintTxt = this.add.text(W / 2, H - 8, '떨어지는 단어를 입력하세요! | ENTER: 입력 초기화', {
       fontSize: '9px', color: '#668888', fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
@@ -197,7 +222,9 @@ export default class TypingScene extends Phaser.Scene {
   handleKey(event) {
     if (this.gameOver) return;
 
-    if (event.key === 'Backspace') {
+    if (event.key === 'Enter') {
+      this.typedText = '';  // Enter 시 입력창 초기화
+    } else if (event.key === 'Backspace') {
       this.typedText = this.typedText.slice(0, -1);
     } else if (event.key === 'Escape') {
       this.typedText = '';
@@ -307,7 +334,7 @@ export default class TypingScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (this.gameOver) return;
+    if (this.gameOver || !this.fallingWords) return;
 
     // 단어 이동
     for (let i = this.fallingWords.length - 1; i >= 0; i--) {

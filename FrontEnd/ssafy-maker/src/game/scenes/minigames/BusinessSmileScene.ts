@@ -17,7 +17,8 @@ export default class BusinessSmileScene extends BaseSmileScene {
   }
 
   protected updateGauge(state: { gauge: number; ratio: number; isSmiling: boolean }): 'success' | 'failure' | null {
-    state.gauge += state.isSmiling ? 0.8 : -1.8;
+    // 1.5배 증가: 0.8 -> 1.2
+    state.gauge += state.isSmiling ? 1.2 : -1.8;
     state.gauge = Math.max(0, Math.min(state.gauge, LEGACY_SMILE_MAX_GAUGE));
     this.statusText.setText(state.isSmiling ? '좋아요. 지금 웃음을 유지해 주세요.' : '게이지가 줄고 있습니다. 조금 더 웃어 주세요.');
     return state.gauge >= LEGACY_SMILE_MAX_GAUGE ? 'success' : null;

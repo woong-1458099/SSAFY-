@@ -21,9 +21,9 @@ export const LEGACY_RHYTHM_LANES = [
 export const LEGACY_RHYTHM_HIT_Y = 490;
 
 export const LEGACY_RHYTHM_DIFFICULTY_SETTINGS = {
-  Easy: { speed: 250, perfect: 60, good: 100, reward: "INT +5  GP +10" },
-  Normal: { speed: 350, perfect: 50, good: 90, reward: "INT +7  GP +20" },
-  Hard: { speed: 450, perfect: 40, good: 70, reward: "INT +10 GP +30" }
+  Easy: { speed: 250, perfect: 60, good: 100, reward: "FE +2, TEAMWORK +1" },
+  Normal: { speed: 350, perfect: 50, good: 90, reward: "FE +5, TEAMWORK +2" },
+  Hard: { speed: 450, perfect: 40, good: 70, reward: "FE +8, TEAMWORK +4" }
 } as const;
 
 export type LegacyRhythmDifficulty = keyof typeof LEGACY_RHYTHM_DIFFICULTY_SETTINGS;

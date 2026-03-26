@@ -8,10 +8,12 @@ import type {
   DialogueChoiceActionType,
   DialogueNode,
   DialogueRequirement,
+  AffectionRequirement,
   DialogueScript,
+  DialogueScriptId,
   DialogueStatKey
 } from "../../common/types/dialogue";
-import { createRuntimeDialogueId } from "../../common/types/dialogue";
+import { createRuntimeDialogueId, normalizeDialogueScriptId } from "../../common/types/dialogue";
 import type { SceneState, SceneStateNpc } from "../../common/types/sceneState";
 import {
   SCENE_STATE_IDS,
@@ -40,6 +42,7 @@ type AuthoredDialogueNodeJson = {
   nextNodeId?: string;
   choices?: AuthoredDialogueChoiceJson[];
   action?: DialogueAction;
+  affectionChanges?: Record<string, number>;
 };
 
 type AuthoredDialogueChoiceJson = {
@@ -48,10 +51,13 @@ type AuthoredDialogueChoiceJson = {
   nextNodeId?: string;
   actionType?: DialogueChoiceActionType;
   statChanges?: Partial<Record<DialogueStatKey, number>>;
+  affectionChanges?: Record<string, number>;
   requirements?: DialogueRequirement[];
+  affectionRequirements?: AffectionRequirement[];
   lockedReason?: string;
   feedbackText?: string;
   action?: DialogueAction;
+  setFlags?: string[];
 };
 
 type SceneStateJson = {
@@ -72,7 +78,7 @@ type SceneStateNpcJson = {
   dialogueId?: string;
 };
 
-const AREA_ID_SET = new Set<AreaId>(["world", "downtown", "campus"]);
+const AREA_ID_SET = new Set<AreaId>(["world", "downtown", "campus", "classroom"]);
 const REQUIRED_DIALOGUE_IDS = new Set<string>(Object.values(DIALOGUE_IDS));
 const REQUIRED_SCENE_STATE_IDS = new Set<SceneStateId>(Object.values(SCENE_STATE_IDS));
 export const AUTHORED_DIALOGUE_FALLBACK_ID = createRuntimeDialogueId("authored_dialogue_missing");
@@ -101,10 +107,13 @@ function normalizeChoice(choice: AuthoredDialogueChoiceJson, index: number): Dia
     nextNodeId: normalizeString(choice.nextNodeId) || undefined,
     actionType: choice.actionType,
     statChanges: choice.statChanges,
+    affectionChanges: choice.affectionChanges,
     requirements: Array.isArray(choice.requirements) ? choice.requirements : undefined,
+    affectionRequirements: Array.isArray(choice.affectionRequirements) ? choice.affectionRequirements : undefined,
     lockedReason: typeof choice.lockedReason === "string" ? choice.lockedReason : undefined,
     feedbackText: typeof choice.feedbackText === "string" ? choice.feedbackText : undefined,
-    action: choice.action
+    action: choice.action,
+    setFlags: Array.isArray(choice.setFlags) ? choice.setFlags : undefined
   };
 }
 
@@ -128,7 +137,8 @@ function normalizeNode(nodeKey: string, node: AuthoredDialogueNodeJson): Dialogu
     text: normalizeString(node.text) || "...",
     nextNodeId: normalizeString(node.nextNodeId) || undefined,
     choices: Array.isArray(node.choices) ? node.choices.map(normalizeChoice) : undefined,
-    action: node.action
+    action: node.action,
+    affectionChanges: node.affectionChanges
   };
 }
 
@@ -232,9 +242,11 @@ export function buildDialogueRegistryFromJson(
   const seenDialogueIds = new Set<string>();
 
   dialogues.forEach((entry, index) => {
-    const id = normalizeString(entry.id);
-    if (!id) {
-      fatalIssues.push(`[dialogues.${index}] id가 비어 있습니다.`);
+    let id: DialogueScriptId;
+    try {
+      id = normalizeDialogueScriptId(normalizeString(entry.id));
+    } catch (error) {
+      fatalIssues.push(`[dialogues.${index}] id="${entry.id}" 이 유효한 형식이 아닙니다.`);
       return;
     }
 

@@ -9,6 +9,7 @@ import {
   START_SCENE_FONT_FAMILY
 } from "@features/start/startSceneAssets";
 import { START_SCENE_CONTINUE_MODAL } from "@features/start/startSceneUiConfig";
+import { getDefaultSceneIdForArea } from "../game/scripts/scenes/sceneRegistry";
 
 
 type ContinueSlotView = {
@@ -54,11 +55,6 @@ export class StartScene extends Phaser.Scene {
       return;
     }
 
-    await this.saveService.hydrate(true);
-    if (!this.sys.isActive()) {
-      return;
-    }
-
     const { width, height } = this.scale;
 
     const bg = this.add.image(width / 2, height / 2, START_SCENE_ASSET_KEYS.background);
@@ -73,6 +69,7 @@ export class StartScene extends Phaser.Scene {
 
     this.createImageButton(width / 2, 430, START_SCENE_ASSET_KEYS.newButton, () => this.startIntro());
     this.continueButton = this.createImageButton(width / 2, 550, START_SCENE_ASSET_KEYS.continueButton, () => this.openContinueModal(), this.continueSlots.length > 0);
+    void this.hydrateContinueSlots();
 
 
 
@@ -108,28 +105,86 @@ export class StartScene extends Phaser.Scene {
     }
   }
 
+  private async hydrateContinueSlots(): Promise<void> {
+    try {
+      await this.saveService.hydrate(true);
+    } catch (error) {
+      console.error("[StartScene] continue slot hydrate failed", error);
+      return;
+    }
+
+    if (!this.sys.isActive()) {
+      return;
+    }
+
+    this.continueSlots = this.getAvailableContinueSlots();
+    this.syncContinueButtonState();
+    if (this.continueModalOpen && this.continueSlots.length === 0) {
+      this.closeContinueModal();
+    }
+  }
+
   private createImageButton(x: number, y: number, key: string, onClick: () => void, enabled = true): Phaser.GameObjects.Image {
     const button = this.add.image(x, y, key);
     const baseWidth = 360;
     const baseHeight = 92;
 
     button.setDisplaySize(baseWidth, baseHeight);
-    if (!enabled) {
-      button.setAlpha(0.42);
-      button.setTint(0x555555);
-      return button;
-    }
+    button.setData("baseWidth", baseWidth);
+    button.setData("baseHeight", baseHeight);
+    button.on("pointerover", () => {
+      if (!button.getData("enabled")) {
+        return;
+      }
 
-    button.setInteractive({ useHandCursor: true });
-    button.on("pointerover", () => button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04));
+      button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04);
+    });
     button.on("pointerout", () => button.setDisplaySize(baseWidth, baseHeight));
     button.on("pointerdown", () => {
+      if (!button.getData("enabled")) {
+        return;
+      }
+
       this.audioManager.play(this, START_SCENE_ASSET_KEYS.click, "sfx");
       button.setDisplaySize(baseWidth * 0.98, baseHeight * 0.98);
       onClick();
     });
-    button.on("pointerup", () => button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04));
+    button.on("pointerup", () => {
+      if (!button.getData("enabled")) {
+        button.setDisplaySize(baseWidth, baseHeight);
+        return;
+      }
+
+      button.setDisplaySize(baseWidth * 1.04, baseHeight * 1.04);
+    });
+    this.setImageButtonEnabled(button, enabled);
     return button;
+  }
+
+  private setImageButtonEnabled(button: Phaser.GameObjects.Image, enabled: boolean): void {
+    button.setData("enabled", enabled);
+    const baseWidth = button.getData("baseWidth") as number;
+    const baseHeight = button.getData("baseHeight") as number;
+    button.setDisplaySize(baseWidth, baseHeight);
+
+    if (enabled) {
+      button.clearTint();
+      button.setAlpha(1);
+      button.setInteractive({ useHandCursor: true });
+      return;
+    }
+
+    button.disableInteractive();
+    button.setAlpha(0.42);
+    button.setTint(0x555555);
+  }
+
+  private syncContinueButtonState(): void {
+    if (!this.continueButton) {
+      return;
+    }
+
+    this.setImageButtonEnabled(this.continueButton, this.continueSlots.length > 0);
   }
 
   private createLogoutButton(width: number): void {
@@ -161,14 +216,16 @@ export class StartScene extends Phaser.Scene {
   private async handleLogout(): Promise<void> {
     this.startArmed = false;
     this.input.enabled = false;
+    this.stopBackgroundMusic();
+    this.sound.stopAll();
 
     this.clearAuthRegistry();
+    clearStoredSession();
 
     try {
       await beginLogout();
     } catch (error) {
       console.error("[StartScene] logout failed, falling back to local logout", error);
-      clearStoredSession();
       this.scene.start(SceneKey.Login);
     }
   }
@@ -303,8 +360,10 @@ export class StartScene extends Phaser.Scene {
     this.cameras.main.fadeOut(280, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.registry.set("pendingRestorePayload", saveSlot.payload);
-      if (saveSlot.payload.world?.sceneId) {
-        this.registry.set("startSceneId", saveSlot.payload.world.sceneId);
+      const restoreSceneId = saveSlot.payload.world?.sceneId ??
+        (saveSlot.payload.world?.areaId ? getDefaultSceneIdForArea(saveSlot.payload.world.areaId) : undefined);
+      if (restoreSceneId) {
+        this.registry.set("startSceneId", restoreSceneId);
       }
       this.scene.start(SceneKey.Main);
     });

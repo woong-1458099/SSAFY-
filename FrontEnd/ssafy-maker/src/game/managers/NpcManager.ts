@@ -3,6 +3,7 @@ import Phaser from "phaser";
 import type { AreaId } from "../../common/enums/area";
 import type { Facing } from "../../common/enums/facing";
 import type { NpcId } from "../../common/enums/npc";
+import { ASSET_KEYS } from "../../common/assets/assetKeys";
 import { getAreaNpcScale } from "../definitions/areas/areaDefinitions";
 import { getNpcAssetDefinition } from "../definitions/assets/npcAssetCatalog";
 import { NPC_DEFINITIONS } from "../definitions/npcs/npcDefinitions";
@@ -11,12 +12,19 @@ import { getActorDepth } from "../systems/renderDepth";
 
 type NpcMotionState = "idle" | "walk";
 
+// emotion.png 프레임 2가 ! (상호작용 가능 신호)
+const EXCLAMATION_FRAME = 2;
+// 감정 말풍선 기본 배율
+const EMOTION_BUBBLE_SCALE = 1.5;
+
 type NpcView = {
   id: NpcId;
   sprite: Phaser.GameObjects.Sprite;
   label: Phaser.GameObjects.Text;
+  emotionBubble: Phaser.GameObjects.Sprite;
   facing: Facing;
   motion: NpcMotionState;
+  isProximityTarget: boolean;
 };
 
 export class NpcManager {
@@ -50,12 +58,21 @@ export class NpcManager {
       .setOrigin(0.5)
       .setDepth(getActorDepth(y) + 1);
 
+    // 감정 말풍선: NPC 머리 위에 배치 (기본 감정 프레임 사용)
+    const emotionBubble = this.scene.add
+      .sprite(x, y, ASSET_KEYS.ui.emotion, def.defaultEmotionFrame)
+      .setOrigin(0.5, 1)
+      .setScale(EMOTION_BUBBLE_SCALE)
+      .setDepth(getActorDepth(y) + 2);
+
     const npc: NpcView = {
       id: npcId,
       sprite,
       label,
+      emotionBubble,
       facing: initialFacing,
-      motion: "idle"
+      motion: "idle",
+      isProximityTarget: false
     };
 
     playNpcIdle(sprite, asset);
@@ -117,6 +134,40 @@ export class NpcManager {
     };
   }
 
+  /**
+   * 플레이어 근접 NPC 업데이트: 해당 NPC는 ! 표시, 나머지는 기본 감정으로 복원.
+   * InteractionManager.update()에서 매 프레임 호출된다.
+   */
+  setProximityTarget(nearbyNpcId?: NpcId): void {
+    this.npcs.forEach((npc, id) => {
+      const def = NPC_DEFINITIONS[id];
+      const wasTarget = npc.isProximityTarget;
+      const isTarget = id === nearbyNpcId;
+      npc.isProximityTarget = isTarget;
+
+      const targetFrame = isTarget ? EXCLAMATION_FRAME : def.defaultEmotionFrame;
+      const currentFrame = Number(npc.emotionBubble.frame.name);
+
+      if (currentFrame !== targetFrame) {
+        npc.emotionBubble.setFrame(targetFrame);
+        // 처음 ! 로 전환될 때 팝 애니메이션
+        if (isTarget && !wasTarget) {
+          this.scene.tweens.add({
+            targets: npc.emotionBubble,
+            scaleX: EMOTION_BUBBLE_SCALE * 1.4,
+            scaleY: EMOTION_BUBBLE_SCALE * 1.4,
+            duration: 100,
+            yoyo: true,
+            ease: "Power1",
+            onComplete: () => {
+              npc.emotionBubble.setScale(EMOTION_BUBBLE_SCALE);
+            }
+          });
+        }
+      }
+    });
+  }
+
   // idle과 walk 상태 전환을 manager 내부에서만 처리한다.
   private setMotion(npc: NpcView, motion: NpcMotionState) {
     const def = NPC_DEFINITIONS[npc.id];
@@ -135,6 +186,7 @@ export class NpcManager {
   private syncNpcPresentation(npc: NpcView) {
     const scale = this.currentAreaId ? getAreaNpcScale(this.currentAreaId) : getAreaNpcScale("campus");
     const labelOffsetY = Math.max(10, npc.sprite.height * scale * 0.1);
+    const spriteTopY = npc.sprite.y - npc.sprite.height * scale;
 
     // 한 줄 한글 설명: 지역 정의의 NPC 배율과 이름표 표시 위치를 함께 반영합니다.
     npc.sprite.setScale(scale);
@@ -145,6 +197,10 @@ export class NpcManager {
       backgroundColor: "rgba(36, 36, 36, 0.85)",
       padding: { left: 6, right: 6, top: 2, bottom: 2 }
     });
+
+    // 감정 말풍선을 NPC 머리 위 8px 위에 배치
+    npc.emotionBubble.setPosition(npc.sprite.x, spriteTopY - 8);
+    npc.emotionBubble.setDepth(getActorDepth(npc.sprite.y) + 2);
   }
 
   // 이동량이 가장 큰 축을 기준으로 상하좌우 방향을 결정한다.

@@ -23,6 +23,20 @@
             "type": "string",
             "minLength": 1
           },
+          "triggerTiming": {
+            "type": "object",
+            "properties": {
+              "week": { "type": "integer" },
+              "day": { "type": "integer" },
+              "timeOfDay": { "type": "string" }
+            }
+          },
+          "location": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
           "nodes": {
             "type": "object",
             "minProperties": 1,
@@ -73,6 +87,15 @@
         "action": {
           "type": "string",
           "minLength": 1
+        },
+        "affectionChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
         }
       }
     },
@@ -95,10 +118,13 @@
         },
         "actionType": {
           "type": "string",
-          "enum": ["NORMAL", "LOCKED", "MADNESS"]
+          "enum": ["NORMAL", "LOCKED", "MADNESS", "ROMANCE_EVENT"]
         },
         "statChanges": {
           "type": "object",
+          "propertyNames": {
+            "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "money"]
+          },
           "additionalProperties": {
             "type": "number"
           }
@@ -107,6 +133,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/dialogueRequirement"
+          }
+        },
+        "affectionRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/affectionRequirement"
           }
         },
         "lockedReason": {
@@ -118,6 +150,19 @@
         "action": {
           "type": "string",
           "minLength": 1
+        },
+        "setFlags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "affectionChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
         }
       }
     },
@@ -128,7 +173,30 @@
       "properties": {
         "stat": {
           "type": "string",
-          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "gold", "money"]
+          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "money", "playerGender"]
+        },
+        "equals": {
+          "type": "string"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "affectionRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["npcId"],
+      "properties": {
+        "npcId": {
+          "type": "string",
+          "enum": ["minsu", "hyoryeon"]
         },
         "min": {
           "type": "number"

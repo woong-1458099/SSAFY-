@@ -15,9 +15,9 @@ export const PLAYER_FRAME_DURATION = 120;
 
 export const PLAYER_DIRECTION_FRAMES: Record<Facing, { idle: number; walk: number[] }> = {
   right: { idle: 0, walk: [1, 2] },
-  up: { idle: 3, walk: [4, 5, 6, 5] },
-  left: { idle: 7, walk: [7, 8] },
-  down: { idle: 9, walk: [10, 11, 12, 11] }
+  up: { idle: 1, walk: [4, 5, 6, 5] },
+  left: { idle: 2, walk: [7, 8] },
+  down: { idle: 3, walk: [10, 11, 12, 11] }
 } as const;
 
 export type PlayerLayerAssetDefinition = {
@@ -55,8 +55,8 @@ function createLayerAssetDefinition(
   return {
     idleTextureKey: getPlayerIdleTextureKey(appearanceAssetId, layer),
     walkTextureKey: getPlayerWalkTextureKey(appearanceAssetId, layer),
-    idleImagePath: `assets/game/character/${idleFileName}`,
-    walkSpritesheetPath: `assets/game/character/${walkFileName}`
+    idleImagePath: `/assets/game/character/${idleFileName}`,
+    walkSpritesheetPath: `/assets/game/character/${walkFileName}`
   };
 }
 

@@ -1,10 +1,13 @@
 import Phaser from "phaser";
+import { createWeeklyPlanActivityModal } from "../../features/planning/weeklyPlanActivityModal";
+import { getWeeklyPlanActivityImageKey } from "../../features/planning/planningAssets";
 import { createWeeklyPlannerModal } from "../../features/planning/weeklyPlannerModal";
 import {
   createDefaultWeeklyPlan,
   getWeeklyPlanOption,
   getWeeklyPlanSlotIndex,
   parseWeeklyPlanOptionId,
+  type WeeklyPlanOption,
   type WeeklyPlanOptionId
 } from "../../features/planning/weeklyPlan";
 import { createWeeklySalaryModal } from "../../features/progression/weeklySalaryModal";
@@ -25,6 +28,16 @@ type ProgressionSnapshot = {
   weeklyPlan: WeeklyPlanOptionId[];
   weeklyPlanWeek: number;
   lastPaidWeeklySalaryWeek: number;
+  completedPlanSlotIndices: number[];
+};
+
+type WeeklyPlanActivityPayload = {
+  title: string;
+  statusText: string;
+  description: string;
+  accentColor: number;
+  imageKey: string;
+  option: WeeklyPlanOption;
 };
 
 type ProgressionManagerOptions = {
@@ -33,9 +46,56 @@ type ProgressionManagerOptions = {
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
+  getCompletedFixedEventSlotIndices?: (week: number) => ReadonlySet<number>;
+  resolveTimeAdvanceBlockedMessage?: () => string | null;
   onNotice?: (message: string) => void;
   onStartEndingFlow?: () => void;
+  onDayPassed?: () => void;
 };
+
+export type ConsumeActionPointFailureReason = "no-action-point" | "blocked-time-advance" | "busy";
+
+export type ConsumeActionPointResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: ConsumeActionPointFailureReason;
+      message?: string;
+    };
+
+export type ConsumeActionPointFailurePresentation = {
+  noticeMessage: string | null;
+  modalTitle: string;
+  modalDescription: string;
+};
+
+export function getConsumeActionPointFailurePresentation(
+  result: Exclude<ConsumeActionPointResult, { ok: true }>
+): ConsumeActionPointFailurePresentation {
+  switch (result.reason) {
+    case "blocked-time-advance": {
+      const description = result.message ?? "현재 시간대의 고정 이벤트를 먼저 진행해야 합니다.";
+      return {
+        noticeMessage: description,
+        modalTitle: "이벤트 진행 필요",
+        modalDescription: description
+      };
+    }
+    case "busy":
+      return {
+        noticeMessage: null,
+        modalTitle: "지금은 진행할 수 없음",
+        modalDescription: "다른 진행 중인 화면을 먼저 닫아 주세요."
+      };
+    case "no-action-point":
+    default:
+      return {
+        noticeMessage: "행동력이 부족합니다",
+        modalTitle: "행동력 부족",
+        modalDescription: "행동력이 부족해서 지금은 시간을 진행할 수 없습니다."
+      };
+  }
+}
 
 export class ProgressionManager {
   private readonly scene: Phaser.Scene;
@@ -43,15 +103,20 @@ export class ProgressionManager {
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
   private readonly getFixedEventSlots?: (week: number) => ReadonlyMap<number, string>;
+  private readonly getCompletedFixedEventSlotIndices?: (week: number) => ReadonlySet<number>;
+  private readonly resolveTimeAdvanceBlockedMessage?: () => string | null;
   private readonly onNotice?: (message: string) => void;
   private readonly onStartEndingFlow?: () => void;
+  private readonly onDayPassed?: () => void;
 
   private timeState: TimeState = createDefaultTimeState();
   private weeklyPlan: WeeklyPlanOptionId[] = createDefaultWeeklyPlan();
   private weeklyPlanWeek = 0;
   private lastPaidWeeklySalaryWeek = 0;
+  private completedPlanSlotIndices = new Set<number>();
   private pendingWeeklySalaryWeek: number | null = null;
   private plannerRoot?: Phaser.GameObjects.Container;
+  private activityRoot?: Phaser.GameObjects.Container;
   private salaryRoot?: Phaser.GameObjects.Container;
   private endingFlowStarted = false;
 
@@ -61,8 +126,11 @@ export class ProgressionManager {
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
     this.getFixedEventSlots = options.getFixedEventSlots;
+    this.getCompletedFixedEventSlotIndices = options.getCompletedFixedEventSlotIndices;
+    this.resolveTimeAdvanceBlockedMessage = options.resolveTimeAdvanceBlockedMessage;
     this.onNotice = options.onNotice;
     this.onStartEndingFlow = options.onStartEndingFlow;
+    this.onDayPassed = options.onDayPassed;
   }
 
   initialize(): void {
@@ -70,12 +138,13 @@ export class ProgressionManager {
   }
 
   destroy(): void {
+    this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
   }
 
   isPlannerOpen(): boolean {
-    return Boolean(this.plannerRoot?.visible || this.salaryRoot?.visible);
+    return Boolean(this.plannerRoot?.visible || this.activityRoot?.visible || this.salaryRoot?.visible);
   }
 
   getTimeCycleIndex(): number {
@@ -98,6 +167,9 @@ export class ProgressionManager {
     if (this.endingFlowStarted) {
       return false;
     }
+    if (this.activityRoot?.visible) {
+      return false;
+    }
     this.grantWeeklySalaryIfDue();
     if (this.pendingWeeklySalaryWeek !== null) {
       this.openSalaryModal();
@@ -110,13 +182,51 @@ export class ProgressionManager {
     return false;
   }
 
-  consumeActionPoint(): boolean {
+  consumeActionPoint(options?: {
+    ignoreTimeAdvanceBlock?: boolean;
+  }): boolean {
+    return this.tryConsumeActionPoint({
+      ignoreTimeAdvanceBlock: options?.ignoreTimeAdvanceBlock,
+      notifyOnFailure: true
+    }).ok;
+  }
+
+  tryConsumeActionPoint(options?: {
+    ignoreTimeAdvanceBlock?: boolean;
+    notifyOnFailure?: boolean;
+  }): ConsumeActionPointResult {
     if (this.timeState.actionPoint <= 0) {
-      this.onNotice?.("행동력이 부족합니다");
-      return false;
+      const result: Exclude<ConsumeActionPointResult, { ok: true }> = {
+        ok: false,
+        reason: "no-action-point",
+        message: "행동력이 부족합니다"
+      };
+      if (options?.notifyOnFailure !== false) {
+        const presentation = getConsumeActionPointFailurePresentation(result);
+        this.onNotice?.(presentation.noticeMessage ?? "행동력이 부족합니다");
+      }
+      return result;
     }
     if (this.salaryRoot?.visible) {
-      return false;
+      return {
+        ok: false,
+        reason: "busy"
+      };
+    }
+    if (!options?.ignoreTimeAdvanceBlock) {
+      const blockedMessage = this.resolveTimeAdvanceBlockedMessage?.() ?? null;
+      if (blockedMessage) {
+        const result: Exclude<ConsumeActionPointResult, { ok: true }> = {
+          ok: false,
+          reason: "blocked-time-advance",
+          message: blockedMessage
+        };
+        if (options?.notifyOnFailure !== false) {
+          const presentation = getConsumeActionPointFailurePresentation(result);
+          this.onNotice?.(presentation.noticeMessage ?? blockedMessage);
+        }
+        return result;
+      }
     }
 
     const result = advanceTime(this.timeState);
@@ -125,16 +235,19 @@ export class ProgressionManager {
 
     if (result.dayPassed && this.timeState.dayCycleIndex === 0) {
       this.weeklyPlan = createDefaultWeeklyPlan();
+      this.completedPlanSlotIndices.clear();
+      this.onDayPassed?.();
     }
 
     this.grantWeeklySalaryIfDue();
     if (result.shouldStartEndingAfterUpdate) {
       this.requestEndingFlow();
     }
-    return true;
+    return { ok: true };
   }
 
   debugAdvanceTime(): void {
+    this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
 
@@ -144,6 +257,8 @@ export class ProgressionManager {
 
     if (result.dayPassed && this.timeState.dayCycleIndex === 0) {
       this.weeklyPlan = createDefaultWeeklyPlan();
+      this.completedPlanSlotIndices.clear();
+      this.onDayPassed?.();
     }
 
     this.grantWeeklySalaryIfDue();
@@ -153,8 +268,10 @@ export class ProgressionManager {
   }
 
   debugPatchTimeState(next: Partial<TimeState>): void {
+    this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
+    const previousWeek = this.timeState.week;
 
     const maxActionPoint = Math.max(0, Math.round(next.maxActionPoint ?? this.timeState.maxActionPoint));
     const actionPoint = Phaser.Math.Clamp(
@@ -181,6 +298,9 @@ export class ProgressionManager {
       week: Math.max(1, Math.round(next.week ?? this.timeState.week))
     };
 
+    if (this.timeState.week !== previousWeek) {
+      this.completedPlanSlotIndices.clear();
+    }
     this.pendingWeeklySalaryWeek = null;
     this.endingFlowStarted = false;
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
@@ -192,6 +312,7 @@ export class ProgressionManager {
     }
 
     this.endingFlowStarted = true;
+    this.closeWeeklyPlanActivity();
     this.closeSalaryModal();
     this.closePlanner();
     this.onStartEndingFlow?.();
@@ -210,7 +331,8 @@ export class ProgressionManager {
       timeState: { ...this.timeState },
       weeklyPlan: [...this.weeklyPlan],
       weeklyPlanWeek: this.weeklyPlanWeek,
-      lastPaidWeeklySalaryWeek: this.lastPaidWeeklySalaryWeek
+      lastPaidWeeklySalaryWeek: this.lastPaidWeeklySalaryWeek,
+      completedPlanSlotIndices: [...this.completedPlanSlotIndices]
     };
   }
 
@@ -229,14 +351,55 @@ export class ProgressionManager {
     if (typeof snapshot?.lastPaidWeeklySalaryWeek === "number") {
       this.lastPaidWeeklySalaryWeek = Math.max(0, Math.round(snapshot.lastPaidWeeklySalaryWeek));
     }
+    this.completedPlanSlotIndices = new Set(
+      Array.isArray(snapshot?.completedPlanSlotIndices)
+        ? snapshot.completedPlanSlotIndices
+            .map((value) => Math.round(value))
+            .filter((value) => Number.isFinite(value) && value >= 0 && value < this.weeklyPlan.length)
+        : []
+    );
+    if (this.weeklyPlanWeek !== this.timeState.week) {
+      this.completedPlanSlotIndices.clear();
+    }
     this.pendingWeeklySalaryWeek = null;
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
   }
 
+  presentCurrentScheduledActivity(): boolean {
+    if (this.endingFlowStarted || this.activityRoot?.visible || this.plannerRoot?.visible || this.salaryRoot?.visible) {
+      return false;
+    }
+    if (this.weeklyPlanWeek < this.timeState.week) {
+      return false;
+    }
+
+    const activity = this.buildWeeklyPlanActivityPayload(this.timeState.dayCycleIndex, this.timeState.timeCycleIndex);
+    if (!activity) {
+      return false;
+    }
+
+    const completedSlotIndex = getWeeklyPlanSlotIndex(this.timeState.dayCycleIndex, this.timeState.timeCycleIndex);
+    if (this.buildCompletedSlotIndices(this.timeState.week).has(completedSlotIndex)) {
+      return false;
+    }
+    this.openWeeklyPlanActivity(activity, () => {
+      const result = this.tryConsumeActionPoint({ notifyOnFailure: false });
+      if (!result.ok) {
+        return;
+      }
+      this.completeScheduledActivity(completedSlotIndex, activity.option);
+      this.onNotice?.(`${activity.option.label} 완료`);
+    });
+    return true;
+  }
+
   private openPlanner(): void {
-    if (this.plannerRoot?.visible || this.salaryRoot?.visible) {
+    if (this.plannerRoot?.visible || this.activityRoot?.visible || this.salaryRoot?.visible) {
       return;
     }
+
+    // Emit tutorial event for planner opened
+    this.scene.events.emit("tutorial:plannerOpened");
 
     this.closePlanner();
     this.plannerRoot = createWeeklyPlannerModal(this.scene, {
@@ -247,6 +410,7 @@ export class ProgressionManager {
       actionPoint: this.timeState.actionPoint,
       maxActionPoint: this.timeState.maxActionPoint,
       fixedEventSlots: this.getFixedEventSlots?.(this.timeState.week) ?? new Map(),
+      completedSlotIndices: this.buildCompletedSlotIndices(this.timeState.week),
       initialPlan: this.weeklyPlan,
       onConfirm: (plan) => {
         this.weeklyPlan = [...plan];
@@ -257,15 +421,18 @@ export class ProgressionManager {
       onAdvance: (plan) => {
         this.weeklyPlan = [...plan];
         this.weeklyPlanWeek = this.timeState.week;
-        this.advanceCurrentSlot();
         this.closePlanner();
+        this.advanceCurrentSlot();
       }
     });
   }
 
   private closePlanner(): void {
-    this.plannerRoot?.destroy(true);
-    this.plannerRoot = undefined;
+    if (this.plannerRoot) {
+      this.plannerRoot.destroy(true);
+      this.plannerRoot = undefined;
+      this.scene.events.emit("tutorial:plannerClosed");
+    }
   }
 
   private openSalaryModal(): void {
@@ -296,19 +463,115 @@ export class ProgressionManager {
       dayCycleIndex: this.timeState.dayCycleIndex,
       timeCycleIndex: this.timeState.timeCycleIndex
     };
+    const completedSlotIndex = getWeeklyPlanSlotIndex(previousState.dayCycleIndex, previousState.timeCycleIndex);
+    const activity = this.buildWeeklyPlanActivityPayload(previousState.dayCycleIndex, previousState.timeCycleIndex);
+    const failure = this.getConsumeActionPointFailureForActivity();
 
-    if (!this.consumeActionPoint()) {
+    if (failure) {
+      this.notifyConsumeActionPointFailure(failure);
       return;
     }
 
-    if (previousState.dayCycleIndex < 5 && previousState.timeCycleIndex < 2) {
-      const slotIndex = getWeeklyPlanSlotIndex(previousState.dayCycleIndex, previousState.timeCycleIndex);
-      const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex]);
-      this.applyStatDelta(option.statDelta, 1);
-      this.onNotice?.(`${option.label} 완료`);
-    } else {
+    if (!activity) {
+      const result = this.tryConsumeActionPoint({ notifyOnFailure: false });
+      if (!result.ok) {
+        return;
+      }
+      this.completedPlanSlotIndices.add(completedSlotIndex);
       this.onNotice?.("이번 시간대에는 계획 보상이 없습니다");
+      return;
     }
+
+    this.openWeeklyPlanActivity(activity, () => {
+      const result = this.tryConsumeActionPoint({ notifyOnFailure: false });
+      if (!result.ok) {
+        return;
+      }
+
+      this.completeScheduledActivity(completedSlotIndex, activity.option);
+      this.onNotice?.(`${activity.option.label} 완료`);
+    });
+  }
+
+  private getConsumeActionPointFailureForActivity(): Exclude<ConsumeActionPointResult, { ok: true }> | null {
+    if (this.timeState.actionPoint <= 0) {
+      return {
+        ok: false,
+        reason: "no-action-point",
+        message: "행동력이 부족합니다"
+      };
+    }
+    if (this.salaryRoot?.visible || this.activityRoot?.visible) {
+      return {
+        ok: false,
+        reason: "busy"
+      };
+    }
+
+    const blockedMessage = this.resolveTimeAdvanceBlockedMessage?.() ?? null;
+    if (blockedMessage) {
+      return {
+        ok: false,
+        reason: "blocked-time-advance",
+        message: blockedMessage
+      };
+    }
+
+    return null;
+  }
+
+  private notifyConsumeActionPointFailure(result: Exclude<ConsumeActionPointResult, { ok: true }>): void {
+    const presentation = getConsumeActionPointFailurePresentation(result);
+    this.onNotice?.(presentation.noticeMessage ?? result.message ?? "행동력이 부족합니다");
+  }
+
+  private buildWeeklyPlanActivityPayload(dayCycleIndex: number, timeCycleIndex: number): WeeklyPlanActivityPayload | null {
+    if (dayCycleIndex < 0 || dayCycleIndex >= 5 || timeCycleIndex < 0 || timeCycleIndex >= 2) {
+      return null;
+    }
+
+    const slotIndex = getWeeklyPlanSlotIndex(dayCycleIndex, timeCycleIndex);
+    const option = getWeeklyPlanOption(this.weeklyPlan[slotIndex]);
+    return {
+      title: `${this.timeState.week}주차 ${DAY_CYCLE[dayCycleIndex]} ${TIME_CYCLE[timeCycleIndex]}`,
+      statusText: `${option.label} 진행 중...`,
+      description: option.description,
+      accentColor: option.color,
+      imageKey: getWeeklyPlanActivityImageKey(option.id),
+      option
+    };
+  }
+
+  private openWeeklyPlanActivity(activity: WeeklyPlanActivityPayload, onComplete?: () => void): void {
+    this.closeWeeklyPlanActivity();
+    this.activityRoot = createWeeklyPlanActivityModal(this.scene, {
+      ...activity,
+      onClose: () => {
+        if (!this.activityRoot) {
+          return;
+        }
+        this.closeWeeklyPlanActivity();
+        onComplete?.();
+      }
+    });
+  }
+
+  private closeWeeklyPlanActivity(): void {
+    this.activityRoot?.destroy(true);
+    this.activityRoot = undefined;
+  }
+
+  private completeScheduledActivity(slotIndex: number, option: WeeklyPlanOption): void {
+    if (this.completedPlanSlotIndices.has(slotIndex)) {
+      return;
+    }
+
+    this.completedPlanSlotIndices.add(slotIndex);
+    const hudState = this.getHudState();
+    this.applyStatDelta(option.statDelta, 1);
+    this.patchHudState({
+      hp: Phaser.Math.Clamp(hudState.hp + option.hpDelta, 0, hudState.hpMax)
+    });
   }
 
   private shouldPayWeeklySalary(): boolean {
@@ -331,5 +594,14 @@ export class ProgressionManager {
 
   private shouldOpenWeeklyPlanner(): boolean {
     return this.timeState.dayCycleIndex === 0 && this.weeklyPlanWeek < this.timeState.week;
+  }
+
+  private buildCompletedSlotIndices(week: number): ReadonlySet<number> {
+    const completedSlotIndices = new Set(this.completedPlanSlotIndices);
+    const completedFixedEventSlotIndices = this.getCompletedFixedEventSlotIndices?.(week);
+    completedFixedEventSlotIndices?.forEach((slotIndex) => {
+      completedSlotIndices.add(slotIndex);
+    });
+    return completedSlotIndices;
   }
 }

@@ -69,6 +69,7 @@ function createSharedSlots(baseX: number, baseY: number): FixedEventNpcSlot[] {
 
 const FIXED_EVENT_NPC_SLOTS: Record<FixedEventLocationId, FixedEventNpcSlot[]> = {
   campus: createSharedSlots(760, 468),
+  classroom: createSharedSlots(760, 468),
   downtown: createSharedSlots(760, 468),
   world: createSharedSlots(760, 468),
   home: createSharedSlots(760, 468),
@@ -116,13 +117,26 @@ function collectUniqueParticipants(entries: FixedEventDialogueEntry[]): FixedEve
   return participants;
 }
 
+function extractDialogueEntriesFromGraphNodes(nodes: FixedEventEntry["nodes"]): FixedEventDialogueEntry[] {
+  if (!nodes || typeof nodes !== "object") {
+    return [];
+  }
+
+  return Object.values(nodes)
+    .filter((node): node is NonNullable<typeof node> => Boolean(node && typeof node === "object"))
+    .map((node) => ({
+      speakerId: typeof node.speakerId === "string" ? node.speakerId : undefined,
+      speakerName: typeof node.speaker === "string" ? node.speaker : undefined
+    }));
+}
+
 export function resolveFixedEventLocationId(rawLocation: unknown, fallbackLocation: FixedEventLocationId): FixedEventLocationId {
   const candidates: FixedEventLocationId[] = ["campus", "downtown", "world", "home", "cafe", "store"];
   return candidates.find((locationId) => matchesFixedEventLocation(rawLocation, locationId)) ?? fallbackLocation;
 }
 
 export function resolveFixedEventRenderArea(location: FixedEventLocationId): FixedEventRenderArea {
-  if (location === "campus" || location === "downtown") {
+  if (location === "campus" || location === "downtown" || location === "classroom") {
     return location;
   }
 
@@ -139,7 +153,8 @@ export function buildFixedEventNpcPresentation(
     return null;
   }
 
-  const participants = collectUniqueParticipants(Array.isArray(event.dialogues) ? event.dialogues : []);
+  const dialogueEntries = Array.isArray(event.dialogues) ? event.dialogues : extractDialogueEntriesFromGraphNodes(event.nodes);
+  const participants = collectUniqueParticipants(dialogueEntries);
   if (participants.length === 0) {
     return null;
   }
@@ -148,8 +163,9 @@ export function buildFixedEventNpcPresentation(
   const renderArea = resolveFixedEventRenderArea(location);
   const slots = FIXED_EVENT_NPC_SLOTS[location] ?? FIXED_EVENT_NPC_SLOTS[renderArea];
 
+  const rawEventId = event.id ?? event.eventId;
   return {
-    eventId: typeof event.eventId === "string" && event.eventId.trim().length > 0 ? event.eventId.trim() : undefined,
+    eventId: typeof rawEventId === "string" && rawEventId.trim().length > 0 ? rawEventId.trim() : undefined,
     renderArea,
     participants: participants.slice(0, slots.length).map((participant, index) => ({
       ...participant,

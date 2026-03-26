@@ -21,9 +21,10 @@ export type RuntimeStaticPlaceTarget = {
   zoneY: number;
   zoneWidth: number;
   zoneHeight: number;
+  promptTiles?: Array<{ tileX: number; tileY: number }>;
 };
 
-const PLACE_INTERACTION_PADDING = 24;
+export const PLACE_INTERACTION_PADDING = 24;
 
 export class InteractionManager {
   private scene: Phaser.Scene;
@@ -34,7 +35,6 @@ export class InteractionManager {
   private interactKey?: Phaser.Input.Keyboard.Key;
   private currentAreaId?: AreaId;
   private isInteractionLocked = false;
-  private hud?: GameHud;
   private currentTargetNpcId?: NpcId;
   private currentTargetTransitionId?: AreaTransitionId;
   private currentTargetPlaceId?: PlaceId;
@@ -60,6 +60,13 @@ export class InteractionManager {
     this.dialogueManager = dialogueManager;
     this.debugLogger = debugLogger;
     this.interactKey = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    
+    // 씬이 일시정지(pause)되었다가 다시 재개(resume)될 때 입력 상태가 꼬여 
+    // 키보드가 계속 눌린 것으로 인식되는 버그(프리즈 현상) 방지
+    this.scene.events.on(Phaser.Scenes.Events.RESUME, () => {
+      this.requiresInteractKeyRelease = false;
+      this.interactKey?.reset();
+    });
   }
 
   setArea(areaId: AreaId) {
@@ -86,14 +93,10 @@ export class InteractionManager {
     this.onPlaceInteract = handler;
   }
 
-  setHud(hud?: GameHud) {
-    this.hud = hud;
-  }
-
   setOverlayBlocked(blocked: boolean) {
     this.overlayBlocked = blocked;
     if (blocked) {
-      this.hud?.setInteractionPrompt(null);
+      this.scene.events.emit("ui:setInteractionPrompt", null);
     }
   }
 
@@ -112,6 +115,8 @@ export class InteractionManager {
     this.currentTargetNpcId = this.findCurrentTargetNpc();
     this.currentTargetTransitionId = this.findCurrentTargetTransition();
     this.currentTargetPlaceId = this.findCurrentTargetPlace();
+    // 근접 NPC 감정 말풍선 업데이트 (근접 시 !, 그 외엔 기본 감정)
+    this.npcManager.setProximityTarget(this.currentTargetNpcId);
     this.debugLogger?.setTargetNpc(this.currentTargetNpcId);
     this.renderHint();
 
@@ -136,6 +141,16 @@ export class InteractionManager {
       this.debugLogger?.log(`interact:${this.currentTargetNpcId}`);
       this.isInteractionLocked = true;
 
+      // Emit tutorial event for NPC interaction
+      const tutorialEventInfo = { npcId: this.currentTargetNpcId, handled: false };
+      this.scene.events.emit("tutorial:npcInteraction", tutorialEventInfo);
+
+      if (tutorialEventInfo.handled) {
+        this.isInteractionLocked = false;
+        this.requiresInteractKeyRelease = true;
+        return;
+      }
+
       this.dialogueManager.play(npcState.dialogueId).finally(() => {
         this.isInteractionLocked = false;
         this.requiresInteractKeyRelease = true;
@@ -145,6 +160,10 @@ export class InteractionManager {
 
     if (this.currentTargetTransitionId && this.onTransitionInteract) {
       this.debugLogger?.log(`interact:transition:${this.currentTargetTransitionId}`);
+
+      // Emit tutorial event for area transition
+      this.scene.events.emit("tutorial:areaTransition", this.currentTargetTransitionId);
+
       this.requiresInteractKeyRelease = true;
       this.onTransitionInteract(this.currentTargetTransitionId);
       return;
@@ -158,6 +177,9 @@ export class InteractionManager {
     if (!place) {
       return;
     }
+
+    // Emit tutorial event for place interaction
+    this.scene.events.emit("tutorial:placeInteraction", place.id);
 
     if (this.onPlaceInteract?.(place.id) === true) {
       this.requiresInteractKeyRelease = true;
@@ -227,6 +249,16 @@ export class InteractionManager {
     }
 
     for (const place of this.currentStaticPlaceTargets) {
+      if (
+        place.promptTiles?.some(
+          (tile) => tile.tileX === player.tileX && tile.tileY === player.tileY
+        )
+      ) {
+        return place.id;
+      }
+    }
+
+    for (const place of this.currentStaticPlaceTargets) {
       const minX = place.zoneX - PLACE_INTERACTION_PADDING;
       const maxX = place.zoneX + place.zoneWidth + PLACE_INTERACTION_PADDING;
       const minY = place.zoneY - PLACE_INTERACTION_PADDING;
@@ -272,17 +304,13 @@ export class InteractionManager {
   }
 
   private renderHint() {
-    if (!this.hud) {
-      return;
-    }
-
     if (
       !this.overlayBlocked &&
       this.currentTargetNpcId &&
       !this.dialogueManager.isDialoguePlaying() &&
       !this.requiresInteractKeyRelease
     ) {
-      this.hud.setInteractionPrompt(`[SPACE] ${this.currentTargetNpcId}와 대화`);
+      this.scene.events.emit("ui:setInteractionPrompt", `[SPACE] ${this.currentTargetNpcId}와 대화`);
       return;
     }
 
@@ -295,7 +323,7 @@ export class InteractionManager {
       const transition = this.currentTransitionTargets.find(
         (target) => target.id === this.currentTargetTransitionId
       );
-      this.hud.setInteractionPrompt(`[SPACE] ${transition?.label ?? "이동"}`);
+      this.scene.events.emit("ui:setInteractionPrompt", `[SPACE] ${transition?.label ?? "이동"}`);
       return;
     }
 
@@ -306,10 +334,10 @@ export class InteractionManager {
       !this.requiresInteractKeyRelease
     ) {
       const place = this.currentStaticPlaceTargets.find((item) => item.id === this.currentTargetPlaceId);
-      this.hud.setInteractionPrompt(`[SPACE] ${place?.label ?? "장소"} 확인`);
+      this.scene.events.emit("ui:setInteractionPrompt", `[SPACE] ${place?.label ?? "장소"} 확인`);
       return;
     }
 
-    this.hud.setInteractionPrompt(null);
+    this.scene.events.emit("ui:setInteractionPrompt", null);
   }
 }
