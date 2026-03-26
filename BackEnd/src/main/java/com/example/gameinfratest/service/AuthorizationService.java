@@ -47,7 +47,11 @@ public class AuthorizationService {
             return userService.getCurrentUser(sessionState.user().id());
         }
 
-        throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_AUTH_REQUIRED", "session authentication is required");
+        throw new ApiException(
+                HttpStatus.UNAUTHORIZED,
+                "DEATH_RECORD_SESSION_AUTH_REQUIRED",
+                "death record APIs require session-based authentication"
+        );
     }
 
     public UserResponse requireUserAccess(UUID userId) {

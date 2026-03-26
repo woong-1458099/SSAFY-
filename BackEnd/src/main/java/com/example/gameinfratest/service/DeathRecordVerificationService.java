@@ -25,6 +25,7 @@ public class DeathRecordVerificationService {
 
     public DeathRecordVerificationService(DeathRecordProperties deathRecordProperties) {
         this.deathRecordProperties = deathRecordProperties;
+        this.deathRecordProperties.validateRuntime();
     }
 
     public DeathRecordTokenResponse issueToken(HttpSession session, UUID userId) {
@@ -41,7 +42,7 @@ public class DeathRecordVerificationService {
     }
 
     public void verifyAndConsume(HttpSession session, UUID userId, String token) {
-        VerificationFailureState failureState = getFailureState(session);
+        VerificationFailureState failureState = getFailureState(session, userId);
         if (failureState.isLocked()) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "DEATH_RECORD_VERIFICATION_LOCKED", "death record verification is temporarily locked");
         }
@@ -57,27 +58,27 @@ public class DeathRecordVerificationService {
         DeathRecordVerificationState state = verificationStates.get(normalizedToken);
         if (state == null) {
             storeVerificationStates(session, verificationStates);
-            recordFailure(session, failureState);
+            recordFailure(session, userId, failureState);
             throw new ApiException(HttpStatus.FORBIDDEN, "DEATH_RECORD_VERIFICATION_INVALID", "death record verification token is invalid");
         }
 
         if (state.isExpired()) {
             verificationStates.remove(normalizedToken);
             storeVerificationStates(session, verificationStates);
-            recordFailure(session, failureState);
+            recordFailure(session, userId, failureState);
             throw new ApiException(HttpStatus.FORBIDDEN, "DEATH_RECORD_VERIFICATION_EXPIRED", "death record verification has expired");
         }
 
         if (!state.userId().equals(userId)) {
             verificationStates.remove(normalizedToken);
             storeVerificationStates(session, verificationStates);
-            recordFailure(session, failureState);
+            recordFailure(session, userId, failureState);
             throw new ApiException(HttpStatus.FORBIDDEN, "DEATH_RECORD_VERIFICATION_INVALID", "death record verification token is invalid");
         }
 
         verificationStates.remove(normalizedToken);
         storeVerificationStates(session, verificationStates);
-        clearFailureState(session);
+        clearFailureState(session, userId);
     }
 
     private String generateToken() {
@@ -141,14 +142,21 @@ public class DeathRecordVerificationService {
         }
     }
 
-    private VerificationFailureState getFailureState(HttpSession session) {
+    @SuppressWarnings("unchecked")
+    private VerificationFailureState getFailureState(HttpSession session, UUID userId) {
         Object attribute = session.getAttribute(FAILURE_SESSION_KEY);
-        if (attribute instanceof VerificationFailureState state) {
+        if (attribute instanceof Map<?, ?> states) {
+            Map<String, VerificationFailureState> failureStates = new HashMap<>((Map<String, VerificationFailureState>) states);
+            VerificationFailureState state = failureStates.get(userId.toString());
+            if (state == null) {
+                return VerificationFailureState.empty();
+            }
             if (state.isLocked()) {
                 return state;
             }
             if (state.lockedUntilEpochMilli() > 0) {
-                clearFailureState(session);
+                failureStates.remove(userId.toString());
+                storeFailureStates(session, failureStates);
                 return VerificationFailureState.empty();
             }
             return state;
@@ -156,17 +164,38 @@ public class DeathRecordVerificationService {
         return VerificationFailureState.empty();
     }
 
-    private void recordFailure(HttpSession session, VerificationFailureState currentState) {
+    private void recordFailure(HttpSession session, UUID userId, VerificationFailureState currentState) {
         int failureCount = currentState.failureCount() + 1;
         long lockedUntilEpochMilli = 0L;
         if (failureCount >= deathRecordProperties.getMaxFailureAttempts()) {
             lockedUntilEpochMilli = Instant.now().plus(deathRecordProperties.getFailureLockout()).toEpochMilli();
         }
-        session.setAttribute(FAILURE_SESSION_KEY, new VerificationFailureState(failureCount, lockedUntilEpochMilli));
+        Map<String, VerificationFailureState> failureStates = getFailureStates(session);
+        failureStates.put(userId.toString(), new VerificationFailureState(failureCount, lockedUntilEpochMilli));
+        storeFailureStates(session, failureStates);
     }
 
-    private void clearFailureState(HttpSession session) {
-        session.removeAttribute(FAILURE_SESSION_KEY);
+    @SuppressWarnings("unchecked")
+    private Map<String, VerificationFailureState> getFailureStates(HttpSession session) {
+        Object attribute = session.getAttribute(FAILURE_SESSION_KEY);
+        if (attribute instanceof Map<?, ?> states) {
+            return new HashMap<>((Map<String, VerificationFailureState>) states);
+        }
+        return new HashMap<>();
+    }
+
+    private void storeFailureStates(HttpSession session, Map<String, VerificationFailureState> failureStates) {
+        if (failureStates.isEmpty()) {
+            session.removeAttribute(FAILURE_SESSION_KEY);
+            return;
+        }
+        session.setAttribute(FAILURE_SESSION_KEY, new HashMap<>(failureStates));
+    }
+
+    private void clearFailureState(HttpSession session, UUID userId) {
+        Map<String, VerificationFailureState> failureStates = getFailureStates(session);
+        failureStates.remove(userId.toString());
+        storeFailureStates(session, failureStates);
     }
 
     private record DeathRecordVerificationState(UUID userId, long expiresAtEpochMilli) implements Serializable {

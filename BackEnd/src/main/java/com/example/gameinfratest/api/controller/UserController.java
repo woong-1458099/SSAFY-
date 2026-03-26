@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/users/me")
 public class UserController {
     private static final String DEATH_RECORD_TOKEN_HEADER = "X-Death-Record-Token";
+    private static final String SESSION_REQUIRED_MESSAGE = "death record APIs require an authenticated session";
 
     private final UserService userService;
     private final AuthorizationService authorizationService;
@@ -78,7 +79,7 @@ public class UserController {
     private HttpSession requireSession(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "DEATH_RECORD_SESSION_REQUIRED", "death record verification requires an authenticated session");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "DEATH_RECORD_SESSION_REQUIRED", SESSION_REQUIRED_MESSAGE);
         }
         return session;
     }

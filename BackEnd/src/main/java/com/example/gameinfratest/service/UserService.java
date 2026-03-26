@@ -23,6 +23,7 @@ public class UserService {
     public UserService(UserRepository userRepository, DeathRecordProperties deathRecordProperties) {
         this.userRepository = userRepository;
         this.deathRecordProperties = deathRecordProperties;
+        this.deathRecordProperties.validateRuntime();
     }
 
     @Transactional
