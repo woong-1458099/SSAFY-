@@ -55,7 +55,7 @@ import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
 import type { HudState } from "../state/gameState";
 import { InGameUIScene } from "./InGameUIScene";
-import type { SceneId } from "../scripts/scenes/sceneIds";
+import { SCENE_IDS, type SceneId } from "../scripts/scenes/sceneIds";
 import { playPlaceBgm, playWorldBgm, createSkyBackground, createCampusBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
 import {
   DEFAULT_START_SCENE_ID,
@@ -1504,8 +1504,23 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    const debugStartTile = this.resolveDebugSceneStartTile(sceneId);
+    if (debugStartTile) {
+      this.registry.set(MainScene.PENDING_START_TILE_KEY, debugStartTile);
+    }
+
     this.debugLogger?.log(`debug:switch-scene:${sceneId}`);
     this.scene.restart();
+  }
+
+  private resolveDebugSceneStartTile(sceneId: SceneId) {
+    switch (sceneId) {
+      case SCENE_IDS.classroomDefault:
+        // Match the requested classroom debug spawn near screen position 1105, 535.
+        return { tileX: 27, tileY: 12 };
+      default:
+        return undefined;
+    }
   }
 
   private prepareSceneRestart(
