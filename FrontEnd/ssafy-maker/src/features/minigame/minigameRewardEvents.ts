@@ -1,5 +1,6 @@
 import type Phaser from "phaser";
 import type { PlayerStatKey } from "../../game/state/gameState";
+import type { LegacyMinigameSceneKey } from "./minigameSceneKeys";
 
 export const MINIGAME_REWARD_EVENT = "minigame:reward";
 export const MINIGAME_COMPLETION_EVENT = "minigame:completion";
@@ -11,6 +12,7 @@ export type MinigameRewardPayload = {
 
 export type MinigameCompletionPayload = {
   sceneKey: string;
+  unlockSceneKey?: LegacyMinigameSceneKey;
 };
 
 export type ParsedMinigameReward = {
@@ -32,13 +34,32 @@ const STAT_LABEL_TO_KEY: Record<string, PlayerStatKey> = {
   운: "luck"
 };
 
+function resolveCompletionPayload(scene: Phaser.Scene, sceneKey: string): MinigameCompletionPayload {
+  const launchData = (scene.sys.settings.data ?? {}) as {
+    unlockOnComplete?: boolean;
+    unlockSceneKey?: LegacyMinigameSceneKey;
+  };
+
+  if (launchData.unlockOnComplete && typeof launchData.unlockSceneKey === "string" && launchData.unlockSceneKey.length > 0) {
+    return {
+      sceneKey,
+      unlockSceneKey: launchData.unlockSceneKey
+    };
+  }
+
+  return { sceneKey };
+}
+
 export function emitMinigameReward(scene: Phaser.Scene, payload: MinigameRewardPayload): void {
   scene.game.events.emit(MINIGAME_REWARD_EVENT, payload);
-  scene.game.events.emit(MINIGAME_COMPLETION_EVENT, { sceneKey: payload.sceneKey } satisfies MinigameCompletionPayload);
+  scene.game.events.emit(MINIGAME_COMPLETION_EVENT, resolveCompletionPayload(scene, payload.sceneKey));
 }
 
 export function emitMinigameCompletion(scene: Phaser.Scene, payload: MinigameCompletionPayload): void {
-  scene.game.events.emit(MINIGAME_COMPLETION_EVENT, payload);
+  scene.game.events.emit(
+    MINIGAME_COMPLETION_EVENT,
+    payload.unlockSceneKey ? payload : resolveCompletionPayload(scene, payload.sceneKey)
+  );
 }
 
 export function parseMinigameRewardText(rewardText: string): ParsedMinigameReward {

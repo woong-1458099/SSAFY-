@@ -7,7 +7,7 @@ import {
   type SupportedMinigameSceneKey
 } from "./minigameSceneKeys";
 import { openLegacyMinigameMenu } from "./minigameLauncher";
-import { queueMinigameUnlock, resolveUnlockableMinigameSceneKey } from "./minigameUnlocks";
+import { resolveUnlockableMinigameSceneKey } from "./minigameUnlocks";
 
 export type MinigameLaunchKey = SupportedMinigameSceneKey;
 export type MinigameLaunchOptions = {
@@ -93,6 +93,7 @@ export function launchMinigame(
   }
 
   const pauseSucceeded = scene.scene.isActive(resolution.resolvedKey);
+  const unlockableSceneKey = options.unlockOnComplete ? resolveUnlockableMinigameSceneKey(sceneKey) : null;
   if (pauseSucceeded) {
     scene.scene.pause(resolution.resolvedKey);
   } else {
@@ -105,15 +106,12 @@ export function launchMinigame(
     resolvedReturnSceneKey: resolution.resolvedKey,
     returnScenePauseSucceeded: pauseSucceeded,
     returnSceneFallback: resolution.usedFallback,
+    unlockOnComplete: options.unlockOnComplete === true,
+    unlockSceneKey: unlockableSceneKey ?? undefined
   });
 
-  if (options.unlockOnComplete) {
-    const unlockableSceneKey = resolveUnlockableMinigameSceneKey(sceneKey);
-    if (unlockableSceneKey) {
-      queueMinigameUnlock(scene, resolution.resolvedKey, unlockableSceneKey);
-    } else {
-      console.warn(`[minigame] unlock queue skipped for non-legacy scene key: ${sceneKey}`);
-    }
+  if (options.unlockOnComplete && !unlockableSceneKey) {
+    console.warn(`[minigame] unlock metadata skipped for non-legacy scene key: ${sceneKey}`);
   }
 
   return true;

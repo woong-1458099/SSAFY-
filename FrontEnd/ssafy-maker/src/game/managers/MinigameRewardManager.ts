@@ -6,6 +6,7 @@ import {
   type MinigameCompletionPayload,
   type MinigameRewardPayload
 } from "../../features/minigame/minigameRewardEvents";
+import type { LegacyMinigameSceneKey } from "../../features/minigame/minigameSceneKeys";
 import type { HudState, PlayerStatKey } from "../state/gameState";
 
 type MinigameRewardManagerOptions = {
@@ -13,7 +14,7 @@ type MinigameRewardManagerOptions = {
   getHudState: () => HudState;
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
-  unlockMinigame?: (sceneKey: string) => void;
+  unlockMinigame?: (sceneKey: LegacyMinigameSceneKey) => void;
 };
 
 export class MinigameRewardManager {
@@ -21,7 +22,7 @@ export class MinigameRewardManager {
   private readonly getHudState: () => HudState;
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
-  private readonly unlockMinigame?: (sceneKey: string) => void;
+  private readonly unlockMinigame?: (sceneKey: LegacyMinigameSceneKey) => void;
 
   constructor(options: MinigameRewardManagerOptions) {
     this.scene = options.scene;
@@ -62,6 +63,8 @@ export class MinigameRewardManager {
   }
 
   private handleCompletion(payload: MinigameCompletionPayload): void {
-    this.unlockMinigame?.(payload.sceneKey);
+    if (payload.unlockSceneKey) {
+      this.unlockMinigame?.(payload.unlockSceneKey);
+    }
   }
 }
