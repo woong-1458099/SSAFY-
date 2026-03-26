@@ -33,9 +33,66 @@ export interface RecordDeathRequest {
 export type BackendApiStatus = "unknown" | "available" | "unavailable";
 
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-const NORMALIZED_API_BASE_URL = RAW_API_BASE_URL
-  ? RAW_API_BASE_URL.replace(/\/+$/, "")
-  : "/api";
+const API_PATH_SEGMENT = "/api";
+
+function stripTrailingSlashes(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+function ensureLeadingSlash(value: string): string {
+  return value.startsWith("/") ? value : `/${value}`;
+}
+
+function ensureApiSuffix(pathname: string): string {
+  const normalizedPath = stripTrailingSlashes(pathname) || "";
+  if (normalizedPath.toLowerCase().endsWith(API_PATH_SEGMENT)) {
+    return normalizedPath || API_PATH_SEGMENT;
+  }
+
+  return `${normalizedPath}${API_PATH_SEGMENT}`;
+}
+
+function handleInvalidApiBaseUrl(rawValue: string): string {
+  console.warn("[auth-api] invalid VITE_API_BASE_URL; falling back to /api", {
+    rawValue
+  });
+  return API_PATH_SEGMENT;
+}
+
+function normalizeApiBaseUrl(rawValue?: string): string {
+  if (!rawValue) {
+    return API_PATH_SEGMENT;
+  }
+
+  try {
+    if (/^https?:\/\//i.test(rawValue)) {
+      const url = new URL(rawValue);
+      if (url.search || url.hash) {
+        console.warn("[auth-api] VITE_API_BASE_URL query/hash is ignored during normalization", {
+          rawValue
+        });
+      }
+      const normalizedPath = ensureApiSuffix(url.pathname);
+      return `${url.origin}${normalizedPath}`;
+    }
+
+    const sanitizedValue = rawValue.split(/[?#]/, 1)[0] ?? API_PATH_SEGMENT;
+    if (sanitizedValue !== rawValue) {
+      console.warn("[auth-api] VITE_API_BASE_URL query/hash is ignored during normalization", {
+        rawValue
+      });
+    }
+    return ensureApiSuffix(ensureLeadingSlash(sanitizedValue));
+  } catch {
+    return handleInvalidApiBaseUrl(rawValue);
+  }
+}
+
+const NORMALIZED_API_BASE_URL = normalizeApiBaseUrl(RAW_API_BASE_URL);
+console.info("[auth-api] API_PREFIX normalized", {
+  rawValue: RAW_API_BASE_URL ?? null,
+  apiPrefix: NORMALIZED_API_BASE_URL
+});
 
 export const API_PREFIX = NORMALIZED_API_BASE_URL;
 let backendApiStatus: BackendApiStatus = "unknown";
