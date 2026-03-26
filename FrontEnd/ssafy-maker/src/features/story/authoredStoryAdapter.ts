@@ -396,8 +396,8 @@ export function buildSceneStateRegistryFromJson(
 
     const npcs = Array.isArray(entry.npcs)
       ? entry.npcs
-          .map((npc, npcIndex) => normalizeSceneStateNpc(npc, resolvedSceneStateId, npcIndex, fatalIssues))
-          .filter((npc): npc is SceneStateNpc => npc !== null)
+        .map((npc, npcIndex) => normalizeSceneStateNpc(npc, resolvedSceneStateId, npcIndex, fatalIssues))
+        .filter((npc): npc is SceneStateNpc => npc !== null)
       : [];
 
     registry[resolvedSceneStateId] = {
@@ -421,7 +421,7 @@ export function buildAuthoredStoryAssetsFromJson(
 } {
   const fatalIssues: string[] = [];
   const warnings: string[] = [];
-  
+
   let dialogues: Record<string, DialogueScript> = {};
   dialoguesChunksRaw.forEach((chunk) => {
     dialogues = buildDialogueRegistryFromJson(chunk, fatalIssues, dialogues);

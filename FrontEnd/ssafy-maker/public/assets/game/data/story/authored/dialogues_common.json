@@ -32,7 +32,7 @@
         "start": {
           "id": "start",
           "speaker": "안내",
-          "text": "카페에서는 휴식 행동을 수행할 수 있습니다."
+          "text": "카페에서는 휴식 활동을 수행할 수 있습니다."
         }
       }
     },
@@ -44,19 +44,19 @@
         "start": {
           "id": "start",
           "speaker": "안내",
-          "text": "헬스장에서는 운동 행동과 미니게임이 연결됩니다."
+          "text": "헬스장에서는 운동 활동과 미니게임이 연결됩니다."
         }
       }
     },
     {
       "id": "ramen_notice",
-      "label": "라멘띵스 안내",
+      "label": "라멘탕스 안내",
       "startNodeId": "start",
       "nodes": {
         "start": {
           "id": "start",
           "speaker": "안내",
-          "text": "라멘집에서는 회복 행동과 미니게임이 연결됩니다."
+          "text": "라멘집에서는 회복 활동과 미니게임이 연결됩니다."
         }
       }
     },
@@ -80,7 +80,7 @@
         "start": {
           "id": "start",
           "speaker": "안내",
-          "text": "노래방에서는 협업과 스트레스 변화 행동이 연결됩니다."
+          "text": "노래방에서는 협업과 스트레스 변화 활동이 연결됩니다."
         }
       }
     },
@@ -92,7 +92,7 @@
         "start": {
           "id": "start",
           "speaker": "안내",
-          "text": "호프집에서는 저녁 이후 행동과 음주 미니게임이 연결됩니다."
+          "text": "호프집에서는 저녁 이후 활동과 음주 미니게임이 연결됩니다."
         }
       }
     },
@@ -140,13 +140,13 @@
       "id": "npc_hyoryeon",
       "label": "효련 (기본)",
       "startNodeId": "start",
-      "nodes": { "start": { "id": "start", "speaker": "효련", "text": "에셋 찍다 쿨타임 오면 딴짓하는 게 국룰이지" } }
+      "nodes": { "start": { "id": "start", "speaker": "효련", "text": "에셋 찍다 쿨타임이 오면 딴짓하는 게 국룰이지" } }
     },
     {
       "id": "npc_jiwoo",
       "label": "지우 (기본)",
       "startNodeId": "start",
-      "nodes": { "start": { "id": "start", "speaker": "지우", "text": "스크립트 짜다가 막히면 바로바로 말해줘." } }
+      "nodes": { "start": { "id": "start", "speaker": "지우", "text": "스크립트 쓰다가 막히면 바로바로 말해줘." } }
     },
     {
       "id": "npc_jongmin",
@@ -176,7 +176,7 @@
       "id": "npc_sunmi",
       "label": "조선미 프로 (기본)",
       "startNodeId": "start",
-      "nodes": { "start": { "id": "start", "speaker": "조선미 프로", "text": "오늘 점식 특식?! 허거덩" } }
+      "nodes": { "start": { "id": "start", "speaker": "조선미 프로", "text": "오늘 점심 특식?! 허거덩" } }
     },
     {
       "id": "npc_doyeon",

@@ -1,3 +1,160 @@
 {
-  "dialogues": []
+  "dialogues": [
+    {
+      "id": "minsu_intro_w3",
+      "label": "민수 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "알고리즘 주간이구나. 시간 복잡도 계산 잘 해라. 효율성이 제일 중요하다."
+        }
+      }
+    },
+    {
+      "id": "npc_hyewon_w3",
+      "label": "혜원 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "혜원",
+          "text": "문제가 안 풀려도 포기하지 마! 내가 도움줄 수 있는 게 있을까?"
+        }
+      }
+    },
+    {
+      "id": "npc_minseok_w3",
+      "label": "민석 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민석",
+          "text": "BFS, DFS... 헤메지 말고 흐름을 먼저 잡아보세요."
+        }
+      }
+    },
+    {
+      "id": "npc_myungjin_w3",
+      "label": "명진 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "명진",
+          "text": "오늘 풀 문제 리스트 정리 끝났어? 차근차근 해나가자."
+        }
+      }
+    },
+    {
+      "id": "npc_yeonwoong_w3",
+      "label": "연웅 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "연웅",
+          "text": "아... 디버깅하다 밤 새갔네. 커피 좀 더 마셔야겠어."
+        }
+      }
+    },
+    {
+      "id": "npc_hyoryeon_w3",
+      "label": "효련 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "효련",
+          "text": "알고리즘 풀때도 구조를 그림으로 그려보면 편해."
+        }
+      }
+    },
+    {
+      "id": "npc_jiwoo_w3",
+      "label": "지우 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "지우",
+          "text": "코드가 너무 길어지면 모듈화를 고민해봐!"
+        }
+      }
+    },
+    {
+      "id": "npc_jongmin_w3",
+      "label": "종민 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "종민",
+          "text": "이번 주 스케줄이 꽤 타이트하네요. 컨디션 관리 잘하세요."
+        }
+      }
+    },
+    {
+      "id": "npc_minsu_w3",
+      "label": "민수 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "이 문제 왜 안 풀리네... 장~담~모한다~"
+        }
+      }
+    },
+    {
+      "id": "npc_sunmi_w3",
+      "label": "조선미 프로 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "조선미 프로",
+          "text": "알고리즘 시험 준비는 잘 되어가나요? 화이팅이에요!"
+        }
+      }
+    },
+    {
+      "id": "npc_doyeon_w3",
+      "label": "김도연 프로 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김도연 프로",
+          "text": "힘들 땐 쉬어가는 것도 공부예요. 힘내세요!"
+        }
+      }
+    },
+    {
+      "id": "npc_hyunseok_w3",
+      "label": "이현석 컨설턴트 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "이현석 컨설턴트",
+          "text": "알고리즘 역량은 나중에 프로젝트의 기초가 됩니다. 성실히 임하세요."
+        }
+      }
+    },
+    {
+      "id": "npc_nayool_w3",
+      "label": "김나율 프로 (3주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김나율 프로",
+          "text": "우리 반 친구들 다 같이 합격했으면 좋겠어!"
+        }
+      }
+    }
+  ]
 }

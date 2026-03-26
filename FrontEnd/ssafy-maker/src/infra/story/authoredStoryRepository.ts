@@ -152,7 +152,7 @@ async function loadAuthoredStoryJson(scene?: Phaser.Scene, week: number = 1): Pr
   try {
     const weekKey = `authoredDialoguesW${week}` as keyof typeof ASSET_PATHS.story;
     const weekPath = ASSET_PATHS.story[weekKey];
-    
+
     // dialogues.json (레거시), dialogues_common.json, 그리고 현재 주차 파일을 함께 로드합니다.
     const [legacyRaw, commonRaw, weekRaw, sceneStatesRaw] = await Promise.all([
       loadJson(`${ASSET_PATHS.story.authoredDialogues}`).catch(() => ({ dialogues: [] })),
@@ -161,9 +161,9 @@ async function loadAuthoredStoryJson(scene?: Phaser.Scene, week: number = 1): Pr
       loadJson(`${ASSET_PATHS.story.authoredSceneStates}`)
     ]);
 
-    return { 
-      dialoguesChunksRaw: [legacyRaw, commonRaw, weekRaw], 
-      sceneStatesRaw 
+    return {
+      dialoguesChunksRaw: [legacyRaw, commonRaw, weekRaw],
+      sceneStatesRaw
     };
   } catch (error) {
     throw new AuthoredStoryLoadError("fetch", ["authored JSON fetch에 실패했습니다."], error);

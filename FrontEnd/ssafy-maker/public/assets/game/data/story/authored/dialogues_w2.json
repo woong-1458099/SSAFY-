@@ -1,6 +1,18 @@
 {
   "dialogues": [
     {
+      "id": "minsu_intro_w2",
+      "label": "민수 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "2주차 적응은 어때? 페이스 조절 잘 해라. 무리하면 나중에 탈 나."
+        }
+      }
+    },
+    {
       "id": "npc_hyewon_w2",
       "label": "혜원 (2주차)",
       "startNodeId": "start",
@@ -20,7 +32,7 @@
         "start": {
           "id": "start",
           "speaker": "민석",
-          "text": "알고리즘 주간이네... 다들 고생이 많아. 가끔 머리도 좀 식혀가며 해."
+          "text": "알고리즘 주간이네... 다들 고생이 많아. 가끔 머리도 좀 식혀가면 해."
         }
       }
     },
@@ -61,6 +73,42 @@
       }
     },
     {
+      "id": "npc_jiwoo_w2",
+      "label": "지우 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "지우",
+          "text": "Git 컨플릭트 해결하느라 고생했어. 브랜치 관리 잘 하자!"
+        }
+      }
+    },
+    {
+      "id": "npc_jongmin_w2",
+      "label": "종민 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "종민",
+          "text": "2주차 과제들 진행 상황 어때요? 모르는 거 있으면 물어보세요."
+        }
+      }
+    },
+    {
+      "id": "npc_minsu_w2",
+      "label": "민수 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "이번 주도 장~담~모한다~"
+        }
+      }
+    },
+    {
       "id": "npc_sunmi_w2",
       "label": "조선미 프로 (2주차)",
       "startNodeId": "start",
@@ -93,6 +141,18 @@
           "id": "start",
           "speaker": "이현석 컨설턴트",
           "text": "기술 스택 결정은 신중해야 합니다. 프로젝트의 방향성이 결정되는 시기니까요."
+        }
+      }
+    },
+    {
+      "id": "npc_nayool_w2",
+      "label": "김나율 프로 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김나율 프로",
+          "text": "2주차 적응 잘 하고 있어요? 언제든 도움 필요하면 말씀해주세요!"
         }
       }
     }

@@ -518,7 +518,7 @@ export class StoryEventManager {
       getFixedEventEntries(rawData).find((event) => {
         const rawEventId = event.id ?? event.eventId;
         const eventIdStr = typeof rawEventId === "string" ? rawEventId : "";
-        
+
         if (event.eventType === "ROMANCE") {
           const gender = this.getPlayerGender();
           if (gender === "MALE" && eventIdStr.includes("_MINSU_")) return false;
@@ -571,7 +571,7 @@ export class StoryEventManager {
 
         const rawEventId = event.id ?? event.eventId;
         const eventId = typeof rawEventId === "string" ? rawEventId : "";
-        
+
         if (event.eventType === "ROMANCE") {
           const gender = this.getPlayerGender();
           if (gender === "MALE" && eventId.includes("_MINSU_")) return false;
