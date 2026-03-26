@@ -93,6 +93,28 @@ function isTileInsideRect(tileX: number, tileY: number, rect: { x: number; y: nu
   );
 }
 
+function forEachClampedRectTile(
+  width: number,
+  height: number,
+  rect: { x: number; y: number; width: number; height: number },
+  onTile: (x: number, y: number) => void
+) {
+  const startX = Math.max(0, rect.x);
+  const startY = Math.max(0, rect.y);
+  const endX = Math.min(width, rect.x + rect.width);
+  const endY = Math.min(height, rect.y + rect.height);
+
+  if (startX >= endX || startY >= endY) {
+    return;
+  }
+
+  for (let y = startY; y < endY; y += 1) {
+    for (let x = startX; x < endX; x += 1) {
+      onTile(x, y);
+    }
+  }
+}
+
 export function applyWalkableTileZones(
   blockedGrid: boolean[][],
   walkableTileZones?: { x: number; y: number; width: number; height: number }[]
@@ -265,13 +287,11 @@ export function buildBooleanGridFromRects(
     return grid;
   }
 
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      if (rects.some((rect) => isTileInsideRect(x, y, rect))) {
-        grid[y][x] = true;
-      }
-    }
-  }
+  rects.forEach((rect) => {
+    forEachClampedRectTile(width, height, rect, (x, y) => {
+      grid[y][x] = true;
+    });
+  });
 
   return grid;
 }
@@ -281,19 +301,21 @@ export function buildWalkableZoneBlockedGrid(
   height: number,
   walkableTileZones?: { x: number; y: number; width: number; height: number }[]
 ) {
+  if (!walkableTileZones || walkableTileZones.length === 0) {
+    return Array.from({ length: height }, () =>
+      Array.from({ length: width }, () => false)
+    );
+  }
+
   const grid = Array.from({ length: height }, () =>
-    Array.from({ length: width }, () => false)
+    Array.from({ length: width }, () => true)
   );
 
-  if (!walkableTileZones || walkableTileZones.length === 0) {
-    return grid;
-  }
-
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      grid[y][x] = !walkableTileZones.some((zone) => isTileInsideRect(x, y, zone));
-    }
-  }
+  walkableTileZones.forEach((zone) => {
+    forEachClampedRectTile(width, height, zone, (x, y) => {
+      grid[y][x] = false;
+    });
+  });
 
   return grid;
 }

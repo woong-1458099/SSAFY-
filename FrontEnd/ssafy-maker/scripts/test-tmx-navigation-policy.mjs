@@ -67,6 +67,53 @@ function runBlockedCase({
   ).blockedGrid[0][0];
 }
 
+function runGridCase({
+  width,
+  height,
+  collisionFilled = false,
+  walkablePatchTiles = [],
+  walkableTileZones,
+  blockedTileZones,
+  blockedTiles
+}) {
+  const collisionValue = collisionFilled ? 1 : 0;
+  const walkableData = Array.from({ length: height }, (_, y) =>
+    Array.from({ length: width }, (_, x) =>
+      walkablePatchTiles.some((tile) => tile.x === x && tile.y === y) ? 1 : 0
+    )
+  );
+  const parsedMap = {
+    width,
+    height,
+    tileWidth: 32,
+    tileHeight: 32,
+    layers: [],
+    tilesets: []
+  };
+  const resolvedLayers = {
+    collisionLayers: [{
+      name: "collision",
+      visible: true,
+      data: Array.from({ length: height }, () => Array.from({ length: width }, () => collisionValue))
+    }],
+    walkableLayers: [{
+      name: "walkable(patch)",
+      visible: true,
+      data: walkableData
+    }],
+    interactionLayers: [],
+    foregroundLayers: []
+  };
+
+  return buildRuntimeGrids(
+    parsedMap,
+    resolvedLayers,
+    walkableTileZones,
+    blockedTileZones,
+    blockedTiles
+  ).blockedGrid;
+}
+
 const cases = [
   {
     name: "walkable patch clears collision-derived blocking",
@@ -96,10 +143,30 @@ const cases = [
       walkableTileZones: [{ x: 1, y: 1, width: 1, height: 1 }]
     }),
     expected: true
+  },
+  {
+    name: "out of bounds rects are clamped without reopening unrelated tiles",
+    actual: runGridCase({
+      width: 2,
+      height: 2,
+      collisionFilled: true,
+      walkablePatchTiles: [{ x: 0, y: 0 }],
+      walkableTileZones: [{ x: -2, y: -2, width: 1, height: 1 }],
+      blockedTileZones: [{ x: -1, y: -1, width: 2, height: 2 }]
+    }),
+    expected: [
+      [true, true],
+      [true, true]
+    ]
   }
 ];
 
 cases.forEach(({ name, actual, expected }) => {
+  if (Array.isArray(expected)) {
+    assert.deepEqual(actual, expected, name);
+    return;
+  }
+
   assert.equal(actual, expected, name);
 });
 
