@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import {
+  MINIGAME_COMPLETION_EVENT,
   MINIGAME_REWARD_EVENT,
   parseMinigameRewardText,
+  type MinigameCompletionPayload,
   type MinigameRewardPayload
 } from "../../features/minigame/minigameRewardEvents";
 import type { HudState, PlayerStatKey } from "../state/gameState";
@@ -11,6 +13,7 @@ type MinigameRewardManagerOptions = {
   getHudState: () => HudState;
   patchHudState: (next: Partial<HudState>) => void;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  unlockMinigame?: (sceneKey: string) => void;
 };
 
 export class MinigameRewardManager {
@@ -18,17 +21,21 @@ export class MinigameRewardManager {
   private readonly getHudState: () => HudState;
   private readonly patchHudState: (next: Partial<HudState>) => void;
   private readonly applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  private readonly unlockMinigame?: (sceneKey: string) => void;
 
   constructor(options: MinigameRewardManagerOptions) {
     this.scene = options.scene;
     this.getHudState = options.getHudState;
     this.patchHudState = options.patchHudState;
     this.applyStatDelta = options.applyStatDelta;
+    this.unlockMinigame = options.unlockMinigame;
     this.scene.game.events.on(MINIGAME_REWARD_EVENT, this.handleReward, this);
+    this.scene.game.events.on(MINIGAME_COMPLETION_EVENT, this.handleCompletion, this);
   }
 
   destroy(): void {
     this.scene.game.events.off(MINIGAME_REWARD_EVENT, this.handleReward, this);
+    this.scene.game.events.off(MINIGAME_COMPLETION_EVENT, this.handleCompletion, this);
   }
 
   private handleReward(payload: MinigameRewardPayload): void {
@@ -52,5 +59,9 @@ export class MinigameRewardManager {
     if (Object.keys(hudPatch).length > 0) {
       this.patchHudState(hudPatch);
     }
+  }
+
+  private handleCompletion(payload: MinigameCompletionPayload): void {
+    this.unlockMinigame?.(payload.sceneKey);
   }
 }

@@ -9,7 +9,7 @@ export type DialogueActionContext = {
 };
 
 function launchStoryMinigame(scene: Phaser.Scene, sceneKey: Parameters<typeof launchMinigame>[1], returnSceneKey: string) {
-  launchMinigame(scene, sceneKey, returnSceneKey, { unlockOnLaunch: true });
+  launchMinigame(scene, sceneKey, returnSceneKey, { unlockOnComplete: true });
 }
 
 export async function handleDialogueAction(scene: Phaser.Scene, action: DialogueAction, returnSceneKey: string = 'main'): Promise<void> {

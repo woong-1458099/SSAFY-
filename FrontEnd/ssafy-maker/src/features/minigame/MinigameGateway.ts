@@ -7,11 +7,11 @@ import {
   type SupportedMinigameSceneKey
 } from "./minigameSceneKeys";
 import { openLegacyMinigameMenu } from "./minigameLauncher";
-import { resolveUnlockableMinigameSceneKey, unlockMinigame } from "./minigameUnlocks";
+import { queueMinigameUnlock, resolveUnlockableMinigameSceneKey } from "./minigameUnlocks";
 
 export type MinigameLaunchKey = SupportedMinigameSceneKey;
 export type MinigameLaunchOptions = {
-  unlockOnLaunch?: boolean;
+  unlockOnComplete?: boolean;
 };
 
 type ReturnSceneResolution = {
@@ -107,12 +107,12 @@ export function launchMinigame(
     returnSceneFallback: resolution.usedFallback,
   });
 
-  if (options.unlockOnLaunch) {
+  if (options.unlockOnComplete) {
     const unlockableSceneKey = resolveUnlockableMinigameSceneKey(sceneKey);
     if (unlockableSceneKey) {
-      unlockMinigame(scene, resolution.resolvedKey, unlockableSceneKey);
+      queueMinigameUnlock(scene, resolution.resolvedKey, unlockableSceneKey);
     } else {
-      console.warn(`[minigame] unlock skipped for non-legacy scene key: ${sceneKey}`);
+      console.warn(`[minigame] unlock queue skipped for non-legacy scene key: ${sceneKey}`);
     }
   }
 

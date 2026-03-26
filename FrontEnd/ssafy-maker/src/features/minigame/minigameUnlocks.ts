@@ -10,6 +10,7 @@ const MINIGAME_UNLOCK_FLAG_PREFIX = "minigame:unlocked:";
 type MinigameFlagHost = Phaser.Scene & {
   hasGameFlag?: (flag: string) => boolean;
   addGameFlags?: (flags: string[]) => void;
+  queueMinigameUnlock?: (sceneKey: LegacyMinigameSceneKey) => void;
 };
 
 function resolveFlagHost(scene: Phaser.Scene, returnSceneKey?: string): MinigameFlagHost | null {
@@ -54,4 +55,13 @@ export function isMinigameUnlocked(scene: Phaser.Scene, returnSceneKey: string, 
   }
 
   return host.hasGameFlag(buildMinigameUnlockFlag(sceneKey));
+}
+
+export function queueMinigameUnlock(scene: Phaser.Scene, returnSceneKey: string, sceneKey: LegacyMinigameSceneKey): void {
+  const host = resolveFlagHost(scene, returnSceneKey);
+  if (!host || typeof host.queueMinigameUnlock !== "function") {
+    return;
+  }
+
+  host.queueMinigameUnlock(sceneKey);
 }

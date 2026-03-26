@@ -2,10 +2,15 @@ import type Phaser from "phaser";
 import type { PlayerStatKey } from "../../game/state/gameState";
 
 export const MINIGAME_REWARD_EVENT = "minigame:reward";
+export const MINIGAME_COMPLETION_EVENT = "minigame:completion";
 
 export type MinigameRewardPayload = {
   sceneKey: string;
   rewardText: string;
+};
+
+export type MinigameCompletionPayload = {
+  sceneKey: string;
 };
 
 export type ParsedMinigameReward = {
@@ -29,6 +34,11 @@ const STAT_LABEL_TO_KEY: Record<string, PlayerStatKey> = {
 
 export function emitMinigameReward(scene: Phaser.Scene, payload: MinigameRewardPayload): void {
   scene.game.events.emit(MINIGAME_REWARD_EVENT, payload);
+  scene.game.events.emit(MINIGAME_COMPLETION_EVENT, { sceneKey: payload.sceneKey } satisfies MinigameCompletionPayload);
+}
+
+export function emitMinigameCompletion(scene: Phaser.Scene, payload: MinigameCompletionPayload): void {
+  scene.game.events.emit(MINIGAME_COMPLETION_EVENT, payload);
 }
 
 export function parseMinigameRewardText(rewardText: string): ParsedMinigameReward {

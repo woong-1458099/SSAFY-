@@ -20,6 +20,7 @@ import type { SceneState } from "../../common/types/sceneState";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { createDialogueActionRunner } from "../../features/minigame/dialogueActionHandler";
+import { buildMinigameUnlockFlag } from "../../features/minigame/minigameUnlocks";
 import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../features/progression/TimeService";
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
 import type { EndingId } from "../../features/progression/types/ending";
@@ -73,6 +74,7 @@ import {
   type RuntimeAreaTransitionTarget
 } from "../view/AreaTransitionOverlay";
 import { UI_DEPTH } from "../systems/uiDepth";
+import { isLegacyMinigameSceneKey, type LegacyMinigameSceneKey } from "../../features/minigame/minigameSceneKeys";
 
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
@@ -116,11 +118,13 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
+  private readonly pendingMinigameUnlocks = new Set<LegacyMinigameSceneKey>();
   constructor() {
     super(SCENE_KEYS.main);
   }
 
   async create() {
+    this.pendingMinigameUnlocks.clear();
     this.initialized = false;
     this.logoutInProgress = false;
     await ensureAuthoredStoryLoaded(this);
@@ -248,7 +252,8 @@ export class MainScene extends Phaser.Scene {
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
-      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier)
+      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      unlockMinigame: (sceneKey) => this.completeQueuedMinigameUnlock(sceneKey)
     });
     // PlaceActionManager is now in InGameUIScene
     this.interactionManager = new InteractionManager(
@@ -1673,6 +1678,22 @@ export class MainScene extends Phaser.Scene {
 
   addGameFlags(flags: string[]): void {
     this.statSystemManager?.addFlags(flags);
+  }
+
+  queueMinigameUnlock(sceneKey: LegacyMinigameSceneKey): void {
+    this.pendingMinigameUnlocks.add(sceneKey);
+  }
+
+  private completeQueuedMinigameUnlock(sceneKey: string): void {
+    if (!isLegacyMinigameSceneKey(sceneKey)) {
+      return;
+    }
+
+    if (!this.pendingMinigameUnlocks.delete(sceneKey)) {
+      return;
+    }
+
+    this.statSystemManager?.addFlags([buildMinigameUnlockFlag(sceneKey)]);
   }
 
   private applyPendingRestorePayload(): void {
