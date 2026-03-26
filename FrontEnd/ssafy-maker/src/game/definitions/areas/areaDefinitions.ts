@@ -73,6 +73,10 @@ const CAMPUS_BLOCKED_TILES: Vector2[] = [
   { x: 27, y: 10 }
 ];
 
+const CAMPUS_VISUAL_DARK_TILES: Vector2[] = [
+  { x: 24, y: 9 }
+];
+
 export const CAMPUS_TMX_LAYER_NAMES = {
   collision: ["tile layer 4(2)", "tile layer 3"],
   interaction: ["tile layer 2", "tile layer 4(2)"],
@@ -140,6 +144,11 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
           alpha: 0.88
         })),
         ...CAMPUS_BLOCKED_TILES.map((tile) => ({
+          tileRect: { x: tile.x, y: tile.y, width: 1, height: 1 },
+          color: 0x5a5f69,
+          alpha: 0.88
+        })),
+        ...CAMPUS_VISUAL_DARK_TILES.map((tile) => ({
           tileRect: { x: tile.x, y: tile.y, width: 1, height: 1 },
           color: 0x5a5f69,
           alpha: 0.88
