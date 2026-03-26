@@ -47,7 +47,7 @@ export function createWeeklyPlanActivityModal(
   panel.setStrokeStyle(3, 0x8ed2ff, 1);
 
   const accentBar = scene.add
-    .rectangle(centerX, centerY - 236, 404, 8, accentColor, 1)
+    .rectangle(centerX, centerY - 230, 404, 4, accentColor, 1)
     .setScrollFactor(0);
 
   const titleText = scene.add.text(centerX, centerY - 252, title, {
