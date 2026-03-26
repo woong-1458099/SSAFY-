@@ -1667,6 +1667,14 @@ export class MainScene extends Phaser.Scene {
     this.dialogueManager?.setRuntimeDialogueScripts(this.runtimeDialogueScripts);
   }
 
+  hasGameFlag(flag: string): boolean {
+    return this.statSystemManager?.hasFlag(flag) === true;
+  }
+
+  addGameFlags(flags: string[]): void {
+    this.statSystemManager?.addFlags(flags);
+  }
+
   private applyPendingRestorePayload(): void {
     const payload = this.getPendingRestorePayload();
     if (!payload || !this.statSystemManager || !this.inventoryService || !this.progressionManager || !this.storyEventManager) {

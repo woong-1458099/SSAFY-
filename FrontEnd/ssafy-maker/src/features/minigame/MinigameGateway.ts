@@ -4,11 +4,16 @@ import {
   LEGACY_MINIGAME_MENU_SCENE_KEY,
   isDeprecatedMinigameSceneKey,
   isSupportedMinigameSceneKey,
+  type LegacyMinigameSceneKey,
   type SupportedMinigameSceneKey
 } from "./minigameSceneKeys";
 import { openLegacyMinigameMenu } from "./minigameLauncher";
+import { unlockMinigame } from "./minigameUnlocks";
 
 export type MinigameLaunchKey = SupportedMinigameSceneKey;
+export type MinigameLaunchOptions = {
+  unlockOnLaunch?: boolean;
+};
 
 type ReturnSceneResolution = {
   requestedKey: string;
@@ -72,7 +77,12 @@ function normalizeReturnSceneKey(scene: Phaser.Scene, returnSceneKey: unknown): 
   };
 }
 
-export function launchMinigame(scene: Phaser.Scene, sceneKey: MinigameLaunchKey, returnSceneKey: string) {
+export function launchMinigame(
+  scene: Phaser.Scene,
+  sceneKey: MinigameLaunchKey,
+  returnSceneKey: string,
+  options: MinigameLaunchOptions = {}
+) {
   const resolution = normalizeReturnSceneKey(scene, returnSceneKey);
 
   if (scene.scene.isActive(sceneKey)) {
@@ -97,6 +107,11 @@ export function launchMinigame(scene: Phaser.Scene, sceneKey: MinigameLaunchKey,
     returnScenePauseSucceeded: pauseSucceeded,
     returnSceneFallback: resolution.usedFallback,
   });
+
+  if (options.unlockOnLaunch) {
+    unlockMinigame(scene, resolution.resolvedKey, sceneKey as LegacyMinigameSceneKey);
+  }
+
   return true;
 }
 

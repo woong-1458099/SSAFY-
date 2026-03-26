@@ -3,6 +3,7 @@ import Phaser from "phaser";
 
 import { LEGACY_MINIGAME_CARDS } from "@features/minigame/minigameCatalog";
 import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
+import { isMinigameUnlocked } from "@features/minigame/minigameUnlocks";
 
 import { applyLegacyViewport } from "./viewport";
 import { SCREEN, PIXEL_FONT } from './utils';
@@ -44,6 +45,12 @@ export default class MenuScene extends Phaser.Scene {
       fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
+    this.add.text(W / 2, 118, "스토리 또는 번화가에서 한 번 플레이한 미니게임만 해금됩니다", {
+      fontSize: "7px",
+      color: "#9ec8ff",
+      fontFamily: PIXEL_FONT
+    }).setOrigin(0.5);
+
     // 게임 카드 생성
     LEGACY_MINIGAME_CARDS.forEach((game, index) => {
       const col = index % 5;
@@ -73,18 +80,21 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   createCard(game, x, y) {
+    const unlocked = isMinigameUnlocked(this, this.returnSceneKey, game.key);
     const shadow = this.add.rectangle(x + 3, y + 3, 132, 88, 0x000000, 0.66);
-    const card = this.add.rectangle(x, y, 132, 88, game.bgColor).setInteractive().setStrokeStyle(3, game.borderColor);
+    const cardColor = unlocked ? game.bgColor : 0x1a2138;
+    const borderColor = unlocked ? game.borderColor : 0x5d6a85;
+    const card = this.add.rectangle(x, y, 132, 88, cardColor).setStrokeStyle(3, borderColor);
 
     const title = this.add.text(x, y - 25, game.title, {
       fontSize: "8px",
-      color: "#ffffff",
+      color: unlocked ? "#ffffff" : "#c6d0e1",
       fontFamily: PIXEL_FONT
     }).setOrigin(0.5);
 
     const sub = this.add.text(x, y - 5, game.sub, {
       fontSize: "5px",
-      color: "#bfe4ff",
+      color: unlocked ? "#bfe4ff" : "#93a0b8",
       fontFamily: PIXEL_FONT,
       align: "center",
       wordWrap: { width: 122 }
@@ -92,7 +102,7 @@ export default class MenuScene extends Phaser.Scene {
 
     const desc = this.add.text(x, y + 18, game.desc, {
       fontSize: "5px",
-      color: "#d8e7f8",
+      color: unlocked ? "#d8e7f8" : "#99a5bc",
       fontFamily: PIXEL_FONT,
       align: "center",
       wordWrap: { width: 122 }
@@ -100,12 +110,29 @@ export default class MenuScene extends Phaser.Scene {
 
     const reward = this.add.text(x, y + 35, game.reward, {
       fontSize: "4px",
-      color: "#FFD700",
+      color: unlocked ? "#FFD700" : "#8e8a6f",
       fontFamily: PIXEL_FONT,
       align: "center",
       wordWrap: { width: 122 }
     }).setOrigin(0.5);
 
+    if (!unlocked) {
+      this.add.rectangle(x, y, 132, 88, 0x050914, 0.34);
+      this.add.text(x, y - 1, "잠금", {
+        fontSize: "9px",
+        color: "#ffd36b",
+        fontFamily: PIXEL_FONT
+      }).setOrigin(0.5);
+      this.add.text(x, y + 12, "스토리/번화가에서\n먼저 해금", {
+        fontSize: "5px",
+        color: "#d9e6ff",
+        fontFamily: PIXEL_FONT,
+        align: "center"
+      }).setOrigin(0.5);
+      return;
+    }
+
+    card.setInteractive();
     card.on("pointerover", () => {
       card.setFillStyle(game.glowColor);
       this.tweens.add({ targets: card, scaleX: 1.04, scaleY: 1.04, duration: 80 });

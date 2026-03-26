@@ -8,46 +8,50 @@ export type DialogueActionContext = {
   openShop?: () => void;
 };
 
+function launchStoryMinigame(scene: Phaser.Scene, sceneKey: Parameters<typeof launchMinigame>[1], returnSceneKey: string) {
+  launchMinigame(scene, sceneKey, returnSceneKey, { unlockOnLaunch: true });
+}
+
 export async function handleDialogueAction(scene: Phaser.Scene, action: DialogueAction, returnSceneKey: string = 'main'): Promise<void> {
   switch (action) {
     case "openMiniGame":
       openMinigameMenu(scene, returnSceneKey);
       return;
     case "playDrinking":
-      launchMinigame(scene, "DrinkingScene", returnSceneKey);
+      launchStoryMinigame(scene, "DrinkingScene", returnSceneKey);
       return;
     case "playInterview":
-      launchMinigame(scene, "InterviewScene", returnSceneKey);
+      launchStoryMinigame(scene, "InterviewScene", returnSceneKey);
       return;
     case "playGym":
-      launchMinigame(scene, "GymScene", returnSceneKey);
+      launchStoryMinigame(scene, "GymScene", returnSceneKey);
       return;
     case "playRhythm":
-      launchMinigame(scene, "RhythmScene", returnSceneKey);
+      launchStoryMinigame(scene, "RhythmScene", returnSceneKey);
       return;
     case "playCooking":
-      launchMinigame(scene, "CookingScene", returnSceneKey);
+      launchStoryMinigame(scene, "CookingScene", returnSceneKey);
       return;
     case "playTank":
-      launchMinigame(scene, "TankScene", returnSceneKey);
+      launchStoryMinigame(scene, "TankScene", returnSceneKey);
       return;
     case "playQuiz":
-      launchMinigame(scene, "QuizScene", returnSceneKey);
+      launchStoryMinigame(scene, "QuizScene", returnSceneKey);
       return;
     case "playRunner":
-      launchMinigame(scene, "RunnerScene", returnSceneKey);
+      launchStoryMinigame(scene, "RunnerScene", returnSceneKey);
       return;
     case "playBusinessSmile":
-      launchMinigame(scene, "BusinessSmileScene", returnSceneKey);
+      launchStoryMinigame(scene, "BusinessSmileScene", returnSceneKey);
       return;
     case "playTyping":
-      launchMinigame(scene, "TypingScene", returnSceneKey);
+      launchStoryMinigame(scene, "TypingScene", returnSceneKey);
       return;
     case "playLotto":
-      launchMinigame(scene, "LottoScene", returnSceneKey);
+      launchStoryMinigame(scene, "LottoScene", returnSceneKey);
       return;
     case "playDontSmile":
-      launchMinigame(scene, "DontSmileScene", returnSceneKey);
+      launchStoryMinigame(scene, "DontSmileScene", returnSceneKey);
       return;
   }
 }
@@ -64,40 +68,40 @@ export function createDialogueActionRunner(context: DialogueActionContext) {
         openMinigameMenu(scene, returnSceneKey);
         return;
       case "playDrinking":
-        launchMinigame(scene, "DrinkingScene", returnSceneKey);
+        launchStoryMinigame(scene, "DrinkingScene", returnSceneKey);
         return;
       case "playInterview":
-        launchMinigame(scene, "InterviewScene", returnSceneKey);
+        launchStoryMinigame(scene, "InterviewScene", returnSceneKey);
         return;
       case "playGym":
-        launchMinigame(scene, "GymScene", returnSceneKey);
+        launchStoryMinigame(scene, "GymScene", returnSceneKey);
         return;
       case "playRhythm":
-        launchMinigame(scene, "RhythmScene", returnSceneKey);
+        launchStoryMinigame(scene, "RhythmScene", returnSceneKey);
         return;
       case "playCooking":
-        launchMinigame(scene, "CookingScene", returnSceneKey);
+        launchStoryMinigame(scene, "CookingScene", returnSceneKey);
         return;
       case "playTank":
-        launchMinigame(scene, "TankScene", returnSceneKey);
+        launchStoryMinigame(scene, "TankScene", returnSceneKey);
         return;
       case "playQuiz":
-        launchMinigame(scene, "QuizScene", returnSceneKey);
+        launchStoryMinigame(scene, "QuizScene", returnSceneKey);
         return;
       case "playRunner":
-        launchMinigame(scene, "RunnerScene", returnSceneKey);
+        launchStoryMinigame(scene, "RunnerScene", returnSceneKey);
         return;
       case "playBusinessSmile":
-        launchMinigame(scene, "BusinessSmileScene", returnSceneKey);
+        launchStoryMinigame(scene, "BusinessSmileScene", returnSceneKey);
         return;
       case "playTyping":
-        launchMinigame(scene, "TypingScene", returnSceneKey);
+        launchStoryMinigame(scene, "TypingScene", returnSceneKey);
         return;
       case "playLotto":
-        launchMinigame(scene, "LottoScene", returnSceneKey);
+        launchStoryMinigame(scene, "LottoScene", returnSceneKey);
         return;
       case "playDontSmile":
-        launchMinigame(scene, "DontSmileScene", returnSceneKey);
+        launchStoryMinigame(scene, "DontSmileScene", returnSceneKey);
         return;
     }
   };

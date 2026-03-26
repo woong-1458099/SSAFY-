@@ -81,6 +81,12 @@
           "x": 500,
           "y": 480,
           "dialogueId": "npc_hyunseok"
+        },
+        {
+          "npcId": "minigame_npc",
+          "x": 1000,
+          "y": 259,
+          "dialogueId": "npc_minigame_npc"
         }
       ]
     },
