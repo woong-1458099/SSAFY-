@@ -3,7 +3,7 @@ import type { AreaId } from "../../../common/enums/area";
 import type { Rect, Vector2 } from "../../../common/types/geometry";
 import type { TmxAreaConfig } from "../../systems/tmxNavigation";
 import { CLASSROOM_BLOCKED_TILES, CLASSROOM_WALKABLE_TILES } from "./classroomCollisionPatch";
-import { WORLD_BLOCKED_TILES, WORLD_INTERACTION_TILES } from "./worldCollisionPatch";
+import { WORLD_BLOCKED_TILES } from "./worldCollisionPatch";
 
 export type AreaMapDefinition = {
   entryPoint?: Vector2;
@@ -97,8 +97,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
       interactionLayerNames: [...WORLD_TMX_LAYER_NAMES.interaction],
       foregroundLayerNames: [...WORLD_TMX_LAYER_NAMES.foreground],
       blockedTileZones: WORLD_BLOCKED_TILE_ZONES,
-      blockedTiles: WORLD_BLOCKED_TILES,
-      interactionTiles: WORLD_INTERACTION_TILES
+      blockedTiles: WORLD_BLOCKED_TILES
     },
     presentation: {
       backgroundKey: ASSET_KEYS.background.world,

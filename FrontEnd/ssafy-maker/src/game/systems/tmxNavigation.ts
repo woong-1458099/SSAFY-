@@ -203,6 +203,29 @@ export function applyInteractionTiles(
   return nextInteractionGrid;
 }
 
+function warnConflictingTileOverrides(
+  blockedTiles?: { x: number; y: number }[],
+  walkableTiles?: { x: number; y: number }[]
+) {
+  if (!blockedTiles || !walkableTiles || blockedTiles.length === 0 || walkableTiles.length === 0) {
+    return;
+  }
+
+  const blockedKeys = new Set(blockedTiles.map((tile) => `${tile.x},${tile.y}`));
+  const overlaps = walkableTiles.filter((tile) => blockedKeys.has(`${tile.x},${tile.y}`));
+
+  if (overlaps.length === 0) {
+    return;
+  }
+
+  console.warn(
+    `[TMX] Conflicting manual tile overrides detected for ${overlaps.length} tiles. ` +
+      `walkableTiles take precedence: ${overlaps
+        .map((tile) => `(${tile.x},${tile.y})`)
+        .join(", ")}`
+  );
+}
+
 function isParsedTmxTilesetRef(
   value: ParsedTmxTilesetRef | null
 ): value is ParsedTmxTilesetRef {
@@ -444,6 +467,7 @@ export function buildRuntimeGrids(
     parsedMap.height,
     resolvedLayers.collisionLayers
   );
+  warnConflictingTileOverrides(blockedTiles, walkableTiles);
   const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
   const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones);
   const blockedTilesAppliedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
