@@ -587,30 +587,32 @@ export class MainScene extends Phaser.Scene {
     const eventName = Phaser.Scenes.Events.RENDER;
 
     const handler = () => {
-      if (this.pendingInitialAreaRefreshRequestId !== requestId) {
-        return;
+      try {
+        if (this.pendingInitialAreaRefreshRequestId !== requestId) {
+          return;
+        }
+
+        if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
+          return;
+        }
+
+        const currentAreaId = this.worldManager?.getCurrentAreaId();
+        const currentPlayerSnapshot = this.playerManager?.getSnapshot();
+
+        if (
+          currentAreaId !== expectedAreaId ||
+          !currentPlayerSnapshot ||
+          !expectedPlayerSnapshot ||
+          currentPlayerSnapshot.tileX !== expectedPlayerSnapshot.tileX ||
+          currentPlayerSnapshot.tileY !== expectedPlayerSnapshot.tileY
+        ) {
+          return;
+        }
+
+        this.refreshCurrentAreaPresentation(expectedAreaId);
+      } finally {
+        this.finalizePendingInitialAreaRefresh(requestId);
       }
-
-      this.clearPendingInitialAreaRefresh();
-
-      if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
-        return;
-      }
-
-      const currentAreaId = this.worldManager?.getCurrentAreaId();
-      const currentPlayerSnapshot = this.playerManager?.getSnapshot();
-
-      if (
-        currentAreaId !== expectedAreaId ||
-        !currentPlayerSnapshot ||
-        !expectedPlayerSnapshot ||
-        currentPlayerSnapshot.tileX !== expectedPlayerSnapshot.tileX ||
-        currentPlayerSnapshot.tileY !== expectedPlayerSnapshot.tileY
-      ) {
-        return;
-      }
-
-      this.refreshCurrentAreaPresentation(expectedAreaId);
     };
 
     this.pendingInitialAreaRefreshEventName = eventName;
@@ -619,9 +621,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   private clearPendingInitialAreaRefresh(): void {
-    this.pendingInitialAreaRefreshRequestId += 1;
+    this.finalizePendingInitialAreaRefresh();
+  }
 
-    if (!this.pendingInitialAreaRefreshHandler) {
+  private finalizePendingInitialAreaRefresh(requestId?: number): void {
+    const activeRequestId = this.pendingInitialAreaRefreshRequestId;
+    if (requestId !== undefined && requestId !== activeRequestId) {
       return;
     }
 
@@ -631,6 +636,7 @@ export class MainScene extends Phaser.Scene {
 
     this.pendingInitialAreaRefreshHandler = undefined;
     this.pendingInitialAreaRefreshEventName = undefined;
+    this.pendingInitialAreaRefreshRequestId = activeRequestId + 1;
   }
 
   private syncAreaPresentationAfterRerender(
