@@ -58,7 +58,7 @@ app:
     public-base-url: ${KEYCLOAK_PUBLIC_BASE_URL:${KEYCLOAK_BASE_URL:http://localhost:8081}}
     internal-base-url: ${KEYCLOAK_INTERNAL_BASE_URL:${KEYCLOAK_BASE_URL:http://localhost:8081}}
     realm: ${KEYCLOAK_REALM:app}
-    client-id: ${KEYCLOAK_CLIENT_ID:ssafy-maker-prod}
+    client-id: ${KEYCLOAK_CLIENT_ID:ssafy-maker-bff}
     client-secret: ${KEYCLOAK_CLIENT_SECRET:}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
     admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}

@@ -1,5 +1,12 @@
 import { API_PREFIX, type ApiResponse } from "@features/auth/api";
 
+export class DeathDashboardUnavailableError extends Error {
+  constructor(message = "Death dashboard endpoint unavailable") {
+    super(message);
+    this.name = "DeathDashboardUnavailableError";
+  }
+}
+
 export interface DeathRecordEvent {
   id: string;
   userId: string;
@@ -29,6 +36,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     ...init
   });
   const raw = await response.text();
+  const contentType = response.headers.get("content-type") ?? "";
+  const normalizedRaw = raw.trimStart().toLowerCase();
+
+  if (
+    contentType.includes("text/html") ||
+    normalizedRaw.startsWith("<!doctype html") ||
+    normalizedRaw.startsWith("<html")
+  ) {
+    throw new DeathDashboardUnavailableError();
+  }
 
   let payload: ApiResponse<T>;
   try {
