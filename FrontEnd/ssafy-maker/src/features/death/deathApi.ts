@@ -4,7 +4,6 @@ export interface DeathRecordEvent {
   id: string;
   userId: string;
   username: string | null;
-  email: string;
   deathCountSnapshot: number;
   diedAt: string;
   areaId: string | null;
@@ -15,7 +14,6 @@ export interface DeathRecordEvent {
 export interface DeathRankingEntry {
   userId: string;
   username: string | null;
-  email: string;
   deathCount: number;
   lastDeathAt: string | null;
 }

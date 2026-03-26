@@ -9,6 +9,7 @@ import com.example.gameinfratest.service.DeathRecordService;
 import com.example.gameinfratest.service.DeathRecordVerificationService;
 import com.example.gameinfratest.service.UserService;
 import com.example.gameinfratest.support.ApiException;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
@@ -67,7 +68,7 @@ public class UserController {
     @PostMapping("/deaths")
     public ApiResponse<UserResponse> recordDeath(
             HttpServletRequest request,
-            @RequestBody(required = false) RecordDeathRequest body,
+            @Valid @RequestBody(required = false) RecordDeathRequest body,
             @RequestHeader(value = DEATH_RECORD_TOKEN_HEADER, required = false) String deathRecordToken
     ) {
         UserResponse currentUser = authorizationService.requireAuthenticatedSessionUser();

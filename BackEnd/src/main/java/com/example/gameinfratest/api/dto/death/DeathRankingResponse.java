@@ -7,7 +7,6 @@ import java.util.UUID;
 public record DeathRankingResponse(
         UUID userId,
         String username,
-        String email,
         int deathCount,
         Instant lastDeathAt
 ) {
@@ -15,7 +14,6 @@ public record DeathRankingResponse(
         return new DeathRankingResponse(
                 user.getId(),
                 user.getUsername(),
-                user.getEmail(),
                 user.getDeathCount(),
                 user.getLastDeathAt()
         );

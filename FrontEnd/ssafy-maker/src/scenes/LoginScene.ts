@@ -167,7 +167,7 @@ export class LoginScene extends Phaser.Scene {
           (entry) => `
             <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.14);">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                <strong style="color:#f4fbff;font-size:15px;">${this.getPlayerLabel(entry.username, entry.email)}</strong>
+                <strong style="color:#f4fbff;font-size:15px;">${this.getPlayerLabel(entry.username, entry.userId)}</strong>
                 <span style="color:#ffd2dc;font-size:12px;">${entry.deathCountSnapshot}회차</span>
               </div>
               <div style="margin-top:6px;color:#dbeaf2;font-size:13px;">${this.formatDashboardTimestamp(entry.diedAt)}</div>
@@ -194,7 +194,7 @@ export class LoginScene extends Phaser.Scene {
             <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.14);">
               <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:${index < 3 ? "rgba(108,231,255,0.14)" : "rgba(88,107,126,0.18)"};color:${index < 3 ? "#c9fbff" : "#c9d5de"};font-size:12px;">${index + 1}</span>
               <div style="min-width:0;">
-                <strong style="display:block;color:#f4fbff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.getPlayerLabel(entry.username, entry.email)}</strong>
+                <strong style="display:block;color:#f4fbff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.getPlayerLabel(entry.username, entry.userId)}</strong>
                 <span style="display:block;margin-top:4px;color:#b4c5d1;font-size:12px;">${
                   entry.lastDeathAt
                     ? `마지막 사망 ${this.formatDashboardTimestamp(entry.lastDeathAt)}`
@@ -441,13 +441,13 @@ export class LoginScene extends Phaser.Scene {
     }).format(date);
   }
 
-  private getPlayerLabel(username: string | null, email: string): string {
+  private getPlayerLabel(username: string | null, userId: string): string {
     const trimmedName = username?.trim();
     if (trimmedName) {
       return trimmedName;
     }
 
-    return email.split("@")[0] || email;
+    return `player-${userId.slice(0, 8)}`;
   }
 
   private getDeathContextLabel(
