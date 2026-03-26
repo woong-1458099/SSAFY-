@@ -403,21 +403,26 @@ export function buildRuntimeGrids(
     resolvedLayers.collisionLayers
   );
   const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
-  const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones);
-  const blockedTilesAppliedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
+  // walkable patch only relaxes base collision-derived blocking.
+  // Manual blocked zones / tiles remain the final authority.
   const walkablePatchGrid = buildBooleanGridFromLayers(
     parsedMap.width,
     parsedMap.height,
     resolvedLayers.walkableLayers
   );
-  const finalBlockedGrid = cloneBooleanGrid(blockedTilesAppliedGrid);
-  for (let y = 0; y < finalBlockedGrid.length; y += 1) {
-    for (let x = 0; x < (finalBlockedGrid[y]?.length ?? 0); x += 1) {
+  const walkableLayerAppliedBlockedGrid = cloneBooleanGrid(walkableAppliedBlockedGrid);
+  for (let y = 0; y < walkableLayerAppliedBlockedGrid.length; y += 1) {
+    for (let x = 0; x < (walkableLayerAppliedBlockedGrid[y]?.length ?? 0); x += 1) {
       if (walkablePatchGrid[y]?.[x]) {
-        finalBlockedGrid[y][x] = false;
+        walkableLayerAppliedBlockedGrid[y][x] = false;
       }
     }
   }
+  const zoneAppliedBlockedGrid = applyBlockedTileZones(
+    walkableLayerAppliedBlockedGrid,
+    blockedTileZones
+  );
+  const finalBlockedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
   const manualBlockedGrid = buildBooleanGridFromTiles(parsedMap.width, parsedMap.height, blockedTiles);
 
   return {
