@@ -49,7 +49,7 @@ public class UserController {
 
     @PostMapping("/deaths/token")
     public ApiResponse<DeathRecordTokenResponse> issueDeathRecordToken(HttpServletRequest request) {
-        UserResponse currentUser = authorizationService.requireAuthenticatedUser();
+        UserResponse currentUser = authorizationService.requireAuthenticatedSessionUser();
         HttpSession session = requireSession(request);
         return ApiResponse.ok(
                 "user death record token issue success",
@@ -62,7 +62,7 @@ public class UserController {
             HttpServletRequest request,
             @RequestHeader(value = DEATH_RECORD_TOKEN_HEADER, required = false) String deathRecordToken
     ) {
-        UserResponse currentUser = authorizationService.requireAuthenticatedUser();
+        UserResponse currentUser = authorizationService.requireAuthenticatedSessionUser();
         HttpSession session = requireSession(request);
         deathRecordVerificationService.verifyAndConsume(session, currentUser.id(), deathRecordToken);
         return ApiResponse.ok("user death count update success", userService.recordDeath(currentUser.id()));

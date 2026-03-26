@@ -36,6 +36,20 @@ public class AuthorizationService {
         throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "unsupported authentication principal");
     }
 
+    public UserResponse requireAuthenticatedSessionUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "authentication is required");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof BffSessionState sessionState) {
+            return userService.getCurrentUser(sessionState.user().id());
+        }
+
+        throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_AUTH_REQUIRED", "session authentication is required");
+    }
+
     public UserResponse requireUserAccess(UUID userId) {
         UserResponse currentUser = requireAuthenticatedUser();
         if (currentUser.id().equals(userId) || hasSystemAuthority()) {

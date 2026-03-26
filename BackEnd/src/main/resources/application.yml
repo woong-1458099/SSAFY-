@@ -66,3 +66,5 @@ app:
     death-record:
       cooldown: ${USER_DEATH_RECORD_COOLDOWN:3s}
       token-ttl: ${USER_DEATH_RECORD_TOKEN_TTL:30s}
+      max-failure-attempts: ${USER_DEATH_RECORD_MAX_FAILURE_ATTEMPTS:5}
+      failure-lockout: ${USER_DEATH_RECORD_FAILURE_LOCKOUT:30s}
