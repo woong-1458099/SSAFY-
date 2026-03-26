@@ -3,6 +3,7 @@ import type { AreaId } from "../../../common/enums/area";
 import type { Rect, Vector2 } from "../../../common/types/geometry";
 import type { TmxAreaConfig } from "../../systems/tmxNavigation";
 import { CLASSROOM_BLOCKED_TILES, CLASSROOM_WALKABLE_TILES } from "./classroomCollisionPatch";
+import { WORLD_BLOCKED_TILES, WORLD_INTERACTION_TILES } from "./worldCollisionPatch";
 
 export type AreaMapDefinition = {
   entryPoint?: Vector2;
@@ -14,6 +15,7 @@ export type AreaMapDefinition = {
   walkableTiles?: Vector2[];
   blockedTileZones?: Rect[];
   blockedTiles?: Vector2[];
+  interactionTiles?: Vector2[];
 };
 
 export type AreaBlockedOverlayDefinition = {
@@ -66,14 +68,7 @@ const CAMPUS_BLOCKED_TILE_ZONES: Rect[] = [
   { x: 28, y: 10, width: 4, height: 1 }
 ];
 
-const CAMPUS_BLOCKED_TILES: Vector2[] = [
-  { x: 23, y: 9 },
-  { x: 23, y: 10 },
-  { x: 24, y: 10 },
-  { x: 25, y: 10 },
-  { x: 26, y: 10 },
-  { x: 27, y: 10 }
-];
+const CAMPUS_BLOCKED_TILES: Vector2[] = [];
 
 const CAMPUS_VISUAL_DARK_TILES: Vector2[] = [
   { x: 24, y: 9 }
@@ -101,7 +96,9 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
       collisionLayerNames: [...WORLD_TMX_LAYER_NAMES.collision],
       interactionLayerNames: [...WORLD_TMX_LAYER_NAMES.interaction],
       foregroundLayerNames: [...WORLD_TMX_LAYER_NAMES.foreground],
-      blockedTileZones: WORLD_BLOCKED_TILE_ZONES
+      blockedTileZones: WORLD_BLOCKED_TILE_ZONES,
+      blockedTiles: WORLD_BLOCKED_TILES,
+      interactionTiles: WORLD_INTERACTION_TILES
     },
     presentation: {
       backgroundKey: ASSET_KEYS.background.world,

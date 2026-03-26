@@ -185,7 +185,8 @@ export class WorldManager {
       area.map.walkableTileZones,
       area.map.blockedTileZones,
       area.map.blockedTiles,
-      area.map.walkableTiles
+      area.map.walkableTiles,
+      area.map.interactionTiles
     );
   }
 

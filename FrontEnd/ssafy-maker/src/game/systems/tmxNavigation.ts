@@ -181,6 +181,28 @@ export function applyBlockedTiles(
   return nextBlockedGrid;
 }
 
+export function applyInteractionTiles(
+  interactionGrid: boolean[][],
+  interactionTiles?: { x: number; y: number }[]
+) {
+  if (!interactionTiles || interactionTiles.length === 0) {
+    return interactionGrid;
+  }
+
+  const nextInteractionGrid = cloneBooleanGrid(interactionGrid);
+
+  interactionTiles.forEach((tile) => {
+    const row = nextInteractionGrid[tile.y];
+    if (!row || tile.x < 0 || tile.x >= row.length) {
+      return;
+    }
+
+    row[tile.x] = true;
+  });
+
+  return nextInteractionGrid;
+}
+
 function isParsedTmxTilesetRef(
   value: ParsedTmxTilesetRef | null
 ): value is ParsedTmxTilesetRef {
@@ -414,7 +436,8 @@ export function buildRuntimeGrids(
   walkableTileZones?: { x: number; y: number; width: number; height: number }[],
   blockedTileZones?: { x: number; y: number; width: number; height: number }[],
   blockedTiles?: { x: number; y: number }[],
-  walkableTiles?: { x: number; y: number }[]
+  walkableTiles?: { x: number; y: number }[],
+  interactionTiles?: { x: number; y: number }[]
 ): TmxRuntimeGrids {
   const baseBlockedGrid = buildBooleanGridFromLayers(
     parsedMap.width,
@@ -429,10 +452,13 @@ export function buildRuntimeGrids(
 
   return {
     blockedGrid: finalBlockedGrid,
-    interactionGrid: buildBooleanGridFromLayers(
-      parsedMap.width,
-      parsedMap.height,
-      resolvedLayers.interactionLayers
+    interactionGrid: applyInteractionTiles(
+      buildBooleanGridFromLayers(
+        parsedMap.width,
+        parsedMap.height,
+        resolvedLayers.interactionLayers
+      ),
+      interactionTiles
     ),
     manualBlockedGrid
   };
