@@ -118,6 +118,7 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
+  private lastDialogueWeekMismatchKey?: string;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -181,7 +182,7 @@ export class MainScene extends Phaser.Scene {
           case "money":
             return hudState.money;
           case "week":
-            return hudState.week;
+            return this.resolveDialogueWeekMetric(hudState.week);
           case "playerGender":
             return typeof playerData?.gender === "string" ? playerData.gender.toUpperCase() : "";
           default:
@@ -1464,6 +1465,27 @@ export class MainScene extends Phaser.Scene {
       default:
         return "전체 지도";
     }
+  }
+
+  private resolveDialogueWeekMetric(hudWeek: number): number {
+    const progressionWeek = this.progressionManager?.getTimeState().week;
+    if (typeof progressionWeek !== "number") {
+      return hudWeek;
+    }
+
+    if (progressionWeek !== hudWeek) {
+      const mismatchKey = `${progressionWeek}:${hudWeek}`;
+      if (this.lastDialogueWeekMismatchKey !== mismatchKey) {
+        this.lastDialogueWeekMismatchKey = mismatchKey;
+        console.warn(
+          `[dialogue] week metric mismatch detected. progressionManager=${progressionWeek}, hud=${hudWeek}. Using progressionManager as source of truth.`
+        );
+      }
+    } else {
+      this.lastDialogueWeekMismatchKey = undefined;
+    }
+
+    return progressionWeek;
   }
 
   private buildEndingPayload(): EndingFlowPayload {
