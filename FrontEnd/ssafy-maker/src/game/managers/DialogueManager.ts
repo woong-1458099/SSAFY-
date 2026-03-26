@@ -364,6 +364,8 @@ export class DialogueManager {
     const label =
       req.stat === "hp"
         ? "HP"
+        : req.stat === "week"
+          ? "주차"
         : req.stat === "playerGender"
           ? "성별"
           : req.stat === "money"
@@ -376,9 +378,7 @@ export class DialogueManager {
                 ? "협업"
                 : req.stat === "luck"
                   ? "운"
-                  : req.stat === "week"
-                    ? "주차"
-                    : "스트레스";
+                  : "스트레스";
 
     if (typeof req.equals === "string") {
       return `${label} ${req.equals}`;

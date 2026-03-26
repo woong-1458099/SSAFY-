@@ -118,6 +118,11 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
+  private pendingDialogueWeekMismatch?: {
+    key: string;
+    frame: number;
+  };
+  private hasLoggedDialogueWeekMismatch = false;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -180,10 +185,10 @@ export class MainScene extends Phaser.Scene {
             return hudState.hp;
           case "money":
             return hudState.money;
+          case "week":
+            return this.resolveDialogueWeekMetric(hudState.week);
           case "playerGender":
             return typeof playerData?.gender === "string" ? playerData.gender.toUpperCase() : "";
-          case "week":
-            return this.progressionManager?.getTimeState().week ?? 1;
           default:
             return statsState[stat];
         }
@@ -1464,6 +1469,39 @@ export class MainScene extends Phaser.Scene {
       default:
         return "전체 지도";
     }
+  }
+
+  private resolveDialogueWeekMetric(hudWeek: number): number {
+    const progressionWeek = this.progressionManager?.getTimeState().week;
+    if (typeof progressionWeek !== "number") {
+      return hudWeek;
+    }
+
+    if (progressionWeek === hudWeek) {
+      this.pendingDialogueWeekMismatch = undefined;
+      return progressionWeek;
+    }
+
+    const mismatchKey = `${progressionWeek}:${hudWeek}`;
+    const currentFrame = this.game.getFrame();
+    const pendingMismatch = this.pendingDialogueWeekMismatch;
+
+    if (pendingMismatch?.key === mismatchKey && currentFrame > pendingMismatch.frame) {
+      if (import.meta.env.DEV && !this.hasLoggedDialogueWeekMismatch) {
+        this.hasLoggedDialogueWeekMismatch = true;
+        console.warn(
+          `[dialogue] week metric mismatch persisted across frames. progressionManager=${progressionWeek}, hud=${hudWeek}. Using progressionManager as source of truth.`
+        );
+      }
+      return progressionWeek;
+    }
+
+    this.pendingDialogueWeekMismatch = {
+      key: mismatchKey,
+      frame: currentFrame
+    };
+
+    return hudWeek;
   }
 
   private buildEndingPayload(): EndingFlowPayload {
