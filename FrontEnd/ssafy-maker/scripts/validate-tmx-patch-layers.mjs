@@ -79,14 +79,18 @@ function countCsvCells(csvText) {
 let hasError = false;
 
 TMX_TARGETS.forEach(({ file, requiredLayers }) => {
-  const absolutePath = path.resolve(file);
-  const xml = fs.readFileSync(absolutePath, "utf8");
-
   let map;
   try {
+    const absolutePath = path.resolve(file);
+    const xml = fs.readFileSync(absolutePath, "utf8");
     map = parseMap(xml, file);
   } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      message.startsWith("[validate-tmx-patch-layers]")
+        ? message
+        : `[validate-tmx-patch-layers] ${message}`
+    );
     hasError = true;
     return;
   }
