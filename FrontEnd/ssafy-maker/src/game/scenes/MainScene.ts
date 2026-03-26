@@ -631,6 +631,14 @@ export class MainScene extends Phaser.Scene {
 
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+    const transitionsVisible =
+      !menuOpen &&
+      !placePopupOpen &&
+      !plannerOpen &&
+      !dialoguePlaying &&
+      !debugHudVisible &&
+      !debugPanelVisible &&
+      !debugTileEditorVisible;
 
     this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible || debugTileEditorVisible);
     this.playerManager.setInputLocked(
@@ -709,6 +717,7 @@ export class MainScene extends Phaser.Scene {
       );
     }
 
+    this.events.emit("ui:setTransitionsVisible", transitionsVisible);
     this.events.emit("ui:renderTransitions", this.resolveAreaTransitionTargets(this.worldManager.getCurrentAreaId() ?? "world", renderBounds));
 
     const player = this.playerManager.getSnapshot();
