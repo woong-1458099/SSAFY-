@@ -84,8 +84,8 @@
         },
         {
           "npcId": "nayool",
-          "x": 976,
-          "y": 384,
+          "x": 1180,
+          "y": 480,
           "dialogueId": "npc_nayool"
         }
       ]
@@ -96,8 +96,8 @@
       "npcs": [
         {
           "npcId": "minigame_npc",
-          "x": 720,
-          "y": 480,
+          "x": 1020,
+          "y": 280,
           "dialogueId": "npc_minigame_npc"
         }
       ]

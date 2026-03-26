@@ -1097,7 +1097,10 @@ export class MainScene extends Phaser.Scene {
     pendingRestorePayload?: SavePayload
   ): SceneState | undefined {
     const defaultSceneState = normalizeSceneState(getSceneState(startScene.initialStateId));
-    const restoredSceneState = normalizeSceneState(pendingRestorePayload?.world?.sceneState);
+    const restoredSceneState = this.reconcileCanonicalNpcPlacements(
+      defaultSceneState,
+      normalizeSceneState(pendingRestorePayload?.world?.sceneState)
+    );
 
     if (!restoredSceneState) {
       return defaultSceneState;
@@ -1115,6 +1118,67 @@ export class MainScene extends Phaser.Scene {
       ...defaultSceneState,
       area: restoredSceneState.area ?? defaultSceneState.area,
       id: restoredSceneState.id ?? defaultSceneState.id
+    };
+  }
+
+  private reconcileCanonicalNpcPlacements(
+    defaultSceneState?: SceneState,
+    restoredSceneState?: SceneState
+  ): SceneState | undefined {
+    if (!defaultSceneState || !restoredSceneState) {
+      return restoredSceneState;
+    }
+
+    const canonicalNpcIds = new Set(["minigame_npc", "nayool"]);
+    const canonicalNpcById = new Map(
+      defaultSceneState.npcs
+        .filter((npc) => canonicalNpcIds.has(npc.npcId))
+        .map((npc) => [npc.npcId, npc] as const)
+    );
+
+    if (canonicalNpcById.size === 0) {
+      return restoredSceneState;
+    }
+
+    const restoredNpcById = new Map(
+      restoredSceneState.npcs.map((npc) => [npc.npcId, npc] as const)
+    );
+
+    const reconciledNpcs = restoredSceneState.npcs
+      .filter((npc) => {
+        if (!canonicalNpcIds.has(npc.npcId)) {
+          return true;
+        }
+
+        // 캠퍼스/교실 기본 roster에 없는 특수 NPC는 오래된 저장 데이터에서 제거한다.
+        return canonicalNpcById.has(npc.npcId);
+      })
+      .map((npc) => {
+        const canonicalNpc = canonicalNpcById.get(npc.npcId);
+        if (!canonicalNpc) {
+          return npc;
+        }
+
+        return {
+          ...npc,
+          x: canonicalNpc.x,
+          y: canonicalNpc.y,
+          facing: canonicalNpc.facing ?? npc.facing,
+          dialogueId: canonicalNpc.dialogueId
+        };
+      });
+
+    canonicalNpcById.forEach((canonicalNpc, npcId) => {
+      if (restoredNpcById.has(npcId)) {
+        return;
+      }
+
+      reconciledNpcs.push(canonicalNpc);
+    });
+
+    return {
+      ...restoredSceneState,
+      npcs: reconciledNpcs
     };
   }
 

@@ -347,17 +347,17 @@
     },
     {
       "id": "npc_nayool",
-      "label": "나율",
+      "label": "김나율 프로",
       "startNodeId": "intro",
       "nodes": {
         "intro": {
           "id": "intro",
-          "speaker": "나율",
+          "speaker": "김나율 프로",
           "text": "부탁할 게 있다구? 말만해!",
           "choices": [
             {
               "id": "bye",
-              "text": "응, 나도 조금 쉬다 갈게."
+              "text": "고마워, 필요하면 부탁할게."
             }
           ]
         }
