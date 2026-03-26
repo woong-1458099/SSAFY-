@@ -25,7 +25,8 @@ import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../feature
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
 import type { EndingId } from "../../features/progression/types/ending";
 import { resolveEnding } from "../../features/progression/services/endingResolver";
-import { beginLogout, clearAuthRegistry, clearStoredSession } from "../../features/auth/authSession";
+import { issueDeathRecordToken, recordCurrentUserDeath } from "../../features/auth/api";
+import { beginLogout, clearAuthRegistry, clearStoredSession, patchStoredSessionUser, readStoredSession } from "../../features/auth/authSession";
 import { SceneKey } from "../../shared/enums/sceneKey";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
@@ -52,6 +53,7 @@ import { PlayerManager } from "../managers/PlayerManager";
 import { StatSystemManager } from "../managers/StatSystemManager";
 import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
+import type { HudState } from "../state/gameState";
 import { InGameUIScene } from "./InGameUIScene";
 import type { SceneId } from "../scripts/scenes/sceneIds";
 import { playPlaceBgm, playWorldBgm, createSkyBackground, createCampusBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
@@ -121,6 +123,8 @@ export class MainScene extends Phaser.Scene {
   private pendingInitialAreaRefreshHandler?: () => void;
   private pendingInitialAreaRefreshEventName?: string;
   private pendingInitialAreaRefreshRequestId = 0;
+  private deathSequenceActive = false;
+  private pendingDeathSceneExit?: Phaser.Time.TimerEvent;
   private pendingDialogueWeekMismatch?: {
     key: string;
     frame: number;
@@ -133,6 +137,9 @@ export class MainScene extends Phaser.Scene {
   async create() {
     this.initialized = false;
     this.logoutInProgress = false;
+    this.deathSequenceActive = false;
+    this.pendingDeathSceneExit?.remove(false);
+    this.pendingDeathSceneExit = undefined;
     this.clearPendingInitialAreaRefresh();
     this.cameras.main.setRoundPixels(true);
     await ensureAuthoredStoryLoaded(this);
@@ -212,7 +219,7 @@ export class MainScene extends Phaser.Scene {
       
     });
     this.statSystemManager.attachHud({
-      applyState: (patch) => this.events.emit("ui:patchHud", patch)
+      applyState: (patch) => this.handleHudStateApplied(patch)
     });
     this.progressionManager = new ProgressionManager({
       scene: this,
@@ -429,6 +436,9 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.clearPendingInitialAreaRefresh();
+      this.pendingDeathSceneExit?.remove(false);
+      this.pendingDeathSceneExit = undefined;
+      this.deathSequenceActive = false;
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
       this.destroySkyBackground?.();
@@ -525,6 +535,69 @@ export class MainScene extends Phaser.Scene {
 
   private handleResize(): void {
     this.layoutBrightnessOverlay();
+  }
+
+  private handleHudStateApplied(hudState: Partial<HudState>): void {
+    this.events.emit("ui:patchHud", hudState);
+    if (typeof hudState.hp === "number") {
+      this.maybeTriggerPlayerDeath(hudState.hp);
+    }
+  }
+
+  private maybeTriggerPlayerDeath(hp: number): void {
+    if (!this.initialized || this.deathSequenceActive || hp > 0) {
+      return;
+    }
+
+    this.deathSequenceActive = true;
+    this.pendingDeathSceneExit?.remove(false);
+    this.pendingDeathSceneExit = undefined;
+    this.clearPendingInitialAreaRefresh();
+    this.events.emit("ui:closeMenu");
+    this.events.emit("ui:closePlaceAction");
+    this.events.emit("ui:setInteractionPrompt", null);
+    if (this.progressionManager?.isPlannerOpen()) {
+      this.progressionManager.togglePlanner();
+    }
+    this.events.emit("ui:showDeathOverlay", {
+      title: "WASTED",
+      subtitle: "HP가 모두 소진되었습니다."
+    });
+    void this.recordCurrentUserDeathIfAvailable();
+
+    this.pendingDeathSceneExit = this.time.delayedCall(1800, () => {
+      this.pendingDeathSceneExit = undefined;
+      if (!this.sys.isActive()) {
+        return;
+      }
+
+      this.clearPendingInitialAreaRefresh();
+      this.scene.start(SceneKey.Start);
+    });
+  }
+
+  private async recordCurrentUserDeathIfAvailable(): Promise<void> {
+    const session = readStoredSession();
+    if (!session || this.registry.get("authToken") !== "bff-session") {
+      return;
+    }
+
+    try {
+      const { token } = await issueDeathRecordToken();
+      const updatedUser = await recordCurrentUserDeath(token, {
+        areaId: this.worldManager?.getCurrentAreaId(),
+        sceneId: this.currentSceneId,
+        cause: "HP_ZERO"
+      });
+      patchStoredSessionUser(updatedUser);
+      this.registry.set("authUser", {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        nickname: updatedUser.username?.trim() || updatedUser.email.split("@")[0]?.slice(0, 8) || "player"
+      });
+    } catch (error) {
+      console.error("[MainScene] failed to record player death", error);
+    }
   }
 
   private ensureBrightnessOverlay(): void {
@@ -850,23 +923,41 @@ export class MainScene extends Phaser.Scene {
 
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+    const deathSequenceActive = this.deathSequenceActive;
     const transitionsVisible =
       !menuOpen &&
       !placePopupOpen &&
       !plannerOpen &&
       !dialoguePlaying &&
+      !deathSequenceActive &&
       !debugHudVisible &&
       !debugPanelVisible &&
       !debugTileEditorVisible;
 
-    this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible || debugTileEditorVisible);
+    this.interactionManager.setOverlayBlocked(
+      menuOpen ||
+        placePopupOpen ||
+        plannerOpen ||
+        deathSequenceActive ||
+        debugHudVisible ||
+        debugPanelVisible ||
+        debugTileEditorVisible
+    );
     this.playerManager.setInputLocked(
-      this.interactionManager.isInputLocked() || debugHudVisible || debugPanelVisible || debugTileEditorVisible || menuOpen || placePopupOpen || plannerOpen
+      this.interactionManager.isInputLocked() ||
+        deathSequenceActive ||
+        debugHudVisible ||
+        debugPanelVisible ||
+        debugTileEditorVisible ||
+        menuOpen ||
+        placePopupOpen ||
+        plannerOpen
     );
 
     if (
       this.escapeKey &&
       Phaser.Input.Keyboard.JustDown(this.escapeKey) &&
+      !deathSequenceActive &&
       !dialoguePlaying &&
       !plannerOpen
     ) {
@@ -888,6 +979,7 @@ export class MainScene extends Phaser.Scene {
     if (
       this.plannerKey &&
       Phaser.Input.Keyboard.JustDown(this.plannerKey) &&
+      !deathSequenceActive &&
       !dialoguePlaying &&
       !menuOpen &&
       !placePopupOpen &&
@@ -994,8 +1086,19 @@ export class MainScene extends Phaser.Scene {
     const placePopupOpen = this.uiScene?.isPlaceActionOpen() === true;
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+    const deathSequenceActive = this.deathSequenceActive;
 
-    this.events.emit("ui:setGuideVisible", !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible && !debugTileEditorVisible);
+    this.events.emit(
+      "ui:setGuideVisible",
+      !menuOpen &&
+        !placePopupOpen &&
+        !plannerOpen &&
+        !dialoguePlaying &&
+        !deathSequenceActive &&
+        !debugHudVisible &&
+        !debugPanelVisible &&
+        !debugTileEditorVisible
+    );
 
     const tutorialProgress = this.registry.get("tutorialProgress");
     if (tutorialProgress && !tutorialProgress.completedAt) {
