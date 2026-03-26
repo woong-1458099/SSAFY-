@@ -57,10 +57,13 @@ export class InGameUIScene extends Phaser.Scene {
   private readonly onClosePlaceAction = () => this.placeActionManager?.close();
   private readonly onRenderTransitions = (targets: any[]) => this.areaTransitionOverlay?.render(targets);
   private readonly onSetTransitionsVisible = (visible: boolean) => this.areaTransitionOverlay?.setVisible(visible);
+  private readonly onSetInteractionPrompt = (msg: string | null) => this.hud?.setInteractionPrompt(msg);
   private readonly onStartTutorial = (options: { onComplete: () => void }) => {
+    if (!this.mainScene) return;
     this.tutorialManager?.destroy();
     this.tutorialManager = new TutorialManager({
       scene: this,
+      gameEvents: this.mainScene.events,
       onComplete: options.onComplete
     });
     this.tutorialManager.start();
@@ -108,7 +111,8 @@ export class InGameUIScene extends Phaser.Scene {
       onAdjustSfxVolume: data.adjustSfxVolume,
       onToggleSfx: data.toggleSfxEnabled,
       onAdjustBrightness: data.adjustBrightness,
-      onLogout: data.handleLogout
+      onLogout: data.handleLogout,
+      gameEvents: data.mainScene.events
     });
 
     // 4. Place Action Manager
@@ -147,6 +151,7 @@ export class InGameUIScene extends Phaser.Scene {
     this.mainScene.events.on("ui:closePlaceAction", this.onClosePlaceAction);
     this.mainScene.events.on("ui:setTransitionsVisible", this.onSetTransitionsVisible);
     this.mainScene.events.on("ui:renderTransitions", this.onRenderTransitions);
+    this.mainScene.events.on("ui:setInteractionPrompt", this.onSetInteractionPrompt);
     this.mainScene.events.on("ui:startTutorial", this.onStartTutorial);
   }
 
@@ -167,6 +172,7 @@ export class InGameUIScene extends Phaser.Scene {
     this.mainScene.events.off("ui:closePlaceAction", this.onClosePlaceAction);
     this.mainScene.events.off("ui:setTransitionsVisible", this.onSetTransitionsVisible);
     this.mainScene.events.off("ui:renderTransitions", this.onRenderTransitions);
+    this.mainScene.events.off("ui:setInteractionPrompt", this.onSetInteractionPrompt);
     this.mainScene.events.off("ui:startTutorial", this.onStartTutorial);
   }
 

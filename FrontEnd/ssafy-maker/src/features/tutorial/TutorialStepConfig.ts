@@ -33,7 +33,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   // Phase 2: Interaction Mechanics
   {
     id: "npcInteraction",
-    message: "SSAFY 생활에서 표정 관리는 필수입니다!\nNPC 근처에서 SPACE 키를 눌러 비즈니스 미소 훈련을 해보세요.",
+    message: "SSAFY 생활에서 표정 관리는 필수입니다!\nNPC 근처에서 SPACE 키를 눌러 웃음참기 훈련을 해보세요.",
     hint: "SPACE",
     highlightTarget: "nearestNpc",
     completionType: "npcInteraction"
