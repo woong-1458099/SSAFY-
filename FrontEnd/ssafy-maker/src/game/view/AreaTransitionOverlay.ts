@@ -28,8 +28,19 @@ type TransitionView = {
 // 전이 포인트를 포탈 느낌의 직관적인 UI로 표시한다.
 export class AreaTransitionOverlay {
   private views = new Map<AreaTransitionId, TransitionView>();
+  private isVisible = true;
 
   constructor(private scene: Phaser.Scene) {}
+
+  setVisible(visible: boolean) {
+    this.isVisible = visible;
+
+    for (const view of this.views.values()) {
+      view.zone.setVisible(visible);
+      view.label.setVisible(visible);
+      view.arrow.setVisible(visible);
+    }
+  }
 
   render(targets: RuntimeAreaTransitionTarget[], activeId?: AreaTransitionId) {
     const visibleIds = new Set(targets.map((target) => target.id));
@@ -55,9 +66,9 @@ export class AreaTransitionOverlay {
       view.label.setAlpha(isActive ? 1 : 0.85);
       view.arrow.setPosition(target.centerX, target.centerY);
       view.arrow.setAlpha(isActive ? 1 : 0.7);
-      view.zone.setVisible(true);
-      view.label.setVisible(true);
-      view.arrow.setVisible(true);
+      view.zone.setVisible(this.isVisible);
+      view.label.setVisible(this.isVisible);
+      view.arrow.setVisible(this.isVisible);
     });
   }
 

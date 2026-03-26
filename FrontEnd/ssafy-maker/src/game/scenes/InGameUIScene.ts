@@ -56,6 +56,7 @@ export class InGameUIScene extends Phaser.Scene {
   private readonly onOpenPlaceAction = (placeId: PlaceId) => this.placeActionManager?.open(placeId);
   private readonly onClosePlaceAction = () => this.placeActionManager?.close();
   private readonly onRenderTransitions = (targets: any[]) => this.areaTransitionOverlay?.render(targets);
+  private readonly onSetTransitionsVisible = (visible: boolean) => this.areaTransitionOverlay?.setVisible(visible);
   private readonly onStartTutorial = (options: { onComplete: () => void }) => {
     this.tutorialManager?.destroy();
     this.tutorialManager = new TutorialManager({
@@ -144,6 +145,7 @@ export class InGameUIScene extends Phaser.Scene {
     this.mainScene.events.on("ui:refreshInventory", this.onRefreshInventory);
     this.mainScene.events.on("ui:openPlaceAction", this.onOpenPlaceAction);
     this.mainScene.events.on("ui:closePlaceAction", this.onClosePlaceAction);
+    this.mainScene.events.on("ui:setTransitionsVisible", this.onSetTransitionsVisible);
     this.mainScene.events.on("ui:renderTransitions", this.onRenderTransitions);
     this.mainScene.events.on("ui:startTutorial", this.onStartTutorial);
   }
@@ -163,6 +165,7 @@ export class InGameUIScene extends Phaser.Scene {
     this.mainScene.events.off("ui:refreshInventory", this.onRefreshInventory);
     this.mainScene.events.off("ui:openPlaceAction", this.onOpenPlaceAction);
     this.mainScene.events.off("ui:closePlaceAction", this.onClosePlaceAction);
+    this.mainScene.events.off("ui:setTransitionsVisible", this.onSetTransitionsVisible);
     this.mainScene.events.off("ui:renderTransitions", this.onRenderTransitions);
     this.mainScene.events.off("ui:startTutorial", this.onStartTutorial);
   }
