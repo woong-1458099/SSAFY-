@@ -131,6 +131,7 @@ export class MainScene extends Phaser.Scene {
   async create() {
     this.initialized = false;
     this.logoutInProgress = false;
+    this.clearPendingInitialAreaRefresh();
     this.cameras.main.setRoundPixels(true);
     await ensureAuthoredStoryLoaded(this);
     this.debugLogger = new DebugEventLogger();
@@ -640,9 +641,12 @@ export class MainScene extends Phaser.Scene {
       runtimeGrids
     );
 
+    this.interactionManager.setArea(areaId);
+    this.interactionManager.setSceneState(this.currentSceneState);
     this.currentStaticPlaceTargets = staticPlaceTargets;
     this.interactionManager.setTransitionTargets(transitionTargets);
     this.interactionManager.setStaticPlaceTargets(staticPlaceTargets);
+    this.resyncHudLocationLabel(areaId);
     this.syncDebugWorldState();
     this.applyBrightnessOverlay();
 
