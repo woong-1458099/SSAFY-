@@ -19,6 +19,8 @@ export interface UISceneData {
   patchHudState: (next: Partial<HudState>) => void;
   getStatsState: () => PlayerStatsState;
   applyStatDelta: (delta: Partial<Record<PlayerStatKey, number>>, multiplier?: 1 | -1) => void;
+  incrementGamePlayCount: () => void;
+  patchEndingProgress: (next: { lottoRank?: number | null }) => void;
   inventoryService: any;
   saveService: any;
   audioManager: any;
@@ -33,6 +35,7 @@ export interface UISceneData {
   adjustSfxVolume: (delta: number) => void;
   toggleSfxEnabled: () => void;
   adjustBrightness: (delta: number) => void;
+  startLottoEndingFlow: () => void;
 }
 
 export class InGameUIScene extends Phaser.Scene {
@@ -130,12 +133,15 @@ export class InGameUIScene extends Phaser.Scene {
       getHudState: data.getHudState,
       patchHudState: data.patchHudState,
       applyStatDelta: data.applyStatDelta,
+      incrementGamePlayCount: data.incrementGamePlayCount,
+      patchEndingProgress: data.patchEndingProgress,
       inventoryService: data.inventoryService,
       getTimeCycleIndex: () => data.progressionManager.getTimeCycleIndex(),
       getActionPoint: () => data.progressionManager.getActionPoint(),
       getMaxActionPoint: () => data.progressionManager.getMaxActionPoint(),
       tryConsumeActionPoint: () => data.progressionManager.tryConsumeActionPoint({ notifyOnFailure: false }),
-      onHomeTimeAdvanced: () => data.storyEventManager.requestFixedEventTrigger("home")
+      onHomeTimeAdvanced: () => data.storyEventManager.requestFixedEventTrigger("home"),
+      onLottoJackpot: data.startLottoEndingFlow
     });
     
     this.setupEventListeners();
