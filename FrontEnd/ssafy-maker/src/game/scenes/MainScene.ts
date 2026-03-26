@@ -180,6 +180,8 @@ export class MainScene extends Phaser.Scene {
             return hudState.hp;
           case "money":
             return hudState.money;
+          case "week":
+            return hudState.week;
           case "playerGender":
             return typeof playerData?.gender === "string" ? playerData.gender.toUpperCase() : "";
           default:

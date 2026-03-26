@@ -10,6 +10,7 @@ export const DIALOGUE_REQUIREMENT_STAT_KEYS = [
   "stress",
   "hp",
   "money",
+  "week",
   "playerGender"
 ] as const;
 

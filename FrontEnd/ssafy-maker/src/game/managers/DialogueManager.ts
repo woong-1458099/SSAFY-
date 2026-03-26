@@ -348,6 +348,8 @@ export class DialogueManager {
     const label =
       req.stat === "hp"
         ? "HP"
+        : req.stat === "week"
+          ? "주차"
         : req.stat === "playerGender"
           ? "성별"
           : req.stat === "money"

@@ -173,7 +173,7 @@
       "properties": {
         "stat": {
           "type": "string",
-          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "money", "playerGender"]
+          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "money", "week", "playerGender"]
         },
         "equals": {
           "type": "string"
