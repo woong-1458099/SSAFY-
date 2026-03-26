@@ -11,6 +11,7 @@ import type { PlaceId } from "../../common/enums/area";
 import type { HudState, PlayerStatsState, PlayerStatKey } from "../state/gameState";
 import type { SavePayload } from "../../features/save/SaveService";
 import type { SettingsPageState } from "../../features/menu/components/tabPages";
+import { UI_DEPTH } from "../systems/uiDepth";
 
 export interface UISceneData {
   mainScene: Phaser.Scene;
@@ -42,6 +43,10 @@ export class InGameUIScene extends Phaser.Scene {
   private hud?: GameHud;
   private gameGuide?: GameGuideUI;
   private dialogueBox?: DialogueBox;
+  private deathOverlay?: Phaser.GameObjects.Container;
+  private deathOverlayBackdrop?: Phaser.GameObjects.Rectangle;
+  private deathOverlayTitle?: Phaser.GameObjects.Text;
+  private deathOverlaySubtitle?: Phaser.GameObjects.Text;
   private menuManager?: InGameMenuManager;
   private placeActionManager?: PlaceActionManager;
   private areaTransitionOverlay?: AreaTransitionOverlay;
@@ -61,6 +66,8 @@ export class InGameUIScene extends Phaser.Scene {
   private readonly onRenderTransitions = (targets: any[]) => this.areaTransitionOverlay?.render(targets);
   private readonly onSetTransitionsVisible = (visible: boolean) => this.areaTransitionOverlay?.setVisible(visible);
   private readonly onSetInteractionPrompt = (msg: string | null) => this.hud?.setInteractionPrompt(msg);
+  private readonly onShowDeathOverlay = (payload?: { title?: string; subtitle?: string }) =>
+    this.showDeathOverlay(payload?.title, payload?.subtitle);
   private readonly onStartTutorial = (options: { onComplete: () => void }) => {
     if (!this.mainScene) return;
     this.tutorialManager?.destroy();
@@ -90,6 +97,7 @@ export class InGameUIScene extends Phaser.Scene {
     // 2. Dialogue & Overlay
     this.dialogueBox = new DialogueBox(this);
     this.areaTransitionOverlay = new AreaTransitionOverlay(this);
+    this.createDeathOverlay();
     
     // 3. Menu Manager
     this.menuManager = new InGameMenuManager({
@@ -158,6 +166,7 @@ export class InGameUIScene extends Phaser.Scene {
     this.mainScene.events.on("ui:setTransitionsVisible", this.onSetTransitionsVisible);
     this.mainScene.events.on("ui:renderTransitions", this.onRenderTransitions);
     this.mainScene.events.on("ui:setInteractionPrompt", this.onSetInteractionPrompt);
+    this.mainScene.events.on("ui:showDeathOverlay", this.onShowDeathOverlay);
     this.mainScene.events.on("ui:startTutorial", this.onStartTutorial);
   }
 
@@ -179,6 +188,7 @@ export class InGameUIScene extends Phaser.Scene {
     this.mainScene.events.off("ui:setTransitionsVisible", this.onSetTransitionsVisible);
     this.mainScene.events.off("ui:renderTransitions", this.onRenderTransitions);
     this.mainScene.events.off("ui:setInteractionPrompt", this.onSetInteractionPrompt);
+    this.mainScene.events.off("ui:showDeathOverlay", this.onShowDeathOverlay);
     this.mainScene.events.off("ui:startTutorial", this.onStartTutorial);
   }
 
@@ -192,6 +202,7 @@ export class InGameUIScene extends Phaser.Scene {
     this.hud?.destroy();
     this.gameGuide?.destroy();
     this.dialogueBox?.destroy();
+    this.deathOverlay?.destroy(true);
     this.menuManager?.destroy();
     this.placeActionManager?.destroy();
     this.areaTransitionOverlay?.destroy();
@@ -199,11 +210,85 @@ export class InGameUIScene extends Phaser.Scene {
     this.hud = undefined;
     this.gameGuide = undefined;
     this.dialogueBox = undefined;
+    this.deathOverlay = undefined;
+    this.deathOverlayBackdrop = undefined;
+    this.deathOverlayTitle = undefined;
+    this.deathOverlaySubtitle = undefined;
     this.menuManager = undefined;
     this.placeActionManager = undefined;
     this.areaTransitionOverlay = undefined;
     this.tutorialManager = undefined;
     this.mainScene = undefined;
+  }
+
+  private createDeathOverlay(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const backdrop = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x08070a, 0.72)
+      .setDepth(UI_DEPTH.debugPanel + 200)
+      .setScrollFactor(0)
+      .setVisible(false)
+      .setAlpha(0);
+    const title = this.add
+      .text(width / 2, height / 2 - 12, "WASTED", {
+        fontFamily: "'PFStardustBold','Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif",
+        fontSize: "74px",
+        color: "#d94b5d",
+        stroke: "#14060a",
+        strokeThickness: 10
+      })
+      .setOrigin(0.5)
+      .setDepth(UI_DEPTH.debugPanel + 201)
+      .setScrollFactor(0)
+      .setVisible(false)
+      .setAlpha(0);
+    const subtitle = this.add
+      .text(width / 2, height / 2 + 46, "HP가 모두 소진되었습니다.", {
+        fontFamily: "'PFStardustBold','Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif",
+        fontSize: "22px",
+        color: "#f5d7db"
+      })
+      .setOrigin(0.5)
+      .setDepth(UI_DEPTH.debugPanel + 201)
+      .setScrollFactor(0)
+      .setVisible(false)
+      .setAlpha(0);
+
+    this.deathOverlay = this.add.container(0, 0, [backdrop, title, subtitle]).setScrollFactor(0);
+    this.deathOverlay.setVisible(false);
+    this.deathOverlayBackdrop = backdrop;
+    this.deathOverlayTitle = title;
+    this.deathOverlaySubtitle = subtitle;
+  }
+
+  private showDeathOverlay(title = "WASTED", subtitle = "HP가 모두 소진되었습니다."): void {
+    if (!this.deathOverlay || !this.deathOverlayBackdrop || !this.deathOverlayTitle || !this.deathOverlaySubtitle) {
+      return;
+    }
+
+    this.tweens.killTweensOf([
+      this.deathOverlayBackdrop,
+      this.deathOverlayTitle,
+      this.deathOverlaySubtitle
+    ]);
+    this.deathOverlay.setVisible(true);
+    this.deathOverlayBackdrop.setVisible(true).setAlpha(0);
+    this.deathOverlayTitle.setVisible(true).setAlpha(0);
+    this.deathOverlaySubtitle.setVisible(true).setAlpha(0);
+    this.deathOverlayTitle.setText(title);
+    this.deathOverlaySubtitle.setText(subtitle);
+
+    this.tweens.add({
+      targets: [
+        this.deathOverlayBackdrop,
+        this.deathOverlayTitle,
+        this.deathOverlaySubtitle
+      ],
+      alpha: 1,
+      duration: 220,
+      ease: "Quad.Out"
+    });
   }
 
   public isMenuOpen() { return this.menuManager?.isOpen() ?? false; }

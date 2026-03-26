@@ -25,7 +25,8 @@ import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../feature
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
 import type { EndingId } from "../../features/progression/types/ending";
 import { resolveEnding } from "../../features/progression/services/endingResolver";
-import { beginLogout, clearAuthRegistry, clearStoredSession } from "../../features/auth/authSession";
+import { issueDeathRecordToken, recordCurrentUserDeath } from "../../features/auth/api";
+import { beginLogout, clearAuthRegistry, clearStoredSession, patchStoredSessionUser, readStoredSession } from "../../features/auth/authSession";
 import { SceneKey } from "../../shared/enums/sceneKey";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
@@ -52,8 +53,9 @@ import { PlayerManager } from "../managers/PlayerManager";
 import { StatSystemManager } from "../managers/StatSystemManager";
 import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
+import type { HudState } from "../state/gameState";
 import { InGameUIScene } from "./InGameUIScene";
-import type { SceneId } from "../scripts/scenes/sceneIds";
+import { SCENE_IDS, type SceneId } from "../scripts/scenes/sceneIds";
 import { playPlaceBgm, playWorldBgm, createSkyBackground, createCampusBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
 import {
   DEFAULT_START_SCENE_ID,
@@ -118,7 +120,6 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
-  private endingFlowRequested = false;
   private pendingDialogueWeekMismatch?: {
     key: string;
     frame: number;
@@ -131,7 +132,6 @@ export class MainScene extends Phaser.Scene {
   async create() {
     this.initialized = false;
     this.logoutInProgress = false;
-    this.endingFlowRequested = false;
     await ensureAuthoredStoryLoaded(this);
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
@@ -209,7 +209,7 @@ export class MainScene extends Phaser.Scene {
       
     });
     this.statSystemManager.attachHud({
-      applyState: (patch) => this.events.emit("ui:patchHud", patch)
+      applyState: (patch) => this.handleHudStateApplied(patch)
     });
     this.progressionManager = new ProgressionManager({
       scene: this,
@@ -438,6 +438,10 @@ export class MainScene extends Phaser.Scene {
       this.progressionManager?.destroy();
       this.storyEventManager?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+      this.clearPendingInitialAreaRefresh();
+      this.pendingDeathSceneExit?.remove(false);
+      this.pendingDeathSceneExit = undefined;
+      this.deathSequenceActive = false;
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
       this.destroySkyBackground?.();
@@ -502,6 +506,10 @@ export class MainScene extends Phaser.Scene {
         this.time.delayedCall(200, startTutorial);
       }
     }
+
+    // 첫 진입 직후 한 프레임 뒤에 현재 맵을 같은 좌표계로 다시 맞춘다.
+    // 다른 맵을 갔다 돌아오면 정상화되던 초기 렌더 불안정을 여기서 흡수한다.
+    this.queueInitialAreaRefresh(currentArea, this.playerManager.getSnapshot());
   }
 
   private async handleLogout(): Promise<void> {
@@ -523,12 +531,76 @@ export class MainScene extends Phaser.Scene {
       this.registry.remove(MainScene.PENDING_RESTORE_PAYLOAD_KEY);
       this.registry.remove(MainScene.PENDING_START_TILE_KEY);
       this.registry.remove("startSceneId");
+      this.clearPendingInitialAreaRefresh();
       this.scene.start(SceneKey.Login);
     }
   }
 
   private handleResize(): void {
     this.layoutBrightnessOverlay();
+  }
+
+  private handleHudStateApplied(hudState: Partial<HudState>): void {
+    this.events.emit("ui:patchHud", hudState);
+    if (typeof hudState.hp === "number") {
+      this.maybeTriggerPlayerDeath(hudState.hp);
+    }
+  }
+
+  private maybeTriggerPlayerDeath(hp: number): void {
+    if (!this.initialized || this.deathSequenceActive || hp > 0) {
+      return;
+    }
+
+    this.deathSequenceActive = true;
+    this.pendingDeathSceneExit?.remove(false);
+    this.pendingDeathSceneExit = undefined;
+    this.clearPendingInitialAreaRefresh();
+    this.events.emit("ui:closeMenu");
+    this.events.emit("ui:closePlaceAction");
+    this.events.emit("ui:setInteractionPrompt", null);
+    if (this.progressionManager?.isPlannerOpen()) {
+      this.progressionManager.togglePlanner();
+    }
+    this.events.emit("ui:showDeathOverlay", {
+      title: "WASTED",
+      subtitle: "HP가 모두 소진되었습니다."
+    });
+    void this.recordCurrentUserDeathIfAvailable();
+
+    this.pendingDeathSceneExit = this.time.delayedCall(1800, () => {
+      this.pendingDeathSceneExit = undefined;
+      if (!this.sys.isActive()) {
+        return;
+      }
+
+      this.clearPendingInitialAreaRefresh();
+      this.scene.start(SceneKey.Start);
+    });
+  }
+
+  private async recordCurrentUserDeathIfAvailable(): Promise<void> {
+    const session = readStoredSession();
+    if (!session || this.registry.get("authToken") !== "bff-session") {
+      return;
+    }
+
+    try {
+      const { token } = await issueDeathRecordToken();
+      const updatedUser = await recordCurrentUserDeath(token, {
+        areaId: this.worldManager?.getCurrentAreaId(),
+        sceneId: this.currentSceneId,
+        cause: "HP_ZERO"
+      });
+      patchStoredSessionUser(updatedUser);
+      this.registry.set("authUser", {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        nickname: updatedUser.username?.trim() || updatedUser.email.split("@")[0]?.slice(0, 8) || "player"
+      });
+    } catch (error) {
+      console.error("[MainScene] failed to record player death", error);
+    }
   }
 
   private ensureBrightnessOverlay(): void {
@@ -563,6 +635,202 @@ export class MainScene extends Phaser.Scene {
     const overlayAlpha = Phaser.Math.Clamp(1 - brightness, 0, 0.45);
     this.brightnessOverlay.setAlpha(overlayAlpha);
     this.brightnessOverlay.setVisible(overlayAlpha > 0.001);
+  }
+
+  private refreshCurrentAreaPresentation(
+    expectedAreaId?: AreaId,
+    expectedPlayerSnapshot?: { tileX: number; tileY: number },
+    requestId?: number
+  ): void {
+    if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
+      return;
+    }
+
+    if (requestId !== undefined && this.pendingInitialAreaRefreshRequestId !== requestId) {
+      return;
+    }
+
+    const areaId = this.worldManager.getCurrentAreaId();
+    if (!areaId || (expectedAreaId && areaId !== expectedAreaId)) {
+      return;
+    }
+
+    const playerSnapshot = this.playerManager.getSnapshot();
+    if (!playerSnapshot) {
+      return;
+    }
+
+    if (
+      expectedPlayerSnapshot &&
+      (
+        playerSnapshot.tileX !== expectedPlayerSnapshot.tileX ||
+        playerSnapshot.tileY !== expectedPlayerSnapshot.tileY
+      )
+    ) {
+      return;
+    }
+
+    if (!this.worldManager.rerenderCurrentArea()) {
+      return;
+    }
+
+    this.syncAreaPresentationAfterRerender(areaId, playerSnapshot);
+  }
+
+  private queueInitialAreaRefresh(
+    expectedAreaId: AreaId,
+    expectedPlayerSnapshot?: { tileX: number; tileY: number }
+  ): void {
+    this.clearPendingInitialAreaRefresh();
+    const requestId = this.pendingInitialAreaRefreshRequestId;
+    const eventName = Phaser.Scenes.Events.RENDER;
+
+    const handler = () => {
+      try {
+        if (this.pendingInitialAreaRefreshRequestId !== requestId) {
+          return;
+        }
+
+        if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
+          return;
+        }
+
+        this.refreshCurrentAreaPresentation(expectedAreaId, expectedPlayerSnapshot, requestId);
+      } finally {
+        this.finalizePendingInitialAreaRefresh(requestId);
+      }
+    };
+
+    this.pendingInitialAreaRefreshEventName = eventName;
+    this.pendingInitialAreaRefreshHandler = handler;
+    this.events.once(eventName, handler);
+  }
+
+  private clearPendingInitialAreaRefresh(): void {
+    this.finalizePendingInitialAreaRefresh();
+  }
+
+  private finalizePendingInitialAreaRefresh(requestId?: number): void {
+    const activeRequestId = this.pendingInitialAreaRefreshRequestId;
+    if (requestId !== undefined && requestId !== activeRequestId) {
+      return;
+    }
+
+    if (this.pendingInitialAreaRefreshEventName) {
+      this.events.off(this.pendingInitialAreaRefreshEventName, this.pendingInitialAreaRefreshHandler);
+    }
+
+    this.pendingInitialAreaRefreshHandler = undefined;
+    this.pendingInitialAreaRefreshEventName = undefined;
+    this.pendingInitialAreaRefreshRequestId = activeRequestId + 1;
+  }
+
+  private syncAreaPresentationAfterRerender(
+    areaId: AreaId,
+    playerSnapshot?: { tileX: number; tileY: number }
+  ): void {
+    if (!this.worldManager || !this.playerManager || !this.interactionManager) {
+      return;
+    }
+
+    const parsedMap = this.worldManager.getCurrentParsedTmxMap();
+    const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
+    const renderBounds = this.worldManager.getCurrentRenderBounds();
+
+    this.playerManager.setRenderBounds(renderBounds);
+
+    const safePlayerTile = this.resolveSafeRefreshTile(playerSnapshot, runtimeGrids, parsedMap);
+    if (safePlayerTile) {
+      this.playerManager.debugTeleportToTile(safePlayerTile.tileX, safePlayerTile.tileY);
+    }
+
+    const transitionTargets = this.resolveAreaTransitionTargets(areaId, renderBounds);
+    const staticPlaceTargets = this.resolveStaticPlaceTargets(
+      areaId,
+      renderBounds,
+      parsedMap,
+      runtimeGrids
+    );
+
+    this.interactionManager.setArea(areaId);
+    this.interactionManager.setSceneState(this.currentSceneState);
+    this.currentStaticPlaceTargets = staticPlaceTargets;
+    this.interactionManager.setTransitionTargets(transitionTargets);
+    this.interactionManager.setStaticPlaceTargets(staticPlaceTargets);
+    this.resyncHudLocationLabel(areaId);
+    this.syncDebugWorldState();
+    this.applyBrightnessOverlay();
+
+    if (this.worldGridOverlay) {
+      this.worldGridOverlay.render(
+        runtimeGrids,
+        parsedMap,
+        renderBounds,
+        this.playerManager.getSnapshot(),
+        this.currentStaticPlaceTargets
+      );
+    }
+
+    this.events.emit("ui:renderTransitions", transitionTargets);
+  }
+
+  private resolveSafeRefreshTile(
+    playerSnapshot: { tileX: number; tileY: number } | undefined,
+    runtimeGrids?: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
+    parsedMap?: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
+  ) {
+    if (!playerSnapshot || !runtimeGrids || !parsedMap) {
+      return undefined;
+    }
+
+    if (this.isWalkableTile(playerSnapshot.tileX, playerSnapshot.tileY, runtimeGrids, parsedMap)) {
+      return {
+        tileX: playerSnapshot.tileX,
+        tileY: playerSnapshot.tileY
+      };
+    }
+
+    return this.findNearestWalkableTile(playerSnapshot.tileX, playerSnapshot.tileY, runtimeGrids, parsedMap);
+  }
+
+  private isWalkableTile(
+    tileX: number,
+    tileY: number,
+    runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
+    parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
+  ) {
+    if (tileX < 0 || tileY < 0 || tileX >= parsedMap.width || tileY >= parsedMap.height) {
+      return false;
+    }
+
+    return runtimeGrids.blockedGrid[tileY]?.[tileX] !== true;
+  }
+
+  private findNearestWalkableTile(
+    originTileX: number,
+    originTileY: number,
+    runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
+    parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
+  ) {
+    const maxRadius = Math.max(parsedMap.width, parsedMap.height);
+
+    for (let radius = 1; radius <= maxRadius; radius += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) {
+            continue;
+          }
+
+          const tileX = originTileX + dx;
+          const tileY = originTileY + dy;
+          if (this.isWalkableTile(tileX, tileY, runtimeGrids, parsedMap)) {
+            return { tileX, tileY };
+          }
+        }
+      }
+    }
+
+    return findFirstWalkableTile(runtimeGrids.blockedGrid);
   }
 
   private adjustBgmVolume(delta: number): void {
@@ -658,23 +926,41 @@ export class MainScene extends Phaser.Scene {
 
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+    const deathSequenceActive = this.deathSequenceActive;
     const transitionsVisible =
       !menuOpen &&
       !placePopupOpen &&
       !plannerOpen &&
       !dialoguePlaying &&
+      !deathSequenceActive &&
       !debugHudVisible &&
       !debugPanelVisible &&
       !debugTileEditorVisible;
 
-    this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible || debugTileEditorVisible);
+    this.interactionManager.setOverlayBlocked(
+      menuOpen ||
+        placePopupOpen ||
+        plannerOpen ||
+        deathSequenceActive ||
+        debugHudVisible ||
+        debugPanelVisible ||
+        debugTileEditorVisible
+    );
     this.playerManager.setInputLocked(
-      this.interactionManager.isInputLocked() || debugHudVisible || debugPanelVisible || debugTileEditorVisible || menuOpen || placePopupOpen || plannerOpen
+      this.interactionManager.isInputLocked() ||
+        deathSequenceActive ||
+        debugHudVisible ||
+        debugPanelVisible ||
+        debugTileEditorVisible ||
+        menuOpen ||
+        placePopupOpen ||
+        plannerOpen
     );
 
     if (
       this.escapeKey &&
       Phaser.Input.Keyboard.JustDown(this.escapeKey) &&
+      !deathSequenceActive &&
       !dialoguePlaying &&
       !plannerOpen
     ) {
@@ -696,6 +982,7 @@ export class MainScene extends Phaser.Scene {
     if (
       this.plannerKey &&
       Phaser.Input.Keyboard.JustDown(this.plannerKey) &&
+      !deathSequenceActive &&
       !dialoguePlaying &&
       !menuOpen &&
       !placePopupOpen &&
@@ -802,8 +1089,19 @@ export class MainScene extends Phaser.Scene {
     const placePopupOpen = this.uiScene?.isPlaceActionOpen() === true;
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+    const deathSequenceActive = this.deathSequenceActive;
 
-    this.events.emit("ui:setGuideVisible", !menuOpen && !placePopupOpen && !plannerOpen && !dialoguePlaying && !debugHudVisible && !debugPanelVisible && !debugTileEditorVisible);
+    this.events.emit(
+      "ui:setGuideVisible",
+      !menuOpen &&
+        !placePopupOpen &&
+        !plannerOpen &&
+        !dialoguePlaying &&
+        !deathSequenceActive &&
+        !debugHudVisible &&
+        !debugPanelVisible &&
+        !debugTileEditorVisible
+    );
 
     const tutorialProgress = this.registry.get("tutorialProgress");
     if (tutorialProgress && !tutorialProgress.completedAt) {
@@ -1209,8 +1507,23 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    const debugStartTile = this.resolveDebugSceneStartTile(sceneId);
+    if (debugStartTile) {
+      this.registry.set(MainScene.PENDING_START_TILE_KEY, debugStartTile);
+    }
+
     this.debugLogger?.log(`debug:switch-scene:${sceneId}`);
     this.scene.restart();
+  }
+
+  private resolveDebugSceneStartTile(sceneId: SceneId) {
+    switch (sceneId) {
+      case SCENE_IDS.classroomDefault:
+        // Match the requested classroom debug spawn near screen position 1105, 535.
+        return { tileX: 27, tileY: 12 };
+      default:
+        return undefined;
+    }
   }
 
   private prepareSceneRestart(
@@ -1219,6 +1532,8 @@ export class MainScene extends Phaser.Scene {
       preservePendingStartTile: boolean;
     }
   ): boolean {
+    this.clearPendingInitialAreaRefresh();
+
     const nextSceneScript = getSceneScript(sceneId);
     if (!nextSceneScript) {
       return false;
@@ -1638,7 +1953,7 @@ export class MainScene extends Phaser.Scene {
       this.events.emit("ui:showNotice", "엔딩 진입 전 오토 세이브에 실패했습니다.");
     }
 
-    this.scene.start(SceneKey.Completion, payload);
+    this.scene.start(SceneKey.Completion, this.buildEndingPayload());
   }
 
   private async saveAutoWithNotice(): Promise<void> {
@@ -1657,6 +1972,7 @@ export class MainScene extends Phaser.Scene {
 
   private startDebugEndingFlow(endingId?: EndingId): void {
     const payload = endingId ? this.buildEndingPresetPayload(endingId) : this.buildEndingPayload();
+    this.clearPendingInitialAreaRefresh();
     this.scene.start(SceneKey.Completion, payload);
   }
 
@@ -1765,6 +2081,8 @@ export class MainScene extends Phaser.Scene {
     if (!this.statSystemManager || !this.inventoryService || !this.progressionManager || !this.storyEventManager) {
       return false;
     }
+
+    this.clearPendingInitialAreaRefresh();
 
     if (payload.world?.playerTile) {
       this.registry.set(MainScene.PENDING_START_TILE_KEY, payload.world.playerTile);

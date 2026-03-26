@@ -25,7 +25,7 @@ pipeline {
     FRONTEND_LIVE_DIR = '/home/ubuntu/deploy/frontend/prod/live'
     NGINX_CONTAINER = 'ingress-nginx-1'
     FRONTEND_DOMAIN = 'ssafymaker.cloud'
-    VITE_API_BASE_URL = 'https://ssafymaker.cloud'
+    VITE_API_BASE_URL = 'https://ssafymaker.cloud/api'
     VITE_KEYCLOAK_BASE_URL = 'https://auth.ssafymaker.cloud'
     VITE_KEYCLOAK_REALM = 'app'
     VITE_KEYCLOAK_CLIENT_ID = 'ssafy-maker-bff'
