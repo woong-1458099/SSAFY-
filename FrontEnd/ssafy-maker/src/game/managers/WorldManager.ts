@@ -188,7 +188,7 @@ export class WorldManager {
     );
   }
 
-  private renderCurrentAreaMap() {
+  private clearRenderedAreaMap() {
     this.renderedTilemaps.forEach((tilemap) => tilemap.destroy());
     this.renderedTilemaps = [];
     this.renderedLayers.forEach((layer) => layer.destroy());
@@ -196,6 +196,10 @@ export class WorldManager {
     this.blockedOverlayGraphics.forEach((overlay) => overlay.destroy());
     this.blockedOverlayGraphics = [];
     this.currentRenderBounds = undefined;
+  }
+
+  private renderCurrentAreaMap() {
+    this.clearRenderedAreaMap();
 
     const parsedMap = this.currentParsedTmxMap;
     const area = this.getCurrentAreaDefinition();

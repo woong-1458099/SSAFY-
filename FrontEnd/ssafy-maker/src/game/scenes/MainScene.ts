@@ -118,7 +118,7 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
-  private pendingInitialAreaRefresh?: Phaser.Time.TimerEvent;
+  private pendingInitialAreaRefreshHandler?: () => void;
   private pendingDialogueWeekMismatch?: {
     key: string;
     frame: number;
@@ -425,8 +425,10 @@ export class MainScene extends Phaser.Scene {
       this.progressionManager?.destroy();
       this.storyEventManager?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-      this.pendingInitialAreaRefresh?.remove(false);
-      this.pendingInitialAreaRefresh = undefined;
+      if (this.pendingInitialAreaRefreshHandler) {
+        this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.pendingInitialAreaRefreshHandler);
+        this.pendingInitialAreaRefreshHandler = undefined;
+      }
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
       this.destroySkyBackground?.();
@@ -494,11 +496,7 @@ export class MainScene extends Phaser.Scene {
 
     // 첫 진입 직후 한 프레임 뒤에 현재 맵을 같은 좌표계로 다시 맞춘다.
     // 다른 맵을 갔다 돌아오면 정상화되던 초기 렌더 불안정을 여기서 흡수한다.
-    this.pendingInitialAreaRefresh?.remove(false);
-    this.pendingInitialAreaRefresh = this.time.delayedCall(0, () => {
-      this.pendingInitialAreaRefresh = undefined;
-      this.refreshCurrentAreaPresentation(currentArea);
-    });
+    this.queueInitialAreaRefresh(currentArea, this.playerManager.getSnapshot());
   }
 
   private async handleLogout(): Promise<void> {
@@ -612,6 +610,37 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.events.emit("ui:renderTransitions", transitionTargets);
+  }
+
+  private queueInitialAreaRefresh(
+    expectedAreaId: AreaId,
+    expectedPlayerSnapshot?: { tileX: number; tileY: number }
+  ): void {
+    if (this.pendingInitialAreaRefreshHandler) {
+      this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.pendingInitialAreaRefreshHandler);
+      this.pendingInitialAreaRefreshHandler = undefined;
+    }
+
+    const handler = () => {
+      this.pendingInitialAreaRefreshHandler = undefined;
+      const currentAreaId = this.worldManager?.getCurrentAreaId();
+      const currentPlayerSnapshot = this.playerManager?.getSnapshot();
+
+      if (
+        currentAreaId !== expectedAreaId ||
+        !currentPlayerSnapshot ||
+        !expectedPlayerSnapshot ||
+        currentPlayerSnapshot.tileX !== expectedPlayerSnapshot.tileX ||
+        currentPlayerSnapshot.tileY !== expectedPlayerSnapshot.tileY
+      ) {
+        return;
+      }
+
+      this.refreshCurrentAreaPresentation(expectedAreaId);
+    };
+
+    this.pendingInitialAreaRefreshHandler = handler;
+    this.events.once(Phaser.Scenes.Events.POST_UPDATE, handler);
   }
 
   private resolveSafeRefreshTile(

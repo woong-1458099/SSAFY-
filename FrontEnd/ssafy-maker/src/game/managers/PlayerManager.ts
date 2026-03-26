@@ -242,22 +242,21 @@ export class PlayerManager {
   }
 
   private isWithinWorldBounds(worldX: number, worldY: number, parsedMap: ParsedTmxMap) {
-    if (!this.renderBounds) {
-      const minX = this.tileSize / 2;
-      const maxX = parsedMap.width * this.tileSize - this.tileSize / 2;
-      const minY = this.tileSize;
-      const maxY = parsedMap.height * this.tileSize;
-      return worldX >= minX && worldX <= maxX && worldY >= minY && worldY <= maxY;
-    }
+    const minPosition = this.getWorldPositionFromTile(0, 0);
+    const maxPosition = this.getWorldPositionFromTile(parsedMap.width - 1, parsedMap.height - 1);
+    const epsilon = this.renderBounds
+      ? Math.max(0.5, Math.min(
+        this.renderBounds.tileWidth * this.renderBounds.scale,
+        this.renderBounds.tileHeight * this.renderBounds.scale
+      ) * 0.01)
+      : 0.5;
 
-    const scaledTileWidth = this.renderBounds.tileWidth * this.renderBounds.scale;
-    const scaledTileHeight = this.renderBounds.tileHeight * this.renderBounds.scale;
-    const minX = this.renderBounds.offsetX + scaledTileWidth / 2;
-    const maxX = this.renderBounds.offsetX + this.renderBounds.mapWidth * scaledTileWidth - scaledTileWidth / 2;
-    const minY = this.renderBounds.offsetY + scaledTileHeight;
-    const maxY = this.renderBounds.offsetY + this.renderBounds.mapHeight * scaledTileHeight;
-
-    return worldX >= minX && worldX <= maxX && worldY >= minY && worldY <= maxY;
+    return (
+      worldX >= minPosition.x - epsilon &&
+      worldX <= maxPosition.x + epsilon &&
+      worldY >= minPosition.y - epsilon &&
+      worldY <= maxPosition.y + epsilon
+    );
   }
 
   private getWorldPositionFromTile(tileX: number, tileY: number) {
