@@ -235,7 +235,7 @@ export class MainScene extends Phaser.Scene {
       advanceTimeAfterFixedEvent: () => {
         if (this.progressionManager?.consumeActionPoint()) {
           this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
-          this.progressionManager?.showCurrentWeeklyPlanActivity();
+          this.progressionManager?.presentCurrentScheduledActivity();
         }
       },
       isTutorialActive: () => {
