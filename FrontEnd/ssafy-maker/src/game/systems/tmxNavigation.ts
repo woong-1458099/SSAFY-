@@ -52,12 +52,14 @@ export function getTilesetSourceBasename(source?: string) {
 export type TmxAreaConfig = {
   tmxKey: string;
   collisionLayerNames: string[];
+  walkableLayerNames?: string[];
   interactionLayerNames: string[];
   foregroundLayerNames: string[];
 };
 
 export type ResolvedTmxLayers = {
   collisionLayers: ParsedTmxLayer[];
+  walkableLayers: ParsedTmxLayer[];
   interactionLayers: ParsedTmxLayer[];
   foregroundLayers: ParsedTmxLayer[];
 };
@@ -114,28 +116,6 @@ export function applyWalkableTileZones(
   return nextBlockedGrid;
 }
 
-export function applyWalkableTiles(
-  blockedGrid: boolean[][],
-  walkableTiles?: { x: number; y: number }[]
-) {
-  if (!walkableTiles || walkableTiles.length === 0) {
-    return blockedGrid;
-  }
-
-  const nextBlockedGrid = cloneBooleanGrid(blockedGrid);
-
-  walkableTiles.forEach((tile) => {
-    const row = nextBlockedGrid[tile.y];
-    if (!row || tile.x < 0 || tile.x >= row.length) {
-      return;
-    }
-
-    row[tile.x] = false;
-  });
-
-  return nextBlockedGrid;
-}
-
 export function applyBlockedTileZones(
   blockedGrid: boolean[][],
   blockedTileZones?: { x: number; y: number; width: number; height: number }[]
@@ -181,51 +161,6 @@ export function applyBlockedTiles(
   return nextBlockedGrid;
 }
 
-export function applyInteractionTiles(
-  interactionGrid: boolean[][],
-  interactionTiles?: { x: number; y: number }[]
-) {
-  if (!interactionTiles || interactionTiles.length === 0) {
-    return interactionGrid;
-  }
-
-  const nextInteractionGrid = cloneBooleanGrid(interactionGrid);
-
-  interactionTiles.forEach((tile) => {
-    const row = nextInteractionGrid[tile.y];
-    if (!row || tile.x < 0 || tile.x >= row.length) {
-      return;
-    }
-
-    row[tile.x] = true;
-  });
-
-  return nextInteractionGrid;
-}
-
-function warnConflictingTileOverrides(
-  blockedTiles?: { x: number; y: number }[],
-  walkableTiles?: { x: number; y: number }[]
-) {
-  if (!blockedTiles || !walkableTiles || blockedTiles.length === 0 || walkableTiles.length === 0) {
-    return;
-  }
-
-  const blockedKeys = new Set(blockedTiles.map((tile) => `${tile.x},${tile.y}`));
-  const overlaps = walkableTiles.filter((tile) => blockedKeys.has(`${tile.x},${tile.y}`));
-
-  if (overlaps.length === 0) {
-    return;
-  }
-
-  console.warn(
-    `[TMX] Conflicting manual tile overrides detected for ${overlaps.length} tiles. ` +
-      `walkableTiles take precedence: ${overlaps
-        .map((tile) => `(${tile.x},${tile.y})`)
-        .join(", ")}`
-  );
-}
-
 function isParsedTmxTilesetRef(
   value: ParsedTmxTilesetRef | null
 ): value is ParsedTmxTilesetRef {
@@ -262,11 +197,13 @@ export function resolveTmxLayers(
   areaConfig: TmxAreaConfig
 ): ResolvedTmxLayers {
   warnMissingLayerNames(parsedMap, areaConfig.collisionLayerNames, "collision");
+  warnMissingLayerNames(parsedMap, areaConfig.walkableLayerNames ?? [], "walkable");
   warnMissingLayerNames(parsedMap, areaConfig.interactionLayerNames, "interaction");
   warnMissingLayerNames(parsedMap, areaConfig.foregroundLayerNames, "foreground");
 
   return {
     collisionLayers: getLayersByNames(parsedMap, areaConfig.collisionLayerNames),
+    walkableLayers: getLayersByNames(parsedMap, areaConfig.walkableLayerNames ?? []),
     interactionLayers: getLayersByNames(parsedMap, areaConfig.interactionLayerNames),
     foregroundLayers: getLayersByNames(parsedMap, areaConfig.foregroundLayerNames)
   };
@@ -458,31 +395,37 @@ export function buildRuntimeGrids(
   resolvedLayers: ResolvedTmxLayers,
   walkableTileZones?: { x: number; y: number; width: number; height: number }[],
   blockedTileZones?: { x: number; y: number; width: number; height: number }[],
-  blockedTiles?: { x: number; y: number }[],
-  walkableTiles?: { x: number; y: number }[],
-  interactionTiles?: { x: number; y: number }[]
+  blockedTiles?: { x: number; y: number }[]
 ): TmxRuntimeGrids {
   const baseBlockedGrid = buildBooleanGridFromLayers(
     parsedMap.width,
     parsedMap.height,
     resolvedLayers.collisionLayers
   );
-  warnConflictingTileOverrides(blockedTiles, walkableTiles);
   const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
-  const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones);
-  const blockedTilesAppliedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
-  const finalBlockedGrid = applyWalkableTiles(blockedTilesAppliedGrid, walkableTiles);
+  const walkablePatchGrid = buildBooleanGridFromLayers(
+    parsedMap.width,
+    parsedMap.height,
+    resolvedLayers.walkableLayers
+  );
+  const walkableLayerAppliedBlockedGrid = cloneBooleanGrid(walkableAppliedBlockedGrid);
+  for (let y = 0; y < walkableLayerAppliedBlockedGrid.length; y += 1) {
+    for (let x = 0; x < (walkableLayerAppliedBlockedGrid[y]?.length ?? 0); x += 1) {
+      if (walkablePatchGrid[y]?.[x]) {
+        walkableLayerAppliedBlockedGrid[y][x] = false;
+      }
+    }
+  }
+  const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableLayerAppliedBlockedGrid, blockedTileZones);
+  const finalBlockedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
   const manualBlockedGrid = buildBooleanGridFromTiles(parsedMap.width, parsedMap.height, blockedTiles);
 
   return {
     blockedGrid: finalBlockedGrid,
-    interactionGrid: applyInteractionTiles(
-      buildBooleanGridFromLayers(
-        parsedMap.width,
-        parsedMap.height,
-        resolvedLayers.interactionLayers
-      ),
-      interactionTiles
+    interactionGrid: buildBooleanGridFromLayers(
+      parsedMap.width,
+      parsedMap.height,
+      resolvedLayers.interactionLayers
     ),
     manualBlockedGrid
   };
