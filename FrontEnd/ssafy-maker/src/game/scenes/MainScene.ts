@@ -119,6 +119,8 @@ export class MainScene extends Phaser.Scene {
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
   private pendingInitialAreaRefreshHandler?: () => void;
+  private pendingInitialAreaRefreshEventName?: string;
+  private pendingInitialAreaRefreshRequestId = 0;
   private pendingDialogueWeekMismatch?: {
     key: string;
     frame: number;
@@ -581,10 +583,20 @@ export class MainScene extends Phaser.Scene {
     expectedPlayerSnapshot?: { tileX: number; tileY: number }
   ): void {
     this.clearPendingInitialAreaRefresh();
+    const requestId = this.pendingInitialAreaRefreshRequestId;
+    const eventName = Phaser.Scenes.Events.RENDER;
 
     const handler = () => {
-      this.events.off(Phaser.Scenes.Events.POST_UPDATE, handler);
-      this.pendingInitialAreaRefreshHandler = undefined;
+      if (this.pendingInitialAreaRefreshRequestId !== requestId) {
+        return;
+      }
+
+      this.clearPendingInitialAreaRefresh();
+
+      if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
+        return;
+      }
+
       const currentAreaId = this.worldManager?.getCurrentAreaId();
       const currentPlayerSnapshot = this.playerManager?.getSnapshot();
 
@@ -601,17 +613,24 @@ export class MainScene extends Phaser.Scene {
       this.refreshCurrentAreaPresentation(expectedAreaId);
     };
 
+    this.pendingInitialAreaRefreshEventName = eventName;
     this.pendingInitialAreaRefreshHandler = handler;
-    this.events.once(Phaser.Scenes.Events.POST_UPDATE, handler);
+    this.events.once(eventName, handler);
   }
 
   private clearPendingInitialAreaRefresh(): void {
+    this.pendingInitialAreaRefreshRequestId += 1;
+
     if (!this.pendingInitialAreaRefreshHandler) {
       return;
     }
 
-    this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.pendingInitialAreaRefreshHandler);
+    if (this.pendingInitialAreaRefreshEventName) {
+      this.events.off(this.pendingInitialAreaRefreshEventName, this.pendingInitialAreaRefreshHandler);
+    }
+
     this.pendingInitialAreaRefreshHandler = undefined;
+    this.pendingInitialAreaRefreshEventName = undefined;
   }
 
   private syncAreaPresentationAfterRerender(

@@ -244,7 +244,7 @@ export class PlayerManager {
   private isWithinWorldBounds(worldX: number, worldY: number, parsedMap: ParsedTmxMap) {
     const minPosition = this.getWorldPositionFromTile(0, 0);
     const maxPosition = this.getWorldPositionFromTile(parsedMap.width - 1, parsedMap.height - 1);
-    const epsilon = 2;
+    const epsilon = this.getWorldBoundsEpsilon();
 
     return (
       worldX >= minPosition.x - epsilon &&
@@ -252,6 +252,17 @@ export class PlayerManager {
       worldY >= minPosition.y - epsilon &&
       worldY <= maxPosition.y + epsilon
     );
+  }
+
+  private getWorldBoundsEpsilon() {
+    const baseTileSize = this.renderBounds
+      ? Math.min(
+          this.renderBounds.tileWidth * this.renderBounds.scale,
+          this.renderBounds.tileHeight * this.renderBounds.scale
+        )
+      : this.tileSize;
+
+    return Math.max(2, Math.round(baseTileSize * 0.1));
   }
 
   private getWorldPositionFromTile(tileX: number, tileY: number) {
