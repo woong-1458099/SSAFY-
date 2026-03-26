@@ -34,7 +34,6 @@ export type BackendApiStatus = "unknown" | "available" | "unavailable";
 
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
 const API_PATH_SEGMENT = "/api";
-const IS_PRODUCTION_BUILD = import.meta.env.PROD;
 
 function stripTrailingSlashes(value: string): string {
   return value.replace(/\/+$/, "");
@@ -50,10 +49,6 @@ function ensureApiSuffix(pathname: string): string {
 }
 
 function handleInvalidApiBaseUrl(rawValue: string): string {
-  if (IS_PRODUCTION_BUILD) {
-    throw new Error(`[auth-api] invalid VITE_API_BASE_URL: ${rawValue}`);
-  }
-
   console.warn("[auth-api] invalid VITE_API_BASE_URL; falling back to /api", {
     rawValue
   });
