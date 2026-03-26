@@ -19,6 +19,10 @@ export class CompletionScene extends Phaser.Scene {
     teamwork: 0,
     luck: 0,
     hp: 0,
+    hpMax: 100,
+    stress: 0,
+    gamePlayCount: 0,
+    lottoRank: null,
     week: 6,
     dayLabel: "금요일",
     timeLabel: "밤"
@@ -36,6 +40,10 @@ export class CompletionScene extends Phaser.Scene {
       teamwork: data?.teamwork ?? 0,
       luck: data?.luck ?? 0,
       hp: data?.hp ?? 0,
+      hpMax: data?.hpMax ?? 100,
+      stress: data?.stress ?? 0,
+      gamePlayCount: data?.gamePlayCount ?? 0,
+      lottoRank: typeof data?.lottoRank === "number" ? data.lottoRank : null,
       week: data?.week ?? 6,
       dayLabel: data?.dayLabel ?? "금요일",
       timeLabel: data?.timeLabel ?? "밤"
