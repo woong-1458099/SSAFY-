@@ -39,6 +39,10 @@ function stripTrailingSlashes(value: string): string {
   return value.replace(/\/+$/, "");
 }
 
+function ensureLeadingSlash(value: string): string {
+  return value.startsWith("/") ? value : `/${value}`;
+}
+
 function ensureApiSuffix(pathname: string): string {
   const normalizedPath = stripTrailingSlashes(pathname) || "";
   if (normalizedPath.toLowerCase().endsWith(API_PATH_SEGMENT)) {
@@ -78,7 +82,7 @@ function normalizeApiBaseUrl(rawValue?: string): string {
         rawValue
       });
     }
-    return ensureApiSuffix(sanitizedValue);
+    return ensureApiSuffix(ensureLeadingSlash(sanitizedValue));
   } catch {
     return handleInvalidApiBaseUrl(rawValue);
   }
