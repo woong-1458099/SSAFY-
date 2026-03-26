@@ -365,7 +365,7 @@ export class ProgressionManager {
     this.patchHudState(buildHudPatchFromTimeState(this.timeState));
   }
 
-  showCurrentWeeklyPlanActivity(): boolean {
+  presentCurrentScheduledActivity(): boolean {
     if (this.endingFlowStarted || this.activityRoot?.visible || this.plannerRoot?.visible || this.salaryRoot?.visible) {
       return false;
     }
@@ -379,13 +379,15 @@ export class ProgressionManager {
     }
 
     const completedSlotIndex = getWeeklyPlanSlotIndex(this.timeState.dayCycleIndex, this.timeState.timeCycleIndex);
+    if (this.buildCompletedSlotIndices(this.timeState.week).has(completedSlotIndex)) {
+      return false;
+    }
     this.openWeeklyPlanActivity(activity, () => {
-      this.completedPlanSlotIndices.add(completedSlotIndex);
-      const hudState = this.getHudState();
-      this.applyStatDelta(activity.option.statDelta, 1);
-      this.patchHudState({
-        hp: Phaser.Math.Clamp(hudState.hp + activity.option.hpDelta, 0, hudState.hpMax)
-      });
+      const result = this.tryConsumeActionPoint({ notifyOnFailure: false });
+      if (!result.ok) {
+        return;
+      }
+      this.completeScheduledActivity(completedSlotIndex, activity.option);
       this.onNotice?.(`${activity.option.label} 완료`);
     });
     return true;
@@ -486,12 +488,7 @@ export class ProgressionManager {
         return;
       }
 
-      this.completedPlanSlotIndices.add(completedSlotIndex);
-      const hudState = this.getHudState();
-      this.applyStatDelta(activity.option.statDelta, 1);
-      this.patchHudState({
-        hp: Phaser.Math.Clamp(hudState.hp + activity.option.hpDelta, 0, hudState.hpMax)
-      });
+      this.completeScheduledActivity(completedSlotIndex, activity.option);
       this.onNotice?.(`${activity.option.label} 완료`);
     });
   }
@@ -562,6 +559,19 @@ export class ProgressionManager {
   private closeWeeklyPlanActivity(): void {
     this.activityRoot?.destroy(true);
     this.activityRoot = undefined;
+  }
+
+  private completeScheduledActivity(slotIndex: number, option: WeeklyPlanOption): void {
+    if (this.completedPlanSlotIndices.has(slotIndex)) {
+      return;
+    }
+
+    this.completedPlanSlotIndices.add(slotIndex);
+    const hudState = this.getHudState();
+    this.applyStatDelta(option.statDelta, 1);
+    this.patchHudState({
+      hp: Phaser.Math.Clamp(hudState.hp + option.hpDelta, 0, hudState.hpMax)
+    });
   }
 
   private shouldPayWeeklySalary(): boolean {

@@ -237,7 +237,7 @@ export class MainScene extends Phaser.Scene {
       advanceTimeAfterFixedEvent: () => {
         if (this.progressionManager?.consumeActionPoint()) {
           this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
-          this.progressionManager?.showCurrentWeeklyPlanActivity();
+          this.progressionManager?.presentCurrentScheduledActivity();
         }
       },
       isTutorialActive: () => {
@@ -552,7 +552,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private toggleBgmEnabled(): void {
-    this.audioManager.setBgmEnabled(!this.audioManager.isBgmEnabled());
+    const next = !this.audioManager.isBgmEnabled();
+    console.log(`[MainScene] Toggling BGM Enabled: ${next}`);
+    this.audioManager.setBgmEnabled(next);
     this.refreshCurrentAreaBgm();
   }
 
@@ -636,6 +638,14 @@ export class MainScene extends Phaser.Scene {
 
     const plannerOpen = this.progressionManager?.isPlannerOpen() === true;
     const dialoguePlaying = this.dialogueManager?.isDialoguePlaying() === true;
+    const transitionsVisible =
+      !menuOpen &&
+      !placePopupOpen &&
+      !plannerOpen &&
+      !dialoguePlaying &&
+      !debugHudVisible &&
+      !debugPanelVisible &&
+      !debugTileEditorVisible;
 
     this.interactionManager.setOverlayBlocked(menuOpen || placePopupOpen || plannerOpen || debugHudVisible || debugPanelVisible || debugTileEditorVisible);
     this.playerManager.setInputLocked(
@@ -714,6 +724,7 @@ export class MainScene extends Phaser.Scene {
       );
     }
 
+    this.events.emit("ui:setTransitionsVisible", transitionsVisible);
     this.events.emit("ui:renderTransitions", this.resolveAreaTransitionTargets(this.worldManager.getCurrentAreaId() ?? "world", renderBounds));
 
     const player = this.playerManager.getSnapshot();
@@ -793,11 +804,12 @@ export class MainScene extends Phaser.Scene {
 
     const pendingEvent = this.storyEventManager.getPendingFixedEventInfo();
     if (pendingEvent) {
+      const isRomance = (pendingEvent as any).isRomance === true;
       this.events.emit("ui:updateGuide", {
-        objective: pendingEvent.eventName,
+        objective: isRomance ? "❤️ 특별한 예감" : pendingEvent.eventName,
         location: pendingEvent.location,
-        npc: pendingEvent.participants.join(", "),
-        action: "고정 이벤트를 진행하세요"
+        npc: isRomance ? "누군가 당신을 기다릴지도...?" : pendingEvent.participants.join(", "),
+        action: isRomance ? "❤️ 설레는 만남을 준비하세요" : "고정 이벤트를 진행하세요"
       });
       return;
     }
@@ -1250,6 +1262,7 @@ export class MainScene extends Phaser.Scene {
     return getAreaTransitionDefinitions(areaId).map((transition) => ({
       id: transition.id,
       label: transition.label,
+      isRomance: this.storyEventManager?.hasRomanceEventForArea(transition.toArea) === true,
       centerX:
         renderBounds.offsetX +
         (transition.tileX + (transition.tileWidth ?? 1) / 2) *

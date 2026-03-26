@@ -17,6 +17,7 @@ export type RuntimeAreaTransitionTarget = {
   tileHeight: number;
   arrowDirection: "up" | "down";
   labelPlacement: "above" | "below";
+  isRomance?: boolean;
 };
 
 type TransitionView = {
@@ -30,8 +31,19 @@ type TransitionView = {
 // 전이 포인트를 포탈 느낌의 직관적인 UI로 표시한다.
 export class AreaTransitionOverlay {
   private views = new Map<AreaTransitionId, TransitionView>();
+  private isVisible = true;
 
   constructor(private scene: Phaser.Scene) {}
+
+  setVisible(visible: boolean) {
+    this.isVisible = visible;
+
+    for (const view of this.views.values()) {
+      view.zone.setVisible(visible);
+      view.label.setVisible(visible);
+      view.arrow.setVisible(visible);
+    }
+  }
 
   render(targets: RuntimeAreaTransitionTarget[], activeId?: AreaTransitionId) {
     const visibleIds = new Set(targets.map((target) => target.id));
@@ -52,15 +64,17 @@ export class AreaTransitionOverlay {
       const view = this.views.get(target.id) ?? this.createView(target);
       const isActive = target.id === activeId;
       this.drawZone(view.zone, target, isActive, view.pulsePhase);
-      view.label.setText(`🚪 ${target.label}`);
+      
+      const emoji = target.isRomance ? "❤️" : "🚪";
+      view.label.setText(`${emoji} ${target.label}`);
       this.positionLabel(view.label, target);
       view.label.setAlpha(isActive ? 1 : 0.85);
       view.arrow.setPosition(target.centerX, target.centerY);
       view.arrow.setText(target.arrowDirection === "down" ? "▼" : "▲");
       view.arrow.setAlpha(isActive ? 1 : 0.7);
-      view.zone.setVisible(true);
-      view.label.setVisible(true);
-      view.arrow.setVisible(true);
+      view.zone.setVisible(this.isVisible);
+      view.label.setVisible(this.isVisible);
+      view.arrow.setVisible(this.isVisible);
     });
   }
 
@@ -78,8 +92,9 @@ export class AreaTransitionOverlay {
   private createView(target: RuntimeAreaTransitionTarget) {
     const zone = this.scene.add.graphics().setDepth(UI_DEPTH.areaTransitionZone);
 
+    const emoji = target.isRomance ? "❤️" : "🚪";
     const label = this.scene.add
-      .text(target.centerX, target.zoneY + target.zoneHeight + 8, `🚪 ${target.label}`, {
+      .text(target.centerX, target.zoneY + target.zoneHeight + 8, `${emoji} ${target.label}`, {
         fontSize: "13px",
         fontFamily: '"PFStardustBold", "Malgun Gothic", sans-serif',
         color: "#ffffff",

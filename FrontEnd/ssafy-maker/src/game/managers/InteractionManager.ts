@@ -35,7 +35,6 @@ export class InteractionManager {
   private interactKey?: Phaser.Input.Keyboard.Key;
   private currentAreaId?: AreaId;
   private isInteractionLocked = false;
-  private hud?: GameHud;
   private currentTargetNpcId?: NpcId;
   private currentTargetTransitionId?: AreaTransitionId;
   private currentTargetPlaceId?: PlaceId;
@@ -94,14 +93,10 @@ export class InteractionManager {
     this.onPlaceInteract = handler;
   }
 
-  setHud(hud?: GameHud) {
-    this.hud = hud;
-  }
-
   setOverlayBlocked(blocked: boolean) {
     this.overlayBlocked = blocked;
     if (blocked) {
-      this.hud?.setInteractionPrompt(null);
+      this.scene.events.emit("ui:setInteractionPrompt", null);
     }
   }
 
@@ -309,17 +304,13 @@ export class InteractionManager {
   }
 
   private renderHint() {
-    if (!this.hud) {
-      return;
-    }
-
     if (
       !this.overlayBlocked &&
       this.currentTargetNpcId &&
       !this.dialogueManager.isDialoguePlaying() &&
       !this.requiresInteractKeyRelease
     ) {
-      this.hud.setInteractionPrompt(`[SPACE] ${this.currentTargetNpcId}와 대화`);
+      this.scene.events.emit("ui:setInteractionPrompt", `[SPACE] ${this.currentTargetNpcId}와 대화`);
       return;
     }
 
@@ -332,7 +323,7 @@ export class InteractionManager {
       const transition = this.currentTransitionTargets.find(
         (target) => target.id === this.currentTargetTransitionId
       );
-      this.hud.setInteractionPrompt(`[SPACE] ${transition?.label ?? "이동"}`);
+      this.scene.events.emit("ui:setInteractionPrompt", `[SPACE] ${transition?.label ?? "이동"}`);
       return;
     }
 
@@ -343,10 +334,10 @@ export class InteractionManager {
       !this.requiresInteractKeyRelease
     ) {
       const place = this.currentStaticPlaceTargets.find((item) => item.id === this.currentTargetPlaceId);
-      this.hud.setInteractionPrompt(`[SPACE] ${place?.label ?? "장소"} 확인`);
+      this.scene.events.emit("ui:setInteractionPrompt", `[SPACE] ${place?.label ?? "장소"} 확인`);
       return;
     }
 
-    this.hud.setInteractionPrompt(null);
+    this.scene.events.emit("ui:setInteractionPrompt", null);
   }
 }

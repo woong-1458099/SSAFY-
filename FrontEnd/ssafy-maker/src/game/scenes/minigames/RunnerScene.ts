@@ -188,9 +188,9 @@ export default class RunnerScene extends Phaser.Scene {
 
   jump() {
     if (!this.started || this.gameOver) return;
-    if (this.isGround) { this.playerVY = -420; this.isGround = false; this.jumpCount = 1; this.cameras.main.shake(80, 0.002); }
+    if (this.isGround) { this.playerVY = -350; this.isGround = false; this.jumpCount = 1; this.cameras.main.shake(80, 0.002); }
     else if (this.jumpCount < 2) {
-      this.playerVY = -450; this.jumpCount += 1;
+      this.playerVY = -380; this.jumpCount += 1;
       const effect = this.add.text(this.playerX, this.playerY - 20, '2x JUMP!', { fontSize: '8px', color: '#FFD700', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(10);
       this.tweens.add({ targets: effect, y: this.playerY - 60, alpha: 0, duration: 500, onComplete: () => effect.destroy() });
     }
