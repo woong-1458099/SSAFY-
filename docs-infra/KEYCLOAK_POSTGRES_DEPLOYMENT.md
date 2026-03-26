@@ -115,13 +115,13 @@ PostgreSQL `users` 테이블에는 다음 운영 필드를 저장한다.
 빌드 시 아래 환경변수를 주입해야 한다.
 
 ```env
-VITE_API_BASE_URL=https://ssafymaker.cloud
+VITE_API_BASE_URL=https://ssafymaker.cloud/api
 VITE_KEYCLOAK_BASE_URL=https://auth.ssafymaker.cloud
 VITE_KEYCLOAK_REALM=app
 VITE_KEYCLOAK_CLIENT_ID=ssafy-maker-bff
 ```
 
-STG 는 `ssafymaker.cloud` 대신 `stg.ssafymaker.cloud` 로 맞춘다.
+STG 는 `ssafymaker.cloud` 대신 `stg.ssafymaker.cloud/api` 로 맞춘다.
 
 ## 배포 전 체크리스트
 - Keycloak realm `app` 에 `ssafy-maker-bff` client 가 존재하는지 확인한다.

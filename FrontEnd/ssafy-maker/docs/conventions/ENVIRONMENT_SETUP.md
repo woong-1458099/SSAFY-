@@ -57,7 +57,7 @@ alias는 `tsconfig.json`, `vite.config.ts`를 함께 수정해야 합니다.
 - 프런트 API 기본 경로는 `VITE_API_BASE_URL` 입니다.
 - 값이 없으면 기본값으로 `/api` 를 사용합니다.
 - 로컬 개발에서는 `vite.config.ts` 의 `/api` 프록시가 `http://localhost:8080` 으로 전달합니다.
-- 배포 환경에서는 인프라 문서 기준으로 ingress/nginx 라우팅에 맞는 값을 설정합니다.
+- 배포 환경에서는 `VITE_API_BASE_URL` 에 `/api` 까지 포함한 값을 넣습니다.
 
 예시:
 
@@ -65,7 +65,7 @@ alias는 `tsconfig.json`, `vite.config.ts`를 함께 수정해야 합니다.
 VITE_API_BASE_URL=/api
 ```
 
-또는 API를 절대 URL로 직접 지정해야 하면:
+또는 배포 도메인을 절대 URL로 직접 지정해야 하면:
 
 ```bash
 VITE_API_BASE_URL=https://ssafymaker.cloud/api

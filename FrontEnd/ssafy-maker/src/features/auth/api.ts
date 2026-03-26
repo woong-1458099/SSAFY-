@@ -34,7 +34,7 @@ export type BackendApiStatus = "unknown" | "available" | "unavailable";
 
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
 const NORMALIZED_API_BASE_URL = RAW_API_BASE_URL
-  ? RAW_API_BASE_URL.replace(/\/+$/, "")
+  ? RAW_API_BASE_URL.replace(/\/+$/, "").replace(/\/api$/i, "") + "/api"
   : "/api";
 
 export const API_PREFIX = NORMALIZED_API_BASE_URL;
