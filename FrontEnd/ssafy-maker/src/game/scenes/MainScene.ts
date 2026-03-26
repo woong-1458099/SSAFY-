@@ -1949,7 +1949,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private async startEndingFlow(payload = this.buildEndingPayload()): Promise<void> {
-    if (this.endingFlowRequested && this.scene.isActive(SceneKey.Completion)) {
+    const ending = resolveEnding(payload);
+    const entrySceneKey = ending.entryMode === "directSummary" ? SceneKey.FinalSummary : SceneKey.Completion;
+
+    if (this.endingFlowRequested && this.scene.isActive(entrySceneKey)) {
       return;
     }
     this.endingFlowRequested = true;
@@ -1965,7 +1968,8 @@ export class MainScene extends Phaser.Scene {
       this.events.emit("ui:showNotice", "엔딩 진입 전 오토 세이브에 실패했습니다.");
     }
 
-    this.scene.start(SceneKey.Completion, this.buildEndingPayload());
+    this.clearPendingInitialAreaRefresh();
+    this.scene.start(entrySceneKey, payload);
   }
 
   private async saveAutoWithNotice(): Promise<void> {
@@ -1984,8 +1988,10 @@ export class MainScene extends Phaser.Scene {
 
   private startDebugEndingFlow(endingId?: EndingId): void {
     const payload = endingId ? this.buildEndingPresetPayload(endingId) : this.buildEndingPayload();
+    const ending = resolveEnding(payload);
+    const entrySceneKey = ending.entryMode === "directSummary" ? SceneKey.FinalSummary : SceneKey.Completion;
     this.clearPendingInitialAreaRefresh();
-    this.scene.start(SceneKey.Completion, payload);
+    this.scene.start(entrySceneKey, payload);
   }
 
   private buildEndingPresetPayload(endingId: EndingId): EndingFlowPayload {

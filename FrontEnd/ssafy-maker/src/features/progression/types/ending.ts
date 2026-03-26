@@ -47,6 +47,8 @@ export type EndingResult = {
   priority: number;
   triggerMode: "manual" | "immediate";
   presentationMode: "full" | "summaryOnly";
+  entryMode: "completion" | "directSummary";
+  postComicAction: "start" | "credit";
   shortDescription: string;
   summaryStats: EndingSummaryStat[];
   introLines: string[];

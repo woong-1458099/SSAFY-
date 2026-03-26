@@ -13,6 +13,8 @@ type EndingDefinition = {
   priority: number;
   triggerMode: "manual" | "immediate";
   presentationMode: "full" | "summaryOnly";
+  entryMode: "completion" | "directSummary";
+  postComicAction: "start" | "credit";
   shortDescription: string;
   introLines: string[];
   npcLine: string;
@@ -31,6 +33,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 110,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "1등 당첨으로 졸업보다 빠르게 인생 역전 루트에 진입했습니다.",
     dominantLabels: ["로또", "행운", "역전"],
     imageFiles: createPanelFileNames("ending_lotto_panel"),
@@ -41,7 +45,9 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     title: "게임 오버",
     priority: 100,
     triggerMode: "immediate",
-    presentationMode: "summaryOnly",
+    presentationMode: "full",
+    entryMode: "directSummary",
+    postComicAction: "start",
     shortDescription: "체력이 바닥나면서 이번 학기의 도전이 여기서 멈췄습니다.",
     dominantLabels: ["HP", "한계", "실패"],
     imageFiles: ["ending_yamuchi.png"],
@@ -52,7 +58,9 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     title: "탈주닌자 엔딩",
     priority: 95,
     triggerMode: "immediate",
-    presentationMode: "summaryOnly",
+    presentationMode: "full",
+    entryMode: "directSummary",
+    postComicAction: "start",
     shortDescription: "스트레스가 한계를 넘기면서 모든 일정에서 이탈해 버렸습니다.",
     dominantLabels: ["스트레스", "이탈", "한계"],
     imageFiles: createPanelFileNames("ending_runaway_panel"),
@@ -64,6 +72,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 90,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "기술력과 협업 능력을 모두 인정받아 대기업 합격 루트에 도달했습니다.",
     dominantLabels: ["FE", "BE", "협업"],
     imageFiles: createPanelFileNames("ending_largecompany_panel"),
@@ -75,6 +85,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 85,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "결정적인 순간마다 운이 따라주면서 예상 밖의 취업 기회를 잡았습니다.",
     dominantLabels: ["운", "기회", "취업"],
     imageFiles: createPanelFileNames("ending_luckyjob_panel"),
@@ -86,6 +98,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 80,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "게임에 쏟은 시간이 결국 또 다른 진로의 문을 열어 주었습니다.",
     dominantLabels: ["게임", "취미", "몰입"],
     imageFiles: createPanelFileNames("ending_gamer_panel"),
@@ -97,6 +111,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 60,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "프론트엔드 구현 역량이 정점에 도달해 UI와 사용자 경험을 이끄는 개발자가 되었습니다.",
     dominantLabels: ["FE", "UI", "구현"],
     imageFiles: createPanelFileNames("ending_fe_panel"),
@@ -108,6 +124,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 59,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "백엔드 구조와 데이터 설계 역량이 충분히 쌓여 안정적인 서버 개발 루트에 올랐습니다.",
     dominantLabels: ["BE", "서버", "구조"],
     imageFiles: [],
@@ -119,6 +137,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 58,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "기술과 커뮤니케이션을 함께 챙기며 팀에 필요한 개발자로 성장했습니다.",
     dominantLabels: ["협업", "FE", "BE"],
     imageFiles: createPanelFileNames("ending_teamplayer_panel"),
@@ -130,6 +150,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 57,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "팀을 이끌고 방향을 정리하는 역할에 강점을 보이며 리더형 인재로 자리 잡았습니다.",
     dominantLabels: ["협업", "리더십", "조율"],
     imageFiles: createPanelFileNames("ending_leader_panel"),
@@ -141,6 +163,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 50,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "체력 관리와 꾸준함이 극한까지 올라가 완전히 다른 진로를 보여 주었습니다.",
     dominantLabels: ["HP MAX", "체력", "꾸준함"],
     imageFiles: createPanelFileNames("ending_healthutuber_panel"),
@@ -152,6 +176,8 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     priority: 0,
     triggerMode: "manual",
     presentationMode: "full",
+    entryMode: "completion",
+    postComicAction: "credit",
     shortDescription: "눈에 띄는 특화 엔딩은 아니지만, 6주 동안의 성장을 무사히 완주했습니다.",
     dominantLabels: ["완주", "성장", "기본"],
     imageFiles: createPanelFileNames("ending_nomal_panel"),
@@ -184,6 +210,8 @@ export function resolveEnding(input: EndingFlowPayload): EndingResult {
     priority: definition.priority,
     triggerMode: definition.triggerMode,
     presentationMode: definition.presentationMode,
+    entryMode: definition.entryMode,
+    postComicAction: definition.postComicAction,
     shortDescription: definition.shortDescription,
     summaryStats,
     introLines: definition.introLines,
@@ -202,6 +230,8 @@ function createEndingDefinition(input: {
   priority: number;
   triggerMode: "manual" | "immediate";
   presentationMode: "full" | "summaryOnly";
+  entryMode: "completion" | "directSummary";
+  postComicAction: "start" | "credit";
   shortDescription: string;
   dominantLabels: string[];
   imageFiles: string[];
