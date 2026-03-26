@@ -112,12 +112,27 @@
     {
       "id": "npc_hyewon",
       "label": "혜원 인사",
-      "startNodeId": "start",
+      "startNodeId": "week1",
       "nodes": {
-        "start": {
-          "id": "start",
+        "week1": {
+          "id": "week1",
           "speaker": "혜원",
-          "text": "오늘도 너무 무리하지 말고, 막히는 건 같이 보자."
+          "text": "SSAFY 1주차네! 처음엔 힘들어도 금방 적응할 거야. 나중에 프로젝트할 때 보탬이 되려면 미리미리 기본을 닦아둬야 해.",
+          "requirements": [{ "stat": "week", "min": 1, "max": 1 }],
+          "nextNodeId": "week2"
+        },
+        "week2": {
+          "id": "week2",
+          "speaker": "혜원",
+          "text": "벌써 2주차네! 이제 슬슬 팀원들이랑 손발이 맞기 시작했을 거야. 협업이 제일 중요한 거 잊지 마!",
+          "requirements": [{ "stat": "week", "min": 2, "max": 2 }],
+          "nextNodeId": "default"
+        },
+        "default": {
+          "id": "default",
+          "speaker": "혜원",
+          "text": "오늘도 너무 무리하지 말고, 막히는 건 같이 보자. 꾸준함이 정답이니까!",
+          "requirements": []
         }
       }
     },

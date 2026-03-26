@@ -10,7 +10,8 @@ export const DIALOGUE_REQUIREMENT_STAT_KEYS = [
   "stress",
   "hp",
   "money",
-  "playerGender"
+  "playerGender",
+  "week"
 ] as const;
 
 export type DialogueMetricKey = (typeof DIALOGUE_METRIC_KEYS)[number];
@@ -80,6 +81,7 @@ export type DialogueNode = {
   speakerGender?: Gender;
   nextNodeId?: string;
   choices?: DialogueChoice[];
+  requirements?: DialogueRequirement[];
   action?: DialogueAction;
   affectionChanges?: Record<string, number>;
 };

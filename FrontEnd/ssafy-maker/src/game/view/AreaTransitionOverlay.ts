@@ -17,6 +17,7 @@ export type RuntimeAreaTransitionTarget = {
   tileHeight: number;
   arrowDirection: "up" | "down";
   labelPlacement: "above" | "below";
+  isRomance?: boolean;
 };
 
 type TransitionView = {
@@ -63,7 +64,9 @@ export class AreaTransitionOverlay {
       const view = this.views.get(target.id) ?? this.createView(target);
       const isActive = target.id === activeId;
       this.drawZone(view.zone, target, isActive, view.pulsePhase);
-      view.label.setText(`🚪 ${target.label}`);
+      
+      const emoji = target.isRomance ? "❤️" : "🚪";
+      view.label.setText(`${emoji} ${target.label}`);
       this.positionLabel(view.label, target);
       view.label.setAlpha(isActive ? 1 : 0.85);
       view.arrow.setPosition(target.centerX, target.centerY);
@@ -89,8 +92,9 @@ export class AreaTransitionOverlay {
   private createView(target: RuntimeAreaTransitionTarget) {
     const zone = this.scene.add.graphics().setDepth(UI_DEPTH.areaTransitionZone);
 
+    const emoji = target.isRomance ? "❤️" : "🚪";
     const label = this.scene.add
-      .text(target.centerX, target.zoneY + target.zoneHeight + 8, `🚪 ${target.label}`, {
+      .text(target.centerX, target.zoneY + target.zoneHeight + 8, `${emoji} ${target.label}`, {
         fontSize: "13px",
         fontFamily: '"PFStardustBold", "Malgun Gothic", sans-serif',
         color: "#ffffff",

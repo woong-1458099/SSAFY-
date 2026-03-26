@@ -5,6 +5,7 @@ import type {
   DialogueChoice,
   DialogueNode,
   DialogueRequirement,
+  AffectionRequirement,
   DialogueRequirementStatKey,
   DialogueScript,
   DialogueStatKey
@@ -105,13 +106,25 @@ export class DialogueManager {
 
     try {
       while (currentNode && !this.destroyed) {
+        // 만약 노드 자체에 조건이 붙어있다면 검사한다.
+        // 조건이 충족되지 않으면 즉시 다음 노드로 건너뛴다.
+        if (currentNode.requirements && !this.checkRequirements(currentNode.requirements)) {
+          if (currentNode.nextNodeId) {
+            currentNode = script.nodes[currentNode.nextNodeId];
+            continue;
+          } else {
+            currentNode = undefined;
+            break;
+          }
+        }
+
         if (currentNode.choices && currentNode.choices.length > 0) {
           const selectedIndex = await this.waitForChoice(currentNode);
           if (this.destroyed) {
             break;
           }
           const selectedChoice: DialogueChoice | undefined = currentNode.choices[selectedIndex] ?? currentNode.choices[0];
-          if (selectedChoice && !this.isChoiceAvailable(selectedChoice)) {
+          if (selectedChoice && !this.checkRequirements(selectedChoice.requirements, selectedChoice.affectionRequirements)) {
             const requirementText = this.getRequirementText(selectedChoice);
             this.onNotice?.(
               selectedChoice.lockedReason ??
@@ -225,7 +238,7 @@ export class DialogueManager {
     this.dialogueBox?.renderNode(node, {
       selectedChoiceIndex: selectedIndex,
       getRequirementText: (choice) => this.getRequirementText(choice),
-      isChoiceAvailable: (choice) => this.isChoiceAvailable(choice)
+      isChoiceAvailable: (choice) => this.checkRequirements(choice.requirements, choice.affectionRequirements)
     });
 
     return new Promise<number>((resolve) => {
@@ -239,7 +252,7 @@ export class DialogueManager {
           this.dialogueBox?.renderNode(node, {
             selectedChoiceIndex: selectedIndex,
             getRequirementText: (choice) => this.getRequirementText(choice),
-            isChoiceAvailable: (choice) => this.isChoiceAvailable(choice)
+            isChoiceAvailable: (choice) => this.checkRequirements(choice.requirements, choice.affectionRequirements)
           });
           return;
         }
@@ -252,7 +265,7 @@ export class DialogueManager {
           this.dialogueBox?.renderNode(node, {
             selectedChoiceIndex: selectedIndex,
             getRequirementText: (choice) => this.getRequirementText(choice),
-            isChoiceAvailable: (choice) => this.isChoiceAvailable(choice)
+            isChoiceAvailable: (choice) => this.checkRequirements(choice.requirements, choice.affectionRequirements)
           });
           return;
         }
@@ -292,9 +305,12 @@ export class DialogueManager {
     });
   }
 
-  private isChoiceAvailable(choice: DialogueChoice): boolean {
-    const requirements = choice.requirements ?? [];
-    const statReqMet = requirements.every((req) => {
+  private checkRequirements(
+    requirements?: DialogueRequirement[],
+    affectionRequirements?: AffectionRequirement[]
+  ): boolean {
+    const list = requirements ?? [];
+    const statReqMet = list.every((req) => {
       const value = this.getMetricValue?.(req.stat) ?? 0;
       if (typeof req.equals === "string") {
         return String(value).toUpperCase() === req.equals.trim().toUpperCase();
@@ -313,8 +329,8 @@ export class DialogueManager {
 
     if (!statReqMet) return false;
 
-    const affectionRequirements = choice.affectionRequirements ?? [];
-    return affectionRequirements.every((req) => {
+    const affList = affectionRequirements ?? [];
+    return affList.every((req) => {
       const value = this.getAffectionValue?.(req.npcId) ?? 0;
       if (typeof req.min === "number" && value < req.min) {
         return false;
@@ -360,7 +376,9 @@ export class DialogueManager {
                 ? "협업"
                 : req.stat === "luck"
                   ? "운"
-                  : "스트레스";
+                  : req.stat === "week"
+                    ? "주차"
+                    : "스트레스";
 
     if (typeof req.equals === "string") {
       return `${label} ${req.equals}`;

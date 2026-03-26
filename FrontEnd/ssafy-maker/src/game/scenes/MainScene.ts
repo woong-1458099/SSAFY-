@@ -180,6 +180,8 @@ export class MainScene extends Phaser.Scene {
             return hudState.money;
           case "playerGender":
             return typeof playerData?.gender === "string" ? playerData.gender.toUpperCase() : "";
+          case "week":
+            return this.progressionManager?.getTimeState().week ?? 1;
           default:
             return statsState[stat];
         }
@@ -547,7 +549,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private toggleBgmEnabled(): void {
-    this.audioManager.setBgmEnabled(!this.audioManager.isBgmEnabled());
+    const next = !this.audioManager.isBgmEnabled();
+    console.log(`[MainScene] Toggling BGM Enabled: ${next}`);
+    this.audioManager.setBgmEnabled(next);
     this.refreshCurrentAreaBgm();
   }
 
@@ -797,11 +801,12 @@ export class MainScene extends Phaser.Scene {
 
     const pendingEvent = this.storyEventManager.getPendingFixedEventInfo();
     if (pendingEvent) {
+      const isRomance = (pendingEvent as any).isRomance === true;
       this.events.emit("ui:updateGuide", {
-        objective: pendingEvent.eventName,
+        objective: isRomance ? "❤️ 특별한 예감" : pendingEvent.eventName,
         location: pendingEvent.location,
-        npc: pendingEvent.participants.join(", "),
-        action: "고정 이벤트를 진행하세요"
+        npc: isRomance ? "누군가 당신을 기다릴지도...?" : pendingEvent.participants.join(", "),
+        action: isRomance ? "❤️ 설레는 만남을 준비하세요" : "고정 이벤트를 진행하세요"
       });
       return;
     }
@@ -1254,6 +1259,7 @@ export class MainScene extends Phaser.Scene {
     return getAreaTransitionDefinitions(areaId).map((transition) => ({
       id: transition.id,
       label: transition.label,
+      isRomance: this.storyEventManager?.hasRomanceEventForArea(transition.toArea) === true,
       centerX:
         renderBounds.offsetX +
         (transition.tileX + (transition.tileWidth ?? 1) / 2) *

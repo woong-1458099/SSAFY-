@@ -26,6 +26,7 @@ export type FixedEventNpcPresentationEntry = FixedEventNpcEntry & {
 
 export type FixedEventNpcPresentation = {
   eventId?: string;
+  isRomance?: boolean;
   renderArea: FixedEventRenderArea;
   participants: FixedEventNpcPresentationEntry[];
 };

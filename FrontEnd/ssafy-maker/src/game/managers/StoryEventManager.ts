@@ -221,10 +221,15 @@ export class StoryEventManager {
 
       const slotIndex = getWeeklyPlanSlotIndex(day - 1, timeIndex);
       const rawEventName = event.label ?? event.eventName;
-      const eventName =
+      let eventName =
         typeof rawEventName === "string" && rawEventName.trim().length > 0
           ? rawEventName.trim()
           : "고정 이벤트";
+
+      if (event.eventType === "ROMANCE") {
+        eventName = "❤️ 특별한 예감";
+      }
+
       slots.set(slotIndex, eventName);
     });
 
@@ -290,9 +295,15 @@ export class StoryEventManager {
       return null;
     }
 
-    return buildFixedEventNpcPresentation(event, {
+    const presentation = buildFixedEventNpcPresentation(event, {
       fallbackLocation: this.getCurrentArea()
     });
+
+    if (presentation && event.eventType === "ROMANCE") {
+      presentation.isRomance = true;
+    }
+
+    return presentation;
   }
 
   tryStartCurrentFixedEvent(): boolean {
@@ -310,7 +321,7 @@ export class StoryEventManager {
     return this.getTimeAdvanceBlockedMessage();
   }
 
-  getPendingFixedEventInfo(): { eventName: string; location: string; participants: string[] } | null {
+  getPendingFixedEventInfo(): { eventName: string; location: string; participants: string[]; isRomance: boolean } | null {
     const event = this.findPendingFixedEventForCurrentTime();
     if (!event) {
       return null;
@@ -335,7 +346,8 @@ export class StoryEventManager {
     return {
       eventName,
       location: locationName,
-      participants
+      participants,
+      isRomance: event.eventType === "ROMANCE"
     };
   }
 
@@ -596,8 +608,16 @@ export class StoryEventManager {
     return (
       getFixedEventEntries(rawData).find((event) => {
         const timing = event.triggerTiming;
-        if (!timing || event.eventType !== "FIXED") {
+        if (!timing || (event.eventType !== "FIXED" && event.eventType !== "ROMANCE")) {
           return false;
+        }
+
+        if (event.eventType === "ROMANCE") {
+          const rawEventId = event.id ?? event.eventId;
+          const eventId = String(rawEventId || "");
+          const gender = this.getPlayerGender();
+          if (gender === "MALE" && eventId.includes("_MINSU_")) return false;
+          if (gender === "FEMALE" && eventId.includes("_HYO_")) return false;
         }
 
         const rawEventId = event.id ?? event.eventId;
@@ -695,6 +715,37 @@ export class StoryEventManager {
     this.activeFixedEventId = null;
     this.starting = false;
     this.removeRuntimeDialogueScript(dialogueId);
+  }
+
+  hasRomanceEventForArea(areaId: string): boolean {
+    const hudState = this.getHudState();
+    const rawData = this.weekData.get(hudState.week);
+    if (!rawData) return false;
+
+    const entries = getFixedEventEntries(rawData);
+    const dayIndex = this.resolveDayIndex(hudState.dayLabel) + 1;
+
+    return entries.some((event) => {
+      const timing = event.triggerTiming;
+      if (!timing || event.eventType !== "ROMANCE") return false;
+
+      const eventId = String(event.id ?? event.eventId ?? "");
+      const gender = this.getPlayerGender();
+      if (gender === "MALE" && eventId.includes("_MINSU_")) return false;
+      if (gender === "FEMALE" && eventId.includes("_HYO_")) return false;
+
+      if (event.isRepeatable !== true && eventId && this.completedFixedEventIds.includes(eventId)) {
+        return false;
+      }
+
+      const sameWeek = Math.round(timing.week ?? -1) === hudState.week;
+      const sameDay = Math.round(timing.day ?? -1) === dayIndex;
+      const sameTime = typeof timing.timeOfDay === "string" && timing.timeOfDay.trim() === hudState.timeLabel;
+      if (!sameWeek || !sameDay || !sameTime) return false;
+
+      const locationId = resolveFixedEventLocationId(event.location, "world");
+      return resolveFixedEventRenderArea(locationId) === areaId;
+    });
   }
 
   private resolveDayIndex(dayLabel: string): number {
