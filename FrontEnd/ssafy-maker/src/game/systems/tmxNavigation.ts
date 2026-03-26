@@ -114,6 +114,28 @@ export function applyWalkableTileZones(
   return nextBlockedGrid;
 }
 
+export function applyWalkableTiles(
+  blockedGrid: boolean[][],
+  walkableTiles?: { x: number; y: number }[]
+) {
+  if (!walkableTiles || walkableTiles.length === 0) {
+    return blockedGrid;
+  }
+
+  const nextBlockedGrid = cloneBooleanGrid(blockedGrid);
+
+  walkableTiles.forEach((tile) => {
+    const row = nextBlockedGrid[tile.y];
+    if (!row || tile.x < 0 || tile.x >= row.length) {
+      return;
+    }
+
+    row[tile.x] = false;
+  });
+
+  return nextBlockedGrid;
+}
+
 export function applyBlockedTileZones(
   blockedGrid: boolean[][],
   blockedTileZones?: { x: number; y: number; width: number; height: number }[]
@@ -391,7 +413,8 @@ export function buildRuntimeGrids(
   resolvedLayers: ResolvedTmxLayers,
   walkableTileZones?: { x: number; y: number; width: number; height: number }[],
   blockedTileZones?: { x: number; y: number; width: number; height: number }[],
-  blockedTiles?: { x: number; y: number }[]
+  blockedTiles?: { x: number; y: number }[],
+  walkableTiles?: { x: number; y: number }[]
 ): TmxRuntimeGrids {
   const baseBlockedGrid = buildBooleanGridFromLayers(
     parsedMap.width,
@@ -400,10 +423,12 @@ export function buildRuntimeGrids(
   );
   const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
   const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones);
+  const blockedTilesAppliedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
+  const finalBlockedGrid = applyWalkableTiles(blockedTilesAppliedGrid, walkableTiles);
   const manualBlockedGrid = buildBooleanGridFromTiles(parsedMap.width, parsedMap.height, blockedTiles);
 
   return {
-    blockedGrid: applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles),
+    blockedGrid: finalBlockedGrid,
     interactionGrid: buildBooleanGridFromLayers(
       parsedMap.width,
       parsedMap.height,

@@ -2,6 +2,7 @@ import { ASSET_KEYS } from "../../../common/assets/assetKeys";
 import type { AreaId } from "../../../common/enums/area";
 import type { Rect, Vector2 } from "../../../common/types/geometry";
 import type { TmxAreaConfig } from "../../systems/tmxNavigation";
+import { CLASSROOM_BLOCKED_TILES, CLASSROOM_WALKABLE_TILES } from "./classroomCollisionPatch";
 
 export type AreaMapDefinition = {
   entryPoint?: Vector2;
@@ -10,6 +11,7 @@ export type AreaMapDefinition = {
   interactionLayerNames: string[];
   foregroundLayerNames: string[];
   walkableTileZones?: Rect[];
+  walkableTiles?: Vector2[];
   blockedTileZones?: Rect[];
   blockedTiles?: Vector2[];
 };
@@ -164,7 +166,9 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
       tmxKey: ASSET_KEYS.map.classroomTmx,
       collisionLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.collision],
       interactionLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.interaction],
-      foregroundLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.foreground]
+      foregroundLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.foreground],
+      walkableTiles: CLASSROOM_WALKABLE_TILES,
+      blockedTiles: CLASSROOM_BLOCKED_TILES
     },
     presentation: {
       backgroundKey: ASSET_KEYS.background.campus,

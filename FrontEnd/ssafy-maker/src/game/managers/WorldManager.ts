@@ -184,7 +184,8 @@ export class WorldManager {
       this.currentResolvedTmxLayers,
       area.map.walkableTileZones,
       area.map.blockedTileZones,
-      area.map.blockedTiles
+      area.map.blockedTiles,
+      area.map.walkableTiles
     );
   }
 
