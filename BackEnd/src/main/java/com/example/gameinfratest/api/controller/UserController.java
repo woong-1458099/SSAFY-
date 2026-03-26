@@ -3,7 +3,9 @@ package com.example.gameinfratest.api.controller;
 import com.example.gameinfratest.api.dto.ApiResponse;
 import com.example.gameinfratest.api.dto.auth.DeathRecordTokenResponse;
 import com.example.gameinfratest.api.dto.auth.UserResponse;
+import com.example.gameinfratest.api.dto.death.RecordDeathRequest;
 import com.example.gameinfratest.service.AuthorizationService;
+import com.example.gameinfratest.service.DeathRecordService;
 import com.example.gameinfratest.service.DeathRecordVerificationService;
 import com.example.gameinfratest.service.UserService;
 import com.example.gameinfratest.support.ApiException;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,15 +29,18 @@ public class UserController {
 
     private final UserService userService;
     private final AuthorizationService authorizationService;
+    private final DeathRecordService deathRecordService;
     private final DeathRecordVerificationService deathRecordVerificationService;
 
     public UserController(
             UserService userService,
             AuthorizationService authorizationService,
+            DeathRecordService deathRecordService,
             DeathRecordVerificationService deathRecordVerificationService
     ) {
         this.userService = userService;
         this.authorizationService = authorizationService;
+        this.deathRecordService = deathRecordService;
         this.deathRecordVerificationService = deathRecordVerificationService;
     }
 
@@ -61,12 +67,13 @@ public class UserController {
     @PostMapping("/deaths")
     public ApiResponse<UserResponse> recordDeath(
             HttpServletRequest request,
+            @RequestBody(required = false) RecordDeathRequest body,
             @RequestHeader(value = DEATH_RECORD_TOKEN_HEADER, required = false) String deathRecordToken
     ) {
         UserResponse currentUser = authorizationService.requireAuthenticatedSessionUser();
         HttpSession session = requireSession(request);
         deathRecordVerificationService.verifyAndConsume(session, currentUser.id(), deathRecordToken);
-        return ApiResponse.ok("user death count update success", userService.recordDeath(currentUser.id()));
+        return ApiResponse.ok("user death count update success", deathRecordService.recordDeath(currentUser.id(), body));
     }
 
     @DeleteMapping
