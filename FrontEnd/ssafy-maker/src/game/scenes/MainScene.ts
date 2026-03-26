@@ -452,7 +452,7 @@ export class MainScene extends Phaser.Scene {
     } else if (currentArea === "downtown") {
       void playPlaceBgm(this, "downtown" as any, this.audioManager);
       this.destroySkyBackground = createSkyBackground(this, timeOfDay, mapPixelWidth, mapPixelHeight);
-    } else if (currentArea === "campus") {
+    } else if (currentArea === "campus" || currentArea === "classroom") {
       void playPlaceBgm(this, "campus" as any, this.audioManager);
       this.destroySkyBackground = createCampusBackground(this, -10);
     } else {
@@ -576,6 +576,11 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    if (currentArea === "classroom") {
+      void playPlaceBgm(this, "campus" as any, this.audioManager);
+      return;
+    }
+
     void playPlaceBgm(this, currentArea as any, this.audioManager);
   }
 
@@ -616,6 +621,8 @@ export class MainScene extends Phaser.Scene {
 
       if (area === "world") {
         void playWorldBgm(this, timeOfDay, this.audioManager);
+      } else if (area === "classroom") {
+        void playPlaceBgm(this, "campus" as any, this.audioManager);
       } else {
         void playPlaceBgm(this, area as any, this.audioManager);
       }
@@ -713,7 +720,12 @@ export class MainScene extends Phaser.Scene {
     }
 
     const currentArea = this.worldManager.getCurrentAreaId();
-    if (currentArea === "world" || currentArea === "downtown" || currentArea === "campus") {
+    if (
+      currentArea === "world" ||
+      currentArea === "downtown" ||
+      currentArea === "campus" ||
+      currentArea === "classroom"
+    ) {
       const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
       const newTimeOfDay = cycle[(this.progressionManager?.getTimeCycleIndex() ?? 0) % cycle.length];
 
@@ -728,7 +740,7 @@ export class MainScene extends Phaser.Scene {
         this.destroySkyBackground?.();
         if (currentArea === "world" || currentArea === "downtown") {
           this.destroySkyBackground = createSkyBackground(this, newTimeOfDay, mapPixelWidth, mapPixelHeight);
-        } else if (currentArea === "campus") {
+        } else if (currentArea === "campus" || currentArea === "classroom") {
           this.destroySkyBackground = createCampusBackground(this, -10);
         }
 
@@ -1256,7 +1268,9 @@ export class MainScene extends Phaser.Scene {
       tileX: transition.tileX,
       tileY: transition.tileY,
       tileWidth: transition.tileWidth ?? 1,
-      tileHeight: transition.tileHeight ?? 1
+      tileHeight: transition.tileHeight ?? 1,
+      arrowDirection: transition.arrowDirection ?? "up",
+      labelPlacement: transition.labelPlacement ?? "below"
     }));
   }
 
@@ -1424,6 +1438,8 @@ export class MainScene extends Phaser.Scene {
     switch (areaId) {
       case "campus":
         return "캠퍼스";
+      case "classroom":
+        return "교실";
       case "downtown":
         return "번화가";
       case "world":

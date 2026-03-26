@@ -15,6 +15,8 @@ export type RuntimeAreaTransitionTarget = {
   tileY: number;
   tileWidth: number;
   tileHeight: number;
+  arrowDirection: "up" | "down";
+  labelPlacement: "above" | "below";
 };
 
 type TransitionView = {
@@ -54,6 +56,7 @@ export class AreaTransitionOverlay {
       this.positionLabel(view.label, target);
       view.label.setAlpha(isActive ? 1 : 0.85);
       view.arrow.setPosition(target.centerX, target.centerY);
+      view.arrow.setText(target.arrowDirection === "down" ? "▼" : "▲");
       view.arrow.setAlpha(isActive ? 1 : 0.7);
       view.zone.setVisible(true);
       view.label.setVisible(true);
@@ -93,9 +96,8 @@ export class AreaTransitionOverlay {
       .setOrigin(0, 0)
       .setDepth(UI_DEPTH.areaTransitionLabel);
 
-    // 화살표 아이콘 (위쪽 방향)
     const arrow = this.scene.add
-      .text(target.centerX, target.centerY, "▲", {
+      .text(target.centerX, target.centerY, target.arrowDirection === "down" ? "▼" : "▲", {
         fontSize: "20px",
         color: "#ffffff",
         shadow: {
@@ -109,10 +111,11 @@ export class AreaTransitionOverlay {
       .setOrigin(0.5)
       .setDepth(UI_DEPTH.areaTransitionZone + 1);
 
-    // 화살표 위아래 애니메이션
+    const arrowOffsetY = target.arrowDirection === "down" ? 6 : -6;
+
     this.scene.tweens.add({
       targets: arrow,
-      y: target.centerY - 6,
+      y: target.centerY + arrowOffsetY,
       duration: 600,
       yoyo: true,
       repeat: -1,
@@ -140,7 +143,14 @@ export class AreaTransitionOverlay {
     const minX = worldView.x;
     const maxX = Math.max(minX, worldView.right - label.width);
     const clampedX = Phaser.Math.Clamp(desiredX, minX, maxX);
-    label.setPosition(clampedX, target.zoneY + target.zoneHeight + 8);
+    const desiredY =
+      target.labelPlacement === "above"
+        ? target.zoneY - label.height - 8
+        : target.zoneY + target.zoneHeight + 8;
+    const minY = worldView.y;
+    const maxY = Math.max(minY, worldView.bottom - label.height);
+    const clampedY = Phaser.Math.Clamp(desiredY, minY, maxY);
+    label.setPosition(clampedX, clampedY);
   }
 
   private drawZone(

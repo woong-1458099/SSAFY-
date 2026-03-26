@@ -22,6 +22,8 @@ type SceneSwitchKeys = {
   downtownNumpad?: Phaser.Input.Keyboard.Key;
   campus?: Phaser.Input.Keyboard.Key;
   campusNumpad?: Phaser.Input.Keyboard.Key;
+  classroom?: Phaser.Input.Keyboard.Key;
+  classroomNumpad?: Phaser.Input.Keyboard.Key;
 };
 
 // 디버그 입력은 명령만 발행하고 실제 상태 변경은 각 책임자에게 위임한다.
@@ -98,6 +100,11 @@ export class DebugInputController {
 
     if (this.justPressed(this.sceneSwitchKeys.campus) || this.justPressed(this.sceneSwitchKeys.campusNumpad)) {
       this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.campusDefault });
+      return;
+    }
+
+    if (this.justPressed(this.sceneSwitchKeys.classroom) || this.justPressed(this.sceneSwitchKeys.classroomNumpad)) {
+      this.emitIfAllowed({ type: "switchStartScene", sceneId: SCENE_IDS.classroomDefault });
     }
   }
 
@@ -189,7 +196,9 @@ export class DebugInputController {
       downtown: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.TWO, false),
       downtownNumpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO, false),
       campus: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.THREE, false),
-      campusNumpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE, false)
+      campusNumpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE, false),
+      classroom: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR, false),
+      classroomNumpad: this.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_FOUR, false)
     };
   }
 }

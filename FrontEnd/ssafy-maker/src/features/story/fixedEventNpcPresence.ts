@@ -69,6 +69,7 @@ function createSharedSlots(baseX: number, baseY: number): FixedEventNpcSlot[] {
 
 const FIXED_EVENT_NPC_SLOTS: Record<FixedEventLocationId, FixedEventNpcSlot[]> = {
   campus: createSharedSlots(760, 468),
+  classroom: createSharedSlots(760, 468),
   downtown: createSharedSlots(760, 468),
   world: createSharedSlots(760, 468),
   home: createSharedSlots(760, 468),
@@ -135,7 +136,7 @@ export function resolveFixedEventLocationId(rawLocation: unknown, fallbackLocati
 }
 
 export function resolveFixedEventRenderArea(location: FixedEventLocationId): FixedEventRenderArea {
-  if (location === "campus" || location === "downtown") {
+  if (location === "campus" || location === "downtown" || location === "classroom") {
     return location;
   }
 

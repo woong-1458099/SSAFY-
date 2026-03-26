@@ -5,5 +5,6 @@ import { getAreaEntryPoint } from "./areaDefinitions";
 
 export const AREA_ENTRY_POINTS: Partial<Record<AreaId, Vector2>> = {
   downtown: getAreaEntryPoint("downtown"),
-  campus: getAreaEntryPoint("campus")
+  campus: getAreaEntryPoint("campus"),
+  classroom: getAreaEntryPoint("classroom")
 };
