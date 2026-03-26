@@ -252,6 +252,70 @@ export function buildBooleanGridFromTiles(
   return grid;
 }
 
+export function buildBooleanGridFromRects(
+  width: number,
+  height: number,
+  rects?: { x: number; y: number; width: number; height: number }[]
+) {
+  const grid = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => false)
+  );
+
+  if (!rects || rects.length === 0) {
+    return grid;
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (rects.some((rect) => isTileInsideRect(x, y, rect))) {
+        grid[y][x] = true;
+      }
+    }
+  }
+
+  return grid;
+}
+
+export function buildWalkableZoneBlockedGrid(
+  width: number,
+  height: number,
+  walkableTileZones?: { x: number; y: number; width: number; height: number }[]
+) {
+  const grid = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => false)
+  );
+
+  if (!walkableTileZones || walkableTileZones.length === 0) {
+    return grid;
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      grid[y][x] = !walkableTileZones.some((zone) => isTileInsideRect(x, y, zone));
+    }
+  }
+
+  return grid;
+}
+
+export type RuntimeBlockedTilePolicyInput = {
+  baseCollisionBlocked: boolean;
+  blockedByWalkableZone: boolean;
+  walkablePatchClearsCollision: boolean;
+  blockedByManualZone: boolean;
+  blockedByManualTile: boolean;
+};
+
+export function resolveRuntimeBlockedTile(input: RuntimeBlockedTilePolicyInput) {
+  const collisionBlocked = input.baseCollisionBlocked && !input.walkablePatchClearsCollision;
+  return (
+    input.blockedByWalkableZone ||
+    collisionBlocked ||
+    input.blockedByManualZone ||
+    input.blockedByManualTile
+  );
+}
+
 export function extractConnectedRegionsFromGrid(
   grid: boolean[][],
   minAreaTiles = 1
@@ -402,28 +466,33 @@ export function buildRuntimeGrids(
     parsedMap.height,
     resolvedLayers.collisionLayers
   );
-  const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
-  // walkable patch only relaxes base collision-derived blocking.
-  // Manual blocked zones / tiles remain the final authority.
+  const walkableZoneBlockedGrid = buildWalkableZoneBlockedGrid(
+    parsedMap.width,
+    parsedMap.height,
+    walkableTileZones
+  );
   const walkablePatchGrid = buildBooleanGridFromLayers(
     parsedMap.width,
     parsedMap.height,
     resolvedLayers.walkableLayers
   );
-  const walkableLayerAppliedBlockedGrid = cloneBooleanGrid(walkableAppliedBlockedGrid);
-  for (let y = 0; y < walkableLayerAppliedBlockedGrid.length; y += 1) {
-    for (let x = 0; x < (walkableLayerAppliedBlockedGrid[y]?.length ?? 0); x += 1) {
-      if (walkablePatchGrid[y]?.[x]) {
-        walkableLayerAppliedBlockedGrid[y][x] = false;
-      }
-    }
-  }
-  const zoneAppliedBlockedGrid = applyBlockedTileZones(
-    walkableLayerAppliedBlockedGrid,
+  const manualBlockedZoneGrid = buildBooleanGridFromRects(
+    parsedMap.width,
+    parsedMap.height,
     blockedTileZones
   );
-  const finalBlockedGrid = applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles);
   const manualBlockedGrid = buildBooleanGridFromTiles(parsedMap.width, parsedMap.height, blockedTiles);
+  const finalBlockedGrid = Array.from({ length: parsedMap.height }, (_, y) =>
+    Array.from({ length: parsedMap.width }, (_, x) =>
+      resolveRuntimeBlockedTile({
+        baseCollisionBlocked: baseBlockedGrid[y]?.[x] ?? false,
+        blockedByWalkableZone: walkableZoneBlockedGrid[y]?.[x] ?? false,
+        walkablePatchClearsCollision: walkablePatchGrid[y]?.[x] ?? false,
+        blockedByManualZone: manualBlockedZoneGrid[y]?.[x] ?? false,
+        blockedByManualTile: manualBlockedGrid[y]?.[x] ?? false
+      })
+    )
+  );
 
   return {
     blockedGrid: finalBlockedGrid,
