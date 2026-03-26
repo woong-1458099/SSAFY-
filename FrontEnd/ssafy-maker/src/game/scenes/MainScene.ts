@@ -130,6 +130,7 @@ export class MainScene extends Phaser.Scene {
   async create() {
     this.initialized = false;
     this.logoutInProgress = false;
+    this.cameras.main.setRoundPixels(true);
     await ensureAuthoredStoryLoaded(this);
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
@@ -487,6 +488,12 @@ export class MainScene extends Phaser.Scene {
         this.time.delayedCall(200, startTutorial);
       }
     }
+
+    // 첫 진입 직후 한 프레임 뒤에 현재 맵을 같은 좌표계로 다시 맞춘다.
+    // 다른 맵을 갔다 돌아오면 정상화되던 초기 렌더 불안정을 여기서 흡수한다.
+    this.time.delayedCall(0, () => {
+      this.refreshCurrentAreaPresentation();
+    });
   }
 
   private async handleLogout(): Promise<void> {
@@ -548,6 +555,55 @@ export class MainScene extends Phaser.Scene {
     const overlayAlpha = Phaser.Math.Clamp(1 - brightness, 0, 0.45);
     this.brightnessOverlay.setAlpha(overlayAlpha);
     this.brightnessOverlay.setVisible(overlayAlpha > 0.001);
+  }
+
+  private refreshCurrentAreaPresentation(): void {
+    if (!this.worldManager || !this.playerManager || !this.interactionManager) {
+      return;
+    }
+
+    const areaId = this.worldManager.getCurrentAreaId();
+    if (!areaId) {
+      return;
+    }
+
+    const playerSnapshot = this.playerManager.getSnapshot();
+    this.worldManager.loadArea(areaId);
+
+    const parsedMap = this.worldManager.getCurrentParsedTmxMap();
+    const runtimeGrids = this.worldManager.getCurrentRuntimeGrids();
+    const renderBounds = this.worldManager.getCurrentRenderBounds();
+
+    this.playerManager.setRenderBounds(renderBounds);
+
+    if (playerSnapshot) {
+      this.playerManager.debugTeleportToTile(playerSnapshot.tileX, playerSnapshot.tileY);
+    }
+
+    const transitionTargets = this.resolveAreaTransitionTargets(areaId, renderBounds);
+    const staticPlaceTargets = this.resolveStaticPlaceTargets(
+      areaId,
+      renderBounds,
+      parsedMap,
+      runtimeGrids
+    );
+
+    this.currentStaticPlaceTargets = staticPlaceTargets;
+    this.interactionManager.setTransitionTargets(transitionTargets);
+    this.interactionManager.setStaticPlaceTargets(staticPlaceTargets);
+    this.syncDebugWorldState();
+
+    if (this.worldGridOverlay) {
+      this.worldGridOverlay.render(
+        runtimeGrids,
+        parsedMap,
+        renderBounds,
+        this.playerManager.getSnapshot(),
+        this.currentStaticPlaceTargets
+      );
+    }
+
+    this.events.emit("ui:renderTransitions", transitionTargets);
   }
 
   private adjustBgmVolume(delta: number): void {

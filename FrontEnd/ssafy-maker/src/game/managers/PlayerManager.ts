@@ -202,6 +202,10 @@ export class PlayerManager {
     runtimeGrids: TmxRuntimeGrids,
     parsedMap: ParsedTmxMap
   ) {
+    if (!this.isWithinWorldBounds(worldX, worldY, parsedMap)) {
+      return false;
+    }
+
     const { tileX, tileY } = this.getTilePositionFromWorld(worldX, worldY, parsedMap);
     return this.canMoveTo(tileX, tileY, runtimeGrids, parsedMap);
   }
@@ -235,6 +239,25 @@ export class PlayerManager {
         parsedMap.height - 1
       )
     };
+  }
+
+  private isWithinWorldBounds(worldX: number, worldY: number, parsedMap: ParsedTmxMap) {
+    if (!this.renderBounds) {
+      const minX = this.tileSize / 2;
+      const maxX = parsedMap.width * this.tileSize - this.tileSize / 2;
+      const minY = this.tileSize;
+      const maxY = parsedMap.height * this.tileSize;
+      return worldX >= minX && worldX <= maxX && worldY >= minY && worldY <= maxY;
+    }
+
+    const scaledTileWidth = this.renderBounds.tileWidth * this.renderBounds.scale;
+    const scaledTileHeight = this.renderBounds.tileHeight * this.renderBounds.scale;
+    const minX = this.renderBounds.offsetX + scaledTileWidth / 2;
+    const maxX = this.renderBounds.offsetX + this.renderBounds.mapWidth * scaledTileWidth - scaledTileWidth / 2;
+    const minY = this.renderBounds.offsetY + scaledTileHeight;
+    const maxY = this.renderBounds.offsetY + this.renderBounds.mapHeight * scaledTileHeight;
+
+    return worldX >= minX && worldX <= maxX && worldY >= minY && worldY <= maxY;
   }
 
   private getWorldPositionFromTile(tileX: number, tileY: number) {
