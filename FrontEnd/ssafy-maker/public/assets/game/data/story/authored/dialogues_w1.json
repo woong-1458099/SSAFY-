@@ -1,0 +1,233 @@
+{
+  "dialogues": [
+    {
+      "id": "minsu_intro_w1",
+      "label": "민수 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "emotion": "NORMAL",
+          "text": "모르는 건 바로 묻는 게 빠르다. 혼자 끌어안지 말고."
+        }
+      }
+    },
+    {
+      "id": "npc_hyewon_w1",
+      "label": "혜원 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "혜원",
+          "text": "SSAFY 1주차네! 처음엔 힘들어도 금방 적응할 거야. 나중에 프로젝트할 때 보탬이 되려면 미리미리 기본을 닦아둬야 해."
+        }
+      }
+    },
+    {
+      "id": "npc_minseok_w1",
+      "label": "민석 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민석",
+          "text": "오늘도 차분하게 하나씩 풀어보자. 급할수록 흐름부터 보는 게 좋아.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "좋아, 차근차근 해볼게."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_myungjin_w1",
+      "label": "명진 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "명진",
+          "emotion": "NORMAL",
+          "text": "오늘도 팀 일은 차분하게 정리하면 돼.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "알겠어, 고마워."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_yeonwoong_w1",
+      "label": "연웅 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "연웅",
+          "emotion": "NORMAL",
+          "text": "와이리 할 게 많노",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "크아아아아아아아아아"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_hyoryeon_w1",
+      "label": "효련 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "효련",
+          "emotion": "NORMAL",
+          "text": "에셋 찍다 쿨타임 오면 딴짓하는 게 국룰이지",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "어, 잠깐 쉬어갈게."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_jiwoo_w1",
+      "label": "지우 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "지우",
+          "emotion": "NORMAL",
+          "text": "스크립트 짜다가 막히면 바로바로 말해줘.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "응, 같이 맞춰보자."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_jongmin_w1",
+      "label": "종민 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "종민",
+          "emotion": "NORMAL",
+          "text": "여긴 1주차 기본 UI 설명 칸이야. 차근차근 익혀보자.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "알겠어."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_minsu_w1",
+      "label": "민수 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "emotion": "NORMAL",
+          "text": "진짜 장~담~ 모한다~",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "흠흠흠~"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_sunmi_w1",
+      "label": "조선미 프로 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "조선미 프로",
+          "text": "오늘 점식 특식?! 허거덩",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "허거덩"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_doyeon_w1",
+      "label": "김도연 프로 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김도연 프로",
+          "text": "오늘도 호ㅓ이팅 ^~^",
+          "choices": [
+            {
+              "id": "bye",
+              "text": " 화이팅! "
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_hyunseok_w1",
+      "label": "이현석 컨설턴트 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "이현석 컨설턴트",
+          "text": "요즘 프로젝트 진행은 어떤가요? 문제가 있으면 빨리 공유하세요.",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "네, 확인해볼게요."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_nayool_w1",
+      "label": "김나율 프로 (1주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김나율 프로",
+          "text": "부탁할 게 있다구? 말만해!",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "고마워, 필요하면 부탁할게."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

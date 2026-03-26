@@ -234,12 +234,13 @@ function validateDialogueNode(
 
 export function buildDialogueRegistryFromJson(
   raw: unknown,
-  fatalIssues: string[] = []
+  fatalIssues: string[] = [],
+  existingRegistry: Record<string, DialogueScript> = {}
 ): Record<string, DialogueScript> {
   const asset = (raw ?? {}) as AuthoredDialogueJson;
   const dialogues = Array.isArray(asset.dialogues) ? asset.dialogues : [];
-  const registry: Record<string, DialogueScript> = {};
-  const seenDialogueIds = new Set<string>();
+  const registry: Record<string, DialogueScript> = { ...existingRegistry };
+  const seenDialogueIds = new Set<string>(Object.keys(registry));
 
   dialogues.forEach((entry, index) => {
     let id: DialogueScriptId;
@@ -311,12 +312,6 @@ export function buildDialogueRegistryFromJson(
       startNodeId,
       nodes
     };
-  });
-
-  REQUIRED_DIALOGUE_IDS.forEach((dialogueId) => {
-    if (!registry[dialogueId]) {
-      fatalIssues.push(`[dialogues] 정적 dialogue id=${dialogueId} 가 authored registry에 없습니다.`);
-    }
   });
 
   return registry;
@@ -412,17 +407,11 @@ export function buildSceneStateRegistryFromJson(
     };
   });
 
-  REQUIRED_SCENE_STATE_IDS.forEach((sceneStateId) => {
-    if (!registry[sceneStateId]) {
-      fatalIssues.push(`[sceneStates] 필수 sceneState id=${sceneStateId} 가 authored scene state registry에 없습니다.`);
-    }
-  });
-
   return registry;
 }
 
 export function buildAuthoredStoryAssetsFromJson(
-  dialoguesRaw: unknown,
+  dialoguesChunksRaw: unknown[],
   sceneStatesRaw: unknown
 ): {
   dialogues: Record<string, DialogueScript>;
@@ -432,10 +421,26 @@ export function buildAuthoredStoryAssetsFromJson(
 } {
   const fatalIssues: string[] = [];
   const warnings: string[] = [];
-  const dialogues = buildDialogueRegistryFromJson(dialoguesRaw, fatalIssues);
+  
+  let dialogues: Record<string, DialogueScript> = {};
+  dialoguesChunksRaw.forEach((chunk) => {
+    dialogues = buildDialogueRegistryFromJson(chunk, fatalIssues, dialogues);
+  });
   dialogues[AUTHORED_DIALOGUE_FALLBACK_ID] ??= createMissingDialogueFallback();
 
+  // 모든 조각이 병합된 후에 필수 ID 검증을 수행합니다.
+  REQUIRED_DIALOGUE_IDS.forEach((dialogueId) => {
+    if (!dialogues[dialogueId]) {
+      fatalIssues.push(`[dialogues] 정적 dialogue id=${dialogueId} 가 authored registry에 없습니다.`);
+    }
+  });
+
   const rawSceneStates = buildSceneStateRegistryFromJson(sceneStatesRaw, fatalIssues);
+  REQUIRED_SCENE_STATE_IDS.forEach((sceneStateId) => {
+    if (!rawSceneStates[sceneStateId]) {
+      fatalIssues.push(`[sceneStates] 정적 id=${sceneStateId} 가 authored registry에 없습니다.`);
+    }
+  });
   const dialogueIds = new Set(Object.keys(dialogues));
 
   const sceneStates = Object.fromEntries(

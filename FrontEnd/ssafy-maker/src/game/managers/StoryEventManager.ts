@@ -16,6 +16,7 @@ import {
 } from "../../features/story/fixedEventNpcPresence";
 import { buildDialogueScriptFromFixedEventEntry, findMatchingFixedEvent, getFixedEventEntries, type FixedEventEntry } from "../../features/story/jsonDialogueAdapter";
 import { loadFixedEventWeek } from "../../infra/story/fixedEventRepository";
+import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
 
 export type StoryEventSnapshot = {
   completedFixedEventIds: string[];
@@ -111,6 +112,8 @@ export class StoryEventManager {
 
   syncWeek(week: number): void {
     void this.ensureWeekLoaded(week);
+    // 일반 대화 데이터도 해당 주차에 맞게 동기화합니다.
+    void ensureAuthoredStoryLoaded(this.scene, week);
   }
 
   debugSyncAllWeeks(): void {

@@ -130,7 +130,9 @@ export class MainScene extends Phaser.Scene {
   async create() {
     this.initialized = false;
     this.logoutInProgress = false;
-    await ensureAuthoredStoryLoaded(this);
+    // 초기 데이터 로드 (레지스트리나 기본 설정에서 주령 정보를 가져옵니다.)
+    const initialWeek = this.registry.get("week") || 1;
+    await ensureAuthoredStoryLoaded(this, initialWeek);
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
       this.debugInputController = new DebugInputController(this, this.debugCommandBus, (command) => {

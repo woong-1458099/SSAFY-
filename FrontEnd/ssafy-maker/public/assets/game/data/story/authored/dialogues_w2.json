@@ -1,0 +1,100 @@
+{
+  "dialogues": [
+    {
+      "id": "npc_hyewon_w2",
+      "label": "혜원 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "혜원",
+          "text": "벌써 2주차네! 이제 슬슬 팀원들이랑 손발이 맞기 시작했을 거야. 협업이 제일 중요한 거 잊지 마!"
+        }
+      }
+    },
+    {
+      "id": "npc_minseok_w2",
+      "label": "민석 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민석",
+          "text": "알고리즘 주간이네... 다들 고생이 많아. 가끔 머리도 좀 식혀가며 해."
+        }
+      }
+    },
+    {
+      "id": "npc_myungjin_w2",
+      "label": "명진 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "명진",
+          "text": "기획서가 점점 구체화되고 있어. 기초가 튼튼해야 뒷심이 발휘된다고!"
+        }
+      }
+    },
+    {
+      "id": "npc_yeonwoong_w2",
+      "label": "연웅 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "연웅",
+          "text": "잠이 부족하다... 카페인으로 버티는 중이야."
+        }
+      }
+    },
+    {
+      "id": "npc_hyoryeon_w2",
+      "label": "효련 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "효련",
+          "text": "에셋 작업은 끝이 없네. 그래도 조금씩 그림이 나오니까 신기해."
+        }
+      }
+    },
+    {
+      "id": "npc_sunmi_w2",
+      "label": "조선미 프로 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "조선미 프로",
+          "text": "이번 주 반 배정도 끝났고, 다들 친해진 거 같아 다행이에요!"
+        }
+      }
+    },
+    {
+      "id": "npc_doyeon_w2",
+      "label": "김도연 프로 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김도연 프로",
+          "text": "전 여러분의 성장을 지켜보는 게 제일 즐거워요. 화이팅!"
+        }
+      }
+    },
+    {
+      "id": "npc_hyunseok_w2",
+      "label": "이현석 컨설턴트 (2주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "이현석 컨설턴트",
+          "text": "기술 스택 결정은 신중해야 합니다. 프로젝트의 방향성이 결정되는 시기니까요."
+        }
+      }
+    }
+  ]
+}

@@ -145,22 +145,26 @@ function readCachedAuthoredStory(scene?: Phaser.Scene): {
   return { dialoguesRaw, sceneStatesRaw };
 }
 
-async function loadAuthoredStoryJson(scene?: Phaser.Scene): Promise<{
-  dialoguesRaw: unknown;
+async function loadAuthoredStoryJson(scene?: Phaser.Scene, week: number = 1): Promise<{
+  dialoguesChunksRaw: unknown[];
   sceneStatesRaw: unknown;
 }> {
-  const cached = readCachedAuthoredStory(scene);
-  if (cached) {
-    return cached;
-  }
-
   try {
-    const [dialoguesRaw, sceneStatesRaw] = await Promise.all([
-      loadJson(`${ASSET_PATHS.story.authoredDialogues}`),
+    const weekKey = `authoredDialoguesW${week}` as keyof typeof ASSET_PATHS.story;
+    const weekPath = ASSET_PATHS.story[weekKey];
+    
+    // dialogues.json (레거시), dialogues_common.json, 그리고 현재 주차 파일을 함께 로드합니다.
+    const [legacyRaw, commonRaw, weekRaw, sceneStatesRaw] = await Promise.all([
+      loadJson(`${ASSET_PATHS.story.authoredDialogues}`).catch(() => ({ dialogues: [] })),
+      loadJson(`${ASSET_PATHS.story.authoredDialoguesCommon}`).catch(() => ({ dialogues: [] })),
+      loadJson(`${weekPath}`).catch(() => ({ dialogues: [] })),
       loadJson(`${ASSET_PATHS.story.authoredSceneStates}`)
     ]);
 
-    return { dialoguesRaw, sceneStatesRaw };
+    return { 
+      dialoguesChunksRaw: [legacyRaw, commonRaw, weekRaw], 
+      sceneStatesRaw 
+    };
   } catch (error) {
     throw new AuthoredStoryLoadError("fetch", ["authored JSON fetch에 실패했습니다."], error);
   }
@@ -177,14 +181,17 @@ function installFallbackAuthoredStory(error: unknown): void {
   applyAuthoredStoryAssets(createFallbackAuthoredStoryAssets());
 }
 
-export async function ensureAuthoredStoryLoaded(scene?: Phaser.Scene): Promise<void> {
-  if (loadPromise) {
+let currentLoadedWeek: number | null = null;
+
+export async function ensureAuthoredStoryLoaded(scene?: Phaser.Scene, week: number = 1): Promise<void> {
+  // 이미 해당 주차의 스토리가 로드되어 있다면 건너뜁니다.
+  if (loadPromise && currentLoadedWeek === week) {
     return loadPromise;
   }
 
-  loadPromise = loadAuthoredStoryJson(scene)
-    .then(({ dialoguesRaw, sceneStatesRaw }) => {
-      const authoredStory = buildAuthoredStoryAssetsFromJson(dialoguesRaw, sceneStatesRaw);
+  loadPromise = loadAuthoredStoryJson(scene, week)
+    .then(({ dialoguesChunksRaw, sceneStatesRaw }) => {
+      const authoredStory = buildAuthoredStoryAssetsFromJson(dialoguesChunksRaw, sceneStatesRaw);
       if (authoredStory.fatalIssues.length > 0) {
         throw new AuthoredStoryLoadError("hydrate", authoredStory.fatalIssues);
       }
@@ -195,9 +202,11 @@ export async function ensureAuthoredStoryLoaded(scene?: Phaser.Scene): Promise<v
       }
 
       applyAuthoredStoryAssets(authoredStory);
+      currentLoadedWeek = week;
     })
     .catch((error) => {
       installFallbackAuthoredStory(error);
+      currentLoadedWeek = null;
     });
 
   return loadPromise;
