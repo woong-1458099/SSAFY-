@@ -1,11 +1,13 @@
 package com.example.gameinfratest;
 
+import com.example.gameinfratest.config.DeathRecordProperties;
+import com.example.gameinfratest.config.KeycloakAuthProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@ConfigurationPropertiesScan
+@EnableConfigurationProperties({KeycloakAuthProperties.class, DeathRecordProperties.class})
 public class GameInfraTestApplication {
 
     public static void main(String[] args) {

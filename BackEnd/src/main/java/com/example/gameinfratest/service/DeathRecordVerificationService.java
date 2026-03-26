@@ -33,6 +33,7 @@ public class DeathRecordVerificationService {
         Map<String, DeathRecordVerificationState> verificationStates = getVerificationStates(session);
 
         pruneExpiredTokens(verificationStates);
+        evictOverflowTokens(verificationStates);
         verificationStates.put(token, new DeathRecordVerificationState(userId, expiresAt.toEpochMilli()));
         storeVerificationStates(session, verificationStates);
 
@@ -116,6 +117,27 @@ public class DeathRecordVerificationService {
             if (entry.getValue().isExpired()) {
                 iterator.remove();
             }
+        }
+    }
+
+    private void evictOverflowTokens(Map<String, DeathRecordVerificationState> verificationStates) {
+        int maxActiveTokens = Math.max(1, deathRecordProperties.getMaxActiveTokens());
+        while (verificationStates.size() >= maxActiveTokens) {
+            String oldestToken = null;
+            long oldestExpiry = Long.MAX_VALUE;
+
+            for (Map.Entry<String, DeathRecordVerificationState> entry : verificationStates.entrySet()) {
+                long expiresAtEpochMilli = entry.getValue().expiresAtEpochMilli();
+                if (expiresAtEpochMilli < oldestExpiry) {
+                    oldestExpiry = expiresAtEpochMilli;
+                    oldestToken = entry.getKey();
+                }
+            }
+
+            if (oldestToken == null) {
+                return;
+            }
+            verificationStates.remove(oldestToken);
         }
     }
 

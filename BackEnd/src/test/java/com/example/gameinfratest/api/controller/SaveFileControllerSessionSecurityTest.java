@@ -118,8 +118,6 @@ class SaveFileControllerSessionSecurityTest {
                 null,
                 "keycloak",
                 now,
-                0,
-                null,
                 now,
                 now
         );

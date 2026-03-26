@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class DeathRecordProperties {
     private Duration cooldown = Duration.ofSeconds(3);
     private Duration tokenTtl = Duration.ofSeconds(30);
+    private int maxActiveTokens = 5;
     private int maxFailureAttempts = 5;
     private Duration failureLockout = Duration.ofSeconds(30);
 
@@ -24,6 +25,14 @@ public class DeathRecordProperties {
 
     public void setTokenTtl(Duration tokenTtl) {
         this.tokenTtl = tokenTtl;
+    }
+
+    public int getMaxActiveTokens() {
+        return maxActiveTokens;
+    }
+
+    public void setMaxActiveTokens(int maxActiveTokens) {
+        this.maxActiveTokens = maxActiveTokens;
     }
 
     public int getMaxFailureAttempts() {
