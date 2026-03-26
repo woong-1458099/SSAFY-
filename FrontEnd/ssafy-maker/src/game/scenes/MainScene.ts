@@ -1401,6 +1401,8 @@ export class MainScene extends Phaser.Scene {
       preservePendingStartTile: boolean;
     }
   ): boolean {
+    this.clearPendingInitialAreaRefresh();
+
     const nextSceneScript = getSceneScript(sceneId);
     if (!nextSceneScript) {
       return false;
@@ -1905,6 +1907,8 @@ export class MainScene extends Phaser.Scene {
     if (!this.statSystemManager || !this.inventoryService || !this.progressionManager || !this.storyEventManager) {
       return false;
     }
+
+    this.clearPendingInitialAreaRefresh();
 
     if (payload.world?.playerTile) {
       this.registry.set(MainScene.PENDING_START_TILE_KEY, payload.world.playerTile);

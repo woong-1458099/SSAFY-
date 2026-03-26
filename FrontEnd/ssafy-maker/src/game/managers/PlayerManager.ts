@@ -257,8 +257,8 @@ export class PlayerManager {
   private getWorldBoundsEpsilon() {
     const baseTileSize = this.renderBounds
       ? Math.min(
-          this.renderBounds.tileWidth * this.renderBounds.scale,
-          this.renderBounds.tileHeight * this.renderBounds.scale
+          this.renderBounds.tileWidth,
+          this.renderBounds.tileHeight
         )
       : this.tileSize;
 
