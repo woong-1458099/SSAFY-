@@ -118,7 +118,11 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
-  private lastDialogueWeekMismatchKey?: string;
+  private pendingDialogueWeekMismatch?: {
+    key: string;
+    frame: number;
+  };
+  private hasLoggedDialogueWeekMismatch = false;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -1473,19 +1477,31 @@ export class MainScene extends Phaser.Scene {
       return hudWeek;
     }
 
-    if (progressionWeek !== hudWeek) {
-      const mismatchKey = `${progressionWeek}:${hudWeek}`;
-      if (this.lastDialogueWeekMismatchKey !== mismatchKey) {
-        this.lastDialogueWeekMismatchKey = mismatchKey;
-        console.warn(
-          `[dialogue] week metric mismatch detected. progressionManager=${progressionWeek}, hud=${hudWeek}. Using progressionManager as source of truth.`
-        );
-      }
-    } else {
-      this.lastDialogueWeekMismatchKey = undefined;
+    if (progressionWeek === hudWeek) {
+      this.pendingDialogueWeekMismatch = undefined;
+      return progressionWeek;
     }
 
-    return progressionWeek;
+    const mismatchKey = `${progressionWeek}:${hudWeek}`;
+    const currentFrame = this.game.getFrame();
+    const pendingMismatch = this.pendingDialogueWeekMismatch;
+
+    if (pendingMismatch?.key === mismatchKey && currentFrame > pendingMismatch.frame) {
+      if (import.meta.env.DEV && !this.hasLoggedDialogueWeekMismatch) {
+        this.hasLoggedDialogueWeekMismatch = true;
+        console.warn(
+          `[dialogue] week metric mismatch persisted across frames. progressionManager=${progressionWeek}, hud=${hudWeek}. Using progressionManager as source of truth.`
+        );
+      }
+      return progressionWeek;
+    }
+
+    this.pendingDialogueWeekMismatch = {
+      key: mismatchKey,
+      frame: currentFrame
+    };
+
+    return hudWeek;
   }
 
   private buildEndingPayload(): EndingFlowPayload {
