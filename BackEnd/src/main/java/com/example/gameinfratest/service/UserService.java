@@ -1,10 +1,10 @@
 package com.example.gameinfratest.service;
 
 import com.example.gameinfratest.api.dto.auth.UserResponse;
+import com.example.gameinfratest.config.DeathRecordProperties;
 import com.example.gameinfratest.support.ApiException;
 import com.example.gameinfratest.user.User;
 import com.example.gameinfratest.user.UserRepository;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
@@ -16,12 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserService {
     private static final String PROVIDER = "keycloak";
-    private static final Duration DEATH_RECORD_COOLDOWN = Duration.ofSeconds(3);
 
     private final UserRepository userRepository;
+    private final DeathRecordProperties deathRecordProperties;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, DeathRecordProperties deathRecordProperties) {
         this.userRepository = userRepository;
+        this.deathRecordProperties = deathRecordProperties;
     }
 
     @Transactional
@@ -94,7 +95,7 @@ public class UserService {
 
         Instant now = Instant.now();
         Instant lastDeathAt = user.getLastDeathAt();
-        if (lastDeathAt != null && lastDeathAt.plus(DEATH_RECORD_COOLDOWN).isAfter(now)) {
+        if (lastDeathAt != null && lastDeathAt.plus(deathRecordProperties.getCooldown()).isAfter(now)) {
             return UserResponse.from(user);
         }
 

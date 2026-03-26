@@ -62,3 +62,7 @@ app:
     client-secret: ${KEYCLOAK_CLIENT_SECRET:}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
     admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  user:
+    death-record:
+      cooldown: ${USER_DEATH_RECORD_COOLDOWN:3s}
+      token-ttl: ${USER_DEATH_RECORD_TOKEN_TTL:30s}
