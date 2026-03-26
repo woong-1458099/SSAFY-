@@ -57,7 +57,20 @@ export const DOWNTOWN_TMX_LAYER_NAMES = {
 } as const;
 
 const CAMPUS_BLOCKED_TILE_ZONES: Rect[] = [
-  { x: 0, y: 0, width: 32, height: 11 }
+  { x: 0, y: 0, width: 32, height: 9 },
+  { x: 0, y: 9, width: 23, height: 1 },
+  { x: 27, y: 9, width: 5, height: 1 },
+  { x: 0, y: 10, width: 23, height: 1 },
+  { x: 28, y: 10, width: 4, height: 1 }
+];
+
+const CAMPUS_BLOCKED_TILES: Vector2[] = [
+  { x: 23, y: 9 },
+  { x: 23, y: 10 },
+  { x: 24, y: 10 },
+  { x: 25, y: 10 },
+  { x: 26, y: 10 },
+  { x: 27, y: 10 }
 ];
 
 export const CAMPUS_TMX_LAYER_NAMES = {
@@ -114,17 +127,23 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
       collisionLayerNames: [...CAMPUS_TMX_LAYER_NAMES.collision],
       interactionLayerNames: [...CAMPUS_TMX_LAYER_NAMES.interaction],
       foregroundLayerNames: [...CAMPUS_TMX_LAYER_NAMES.foreground],
-      blockedTileZones: CAMPUS_BLOCKED_TILE_ZONES
+      blockedTileZones: CAMPUS_BLOCKED_TILE_ZONES,
+      blockedTiles: CAMPUS_BLOCKED_TILES
     },
     presentation: {
       backgroundKey: ASSET_KEYS.background.campus,
       npcScale: DEFAULT_AREA_NPC_SCALE,
       blockedOverlays: [
-        {
-          tileRect: { x: 0, y: 0, width: 32, height: 11 },
+        ...CAMPUS_BLOCKED_TILE_ZONES.map((tileRect) => ({
+          tileRect,
           color: 0x5a5f69,
           alpha: 0.88
-        }
+        })),
+        ...CAMPUS_BLOCKED_TILES.map((tile) => ({
+          tileRect: { x: tile.x, y: tile.y, width: 1, height: 1 },
+          color: 0x5a5f69,
+          alpha: 0.88
+        }))
       ]
     }
   },

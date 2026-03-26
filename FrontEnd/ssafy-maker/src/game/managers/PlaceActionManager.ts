@@ -250,7 +250,7 @@ export class PlaceActionManager {
     this.close();
 
     if (result.minigameSceneKey) {
-      launchMinigame(this.scene, result.minigameSceneKey, SCENE_KEYS.main);
+      launchMinigame(this.scene, result.minigameSceneKey, SCENE_KEYS.main, { unlockOnComplete: true });
     }
   }
 

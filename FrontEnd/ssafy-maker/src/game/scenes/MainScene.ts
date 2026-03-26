@@ -20,6 +20,7 @@ import type { SceneState } from "../../common/types/sceneState";
 import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { createDialogueActionRunner } from "../../features/minigame/dialogueActionHandler";
+import { buildMinigameUnlockFlag } from "../../features/minigame/minigameUnlocks";
 import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../features/progression/TimeService";
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
 import type { EndingId } from "../../features/progression/types/ending";
@@ -73,6 +74,7 @@ import {
   type RuntimeAreaTransitionTarget
 } from "../view/AreaTransitionOverlay";
 import { UI_DEPTH } from "../systems/uiDepth";
+import type { LegacyMinigameSceneKey } from "../../features/minigame/minigameSceneKeys";
 
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
@@ -116,6 +118,11 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
+  private pendingDialogueWeekMismatch?: {
+    key: string;
+    frame: number;
+  };
+  private hasLoggedDialogueWeekMismatch = false;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -178,10 +185,10 @@ export class MainScene extends Phaser.Scene {
             return hudState.hp;
           case "money":
             return hudState.money;
+          case "week":
+            return this.resolveDialogueWeekMetric(hudState.week);
           case "playerGender":
             return typeof playerData?.gender === "string" ? playerData.gender.toUpperCase() : "";
-          case "week":
-            return this.progressionManager?.getTimeState().week ?? 1;
           default:
             return statsState[stat];
         }
@@ -250,7 +257,8 @@ export class MainScene extends Phaser.Scene {
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
       patchHudState: (next) => this.statSystemManager!.patchHudState(next),
-      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier)
+      applyStatDelta: (delta, multiplier = 1) => this.statSystemManager!.applyStatDelta(delta, multiplier),
+      unlockMinigame: (sceneKey) => this.applyCompletedMinigameUnlock(sceneKey)
     });
     // PlaceActionManager is now in InGameUIScene
     this.interactionManager = new InteractionManager(
@@ -1089,7 +1097,10 @@ export class MainScene extends Phaser.Scene {
     pendingRestorePayload?: SavePayload
   ): SceneState | undefined {
     const defaultSceneState = normalizeSceneState(getSceneState(startScene.initialStateId));
-    const restoredSceneState = normalizeSceneState(pendingRestorePayload?.world?.sceneState);
+    const restoredSceneState = this.reconcileCanonicalNpcPlacements(
+      defaultSceneState,
+      normalizeSceneState(pendingRestorePayload?.world?.sceneState)
+    );
 
     if (!restoredSceneState) {
       return defaultSceneState;
@@ -1107,6 +1118,67 @@ export class MainScene extends Phaser.Scene {
       ...defaultSceneState,
       area: restoredSceneState.area ?? defaultSceneState.area,
       id: restoredSceneState.id ?? defaultSceneState.id
+    };
+  }
+
+  private reconcileCanonicalNpcPlacements(
+    defaultSceneState?: SceneState,
+    restoredSceneState?: SceneState
+  ): SceneState | undefined {
+    if (!defaultSceneState || !restoredSceneState) {
+      return restoredSceneState;
+    }
+
+    const canonicalNpcIds = new Set(["minigame_npc", "nayool"]);
+    const canonicalNpcById = new Map(
+      defaultSceneState.npcs
+        .filter((npc) => canonicalNpcIds.has(npc.npcId))
+        .map((npc) => [npc.npcId, npc] as const)
+    );
+
+    if (canonicalNpcById.size === 0) {
+      return restoredSceneState;
+    }
+
+    const restoredNpcById = new Map(
+      restoredSceneState.npcs.map((npc) => [npc.npcId, npc] as const)
+    );
+
+    const reconciledNpcs = restoredSceneState.npcs
+      .filter((npc) => {
+        if (!canonicalNpcIds.has(npc.npcId)) {
+          return true;
+        }
+
+        // 캠퍼스/교실 기본 roster에 없는 특수 NPC는 오래된 저장 데이터에서 제거한다.
+        return canonicalNpcById.has(npc.npcId);
+      })
+      .map((npc) => {
+        const canonicalNpc = canonicalNpcById.get(npc.npcId);
+        if (!canonicalNpc) {
+          return npc;
+        }
+
+        return {
+          ...npc,
+          x: canonicalNpc.x,
+          y: canonicalNpc.y,
+          facing: canonicalNpc.facing ?? npc.facing,
+          dialogueId: canonicalNpc.dialogueId
+        };
+      });
+
+    canonicalNpcById.forEach((canonicalNpc, npcId) => {
+      if (restoredNpcById.has(npcId)) {
+        return;
+      }
+
+      reconciledNpcs.push(canonicalNpc);
+    });
+
+    return {
+      ...restoredSceneState,
+      npcs: reconciledNpcs
     };
   }
 
@@ -1463,6 +1535,40 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private resolveDialogueWeekMetric(hudWeek: number): number {
+    const progressionWeek = this.progressionManager?.getTimeState().week;
+    if (typeof progressionWeek !== "number") {
+      return hudWeek;
+    }
+
+    if (progressionWeek === hudWeek) {
+      this.pendingDialogueWeekMismatch = undefined;
+      this.hasLoggedDialogueWeekMismatch = false;
+      return progressionWeek;
+    }
+
+    const mismatchKey = `${progressionWeek}:${hudWeek}`;
+    const currentFrame = this.game.getFrame();
+    const pendingMismatch = this.pendingDialogueWeekMismatch;
+
+    if (pendingMismatch?.key === mismatchKey && currentFrame > pendingMismatch.frame) {
+      if (import.meta.env.DEV && !this.hasLoggedDialogueWeekMismatch) {
+        this.hasLoggedDialogueWeekMismatch = true;
+        console.warn(
+          `[dialogue] week metric mismatch persisted across frames. progressionManager=${progressionWeek}, hud=${hudWeek}. Using progressionManager as source of truth.`
+        );
+      }
+      return progressionWeek;
+    }
+
+    this.pendingDialogueWeekMismatch = {
+      key: mismatchKey,
+      frame: currentFrame
+    };
+
+    return hudWeek;
+  }
+
   private buildEndingPayload(): EndingFlowPayload {
     const hudState = this.statSystemManager?.getHudState() ?? this.statSystemManager!.getHudState();
     const statsState = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
@@ -1680,6 +1786,18 @@ export class MainScene extends Phaser.Scene {
   clearRuntimeDialogueScripts(): void {
     this.runtimeDialogueScripts = {};
     this.dialogueManager?.setRuntimeDialogueScripts(this.runtimeDialogueScripts);
+  }
+
+  hasGameFlag(flag: string): boolean {
+    return this.statSystemManager?.hasFlag(flag) === true;
+  }
+
+  addGameFlags(flags: string[]): void {
+    this.statSystemManager?.addFlags(flags);
+  }
+
+  private applyCompletedMinigameUnlock(sceneKey: LegacyMinigameSceneKey): void {
+    this.statSystemManager?.addFlags([buildMinigameUnlockFlag(sceneKey)]);
   }
 
   private applyPendingRestorePayload(): void {

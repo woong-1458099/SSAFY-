@@ -10,7 +10,7 @@ import { installMinigamePause } from './installMinigamePause';
 import { applyLegacyViewport } from './viewport';
 import { LEGACY_MINIGAME_CARDS, getMinigameCard } from '@features/minigame/minigameCatalog';
 import { returnToScene } from '@features/minigame/minigameLauncher';
-import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { emitMinigameCompletion, emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import {
   LEGACY_SMILE_CAMERA_HEIGHT,
   LEGACY_SMILE_CAMERA_WIDTH,
@@ -354,6 +354,7 @@ abstract class BaseSmileScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(32);
     const retryButton = this.createButton(W / 2 - 100, 356, '다시하기', () => this.scene.restart());
     const menuButton = this.createButton(W / 2 + 100, 356, '나가기', () => {
+      emitMinigameCompletion(this, { sceneKey: this.scene.key });
       this.emitCompletedReward();
       returnToScene(this, this.returnSceneKey);
     });
