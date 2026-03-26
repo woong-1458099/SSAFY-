@@ -518,6 +518,7 @@ export class MainScene extends Phaser.Scene {
       this.registry.remove(MainScene.PENDING_RESTORE_PAYLOAD_KEY);
       this.registry.remove(MainScene.PENDING_START_TILE_KEY);
       this.registry.remove("startSceneId");
+      this.clearPendingInitialAreaRefresh();
       this.scene.start(SceneKey.Login);
     }
   }
@@ -560,8 +561,16 @@ export class MainScene extends Phaser.Scene {
     this.brightnessOverlay.setVisible(overlayAlpha > 0.001);
   }
 
-  private refreshCurrentAreaPresentation(expectedAreaId?: AreaId): void {
+  private refreshCurrentAreaPresentation(
+    expectedAreaId?: AreaId,
+    expectedPlayerSnapshot?: { tileX: number; tileY: number },
+    requestId?: number
+  ): void {
     if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
+      return;
+    }
+
+    if (requestId !== undefined && this.pendingInitialAreaRefreshRequestId !== requestId) {
       return;
     }
 
@@ -571,6 +580,20 @@ export class MainScene extends Phaser.Scene {
     }
 
     const playerSnapshot = this.playerManager.getSnapshot();
+    if (!playerSnapshot) {
+      return;
+    }
+
+    if (
+      expectedPlayerSnapshot &&
+      (
+        playerSnapshot.tileX !== expectedPlayerSnapshot.tileX ||
+        playerSnapshot.tileY !== expectedPlayerSnapshot.tileY
+      )
+    ) {
+      return;
+    }
+
     if (!this.worldManager.rerenderCurrentArea()) {
       return;
     }
@@ -596,20 +619,7 @@ export class MainScene extends Phaser.Scene {
           return;
         }
 
-        const currentAreaId = this.worldManager?.getCurrentAreaId();
-        const currentPlayerSnapshot = this.playerManager?.getSnapshot();
-
-        if (
-          currentAreaId !== expectedAreaId ||
-          !currentPlayerSnapshot ||
-          !expectedPlayerSnapshot ||
-          currentPlayerSnapshot.tileX !== expectedPlayerSnapshot.tileX ||
-          currentPlayerSnapshot.tileY !== expectedPlayerSnapshot.tileY
-        ) {
-          return;
-        }
-
-        this.refreshCurrentAreaPresentation(expectedAreaId);
+        this.refreshCurrentAreaPresentation(expectedAreaId, expectedPlayerSnapshot, requestId);
       } finally {
         this.finalizePendingInitialAreaRefresh(requestId);
       }
@@ -1796,6 +1806,7 @@ export class MainScene extends Phaser.Scene {
       this.events.emit("ui:showNotice", "엔딩 진입 전 오토 세이브에 실패했습니다.");
     }
 
+    this.clearPendingInitialAreaRefresh();
     this.scene.start(SceneKey.Completion, this.buildEndingPayload());
   }
 
@@ -1815,6 +1826,7 @@ export class MainScene extends Phaser.Scene {
 
   private startDebugEndingFlow(endingId?: EndingId): void {
     const payload = endingId ? this.buildEndingPresetPayload(endingId) : this.buildEndingPayload();
+    this.clearPendingInitialAreaRefresh();
     this.scene.start(SceneKey.Completion, payload);
   }
 
