@@ -1479,6 +1479,7 @@ export class MainScene extends Phaser.Scene {
 
     if (progressionWeek === hudWeek) {
       this.pendingDialogueWeekMismatch = undefined;
+      this.hasLoggedDialogueWeekMismatch = false;
       return progressionWeek;
     }
 
