@@ -23,6 +23,13 @@ export const NPC_WALK_FRAME_RANGES: Record<Facing, { start: number; end: number 
   down: { start: 9, end: 12 }
 } as const;
 
+const NAYOOL_WALK_FRAME_RANGES: Record<Facing, { start: number; end: number }> = {
+  right: { start: 0, end: 2 },
+  up: { start: 0, end: 2 },
+  left: { start: 0, end: 2 },
+  down: { start: 0, end: 2 }
+} as const;
+
 export type NpcVisualAssetId =
   | "minsu"
   | "hyoryeon"
@@ -59,7 +66,8 @@ export type NpcVisualAssetDefinition = {
 function createNpcAssetDefinition(
   id: NpcVisualAssetId,
   idleFileName: string,
-  walkFileName: string
+  walkFileName: string,
+  options?: Partial<Pick<NpcVisualAssetDefinition, "walkFrameRanges" | "walkFrameRate" | "idleFrameRate">>
 ): NpcVisualAssetDefinition {
   return {
     id,
@@ -71,9 +79,9 @@ function createNpcAssetDefinition(
     frameWidth: NPC_SPRITE_FRAME.width,
     frameHeight: NPC_SPRITE_FRAME.height,
     idleFrameRange: NPC_IDLE_FRAME_RANGE,
-    walkFrameRanges: NPC_WALK_FRAME_RANGES,
-    idleFrameRate: 4,
-    walkFrameRate: 8
+    walkFrameRanges: options?.walkFrameRanges ?? NPC_WALK_FRAME_RANGES,
+    idleFrameRate: options?.idleFrameRate ?? 4,
+    walkFrameRate: options?.walkFrameRate ?? 8
   };
 }
 
@@ -91,7 +99,10 @@ export const NPC_ASSET_CATALOG: Record<NpcVisualAssetId, NpcVisualAssetDefinitio
   hyewon: createNpcAssetDefinition("hyewon", "hyewonC.png", "walking-hyewon.png"),
   minseok: createNpcAssetDefinition("minseok", "minseokC.png", "walking-minsok.png"),
   minigame_npc: createNpcAssetDefinition("minigame_npc", "minigame_npc.png", "walking-minigame_npc.png"),
-  nayool: createNpcAssetDefinition("nayool", "nayool.png", "walking-nayool.png")
+  nayool: createNpcAssetDefinition("nayool", "nayool.png", "walking-nayool.png", {
+    walkFrameRanges: NAYOOL_WALK_FRAME_RANGES,
+    walkFrameRate: 6
+  })
 };
 
 export const NPC_ASSET_LIST = Object.values(NPC_ASSET_CATALOG);

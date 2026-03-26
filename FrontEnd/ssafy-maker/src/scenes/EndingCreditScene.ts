@@ -32,13 +32,22 @@ type CreditSpacerItem = {
 
 type CreditItem = CreditTextItem | CreditImageItem | CreditSpriteItem | CreditSpacerItem;
 
+type CreditNpcDefinition = {
+  key: string;
+  assetPath: string;
+  displayName: string;
+  frameRate?: number;
+  frameStart?: number;
+  frameEnd?: number;
+};
+
 const FONT_FAMILY = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 const ENDING_BGM_KEY = "ending-credit-bgm";
 const CREDIT_206_KEY = "ending-credit-206";
 const CREDIT_LOGO_KEY = "ending-credit-logo-mini";
 const CREDIT_BACKGROUND_KEY = "ending-credit-background";
 
-const CREDIT_NPCS = [
+const CREDIT_NPCS: readonly CreditNpcDefinition[] = [
   { key: "ending-credit-minsu", assetPath: "/assets/game/npc/walking-minsu.png", displayName: "김민수" },
   { key: "ending-credit-myungjin", assetPath: "/assets/game/npc/walking-myeongjin.png", displayName: "김명진" },
   { key: "ending-credit-jongmin", assetPath: "/assets/game/npc/walking-jongmin.png", displayName: "진종민" },
@@ -47,10 +56,11 @@ const CREDIT_NPCS = [
   { key: "ending-credit-yeonwoong", assetPath: "/assets/game/npc/walking-yeonwoong.png", displayName: "최연웅" },
   { key: "ending-credit-doyeon", assetPath: "/assets/game/npc/walking-doyeon.png", displayName: "김도연 프로님" },
   { key: "ending-credit-sunmi", assetPath: "/assets/game/npc/walking-sunmi.png", displayName: "조선미 프로님" },
+  { key: "ending-credit-nayool", assetPath: "/assets/game/npc/walking-nayool.png", displayName: "김나율 프로님", frameRate: 6, frameStart: 0, frameEnd: 2 },
   { key: "ending-credit-hyunseok", assetPath: "/assets/game/npc/walking-hyeonsok.png", displayName: "이현석 컨설턴트님" },
   { key: "ending-credit-hyewon", assetPath: "/assets/game/npc/walking-hyewon.png", displayName: "이혜원 실습코치님" },
   { key: "ending-credit-minseok", assetPath: "/assets/game/npc/walking-minsok.png", displayName: "최민석 실습코치님" }
-] as const;
+];
 
 export class EndingCreditScene extends Phaser.Scene {
   private creditsContainer!: Phaser.GameObjects.Container;
@@ -150,8 +160,11 @@ export class EndingCreditScene extends Phaser.Scene {
 
       this.anims.create({
         key: animationKey,
-        frames: this.anims.generateFrameNumbers(npc.key, { start: 9, end: 12 }),
-        frameRate: 7,
+        frames: this.anims.generateFrameNumbers(npc.key, {
+          start: npc.frameStart ?? 9,
+          end: npc.frameEnd ?? 12
+        }),
+        frameRate: npc.frameRate ?? 7,
         repeat: -1
       });
     });
@@ -208,6 +221,8 @@ export class EndingCreditScene extends Phaser.Scene {
       { type: "text", content: "교육진", style: { fontSize: "30px", color: "#a8c7f0" } },
       { type: "sprite", key: "ending-credit-sunmi", scale: 2.2 },
       { type: "text", content: "조선미 프로님", style: { fontSize: "24px", color: "#ffffff" } },
+      { type: "sprite", key: "ending-credit-nayool", scale: 2.2 },
+      { type: "text", content: "김나율 프로님", style: { fontSize: "24px", color: "#ffffff" } },
       { type: "sprite", key: "ending-credit-doyeon", scale: 2.2 },
       { type: "text", content: "김도연 프로님", style: { fontSize: "24px", color: "#ffffff" } },
       { type: "sprite", key: "ending-credit-hyunseok", scale: 2.2 },
