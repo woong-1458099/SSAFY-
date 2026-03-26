@@ -1,5 +1,9 @@
 import type Phaser from "phaser";
-import type { LegacyMinigameSceneKey } from "./minigameSceneKeys";
+import {
+  isLegacyMinigameSceneKey,
+  type LegacyMinigameSceneKey,
+  type SupportedMinigameSceneKey
+} from "./minigameSceneKeys";
 
 const MINIGAME_UNLOCK_FLAG_PREFIX = "minigame:unlocked:";
 
@@ -28,6 +32,10 @@ function resolveFlagHost(scene: Phaser.Scene, returnSceneKey?: string): Minigame
 
 export function buildMinigameUnlockFlag(sceneKey: LegacyMinigameSceneKey): string {
   return `${MINIGAME_UNLOCK_FLAG_PREFIX}${sceneKey}`;
+}
+
+export function resolveUnlockableMinigameSceneKey(sceneKey: SupportedMinigameSceneKey): LegacyMinigameSceneKey | null {
+  return isLegacyMinigameSceneKey(sceneKey) ? sceneKey : null;
 }
 
 export function unlockMinigame(scene: Phaser.Scene, returnSceneKey: string, sceneKey: LegacyMinigameSceneKey): void {

@@ -68,6 +68,7 @@ export const LEGACY_MINIGAME_FLOW_SCENE_KEYS = [
 
 export const SUPPORTED_MINIGAME_SCENE_KEYS = [...LEGACY_MINIGAME_FLOW_SCENE_KEYS] as const;
 export const SUPPORTED_MINIGAME_SCENE_KEY_SET = new Set<string>(SUPPORTED_MINIGAME_SCENE_KEYS);
+export const LEGACY_MINIGAME_SCENE_KEY_SET = new Set<string>(LEGACY_MINIGAME_SCENE_KEYS);
 
 export type DeprecatedMinigameSceneKey = (typeof DEPRECATED_MINIGAME_SCENE_KEYS)[number];
 export type LegacyMinigameSceneKey = (typeof LEGACY_MINIGAME_SCENE_KEYS)[number];
@@ -80,6 +81,10 @@ export function isDeprecatedMinigameSceneKey(sceneKey: string): sceneKey is Depr
 
 export function isSupportedMinigameSceneKey(sceneKey: string): sceneKey is SupportedMinigameSceneKey {
   return SUPPORTED_MINIGAME_SCENE_KEY_SET.has(sceneKey);
+}
+
+export function isLegacyMinigameSceneKey(sceneKey: string): sceneKey is LegacyMinigameSceneKey {
+  return LEGACY_MINIGAME_SCENE_KEY_SET.has(sceneKey);
 }
 
 export function assertMinigameSceneKeyIntegrity(): void {
