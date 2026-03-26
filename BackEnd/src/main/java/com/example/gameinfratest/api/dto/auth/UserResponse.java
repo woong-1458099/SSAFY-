@@ -15,6 +15,8 @@ public record UserResponse(
         LocalDate birthday,
         String provider,
         Instant lastLoginAt,
+        int deathCount,
+        Instant lastDeathAt,
         Instant createdAt,
         Instant updatedAt
 ) implements Serializable {
@@ -28,6 +30,8 @@ public record UserResponse(
                 user.getBirthday(),
                 user.getProvider(),
                 user.getLastLoginAt(),
+                user.getDeathCount(),
+                user.getLastDeathAt(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );
