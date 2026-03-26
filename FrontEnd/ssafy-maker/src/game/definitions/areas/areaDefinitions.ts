@@ -7,6 +7,7 @@ export type AreaMapDefinition = {
   entryPoint?: Vector2;
   tmxKey?: string;
   collisionLayerNames: string[];
+  walkableLayerNames?: string[];
   interactionLayerNames: string[];
   foregroundLayerNames: string[];
   walkableTileZones?: Rect[];
@@ -41,8 +42,8 @@ const WORLD_BLOCKED_TILE_ZONES: Rect[] = [
 ];
 
 export const WORLD_TMX_LAYER_NAMES = {
-  collision: ["root", "build"],
-  interaction: ["interaction(build)"],
+  collision: ["root", "build", "collision(patch)"],
+  interaction: ["interaction(build)", "interaction(patch)"],
   foreground: ["tree"]
 } as const;
 
@@ -64,15 +65,6 @@ const CAMPUS_BLOCKED_TILE_ZONES: Rect[] = [
   { x: 28, y: 10, width: 4, height: 1 }
 ];
 
-const CAMPUS_BLOCKED_TILES: Vector2[] = [
-  { x: 23, y: 9 },
-  { x: 23, y: 10 },
-  { x: 24, y: 10 },
-  { x: 25, y: 10 },
-  { x: 26, y: 10 },
-  { x: 27, y: 10 }
-];
-
 const CAMPUS_VISUAL_DARK_TILES: Vector2[] = [
   { x: 24, y: 9 }
 ];
@@ -84,7 +76,8 @@ export const CAMPUS_TMX_LAYER_NAMES = {
 } as const;
 
 export const CLASSROOM_TMX_LAYER_NAMES = {
-  collision: ["tile layer 3", "tile layer 4"],
+  collision: ["tile layer 3", "tile layer 4", "collision(patch)"],
+  walkable: ["walkable(patch)"],
   interaction: [],
   foreground: ["tile layer 4"]
 } as const;
@@ -131,8 +124,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
       collisionLayerNames: [...CAMPUS_TMX_LAYER_NAMES.collision],
       interactionLayerNames: [...CAMPUS_TMX_LAYER_NAMES.interaction],
       foregroundLayerNames: [...CAMPUS_TMX_LAYER_NAMES.foreground],
-      blockedTileZones: CAMPUS_BLOCKED_TILE_ZONES,
-      blockedTiles: CAMPUS_BLOCKED_TILES
+      blockedTileZones: CAMPUS_BLOCKED_TILE_ZONES
     },
     presentation: {
       backgroundKey: ASSET_KEYS.background.campus,
@@ -140,11 +132,6 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
       blockedOverlays: [
         ...CAMPUS_BLOCKED_TILE_ZONES.map((tileRect) => ({
           tileRect,
-          color: 0x5a5f69,
-          alpha: 0.88
-        })),
-        ...CAMPUS_BLOCKED_TILES.map((tile) => ({
-          tileRect: { x: tile.x, y: tile.y, width: 1, height: 1 },
           color: 0x5a5f69,
           alpha: 0.88
         })),
@@ -163,6 +150,7 @@ export const AREA_DEFINITIONS: Record<AreaId, AreaDefinition> = {
       entryPoint: { x: 480, y: 528 },
       tmxKey: ASSET_KEYS.map.classroomTmx,
       collisionLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.collision],
+      walkableLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.walkable],
       interactionLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.interaction],
       foregroundLayerNames: [...CLASSROOM_TMX_LAYER_NAMES.foreground]
     },
@@ -192,6 +180,7 @@ export function getAreaTmxConfig(areaId: AreaId): TmxAreaConfig | undefined {
   return {
     tmxKey: map.tmxKey,
     collisionLayerNames: map.collisionLayerNames,
+    walkableLayerNames: map.walkableLayerNames,
     interactionLayerNames: map.interactionLayerNames,
     foregroundLayerNames: map.foregroundLayerNames
   };

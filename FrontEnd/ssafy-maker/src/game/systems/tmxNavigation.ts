@@ -52,12 +52,14 @@ export function getTilesetSourceBasename(source?: string) {
 export type TmxAreaConfig = {
   tmxKey: string;
   collisionLayerNames: string[];
+  walkableLayerNames?: string[];
   interactionLayerNames: string[];
   foregroundLayerNames: string[];
 };
 
 export type ResolvedTmxLayers = {
   collisionLayers: ParsedTmxLayer[];
+  walkableLayers: ParsedTmxLayer[];
   interactionLayers: ParsedTmxLayer[];
   foregroundLayers: ParsedTmxLayer[];
 };
@@ -89,6 +91,28 @@ function isTileInsideRect(tileX: number, tileY: number, rect: { x: number; y: nu
     tileY >= rect.y &&
     tileY < rect.y + rect.height
   );
+}
+
+function forEachClampedRectTile(
+  width: number,
+  height: number,
+  rect: { x: number; y: number; width: number; height: number },
+  onTile: (x: number, y: number) => void
+) {
+  const startX = Math.max(0, rect.x);
+  const startY = Math.max(0, rect.y);
+  const endX = Math.min(width, rect.x + rect.width);
+  const endY = Math.min(height, rect.y + rect.height);
+
+  if (startX >= endX || startY >= endY) {
+    return;
+  }
+
+  for (let y = startY; y < endY; y += 1) {
+    for (let x = startX; x < endX; x += 1) {
+      onTile(x, y);
+    }
+  }
 }
 
 export function applyWalkableTileZones(
@@ -195,11 +219,13 @@ export function resolveTmxLayers(
   areaConfig: TmxAreaConfig
 ): ResolvedTmxLayers {
   warnMissingLayerNames(parsedMap, areaConfig.collisionLayerNames, "collision");
+  warnMissingLayerNames(parsedMap, areaConfig.walkableLayerNames ?? [], "walkable");
   warnMissingLayerNames(parsedMap, areaConfig.interactionLayerNames, "interaction");
   warnMissingLayerNames(parsedMap, areaConfig.foregroundLayerNames, "foreground");
 
   return {
     collisionLayers: getLayersByNames(parsedMap, areaConfig.collisionLayerNames),
+    walkableLayers: getLayersByNames(parsedMap, areaConfig.walkableLayerNames ?? []),
     interactionLayers: getLayersByNames(parsedMap, areaConfig.interactionLayerNames),
     foregroundLayers: getLayersByNames(parsedMap, areaConfig.foregroundLayerNames)
   };
@@ -246,6 +272,70 @@ export function buildBooleanGridFromTiles(
   });
 
   return grid;
+}
+
+export function buildBooleanGridFromRects(
+  width: number,
+  height: number,
+  rects?: { x: number; y: number; width: number; height: number }[]
+) {
+  const grid = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => false)
+  );
+
+  if (!rects || rects.length === 0) {
+    return grid;
+  }
+
+  rects.forEach((rect) => {
+    forEachClampedRectTile(width, height, rect, (x, y) => {
+      grid[y][x] = true;
+    });
+  });
+
+  return grid;
+}
+
+export function buildWalkableZoneBlockedGrid(
+  width: number,
+  height: number,
+  walkableTileZones?: { x: number; y: number; width: number; height: number }[]
+) {
+  if (!walkableTileZones || walkableTileZones.length === 0) {
+    return Array.from({ length: height }, () =>
+      Array.from({ length: width }, () => false)
+    );
+  }
+
+  const grid = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => true)
+  );
+
+  walkableTileZones.forEach((zone) => {
+    forEachClampedRectTile(width, height, zone, (x, y) => {
+      grid[y][x] = false;
+    });
+  });
+
+  return grid;
+}
+
+export type RuntimeBlockedTilePolicyInput = {
+  baseCollisionBlocked: boolean;
+  blockedByWalkableZone: boolean;
+  walkablePatchClearsCollision: boolean;
+  blockedByManualZone: boolean;
+  blockedByManualTile: boolean;
+};
+
+export function resolveRuntimeBlockedTile(input: RuntimeBlockedTilePolicyInput) {
+  const collisionBlocked = input.baseCollisionBlocked && !input.walkablePatchClearsCollision;
+  return (
+    input.blockedByWalkableZone ||
+    collisionBlocked ||
+    input.blockedByManualZone ||
+    input.blockedByManualTile
+  );
 }
 
 export function extractConnectedRegionsFromGrid(
@@ -398,12 +488,36 @@ export function buildRuntimeGrids(
     parsedMap.height,
     resolvedLayers.collisionLayers
   );
-  const walkableAppliedBlockedGrid = applyWalkableTileZones(baseBlockedGrid, walkableTileZones);
-  const zoneAppliedBlockedGrid = applyBlockedTileZones(walkableAppliedBlockedGrid, blockedTileZones);
+  const walkableZoneBlockedGrid = buildWalkableZoneBlockedGrid(
+    parsedMap.width,
+    parsedMap.height,
+    walkableTileZones
+  );
+  const walkablePatchGrid = buildBooleanGridFromLayers(
+    parsedMap.width,
+    parsedMap.height,
+    resolvedLayers.walkableLayers
+  );
+  const manualBlockedZoneGrid = buildBooleanGridFromRects(
+    parsedMap.width,
+    parsedMap.height,
+    blockedTileZones
+  );
   const manualBlockedGrid = buildBooleanGridFromTiles(parsedMap.width, parsedMap.height, blockedTiles);
+  const finalBlockedGrid = Array.from({ length: parsedMap.height }, (_, y) =>
+    Array.from({ length: parsedMap.width }, (_, x) =>
+      resolveRuntimeBlockedTile({
+        baseCollisionBlocked: baseBlockedGrid[y]?.[x] ?? false,
+        blockedByWalkableZone: walkableZoneBlockedGrid[y]?.[x] ?? false,
+        walkablePatchClearsCollision: walkablePatchGrid[y]?.[x] ?? false,
+        blockedByManualZone: manualBlockedZoneGrid[y]?.[x] ?? false,
+        blockedByManualTile: manualBlockedGrid[y]?.[x] ?? false
+      })
+    )
+  );
 
   return {
-    blockedGrid: applyBlockedTiles(zoneAppliedBlockedGrid, blockedTiles),
+    blockedGrid: finalBlockedGrid,
     interactionGrid: buildBooleanGridFromLayers(
       parsedMap.width,
       parsedMap.height,
@@ -492,8 +606,13 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
     .sort((a, b) => a.firstgid - b.firstgid);
 
   const layers: ParsedTmxLayer[] = [];
+  let hasInvalidLayerData = false;
 
   Array.from(mapNode.getElementsByTagName("layer")).forEach((layerNode, index) => {
+    if (hasInvalidLayerData) {
+      return;
+    }
+
     const dataNode = layerNode.getElementsByTagName("data")[0];
     if (!dataNode) {
       return;
@@ -518,8 +637,13 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
       });
 
     const requiredCellCount = width * height;
-    while (values.length < requiredCellCount) {
-      values.push(0);
+    if (values.length !== requiredCellCount) {
+      console.error(
+        `[TMX] Invalid CSV cell count for layer "${layerNode.getAttribute("name") ?? `layer_${index + 1}`}". ` +
+          `Expected ${requiredCellCount}, received ${values.length}.`
+      );
+      hasInvalidLayerData = true;
+      return;
     }
 
     const rowData: number[][] = [];
@@ -534,6 +658,10 @@ export function parseTmxMap(rawTmx: string): ParsedTmxMap | null {
       data: rowData
     });
   });
+
+  if (hasInvalidLayerData) {
+    return null;
+  }
 
   return {
     width,
