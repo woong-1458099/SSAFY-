@@ -22,8 +22,22 @@ const transpileCompilerOptions = {
   noEmit: false
 };
 
-process.on("exit", () => {
+function cleanupTempDir() {
   fs.rmSync(tempDir, { recursive: true, force: true });
+}
+
+process.on("exit", cleanupTempDir);
+process.on("SIGINT", () => {
+  cleanupTempDir();
+  process.exit(130);
+});
+process.on("SIGTERM", () => {
+  cleanupTempDir();
+  process.exit(143);
+});
+process.on("uncaughtException", (error) => {
+  cleanupTempDir();
+  throw error;
 });
 
 function transpileModuleToTemp(sourcePath, outputName) {
