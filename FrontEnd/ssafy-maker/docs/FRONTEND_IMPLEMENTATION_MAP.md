@@ -78,6 +78,20 @@ Key scenes:
 - `InGameUIScene.ts`: parallel UI layer hosting HUD, dialogues, menus, and overlays.
 - `FinalSummaryScene.ts`, `EndingIntroScene.ts`, `EndingComicScene.ts`: ending pipeline.
 
+### `src/game/scenes/main`
+
+- Support modules extracted from `MainScene.ts`.
+- `authFlow.ts`: scene entry auth/session checks and logout fallback handling.
+- `autoSaveCoordinator.ts`: dirty-state and idle-aware autosave scheduler.
+- `areaRefreshCoordinator.ts`: pending area rerender queue and request-id lifecycle handling.
+- `debugPanel.ts`: debug panel state payload builder.
+- `debugFlow.ts`: debug command routing and debug restart helpers.
+- `areaPresentation.ts`: safe area rerender tile and presentation helpers.
+- `ending.ts`: ending preset payload helpers.
+- `fixedEventDebug.ts`: debug fixed-event jump payload helpers.
+- `targets.ts`: area transition and static place interaction target builders.
+- `persistence.ts`: save payload and ending payload shaping helpers.
+
 ### `src/features`
 
 Domain-oriented modules.
@@ -196,9 +210,10 @@ This file currently owns most runtime game logic:
 
 #### Save/load
 
-- Save slots are persisted in `localStorage` through `SaveManager`.
+- Save slots are persisted through `src/features/save/SaveService.ts`.
+- Local save durability now uses IndexedDB first, with legacy localStorage migration fallback.
 - Slot IDs are `auto`, `slot-1` through `slot-6`.
-- MainScene serializes its own game state payload.
+- `MainScene` still owns runtime state collection, but payload shaping and ending/save helpers are split under `src/game/scenes/main/*`.
 
 #### Time progression and ending
 
@@ -245,11 +260,16 @@ Used for short-lived scene-to-scene runtime data such as:
 Used for durable client data:
 
 - auth session
+
+### IndexedDB
+
+Used for durable client data:
+
 - save slots
 
 Practical rule:
 
-- If data must survive refresh, look at `localStorage`.
+- If data must survive refresh, check auth in `localStorage` and save slots in IndexedDB first.
 - If data only needs to survive scene changes, check Phaser registry usage first.
 
 ## Current Architecture Characteristics
@@ -266,6 +286,7 @@ Practical rule:
 
 - `MainScene.ts` was historically the gameplay monolith.
 - **Refactoring Update**: UI management (HUD, Menus, Dialogues) has been migrated to `InGameUIScene.ts` to reduce coupling.
+- **Refactoring Update**: auth entry/logout flow, autosave scheduling, and save payload helpers now live under `src/game/scenes/main/*`.
 - Map logic, dialogue *execution* (script selection), and progression logic still reside in `MainScene`.
 
 Practical reading order for future analysis:
@@ -318,7 +339,7 @@ If the future task is about:
 - HUD layout/state: `src/features/ui/components/game-hud.ts`, `src/scenes/MainScene.ts`
 - NPC dialogue content: `src/features/story/npcDialogueScripts.ts`
 - Shop/inventory/equipment: `src/scenes/MainScene.ts`
-- Save/load behavior: `src/core/managers/SaveManager.ts`, `src/scenes/MainScene.ts`
+- Save/load behavior: `src/features/save/SaveService.ts`, `src/scenes/MainScene.ts`, `src/game/scenes/main/persistence.ts`
 - Ending conditions or ending copy: `src/features/progression/services/endingResolver.ts`, ending scenes
 - Character creation flow: `src/scenes/NewCharacterScene.ts`
 - Intro cinematic flow: `src/scenes/IntroScene.ts`

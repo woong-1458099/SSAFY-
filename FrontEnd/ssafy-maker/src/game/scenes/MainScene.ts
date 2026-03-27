@@ -1,7 +1,6 @@
 // 씬 조립만 담당하고 디버그 오버레이에도 render bounds를 연결한다.
 import Phaser from "phaser";
 import { SCENE_KEYS } from "../../common/enums/scene";
-import { DIALOGUE_IDS } from "../../common/enums/dialogue";
 import { AudioManager } from "../../core/managers/AudioManager";
 import { DisplaySettingsManager } from "../../core/managers/DisplaySettingsManager";
 import { DebugOverlay } from "../../debug/overlay/DebugOverlay";
@@ -21,17 +20,11 @@ import type { PlayerAppearanceSelection } from "../../common/types/player";
 import { InventoryService } from "../../features/inventory/InventoryService";
 import { createDialogueActionRunner } from "../../features/minigame/dialogueActionHandler";
 import { buildMinigameUnlockFlag } from "../../features/minigame/minigameUnlocks";
-import { buildHudPatchFromTimeState, DAY_CYCLE, TIME_CYCLE } from "../../features/progression/TimeService";
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
 import type { EndingId } from "../../features/progression/types/ending";
 import { resolveEnding } from "../../features/progression/services/endingResolver";
 import { issueDeathRecordToken, recordCurrentUserDeath } from "../../features/auth/api";
 import {
-  applySessionToRegistry,
-  beginLogout,
-  clearAuthRegistry,
-  clearStoredSession,
-  fetchExistingSession,
   getActiveAuthUserId,
   patchStoredSessionUser,
   readStoredSession
@@ -42,7 +35,6 @@ import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
 import { SceneDirector } from "../directors/SceneDirector";
 import { getAreaEntryPoint } from "../definitions/areas/areaDefinitions";
-import { getStaticPlaceDefinitions } from "../definitions/places/placeDefinitions";
 import {
   getAreaTransitionDefinitions,
   type AreaTransitionDefinition,
@@ -65,7 +57,7 @@ import { StoryEventManager } from "../managers/StoryEventManager";
 import { WorldManager } from "../managers/WorldManager";
 import type { HudState } from "../state/gameState";
 import { InGameUIScene } from "./InGameUIScene";
-import { SCENE_IDS, type SceneId } from "../scripts/scenes/sceneIds";
+import type { SceneId } from "../scripts/scenes/sceneIds";
 import { playPlaceBgm, playWorldBgm, createSkyBackground, createCampusBackground, type TimeOfDay } from "../../features/place/placeBackgrounds";
 import {
   DEFAULT_START_SCENE_ID,
@@ -74,10 +66,7 @@ import {
 } from "../scripts/scenes/sceneRegistry";
 import { buildRuntimeSceneScript, normalizeSceneState } from "../systems/sceneStateRuntime";
 import {
-  buildAdjacentWalkableTiles,
   countTrueCells,
-  extractConnectedRegionsFromGrid,
-  findFirstWalkableTile,
   type ParsedTmxMap,
   type TmxRuntimeGrids
 } from "../systems/tmxNavigation";
@@ -87,6 +76,32 @@ import {
 } from "../view/AreaTransitionOverlay";
 import { UI_DEPTH } from "../systems/uiDepth";
 import type { LegacyMinigameSceneKey } from "../../features/minigame/minigameSceneKeys";
+import { MainSceneAutoSaveCoordinator } from "./main/autoSaveCoordinator";
+import { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } from "./main/authFlow";
+import {
+  buildCurrentSceneStateSnapshot,
+  buildEndingAutoSavePayload,
+  buildMainSceneEndingPayload,
+  buildMainSceneSavePayload
+} from "./main/persistence";
+import { buildMainSceneDebugPanelState } from "./main/debugPanel";
+import { buildMainSceneEndingPresetPayload } from "./main/ending";
+import {
+  getAreaPresentationLabel,
+  findNearestWalkableRefreshTile,
+  isWalkableRefreshTile,
+  resolveSafeRefreshTile
+} from "./main/areaPresentation";
+import { MainSceneAreaRefreshCoordinator } from "./main/areaRefreshCoordinator";
+import {
+  handleMainSceneDebugCommand,
+  resolveMainSceneDebugStartTile
+} from "./main/debugFlow";
+import { buildDebugFixedEventJumpPayload } from "./main/fixedEventDebug";
+import {
+  resolveAreaTransitionTargets as buildAreaTransitionTargets,
+  resolveStaticPlaceTargets as buildStaticPlaceTargets
+} from "./main/targets";
 
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
@@ -96,6 +111,25 @@ export class MainScene extends Phaser.Scene {
   private static readonly DEBUG_MODE_REGISTRY_KEY = "debug.arcadePhysics.enabled";
   private readonly audioManager = new AudioManager();
   private readonly displaySettingsManager = new DisplaySettingsManager();
+  private readonly autoSaveCoordinator = new MainSceneAutoSaveCoordinator({
+    scene: this,
+    checkIntervalMs: 10000,
+    minIntervalMs: 60000,
+    shouldAutoSave: () => this.shouldAutoSave(),
+    buildFingerprint: () => JSON.stringify(this.buildSavePayload()),
+    save: async () => {
+      if (!this.saveService) {
+        return;
+      }
+      await this.saveService.saveSlot("auto", this.buildSavePayload());
+    }
+  });
+  private readonly areaRefreshCoordinator = new MainSceneAreaRefreshCoordinator({
+    scene: this,
+    refresh: (expectedAreaId, expectedPlayerSnapshot, requestId) =>
+      this.refreshCurrentAreaPresentation(expectedAreaId, expectedPlayerSnapshot, requestId),
+    canRefresh: () => !!(this.sys.isActive() && this.worldManager && this.playerManager && this.interactionManager)
+  });
   private initialized = false;
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
@@ -130,9 +164,6 @@ export class MainScene extends Phaser.Scene {
   private wasPlacePopupOpen = false;
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
-  private pendingInitialAreaRefreshHandler?: () => void;
-  private pendingInitialAreaRefreshEventName?: string;
-  private pendingInitialAreaRefreshRequestId = 0;
   private deathSequenceActive = false;
   private pendingDeathSceneExit?: Phaser.Time.TimerEvent;
   private endingFlowRequested = false;
@@ -156,6 +187,7 @@ export class MainScene extends Phaser.Scene {
     this.endingFlowRequested = false;
     this.pendingDeathSceneExit?.remove(false);
     this.pendingDeathSceneExit = undefined;
+    this.autoSaveCoordinator.reset();
     this.clearPendingInitialAreaRefresh();
     this.cameras.main.setRoundPixels(true);
     // 초기 데이터 로드: 씬 재시작(구역 이동) 시 저장된 restore payload에서 현재 주차를 먼저 읽어,
@@ -385,9 +417,9 @@ export class MainScene extends Phaser.Scene {
     this.interactionManager.setArea(runtimeSceneScript.area);
     this.interactionManager.setSceneState(initialSceneState);
     this.statSystemManager.patchHudState({
-      locationLabel: this.getAreaLabel(runtimeSceneScript.area)
+      locationLabel: getAreaPresentationLabel(runtimeSceneScript.area)
     });
-    this.storyEventManager?.requestFixedEventTrigger(this.getAreaLabel(runtimeSceneScript.area));
+    this.storyEventManager?.requestFixedEventTrigger(getAreaPresentationLabel(runtimeSceneScript.area));
 
     const tmxConfig = this.worldManager.getCurrentTmxConfig();
     const parsedMap = this.worldManager.getCurrentParsedTmxMap();
@@ -415,7 +447,7 @@ export class MainScene extends Phaser.Scene {
 
     this.applyPendingRestorePayload();
     this.statSystemManager.patchHudState({
-      locationLabel: this.getAreaLabel(runtimeSceneScript.area)
+      locationLabel: getAreaPresentationLabel(runtimeSceneScript.area)
     });
 
     if (DEBUG_FLAGS.overlayEnabled && this.debugLogger && this.npcManager) {
@@ -475,6 +507,7 @@ export class MainScene extends Phaser.Scene {
       this.clearPendingInitialAreaRefresh();
       this.pendingDeathSceneExit?.remove(false);
       this.pendingDeathSceneExit = undefined;
+      this.autoSaveCoordinator.destroy();
       this.deathSequenceActive = false;
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
@@ -498,6 +531,8 @@ export class MainScene extends Phaser.Scene {
     });
     this.trackAnalyticsGameStart();
     this.trackAnalyticsWeeklyProgress();
+    this.autoSaveCoordinator.markCurrentStateAsSaved();
+    this.autoSaveCoordinator.start();
 
     const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
     const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
@@ -549,29 +584,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private async ensureAuthenticatedEntry(): Promise<boolean> {
-    const storedSession = readStoredSession();
-    if (storedSession) {
-      if (this.registry.get("authToken") !== "bff-session") {
-        applySessionToRegistry(this.registry, storedSession);
-      }
-      return true;
-    }
-
-    const authUser = this.registry.get("authUser") as { id?: string } | undefined;
-    if (this.registry.get("authToken") === "bff-session" && authUser?.id && getActiveAuthUserId() === authUser.id) {
-      return true;
-    }
-
-    const existingSession = await fetchExistingSession();
-    if (!existingSession) {
-      clearAuthRegistry(this.registry);
-      clearStoredSession();
-      this.scene.start(SceneKey.Login);
-      return false;
-    }
-
-    applySessionToRegistry(this.registry, existingSession);
-    return true;
+    return ensureMainSceneAuthenticatedEntry(this.registry, this.scene);
   }
 
   private async handleLogout(): Promise<void> {
@@ -583,19 +596,12 @@ export class MainScene extends Phaser.Scene {
     this.input.enabled = false;
     this.events.emit("ui:closeMenu");
     this.sound.stopAll();
-    clearAuthRegistry(this.registry);
-    clearStoredSession();
-
-    try {
-      await beginLogout();
-    } catch (error) {
-      console.error("[MainScene] logout failed, falling back to local logout", error);
+    await logoutMainSceneSession(this.registry, this.scene, () => {
       this.registry.remove(MainScene.PENDING_RESTORE_PAYLOAD_KEY);
       this.registry.remove(MainScene.PENDING_START_TILE_KEY);
       this.registry.remove("startSceneId");
       this.clearPendingInitialAreaRefresh();
-      this.scene.start(SceneKey.Login);
-    }
+    });
   }
 
   private handleResize(): void {
@@ -750,7 +756,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (requestId !== undefined && this.pendingInitialAreaRefreshRequestId !== requestId) {
+    if (requestId !== undefined && this.areaRefreshCoordinator.getRequestId() !== requestId) {
       return;
     }
 
@@ -785,48 +791,15 @@ export class MainScene extends Phaser.Scene {
     expectedAreaId: AreaId,
     expectedPlayerSnapshot?: { tileX: number; tileY: number }
   ): void {
-    this.clearPendingInitialAreaRefresh();
-    const requestId = this.pendingInitialAreaRefreshRequestId;
-    const eventName = Phaser.Scenes.Events.RENDER;
-
-    const handler = () => {
-      try {
-        if (this.pendingInitialAreaRefreshRequestId !== requestId) {
-          return;
-        }
-
-        if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
-          return;
-        }
-
-        this.refreshCurrentAreaPresentation(expectedAreaId, expectedPlayerSnapshot, requestId);
-      } finally {
-        this.finalizePendingInitialAreaRefresh(requestId);
-      }
-    };
-
-    this.pendingInitialAreaRefreshEventName = eventName;
-    this.pendingInitialAreaRefreshHandler = handler;
-    this.events.once(eventName, handler);
+    this.areaRefreshCoordinator.queue(expectedAreaId, expectedPlayerSnapshot);
   }
 
   private clearPendingInitialAreaRefresh(): void {
-    this.finalizePendingInitialAreaRefresh();
+    this.areaRefreshCoordinator.clear();
   }
 
   private finalizePendingInitialAreaRefresh(requestId?: number): void {
-    const activeRequestId = this.pendingInitialAreaRefreshRequestId;
-    if (requestId !== undefined && requestId !== activeRequestId) {
-      return;
-    }
-
-    if (this.pendingInitialAreaRefreshEventName) {
-      this.events.off(this.pendingInitialAreaRefreshEventName, this.pendingInitialAreaRefreshHandler);
-    }
-
-    this.pendingInitialAreaRefreshHandler = undefined;
-    this.pendingInitialAreaRefreshEventName = undefined;
-    this.pendingInitialAreaRefreshRequestId = activeRequestId + 1;
+    this.areaRefreshCoordinator.finalize(requestId);
   }
 
   private syncAreaPresentationAfterRerender(
@@ -883,18 +856,7 @@ export class MainScene extends Phaser.Scene {
     runtimeGrids?: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
     parsedMap?: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
   ) {
-    if (!playerSnapshot || !runtimeGrids || !parsedMap) {
-      return undefined;
-    }
-
-    if (this.isWalkableTile(playerSnapshot.tileX, playerSnapshot.tileY, runtimeGrids, parsedMap)) {
-      return {
-        tileX: playerSnapshot.tileX,
-        tileY: playerSnapshot.tileY
-      };
-    }
-
-    return this.findNearestWalkableTile(playerSnapshot.tileX, playerSnapshot.tileY, runtimeGrids, parsedMap);
+    return resolveSafeRefreshTile(playerSnapshot, runtimeGrids, parsedMap);
   }
 
   private isWalkableTile(
@@ -903,11 +865,7 @@ export class MainScene extends Phaser.Scene {
     runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
     parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
   ) {
-    if (tileX < 0 || tileY < 0 || tileX >= parsedMap.width || tileY >= parsedMap.height) {
-      return false;
-    }
-
-    return runtimeGrids.blockedGrid[tileY]?.[tileX] !== true;
+    return isWalkableRefreshTile(tileX, tileY, runtimeGrids, parsedMap);
   }
 
   private findNearestWalkableTile(
@@ -916,25 +874,7 @@ export class MainScene extends Phaser.Scene {
     runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
     parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
   ) {
-    const maxRadius = Math.max(parsedMap.width, parsedMap.height);
-
-    for (let radius = 1; radius <= maxRadius; radius += 1) {
-      for (let dy = -radius; dy <= radius; dy += 1) {
-        for (let dx = -radius; dx <= radius; dx += 1) {
-          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) {
-            continue;
-          }
-
-          const tileX = originTileX + dx;
-          const tileY = originTileY + dy;
-          if (this.isWalkableTile(tileX, tileY, runtimeGrids, parsedMap)) {
-            return { tileX, tileY };
-          }
-        }
-      }
-    }
-
-    return findFirstWalkableTile(runtimeGrids.blockedGrid);
+    return findNearestWalkableRefreshTile(originTileX, originTileY, runtimeGrids, parsedMap);
   }
 
   private adjustBgmVolume(delta: number): void {
@@ -1281,151 +1221,107 @@ export class MainScene extends Phaser.Scene {
   private bindDebugControls() {
     this.unsubscribeDebugCommandBus?.();
     this.unsubscribeDebugCommandBus = this.debugCommandBus?.subscribe((command) => {
-      switch (command.type) {
-        case "toggleDebugOverlay": {
-          const nextEnabled = this.debugOverlay
-            ? !this.debugOverlay.isVisible()
-            : !this.isDebugModeEnabled();
-          this.applyDebugMode(nextEnabled);
-          break;
-        }
-        case "toggleDebugPanel":
-          this.debugPanel?.toggle();
-          if (this.debugPanel?.isVisible()) {
-            // this.storyEventManager?.debugSyncAllWeeks();
-          }
-          break;
-        case "toggleWorldTileEditor":
-          this.worldTileEditor?.toggle();
-          break;
-        case "toggleWorldGrid":
+      handleMainSceneDebugCommand(command, {
+        isDebugOverlayVisible: () => this.debugOverlay?.isVisible() === true,
+        isDebugModeEnabled: () => this.isDebugModeEnabled(),
+        applyDebugMode: (enabled) => this.applyDebugMode(enabled),
+        toggleDebugPanel: () => this.debugPanel?.toggle(),
+        toggleWorldTileEditor: () => this.worldTileEditor?.toggle(),
+        toggleWorldGrid: () => {
           if (this.worldGridOverlay) {
             this.worldGridOverlay.setVisible(!this.worldGridOverlay.isVisible());
           }
-          break;
-        case "toggleMinigameHud":
-          if (this.debugOverlay?.isVisible()) {
-            this.debugMinigameHud?.toggle();
-          }
-          break;
-        case "teleportPlayerToWorld":
-          this.handleDebugTeleport(command.worldX, command.worldY);
-          break;
-        case "switchStartScene":
-          this.restartWithDebugScene(command.sceneId);
-          break;
-        case "adjustHudValue": {
+        },
+        toggleMinigameHud: () => this.debugMinigameHud?.toggle(),
+        teleportPlayerToWorld: (worldX, worldY) => this.handleDebugTeleport(worldX, worldY),
+        restartWithDebugScene: (sceneId) => this.restartWithDebugScene(sceneId),
+        adjustHudValue: (key, delta) => {
           const hudState = this.statSystemManager?.getHudState();
           if (!hudState || !this.statSystemManager) {
-            break;
+            return;
           }
           this.statSystemManager.patchHudState({
-            [command.key]: hudState[command.key] + command.delta
+            [key]: hudState[key] + delta
           });
-          this.events.emit("ui:showNotice", `디버그 ${command.key} ${command.delta > 0 ? "+" : ""}${command.delta}`);
-          break;
-        }
-        case "adjustStatValue":
-          this.statSystemManager?.applyStatDelta({ [command.key]: command.delta });
-          this.events.emit("ui:showNotice", `디버그 ${command.key} ${command.delta > 0 ? "+" : ""}${command.delta}`);
-          break;
-        case "advanceTime":
+          this.events.emit("ui:showNotice", `[debug] ${key} ${delta > 0 ? "+" : ""}${delta}`);
+        },
+        adjustStatValue: (key, delta) => {
+          this.statSystemManager?.applyStatDelta({ [key]: delta });
+          this.events.emit("ui:showNotice", `[debug] ${key} ${delta > 0 ? "+" : ""}${delta}`);
+        },
+        advanceTime: () => {
           this.progressionManager?.debugAdvanceTime();
           this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
-          this.events.emit("ui:showNotice", "디버그 시간 진행");
-          break;
-        case "adjustWeek": {
+          this.events.emit("ui:showNotice", "[debug] advanced time");
+        },
+        adjustWeek: (delta) => {
           const timeState = this.progressionManager?.getTimeState();
           if (!timeState) {
-            break;
+            return;
           }
           this.progressionManager?.debugPatchTimeState({
-            week: timeState.week + command.delta
+            week: timeState.week + delta
           });
-          // 주차 변경 시 force: true로 대화 데이터를 강제 재로드하여 주차 불일치 방지
           this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week, { force: true });
-          this.events.emit("ui:showNotice", `디버그 주차 ${command.delta > 0 ? "+" : ""}${command.delta}`);
-          break;
-        }
-        case "adjustActionPoint": {
+          this.events.emit("ui:showNotice", `[debug] week ${delta > 0 ? "+" : ""}${delta}`);
+        },
+        adjustActionPoint: (delta) => {
           const timeState = this.progressionManager?.getTimeState();
           if (!timeState) {
-            break;
+            return;
           }
           this.progressionManager?.debugPatchTimeState({
-            actionPoint: timeState.actionPoint + command.delta
+            actionPoint: timeState.actionPoint + delta
           });
-          this.events.emit("ui:showNotice", `디버그 행동력 ${command.delta > 0 ? "+" : ""}${command.delta}`);
-          break;
-        }
-        case "refillActionPoint": {
+          this.events.emit("ui:showNotice", `[debug] action point ${delta > 0 ? "+" : ""}${delta}`);
+        },
+        refillActionPoint: () => {
           const timeState = this.progressionManager?.getTimeState();
           if (!timeState) {
-            break;
+            return;
           }
           this.progressionManager?.debugPatchTimeState({
             actionPoint: timeState.maxActionPoint
           });
-          this.events.emit("ui:showNotice", "디버그 행동력 최대치");
-          break;
-        }
-        case "giveInventoryItem": {
-          const result = this.inventoryService?.debugGrantItem(command.templateId);
+          this.events.emit("ui:showNotice", "[debug] action points refilled");
+        },
+        giveInventoryItem: (templateId) => {
+          const result = this.inventoryService?.debugGrantItem(templateId);
           if (result) {
             this.events.emit("ui:showNotice", result.message);
           }
-          break;
-        }
-        case "triggerCurrentFixedEvent":
-          this.events.emit("ui:showNotice", 
-            this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() ? "고정 이벤트 실행" : "실행 가능한 고정 이벤트가 없습니다"
+        },
+        triggerCurrentFixedEvent: () => {
+          this.events.emit(
+            "ui:showNotice",
+            this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent() ? "[debug] fixed event started" : "[debug] no fixed event available"
           );
-          break;
-        case "jumpToFixedEvent":
-          this.handleDebugFixedEventJump(command.week, command.eventId, {
-            resetCompletion: command.resetCompletion === true,
-            runImmediately: false
-          });
-          break;
-        case "runFixedEvent":
-          this.handleDebugFixedEventJump(command.week, command.eventId, {
-            resetCompletion: command.resetCompletion === true,
-            runImmediately: true
-          });
-          break;
-        case "resetFixedEventCompletion": {
-          const changed = this.storyEventManager?.debugResetFixedEventCompletion(command.eventId) === true;
-          this.events.emit("ui:showNotice", changed ? `이벤트 완료 기록 초기화: ${command.eventId}` : `완료 기록이 없습니다: ${command.eventId}`);
-          break;
-        }
-        case "resetFixedEventCompletionsForWeek": {
-          const cleared = this.storyEventManager?.debugResetFixedEventCompletionsForWeek(command.week) ?? 0;
-          this.events.emit("ui:showNotice", cleared > 0 ? `${command.week}주차 완료 기록 ${cleared}건 초기화` : `${command.week}주차 완료 기록이 없습니다`);
-          break;
-        }
-        case "saveAuto":
+        },
+        jumpToFixedEvent: (week, eventId, options) => this.handleDebugFixedEventJump(week, eventId, options),
+        resetFixedEventCompletion: (eventId) => {
+          const changed = this.storyEventManager?.debugResetFixedEventCompletion(eventId) === true;
+          this.events.emit("ui:showNotice", changed ? `[debug] reset fixed event ${eventId}` : `[debug] fixed event not completed: ${eventId}`);
+        },
+        resetFixedEventCompletionsForWeek: (week) => {
+          const cleared = this.storyEventManager?.debugResetFixedEventCompletionsForWeek(week) ?? 0;
+          this.events.emit("ui:showNotice", cleared > 0 ? `[debug] reset ${cleared} events for week ${week}` : `[debug] no completed events for week ${week}`);
+        },
+        saveAuto: () => {
           if (this.saveService) {
             void this.saveAutoWithNotice();
           }
-          break;
-        case "startEndingFlow":
+        },
+        startEndingFlow: () => {
           this.startDebugEndingFlow();
-          this.events.emit("ui:showNotice", "디버그 엔딩 진입");
-          break;
-        case "startEndingFlowPreset":
-          this.startDebugEndingFlow(command.endingId);
-          this.events.emit("ui:showNotice", `디버그 엔딩 진입: ${command.endingId}`);
-          break;
-        default:
-          this.assertNeverDebugCommand(command);
-      }
+          this.events.emit("ui:showNotice", "[debug] ending flow started");
+        },
+        startEndingFlowPreset: (endingId) => {
+          this.startDebugEndingFlow(endingId);
+          this.events.emit("ui:showNotice", `[debug] ending flow started: ${endingId}`);
+        }
+      });
     });
   }
-
-  private assertNeverDebugCommand(command: never): never {
-    throw new Error(`Unhandled debug command: ${JSON.stringify(command)}`);
-  }
-
   private ensureDebugModeInitialized(): void {
     if (typeof this.registry.get(MainScene.DEBUG_MODE_REGISTRY_KEY) !== "boolean") {
       this.registry.set(MainScene.DEBUG_MODE_REGISTRY_KEY, false);
@@ -1612,23 +1508,13 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    const debugStartTile = this.resolveDebugSceneStartTile(sceneId);
+    const debugStartTile = resolveMainSceneDebugStartTile(sceneId);
     if (debugStartTile) {
       this.registry.set(MainScene.PENDING_START_TILE_KEY, debugStartTile);
     }
 
     this.debugLogger?.log(`debug:switch-scene:${sceneId}`);
     this.scene.restart();
-  }
-
-  private resolveDebugSceneStartTile(sceneId: SceneId) {
-    switch (sceneId) {
-      case SCENE_IDS.classroomDefault:
-        // Match the requested classroom debug spawn near screen position 1105, 535.
-        return { tileX: 27, tileY: 12 };
-      default:
-        return undefined;
-    }
   }
 
   private prepareSceneRestart(
@@ -1656,7 +1542,7 @@ export class MainScene extends Phaser.Scene {
         ...payload.gameState,
         hud: {
           ...payload.gameState.hud,
-          locationLabel: this.getAreaLabel(nextSceneScript.area)
+          locationLabel: getAreaPresentationLabel(nextSceneScript.area)
         }
       },
       world: {
@@ -1679,7 +1565,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.statSystemManager.patchHudState({
-      locationLabel: this.getAreaLabel(resolvedAreaId)
+      locationLabel: getAreaPresentationLabel(resolvedAreaId)
     });
   }
 
@@ -1759,41 +1645,11 @@ export class MainScene extends Phaser.Scene {
     areaId: AreaId,
     renderBounds?: ReturnType<WorldManager["getCurrentRenderBounds"]>
   ): RuntimeAreaTransitionTarget[] {
-    if (!renderBounds) {
-      return [];
-    }
-
-    return getAreaTransitionDefinitions(areaId).map((transition) => ({
-      id: transition.id,
-      label: transition.label,
-      isRomance: this.storyEventManager?.hasRomanceEventForArea(transition.toArea) === true,
-      centerX:
-        renderBounds.offsetX +
-        (transition.tileX + (transition.tileWidth ?? 1) / 2) *
-          renderBounds.tileWidth *
-          renderBounds.scale,
-      centerY:
-        renderBounds.offsetY +
-        (transition.tileY + (transition.tileHeight ?? 1) / 2) *
-          renderBounds.tileHeight *
-          renderBounds.scale,
-      zoneX:
-        renderBounds.offsetX +
-        transition.tileX * renderBounds.tileWidth * renderBounds.scale,
-      zoneY:
-        renderBounds.offsetY +
-        transition.tileY * renderBounds.tileHeight * renderBounds.scale,
-      zoneWidth:
-        (transition.tileWidth ?? 1) * renderBounds.tileWidth * renderBounds.scale,
-      zoneHeight:
-        (transition.tileHeight ?? 1) * renderBounds.tileHeight * renderBounds.scale,
-      tileX: transition.tileX,
-      tileY: transition.tileY,
-      tileWidth: transition.tileWidth ?? 1,
-      tileHeight: transition.tileHeight ?? 1,
-      arrowDirection: transition.arrowDirection ?? "up",
-      labelPlacement: transition.labelPlacement ?? "below"
-    }));
+    return buildAreaTransitionTargets({
+      areaId,
+      renderBounds,
+      hasRomanceEventForArea: (targetAreaId) => this.storyEventManager?.hasRomanceEventForArea(targetAreaId) === true
+    });
   }
 
   private resolveStaticPlaceTargets(
@@ -1802,137 +1658,12 @@ export class MainScene extends Phaser.Scene {
     parsedMap?: ParsedTmxMap,
     runtimeGrids?: TmxRuntimeGrids
   ): RuntimeStaticPlaceTarget[] {
-    if (!renderBounds) {
-      return [];
-    }
-
-    const staticPlaces = getStaticPlaceDefinitions(areaId);
-    const tmxDerivedTargets = this.resolveTmxStaticPlaceTargets(
-      staticPlaces,
+    return buildStaticPlaceTargets({
+      areaId,
       renderBounds,
       parsedMap,
       runtimeGrids
-    );
-
-    return staticPlaces.map((place) => {
-      const tmxTarget = tmxDerivedTargets.get(place.id);
-      if (tmxTarget) {
-        return tmxTarget;
-      }
-
-      const interactionZone = place.interactionZone ?? place.zone;
-
-      return {
-        id: place.id,
-        label: place.label,
-        dialogueId: place.dialogueId!,
-        x: renderBounds.offsetX + (interactionZone.x + interactionZone.width / 2) * renderBounds.scale,
-        y: renderBounds.offsetY + (interactionZone.y + interactionZone.height / 2) * renderBounds.scale,
-        zoneX: renderBounds.offsetX + interactionZone.x * renderBounds.scale,
-        zoneY: renderBounds.offsetY + interactionZone.y * renderBounds.scale,
-        zoneWidth: interactionZone.width * renderBounds.scale,
-        zoneHeight: interactionZone.height * renderBounds.scale
-      };
     });
-  }
-
-  private resolveTmxStaticPlaceTargets(
-    staticPlaces: ReturnType<typeof getStaticPlaceDefinitions>,
-    renderBounds?: ReturnType<WorldManager["getCurrentRenderBounds"]>,
-    parsedMap?: ParsedTmxMap,
-    runtimeGrids?: TmxRuntimeGrids
-  ) {
-    const targets = new Map<RuntimeStaticPlaceTarget["id"], RuntimeStaticPlaceTarget>();
-
-    if (
-      !renderBounds ||
-      !parsedMap ||
-      !runtimeGrids ||
-      staticPlaces.length === 0
-    ) {
-      return targets;
-    }
-
-    const availableRegions = extractConnectedRegionsFromGrid(runtimeGrids.interactionGrid, 2);
-
-    if (availableRegions.length === 0) {
-      return targets;
-    }
-
-    staticPlaces.forEach((place) => {
-      if (availableRegions.length === 0) {
-        return;
-      }
-
-      const anchorTileX = Phaser.Math.Clamp(
-        Math.floor((place.zone.x + place.zone.width / 2) / parsedMap.tileWidth),
-        0,
-        parsedMap.width - 1
-      );
-      const anchorTileY = Phaser.Math.Clamp(
-        Math.floor((place.zone.y + place.zone.height / 2) / parsedMap.tileHeight),
-        0,
-        parsedMap.height - 1
-      );
-
-      let bestRegionIndex = -1;
-      let bestDistance = Number.POSITIVE_INFINITY;
-
-      availableRegions.forEach((region, index) => {
-        const dx = region.centerX - anchorTileX;
-        const dy = region.centerY - anchorTileY;
-        const distance = dx * dx + dy * dy;
-
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          bestRegionIndex = index;
-        }
-      });
-
-      if (bestRegionIndex < 0) {
-        return;
-      }
-
-      const [region] = availableRegions.splice(bestRegionIndex, 1);
-      if (!region) {
-        return;
-      }
-
-      const promptTiles = buildAdjacentWalkableTiles(region, runtimeGrids.blockedGrid).map((tile) => ({
-        tileX: tile.x,
-        tileY: tile.y
-      }));
-
-      if (promptTiles.length === 0) {
-        return;
-      }
-
-      const minTileX = Math.min(...promptTiles.map((tile) => tile.tileX));
-      const maxTileX = Math.max(...promptTiles.map((tile) => tile.tileX));
-      const minTileY = Math.min(...promptTiles.map((tile) => tile.tileY));
-      const maxTileY = Math.max(...promptTiles.map((tile) => tile.tileY));
-      const scaledTileWidth = renderBounds.tileWidth * renderBounds.scale;
-      const scaledTileHeight = renderBounds.tileHeight * renderBounds.scale;
-      const zoneX = renderBounds.offsetX + minTileX * scaledTileWidth;
-      const zoneY = renderBounds.offsetY + minTileY * scaledTileHeight;
-      const zoneWidth = (maxTileX - minTileX + 1) * scaledTileWidth;
-      const zoneHeight = (maxTileY - minTileY + 1) * scaledTileHeight;
-
-      targets.set(place.id, {
-        id: place.id,
-        label: place.label,
-        dialogueId: place.dialogueId!,
-        x: zoneX + zoneWidth / 2,
-        y: zoneY + zoneHeight / 2,
-        zoneX,
-        zoneY,
-        zoneWidth,
-        zoneHeight,
-        promptTiles
-      });
-    });
-
-    return targets;
   }
 
   private applyDebugTileEditorGrids(collisionGrid: boolean[][], interactionGrid: boolean[][]) {
@@ -1956,21 +1687,8 @@ export class MainScene extends Phaser.Scene {
     this.interactionManager?.setStaticPlaceTargets(this.currentStaticPlaceTargets);
   }
 
-  private getAreaLabel(areaId: AreaId): string {
-    switch (areaId) {
-      case "campus":
-        return "캠퍼스";
-      case "classroom":
-        return "교실";
-      case "downtown":
-        return "번화가";
-      case "world":
-      default:
-        return "전체 지도";
-    }
-  }
-
-  private resolveDialogueWeekMetric(hudWeek: number): number {
+  private resolveDialogueWeekMetric(
+hudWeek: number): number {
     const progressionWeek = this.progressionManager?.getTimeState().week;
     if (typeof progressionWeek !== "number") {
       return hudWeek;
@@ -2005,25 +1723,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buildEndingPayload(overrides: Partial<EndingFlowPayload> = {}): EndingFlowPayload {
-    const hudState = this.statSystemManager?.getHudState() ?? this.statSystemManager!.getHudState();
-    const statsState = this.statSystemManager?.getStatsState() ?? this.statSystemManager!.getStatsState();
-    const endingProgress = this.statSystemManager?.getEndingProgress() ?? this.statSystemManager!.getEndingProgress();
-
-    return {
-      fe: statsState.fe,
-      be: statsState.be,
-      teamwork: statsState.teamwork,
-      luck: statsState.luck,
-      hp: hudState.hp,
-      hpMax: hudState.hpMax,
-      stress: hudState.stress,
-      gamePlayCount: endingProgress.gamePlayCount,
-      lottoRank: endingProgress.lottoRank,
-      week: hudState.week,
-      dayLabel: hudState.dayLabel,
-      timeLabel: hudState.timeLabel,
-      ...overrides
-    };
+    return buildMainSceneEndingPayload({
+      gameState: this.statSystemManager?.getState() ?? this.statSystemManager!.getState(),
+      overrides
+    });
   }
 
   private evaluateImmediateEndingTrigger(): void {
@@ -2056,6 +1759,7 @@ export class MainScene extends Phaser.Scene {
 
     try {
       await this.saveService.saveSlot("auto", this.buildEndingAutoSavePayload(ending));
+      this.autoSaveCoordinator.markCurrentStateAsSaved();
     } catch (error) {
       console.error("[MainScene] ending auto save failed", error);
       this.events.emit("ui:showNotice", "엔딩 진입 전 오토 세이브에 실패했습니다.");
@@ -2072,11 +1776,44 @@ export class MainScene extends Phaser.Scene {
 
     try {
       await this.saveService.saveSlot("auto", this.buildSavePayload());
+      this.autoSaveCoordinator.markCurrentStateAsSaved();
       this.events.emit("ui:showNotice", "오토 세이브 완료");
     } catch (error) {
       console.error("[MainScene] auto save failed", error);
       this.events.emit("ui:showNotice", "오토 세이브에 실패했습니다.");
     }
+  }
+
+  private shouldAutoSave(): boolean {
+    if (!this.saveService || this.logoutInProgress || this.deathSequenceActive || this.endingFlowRequested) {
+      return false;
+    }
+
+    if (!this.sys.isActive() || !this.scene.isActive()) {
+      return false;
+    }
+
+    if (this.playerManager?.isPlayerMoving() === true) {
+      return false;
+    }
+
+    if (this.dialogueManager?.isDialoguePlaying() === true) {
+      return false;
+    }
+
+    if (this.uiScene?.isMenuOpen() === true || this.uiScene?.isPlaceActionOpen() === true) {
+      return false;
+    }
+
+    if (this.progressionManager?.isPlannerOpen() === true) {
+      return false;
+    }
+
+    if (this.scene.manager.scenes.some((scene) => scene !== this && scene.scene.isActive() && scene.scene.key !== SCENE_KEYS.inGameUI)) {
+      return false;
+    }
+
+    return true;
   }
 
   private startDebugEndingFlow(endingId?: EndingId): void {
@@ -2088,44 +1825,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buildEndingPresetPayload(endingId: EndingId): EndingFlowPayload {
-    const base: Pick<EndingFlowPayload, "week" | "dayLabel" | "timeLabel" | "hpMax" | "stress" | "gamePlayCount" | "lottoRank"> = {
-      week: 6,
-      hpMax: 100,
-      stress: 24,
-      gamePlayCount: 0,
-      lottoRank: null,
-      dayLabel: "금요일",
-      timeLabel: "밤"
-    };
-
-    switch (endingId) {
-      case "lotto":
-        return { ...base, fe: 30, be: 24, teamwork: 28, luck: 200, hp: 84, lottoRank: 1 };
-      case "game_over":
-        return { ...base, fe: 90, be: 84, teamwork: 72, luck: 40, hp: 0, stress: 92 };
-      case "runaway":
-        return { ...base, fe: 110, be: 106, teamwork: 104, luck: 52, hp: 38, stress: 100 };
-      case "largecompany":
-        return { ...base, fe: 180, be: 170, teamwork: 165, luck: 58, hp: 72 };
-      case "lucky_job":
-        return { ...base, fe: 88, be: 74, teamwork: 80, luck: 190, hp: 70 };
-      case "gamer":
-        return { ...base, fe: 70, be: 52, teamwork: 64, luck: 162, hp: 76, gamePlayCount: 18 };
-      case "frontend_master":
-        return { ...base, fe: 260, be: 92, teamwork: 118, luck: 46, hp: 68 };
-      case "backend_master":
-        return { ...base, fe: 82, be: 220, teamwork: 94, luck: 42, hp: 66 };
-      case "collaborative_dev":
-        return { ...base, fe: 170, be: 160, teamwork: 220, luck: 44, hp: 82 };
-      case "leader_type":
-        return { ...base, fe: 120, be: 118, teamwork: 260, luck: 40, hp: 88 };
-      case "health_trainer":
-        return { ...base, fe: 70, be: 68, teamwork: 108, luck: 34, hp: 96, hpMax: 210 };
-      case "normal":
-        return { ...base, fe: 118, be: 112, teamwork: 124, luck: 78, hp: 74 };
-      default:
-        return this.buildEndingPayload();
-    }
+    return buildMainSceneEndingPresetPayload(endingId, () => this.buildEndingPayload());
   }
 
   private buildDebugPanelState(): DebugPanelState {
@@ -2143,100 +1843,36 @@ export class MainScene extends Phaser.Scene {
       };
     });
 
-    return {
-      currentSceneId: this.currentSceneId ?? "-",
+    return buildMainSceneDebugPanelState({
+      currentSceneId: this.currentSceneId,
       currentAreaId: this.worldManager?.getCurrentAreaId(),
       currentLocationLabel: hud.locationLabel,
-      inventoryUsageText: `${usedSlotCount}/${totalSlotCount}`,
+      usedSlotCount,
+      totalSlotCount,
       fixedEventId: this.storyEventManager?.getCurrentFixedEventPresentation()?.eventId,
       hud,
       stats,
-      endingDebug: {
-        endingId: ending.endingId,
-        title: ending.title,
-        shortDescription: ending.shortDescription,
-        dominantLabels: ending.dominantLabels,
-        summaryStats: ending.summaryStats,
-        introLines: ending.introLines,
-        npcLine: ending.npcLine
-      },
-      storyDebug: {
-        currentWeek: hud.week,
-        weeks: storyWeeks
-      }
-    };
+      ending,
+      storyWeeks
+    });
   }
 
   private buildSavePayload(): SavePayload {
-    const playerSnapshot = this.playerManager?.getSnapshot();
-    return {
+    return buildMainSceneSavePayload({
       gameState: this.statSystemManager!.getState(),
       inventory: this.inventoryService!.serialize(),
       progression: this.progressionManager?.getSnapshot(),
-      world: {
-        areaId: this.worldManager?.getCurrentAreaId() ?? "world",
-        sceneId: this.currentSceneId,
-        sceneState: this.buildCurrentSceneStateSnapshot(),
-        playerTile: playerSnapshot
-          ? {
-              tileX: playerSnapshot.tileX,
-              tileY: playerSnapshot.tileY
-            }
-          : undefined
-      },
+      areaId: this.worldManager?.getCurrentAreaId() ?? "world",
+      sceneId: this.currentSceneId,
+      baseSceneState: this.currentSceneState,
+      npcSnapshots: this.npcManager?.getSnapshot(),
+      playerSnapshot: this.playerManager?.getSnapshot(),
       story: this.storyEventManager?.getSnapshot()
-    };
+    });
   }
 
   private buildEndingAutoSavePayload(ending: ReturnType<typeof resolveEnding>): SavePayload {
-    const payload = this.buildSavePayload();
-    if (ending.autoSaveMode !== "recoverable" || !ending.autoSaveRestoreOverrides) {
-      return payload;
-    }
-
-    const overrides = ending.autoSaveRestoreOverrides;
-    const nextHud = { ...payload.gameState.hud };
-    const nextStats = { ...payload.gameState.stats };
-    const nextEndingProgress = { ...payload.gameState.endingProgress };
-
-    if (typeof overrides.hp === "number") {
-      nextHud.hp = overrides.hp;
-    }
-    if (typeof overrides.hpMax === "number") {
-      nextHud.hpMax = overrides.hpMax;
-    }
-    if (typeof overrides.stress === "number") {
-      nextHud.stress = overrides.stress;
-      nextStats.stress = overrides.stress;
-    }
-    if (typeof overrides.fe === "number") {
-      nextStats.fe = overrides.fe;
-    }
-    if (typeof overrides.be === "number") {
-      nextStats.be = overrides.be;
-    }
-    if (typeof overrides.teamwork === "number") {
-      nextStats.teamwork = overrides.teamwork;
-    }
-    if (typeof overrides.luck === "number") {
-      nextStats.luck = overrides.luck;
-    }
-    if (typeof overrides.gamePlayCount === "number") {
-      nextEndingProgress.gamePlayCount = overrides.gamePlayCount;
-    }
-    if ("lottoRank" in overrides) {
-      nextEndingProgress.lottoRank = overrides.lottoRank ?? null;
-    }
-
-    return {
-      ...payload,
-      gameState: {
-        ...payload.gameState,
-        hud: nextHud,
-        stats: nextStats,
-        endingProgress: nextEndingProgress
-      }
-    };
+    return buildEndingAutoSavePayload(this.buildSavePayload(), ending);
   }
 
   private restoreSavePayload(payload: SavePayload): boolean {
@@ -2272,28 +1908,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buildCurrentSceneStateSnapshot(): SceneState | undefined {
-    const baseSceneState = this.currentSceneState;
-    const npcSnapshots = this.npcManager?.getSnapshot();
-
-    if (!baseSceneState || !npcSnapshots?.length) {
-      return baseSceneState;
-    }
-
-    const dialogueIdByNpcId = new Map(
-      baseSceneState.npcs.map((npc) => [npc.npcId, npc.dialogueId] as const)
-    );
-    const fallbackDialogueId = baseSceneState.npcs[0]?.dialogueId ?? DIALOGUE_IDS.minsuIntro;
-
-    return normalizeSceneState({
-      ...baseSceneState,
-      npcs: npcSnapshots.map((npc) => ({
-        npcId: npc.id,
-        x: npc.x,
-        y: npc.y,
-        facing: npc.facing,
-        dialogueId: dialogueIdByNpcId.get(npc.id) ?? fallbackDialogueId
-      }))
-    });
+    return buildCurrentSceneStateSnapshot(this.currentSceneState, this.npcManager?.getSnapshot());
   }
 
   private getPendingRestorePayload(): SavePayload | undefined {
@@ -2371,45 +1986,9 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    const payload = this.buildSavePayload();
-    const targetSceneId = getDefaultSceneIdForArea(event.areaId);
-    const timeCycleIndex = Math.max(0, TIME_CYCLE.findIndex((label) => label === event.timeOfDay));
-    const dayCycleIndex = Phaser.Math.Clamp(event.day - 1, 0, DAY_CYCLE.length - 1);
-
-    if (payload.progression) {
-      payload.progression.timeState = {
-        ...payload.progression.timeState,
-        week: event.week,
-        dayCycleIndex,
-        timeCycleIndex,
-        actionPoint: payload.progression.timeState.maxActionPoint
-      };
-      payload.progression.weeklyPlanWeek = event.week;
-      payload.progression.lastPaidWeeklySalaryWeek = Math.max(payload.progression.lastPaidWeeklySalaryWeek, event.week);
-    }
-
-    payload.gameState.hud = {
-      ...payload.gameState.hud,
-      ...buildHudPatchFromTimeState(payload.progression?.timeState ?? {
-        actionPoint: payload.gameState.hud.actionPoint,
-        maxActionPoint: payload.gameState.hud.maxActionPoint,
-        timeCycleIndex,
-        dayCycleIndex,
-        week: event.week
-      }),
-      locationLabel: event.locationLabel
-    };
-
-    if (options.resetCompletion) {
-      payload.story = {
-        completedFixedEventIds: (payload.story?.completedFixedEventIds ?? []).filter((completedEventId) => completedEventId !== event.eventId)
-      };
-    }
-
-    payload.world = {
-      areaId: event.areaId,
-      sceneId: targetSceneId
-    };
+    const payload = buildDebugFixedEventJumpPayload(this.buildSavePayload(), event, {
+      resetCompletion: options.resetCompletion
+    });
 
     if (options.runImmediately) {
       this.registry.set(MainScene.PENDING_DEBUG_FIXED_EVENT_KEY, {

@@ -23,7 +23,7 @@ import type { HudState, PlayerStatKey } from "../state/gameState";
 
 const WEEKLY_SALARY_AMOUNT = 50000;
 
-type ProgressionSnapshot = {
+export type ProgressionSnapshot = {
   timeState: TimeState;
   weeklyPlan: WeeklyPlanOptionId[];
   weeklyPlanWeek: number;

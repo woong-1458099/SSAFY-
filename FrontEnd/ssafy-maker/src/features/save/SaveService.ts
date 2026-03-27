@@ -53,6 +53,8 @@ type SaveStore = Record<string, SaveSlotData | null>;
 const STORAGE_KEY_PREFIX = "ppap-save-slots-v3";
 const LEGACY_STORAGE_KEY = "ppap-save-slots-v2";
 const LEGACY_STORAGE_KEY_V1 = "ppap-save-slots-v1";
+const INDEXED_DB_NAME = "ssafy-maker-save-slots";
+const INDEXED_DB_STORE_NAME = "saveStores";
 const AUTO_SLOT_ID: SaveSlotId = "auto";
 const REMOTE_AUTO_SLOT_NUMBER = 999999;
 
@@ -62,6 +64,10 @@ let pendingHydration: Promise<SaveStore> | null = null;
 
 function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function canUseIndexedDb(): boolean {
+  return typeof window !== "undefined" && typeof window.indexedDB !== "undefined";
 }
 
 function getCurrentUserId(): string | null {
@@ -175,6 +181,107 @@ function writeStore(store: SaveStore, scope = getStorageScope()): void {
   window.localStorage.setItem(getScopedStorageKey(scope), JSON.stringify(normalizeStore(store)));
 }
 
+function deleteLegacyStores(scope = getStorageScope()): void {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(getScopedStorageKey(scope));
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY_V1);
+  } catch {
+    // Ignore storage cleanup failures.
+  }
+}
+
+function openSaveIndexedDb(): Promise<IDBDatabase | null> {
+  if (!canUseIndexedDb()) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const request = window.indexedDB.open(INDEXED_DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(INDEXED_DB_STORE_NAME)) {
+          db.createObjectStore(INDEXED_DB_STORE_NAME);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+      request.onblocked = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function readIndexedDbStore(scope = getStorageScope()): Promise<SaveStore | null> {
+  const db = await openSaveIndexedDb();
+  if (!db) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const transaction = db.transaction(INDEXED_DB_STORE_NAME, "readonly");
+      const store = transaction.objectStore(INDEXED_DB_STORE_NAME);
+      const request = store.get(scope);
+      request.onsuccess = () => {
+        const result = request.result;
+        resolve(result && typeof result === "object" ? normalizeStore(result as SaveStore) : null);
+      };
+      request.onerror = () => resolve(null);
+      transaction.oncomplete = () => db.close();
+      transaction.onerror = () => db.close();
+      transaction.onabort = () => db.close();
+    } catch {
+      db.close();
+      resolve(null);
+    }
+  });
+}
+
+async function writeIndexedDbStore(store: SaveStore, scope = getStorageScope()): Promise<void> {
+  const normalized = normalizeStore(store);
+  const db = await openSaveIndexedDb();
+  if (!db) {
+    writeStore(normalized, scope);
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    try {
+      const transaction = db.transaction(INDEXED_DB_STORE_NAME, "readwrite");
+      const objectStore = transaction.objectStore(INDEXED_DB_STORE_NAME);
+      objectStore.put(normalized, scope);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => resolve();
+      transaction.onabort = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+
+  db.close();
+  deleteLegacyStores(scope);
+}
+
+async function readPersistentStore(scope = getStorageScope()): Promise<SaveStore> {
+  const indexedDbStore = await readIndexedDbStore(scope);
+  if (indexedDbStore) {
+    return indexedDbStore;
+  }
+
+  const legacyStore = readStore(scope);
+  if (Object.keys(legacyStore).length > 0) {
+    await writeIndexedDbStore(legacyStore, scope);
+  }
+  return legacyStore;
+}
+
 function setCachedStore(store: SaveStore, scope = getStorageScope()): SaveStore {
   const normalized = normalizeStore(store);
   cachedSlots = normalized;
@@ -264,26 +371,26 @@ function indexRemoteSaveFiles(remoteSaveFiles: BackendSaveFile[]): Map<SaveSlotI
   return indexed;
 }
 
-function upsertLocalSlot(slotData: SaveSlotData, scope = getStorageScope()): SaveSlotData {
-  const store = readStore(scope);
+async function upsertLocalSlot(slotData: SaveSlotData, scope = getStorageScope()): Promise<SaveSlotData> {
+  const store = await readPersistentStore(scope);
   store[slotData.slotId] = slotData;
-  writeStore(store, scope);
+  await writeIndexedDbStore(store, scope);
   setCachedStore(store, scope);
   return slotData;
 }
 
-function removeLocalSlot(slotId: SaveSlotId, scope = getStorageScope()): boolean {
+async function removeLocalSlot(slotId: SaveSlotId, scope = getStorageScope()): Promise<boolean> {
   if (slotId === AUTO_SLOT_ID) {
     return false;
   }
 
-  const store = readStore(scope);
+  const store = await readPersistentStore(scope);
   if (!(slotId in store)) {
     return false;
   }
 
   delete store[slotId];
-  writeStore(store, scope);
+  await writeIndexedDbStore(store, scope);
   setCachedStore(store, scope);
   return true;
 }
@@ -366,7 +473,7 @@ export class SaveService {
         return cloneStore(cachedSlots);
       }
 
-      return cloneStore(setCachedStore(readStore(scope), scope));
+      return cloneStore(setCachedStore(await readPersistentStore(scope), scope));
     }
 
     if (!force && pendingHydration && cachedScope === scope) {
@@ -378,7 +485,7 @@ export class SaveService {
     }
 
     pendingHydration = (async () => {
-      const localStore = readStore(scope);
+      const localStore = await readPersistentStore(scope);
 
       try {
         const remoteBySlot = indexRemoteSaveFiles(await fetchUserSaveFiles(userId));
@@ -410,7 +517,7 @@ export class SaveService {
               syncTargets.push(
                 this.upsertRemoteSlot(userId, newestLocal, remoteFile).then((slotData) => ({ slotId, slotData }))
               );
-              merged[slotId] = remoteSlot;
+              merged[slotId] = newestLocal;
               return;
             }
 
@@ -423,9 +530,7 @@ export class SaveService {
             syncTargets.push(
               this.upsertRemoteSlot(userId, newestLocal, remoteFile).then((slotData) => ({ slotId, slotData }))
             );
-            if (slotId === AUTO_SLOT_ID) {
-              merged[slotId] = null;
-            }
+            merged[slotId] = newestLocal;
             return;
           }
 
@@ -444,7 +549,7 @@ export class SaveService {
           console.error("[SaveService] slot sync during hydrate failed", result.reason);
         });
 
-        writeStore(merged, scope);
+        await writeIndexedDbStore(merged, scope);
         return setCachedStore(merged, scope);
       } catch (error) {
         console.error("[SaveService] remote hydrate failed, falling back to local cache", error);
@@ -513,33 +618,44 @@ export class SaveService {
     const scope = getStorageScope();
     const normalizedSlotId = normalizeSlotId(slotId);
     const targetSlotId = normalizedSlotId ?? this.getNextManualSlotId();
+    const userId = getCurrentUserId();
+
+    if (userId) {
+      await this.hydrate();
+    }
+
+    const current = this.loadSlot(targetSlotId);
     const baseSlotData: SaveSlotData = {
       slotId: targetSlotId,
       savedAt: new Date().toISOString(),
-      payload
+      payload,
+      saveFileId: current?.saveFileId,
+      userId: current?.userId
     };
+    const localSlotData = await upsertLocalSlot(baseSlotData, scope);
 
-    const userId = getCurrentUserId();
     if (!userId) {
-      return upsertLocalSlot(baseSlotData, scope);
+      return localSlotData;
     }
 
-    await this.hydrate();
-
     try {
-      const current = this.loadSlot(targetSlotId);
       const remoteSlotData = await this.upsertRemoteSlot(
         userId,
         {
           ...baseSlotData,
-          saveFileId: current?.saveFileId,
           userId
         }
       );
       return upsertLocalSlot(remoteSlotData, scope);
     } catch (error) {
       console.error("[SaveService] remote save failed", error);
-      throw error;
+      return upsertLocalSlot(
+        {
+          ...localSlotData,
+          userId
+        },
+        scope
+      );
     }
   }
 }
