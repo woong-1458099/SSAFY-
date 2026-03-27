@@ -56,7 +56,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     payload = JSON.parse(raw) as ApiResponse<T>;
   } catch {
-    if (response.status === 404 || response.status >= 500) {
+    if (response.status === 404 || isUnavailableRouteMessage(raw)) {
       throw new DeathDashboardUnavailableError();
     }
     throw new Error(raw || "Death API request failed");
