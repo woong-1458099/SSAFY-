@@ -49,6 +49,13 @@ export type EndingResult = {
   presentationMode: "full" | "summaryOnly";
   entryMode: "completion" | "directSummary";
   postComicAction: "start" | "credit";
+  autoSaveMode: "exact" | "recoverable";
+  autoSaveRestoreOverrides?: Partial<
+    Pick<
+      EndingFlowPayload,
+      "fe" | "be" | "teamwork" | "luck" | "hp" | "hpMax" | "stress" | "gamePlayCount" | "lottoRank"
+    >
+  >;
   shortDescription: string;
   summaryStats: EndingSummaryStat[];
   introLines: string[];

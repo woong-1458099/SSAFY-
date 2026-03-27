@@ -1970,7 +1970,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     try {
-      await this.saveService.saveSlot("auto", this.buildSavePayload());
+      await this.saveService.saveSlot("auto", this.buildEndingAutoSavePayload(ending));
     } catch (error) {
       console.error("[MainScene] ending auto save failed", error);
       this.events.emit("ui:showNotice", "엔딩 진입 전 오토 세이브에 실패했습니다.");
@@ -2100,6 +2100,57 @@ export class MainScene extends Phaser.Scene {
           : undefined
       },
       story: this.storyEventManager?.getSnapshot()
+    };
+  }
+
+  private buildEndingAutoSavePayload(ending: ReturnType<typeof resolveEnding>): SavePayload {
+    const payload = this.buildSavePayload();
+    if (ending.autoSaveMode !== "recoverable" || !ending.autoSaveRestoreOverrides) {
+      return payload;
+    }
+
+    const overrides = ending.autoSaveRestoreOverrides;
+    const nextHud = { ...payload.gameState.hud };
+    const nextStats = { ...payload.gameState.stats };
+    const nextEndingProgress = { ...payload.gameState.endingProgress };
+
+    if (typeof overrides.hp === "number") {
+      nextHud.hp = overrides.hp;
+    }
+    if (typeof overrides.hpMax === "number") {
+      nextHud.hpMax = overrides.hpMax;
+    }
+    if (typeof overrides.stress === "number") {
+      nextHud.stress = overrides.stress;
+      nextStats.stress = overrides.stress;
+    }
+    if (typeof overrides.fe === "number") {
+      nextStats.fe = overrides.fe;
+    }
+    if (typeof overrides.be === "number") {
+      nextStats.be = overrides.be;
+    }
+    if (typeof overrides.teamwork === "number") {
+      nextStats.teamwork = overrides.teamwork;
+    }
+    if (typeof overrides.luck === "number") {
+      nextStats.luck = overrides.luck;
+    }
+    if (typeof overrides.gamePlayCount === "number") {
+      nextEndingProgress.gamePlayCount = overrides.gamePlayCount;
+    }
+    if ("lottoRank" in overrides) {
+      nextEndingProgress.lottoRank = overrides.lottoRank ?? null;
+    }
+
+    return {
+      ...payload,
+      gameState: {
+        ...payload.gameState,
+        hud: nextHud,
+        stats: nextStats,
+        endingProgress: nextEndingProgress
+      }
     };
   }
 
