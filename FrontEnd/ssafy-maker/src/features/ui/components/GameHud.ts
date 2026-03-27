@@ -55,6 +55,7 @@ export class GameHud {
   private readonly hintBg: Phaser.GameObjects.Rectangle;
   private readonly hpBarFill: Phaser.GameObjects.Rectangle;
   private readonly stressBarFill: Phaser.GameObjects.Rectangle;
+  private readonly helpButton: Phaser.GameObjects.Container;
 
   private readonly rightHudLayout = RIGHT_HUD_LAYOUT;
   private readonly hpBarMaxWidth =
@@ -149,6 +150,10 @@ export class GameHud {
     this.stressText = scene.add.text(rightLayout.valueColumnRightX, conditionRowY, "", this.getTextStyle(13, HUD_COLORS.textSoft, "bold"));
     this.stressText.setOrigin(1, 0.5);
 
+    // Help button (물음표 버튼)
+    this.helpButton = this.createHelpButton();
+    this.helpButton.setPosition(-40, rightLayout.height / 2);
+
     this.rightGroup.add([
       rightBg,
       hpLabel,
@@ -162,7 +167,8 @@ export class GameHud {
       this.conditionText,
       stressBarBg,
       this.stressBarFill,
-      this.stressText
+      this.stressText,
+      this.helpButton
     ]);
 
     this.hintBg = scene.add.rectangle(0, 0, this.hintMinWidth, this.hintMinHeight, HUD_COLORS.hintBg, 0.92);
@@ -285,5 +291,52 @@ export class GameHud {
       color,
       resolution: 2
     };
+  }
+
+  private createHelpButton(): Phaser.GameObjects.Container {
+    const container = this.scene.add.container(0, 0).setScrollFactor(0);
+    const size = 32;
+    const radius = size / 2;
+
+    const bg = this.scene.add.graphics();
+    bg.fillStyle(HUD_COLORS.panelBg, 0.9);
+    bg.fillCircle(0, 0, radius);
+    bg.lineStyle(2, HUD_COLORS.panelBorder, 1);
+    bg.strokeCircle(0, 0, radius);
+
+    const questionMark = this.scene.add.text(0, 0, "?", {
+      fontFamily: this.fontFamily,
+      fontSize: "20px",
+      fontStyle: "bold",
+      color: HUD_COLORS.textMain,
+      resolution: 2
+    });
+    questionMark.setOrigin(0.5);
+
+    container.add([bg, questionMark]);
+    container.setSize(size, size);
+    container.setInteractive({ useHandCursor: true });
+
+    container.on("pointerover", () => {
+      bg.clear();
+      bg.fillStyle(0x3a5b83, 1);
+      bg.fillCircle(0, 0, radius);
+      bg.lineStyle(2, 0x9ad6ff, 1);
+      bg.strokeCircle(0, 0, radius);
+    });
+
+    container.on("pointerout", () => {
+      bg.clear();
+      bg.fillStyle(HUD_COLORS.panelBg, 0.9);
+      bg.fillCircle(0, 0, radius);
+      bg.lineStyle(2, HUD_COLORS.panelBorder, 1);
+      bg.strokeCircle(0, 0, radius);
+    });
+
+    container.on("pointerdown", () => {
+      this.scene.events.emit("ui:toggleHelp");
+    });
+
+    return container;
   }
 }

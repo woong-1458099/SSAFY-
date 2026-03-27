@@ -3,6 +3,7 @@ import { SCENE_KEYS } from "../../common/enums/scene";
 import { GameHud } from "../../features/ui/components/GameHud";
 import { GameGuideUI, type GuideState } from "../../features/ui/components/GameGuideUI";
 import { DialogueBox } from "../../features/ui/components/DialogueBox";
+import { HelpModal } from "../../features/ui/components/HelpModal";
 import { InGameMenuManager } from "../managers/InGameMenuManager";
 import { PlaceActionManager } from "../managers/PlaceActionManager";
 import { AreaTransitionOverlay } from "../view/AreaTransitionOverlay";
@@ -43,6 +44,7 @@ export class InGameUIScene extends Phaser.Scene {
   private hud?: GameHud;
   private gameGuide?: GameGuideUI;
   private dialogueBox?: DialogueBox;
+  private helpModal?: HelpModal;
   private deathOverlay?: Phaser.GameObjects.Container;
   private deathOverlayBackdrop?: Phaser.GameObjects.Rectangle;
   private deathOverlayTitle?: Phaser.GameObjects.Text;
@@ -93,6 +95,10 @@ export class InGameUIScene extends Phaser.Scene {
     this.hud = new GameHud(this);
     this.hud.applyState(data.getHudState());
     this.gameGuide = new GameGuideUI(this);
+    this.helpModal = new HelpModal(this);
+
+    // Help button event (from GameHud)
+    this.events.on("ui:toggleHelp", () => this.helpModal?.toggle());
     
     // 2. Dialogue & Overlay
     this.dialogueBox = new DialogueBox(this);
@@ -199,9 +205,11 @@ export class InGameUIScene extends Phaser.Scene {
 
     this.didCleanup = true;
     this.cleanupEventListeners();
+    this.events.off("ui:toggleHelp");
     this.hud?.destroy();
     this.gameGuide?.destroy();
     this.dialogueBox?.destroy();
+    this.helpModal?.destroy();
     this.deathOverlay?.destroy(true);
     this.menuManager?.destroy();
     this.placeActionManager?.destroy();
@@ -210,6 +218,7 @@ export class InGameUIScene extends Phaser.Scene {
     this.hud = undefined;
     this.gameGuide = undefined;
     this.dialogueBox = undefined;
+    this.helpModal = undefined;
     this.deathOverlay = undefined;
     this.deathOverlayBackdrop = undefined;
     this.deathOverlayTitle = undefined;
