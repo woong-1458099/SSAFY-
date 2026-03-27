@@ -16,6 +16,7 @@
     "validate:game-assets": "node scripts/validate-game-assets.mjs",
     "validate:tmx-patch-layers": "node scripts/validate-tmx-patch-layers.mjs",
     "test:tmx-navigation-policy": "node scripts/test-tmx-navigation-policy.mjs",
+    "test:main-scene-runtime-contracts": "node scripts/test-main-scene-runtime-contracts.mjs",
     "build": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:game-assets && npm run validate:tmx-patch-layers && npm run test:tmx-navigation-policy && npm run validate:fixed-events && vite build",
     "preview": "vite preview",
     "validate": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:game-assets && npm run validate:tmx-patch-layers && npm run test:tmx-navigation-policy && npm run validate:authored-story && npm run validate:fixed-events && npm run test:authored-story-validator",

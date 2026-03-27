@@ -12,6 +12,17 @@ import {
 import { getDefaultPlayerAppearanceDefinition } from "../definitions/player/playerAppearanceDefinitions";
 import type { WorldRenderBounds } from "./WorldManager";
 
+export function resolvePlayerMovementActivityState(options: {
+  didMove: boolean;
+  hasMoveInput: boolean;
+  isInputLocked: boolean;
+}) {
+  return {
+    isMoving: options.didMove,
+    isMoveInputActive: options.isInputLocked ? false : options.hasMoveInput
+  };
+}
+
 export class PlayerManager {
   private static readonly WORLD_BOUNDS_EPSILON = 2;
   private scene: Phaser.Scene;
@@ -95,9 +106,14 @@ export class PlayerManager {
   update(runtimeGrids?: TmxRuntimeGrids, parsedMap?: ParsedTmxMap) {
     this.runtimeGrids = runtimeGrids;
     this.parsedMap = parsedMap;
-    let nextIsMoving = false;
     const moveVector = this.getRequestedMoveVector();
-    let nextIsMoveInputActive = this.resolveMoveInputActivity(moveVector);
+    const baseActivityState = resolvePlayerMovementActivityState({
+      didMove: false,
+      hasMoveInput: moveVector.lengthSq() > 0,
+      isInputLocked: this.isInputLocked
+    });
+    let nextIsMoving = baseActivityState.isMoving;
+    let nextIsMoveInputActive = baseActivityState.isMoveInputActive;
 
     if (
       !this.player ||
@@ -142,7 +158,13 @@ export class PlayerManager {
     }
 
     const didMove = nextX !== this.player.root.x || nextY !== this.player.root.y;
-    nextIsMoving = didMove;
+    const activityState = resolvePlayerMovementActivityState({
+      didMove,
+      hasMoveInput: moveVector.lengthSq() > 0,
+      isInputLocked: this.isInputLocked
+    });
+    nextIsMoving = activityState.isMoving;
+    nextIsMoveInputActive = activityState.isMoveInputActive;
     this.player.root.setPosition(nextX, nextY);
     this.player.root.setDepth(getActorDepth(nextY));
 
@@ -228,15 +250,6 @@ export class PlayerManager {
 
     return new Phaser.Math.Vector2(horizontal, vertical);
   }
-
-  private resolveMoveInputActivity(moveVector: Phaser.Math.Vector2): boolean {
-    if (this.isInputLocked) {
-      return false;
-    }
-
-    return moveVector.lengthSq() > 0;
-  }
-
   private resolveFacingFromVelocity(velocityX: number, velocityY: number): Facing {
     if (Math.abs(velocityX) > Math.abs(velocityY)) {
       return velocityX < 0 ? "left" : "right";

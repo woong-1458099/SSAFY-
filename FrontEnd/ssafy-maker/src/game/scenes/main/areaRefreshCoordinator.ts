@@ -1,6 +1,13 @@
 import Phaser from "phaser";
 import type { AreaId } from "../../../common/enums/area";
 
+export function shouldAbortAreaRefreshRequest(request?: {
+  signal: AbortSignal;
+  isCurrentRequest: () => boolean;
+}): boolean {
+  return request?.signal.aborted === true || (request !== undefined && !request.isCurrentRequest());
+}
+
 type AreaRefreshCoordinatorOptions = {
   scene: Phaser.Scene;
   refresh: (

@@ -92,7 +92,10 @@ import {
   isWalkableRefreshTile,
   resolveSafeRefreshTile
 } from "./main/areaPresentation";
-import { MainSceneAreaRefreshCoordinator } from "./main/areaRefreshCoordinator";
+import {
+  MainSceneAreaRefreshCoordinator,
+  shouldAbortAreaRefreshRequest
+} from "./main/areaRefreshCoordinator";
 import {
   handleMainSceneDebugCommand,
   resolveMainSceneDebugStartTile
@@ -766,7 +769,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (request?.signal.aborted || (request && !request.isCurrentRequest())) {
+    if (shouldAbortAreaRefreshRequest(request)) {
       return;
     }
 
@@ -794,7 +797,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (request?.signal.aborted || (request && !request.isCurrentRequest())) {
+    if (shouldAbortAreaRefreshRequest(request)) {
       return;
     }
 
