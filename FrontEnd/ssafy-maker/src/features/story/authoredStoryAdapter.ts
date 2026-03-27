@@ -22,224 +22,143 @@ import {
   type SceneStateId
 } from "../../game/definitions/sceneStates/sceneStateIds";
 
-type AuthoredDialogueJson = {
-  dialogues?: AuthoredDialogueScriptJson[];
-};
-
-type AuthoredDialogueScriptJson = {
-  id?: string;
-  label?: string;
-  startNodeId?: string;
-  nodes?: Record<string, AuthoredDialogueNodeJson>;
-};
-
-type AuthoredDialogueNodeJson = {
-  id?: string;
+type AuthoredDialogueNodeRaw = {
+  text?: string;
   speaker?: string;
   speakerId?: string;
   emotion?: string;
-  text?: string;
+  speakerGender?: string;
   nextNodeId?: string;
-  choices?: AuthoredDialogueChoiceJson[];
-  action?: DialogueAction;
-  affectionChanges?: Record<string, number>;
+  action?: string;
+  choices?: any[];
+  requirements?: any[];
+  affectionChanges?: any;
 };
 
-type AuthoredDialogueChoiceJson = {
-  id?: string;
-  text?: string;
-  nextNodeId?: string;
-  actionType?: DialogueChoiceActionType;
-  statChanges?: Partial<Record<DialogueStatKey, number>>;
-  affectionChanges?: Record<string, number>;
-  requirements?: DialogueRequirement[];
-  affectionRequirements?: AffectionRequirement[];
-  lockedReason?: string;
-  feedbackText?: string;
-  action?: DialogueAction;
-  setFlags?: string[];
+type AuthoredDialogueJson = {
+  dialogues: Array<{
+    id: string;
+    label?: string;
+    startNodeId: string;
+    nodes: Record<string, AuthoredDialogueNodeRaw>;
+  }>;
 };
 
-type SceneStateJson = {
-  sceneStates?: SceneStateEntryJson[];
+type AuthoredSceneStateJson = {
+  sceneStates: Array<{
+    id: string;
+    area: string;
+    npcs: Array<{
+      npcId: string;
+      x: number;
+      y: number;
+      dialogueId: string;
+      facing?: string;
+    }>;
+  }>;
 };
 
-type SceneStateEntryJson = {
-  id?: string;
-  area?: AreaId;
-  npcs?: SceneStateNpcJson[];
-};
-
-type SceneStateNpcJson = {
-  npcId?: string;
-  x?: number;
-  y?: number;
-  facing?: Facing;
-  dialogueId?: string;
-};
-
-const AREA_ID_SET = new Set<AreaId>(["world", "downtown", "campus", "classroom"]);
 const REQUIRED_DIALOGUE_IDS = new Set<string>(Object.values(DIALOGUE_IDS));
 const REQUIRED_SCENE_STATE_IDS = new Set<SceneStateId>(Object.values(SCENE_STATE_IDS));
-export const AUTHORED_DIALOGUE_FALLBACK_ID = createRuntimeDialogueId("authored_dialogue_missing");
-const SCENE_STATE_NPC_DIALOGUE_ID_PATTERN = /^npc_[a-z0-9_]+$/;
+export const AUTHORED_DIALOGUE_FALLBACK_ID = "authored_dialogue_missing";
+
+function normalizeString(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim();
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function isAreaId(value: unknown): value is AreaId {
-  return typeof value === "string" && AREA_ID_SET.has(value as AreaId);
-}
-
-function isFacing(value: unknown): value is Facing {
-  return value === "up" || value === "down" || value === "left" || value === "right";
-}
-
-function normalizeChoice(choice: AuthoredDialogueChoiceJson, index: number): DialogueChoice {
-  return {
-    id: normalizeString(choice.id) || `choice_${index + 1}`,
-    text: normalizeString(choice.text) || `선택지 ${index + 1}`,
-    nextNodeId: normalizeString(choice.nextNodeId) || undefined,
-    actionType: choice.actionType,
-    statChanges: choice.statChanges,
-    affectionChanges: choice.affectionChanges,
-    requirements: Array.isArray(choice.requirements) ? choice.requirements : undefined,
-    affectionRequirements: Array.isArray(choice.affectionRequirements) ? choice.affectionRequirements : undefined,
-    lockedReason: typeof choice.lockedReason === "string" ? choice.lockedReason : undefined,
-    feedbackText: typeof choice.feedbackText === "string" ? choice.feedbackText : undefined,
-    action: choice.action,
-    setFlags: Array.isArray(choice.setFlags) ? choice.setFlags : undefined
-  };
-}
-
-function resolveFallbackSpeakerLabel(node: AuthoredDialogueNodeJson): string {
-  const speakerId = normalizeString(node.speakerId).toUpperCase();
-  if (speakerId === "SYSTEM") {
-    return "시스템";
-  }
-  if (speakerId === "PLAYER") {
-    return "플레이어";
-  }
-  return "내레이션";
-}
-
-function normalizeNode(nodeKey: string, node: AuthoredDialogueNodeJson): DialogueNode {
-  return {
-    id: normalizeString(node.id) || nodeKey,
-    speaker: normalizeString(node.speaker) || resolveFallbackSpeakerLabel(node),
-    speakerId: normalizeString(node.speakerId) || undefined,
-    emotion: normalizeString(node.emotion) || undefined,
-    text: normalizeString(node.text) || "...",
-    nextNodeId: normalizeString(node.nextNodeId) || undefined,
-    choices: Array.isArray(node.choices) ? node.choices.map(normalizeChoice) : undefined,
-    action: node.action,
-    affectionChanges: node.affectionChanges
-  };
+function warnOnce(message: string): void {
+  console.warn(`[AuthoredStoryAdapter] ${message}`);
 }
 
 function createMissingDialogueFallback(): DialogueScript {
   return {
-    id: AUTHORED_DIALOGUE_FALLBACK_ID,
-    label: "누락된 대화 안내",
-    startNodeId: "start",
+    id: AUTHORED_DIALOGUE_FALLBACK_ID as DialogueScript["id"],
+    label: "알 수 없는 대화",
+    startNodeId: "missing",
     nodes: {
-      start: {
-        id: "start",
-        speaker: "안내",
-        text: "연결된 authored 대화 데이터가 없습니다. dialogues.json과 scene_states.json 참조를 확인하세요."
+      missing: {
+        id: "missing",
+        speaker: "시스템",
+        text: "대화 데이터를 찾을 수 없습니다. (ID: missing)"
       }
     }
   };
 }
 
-function buildExpectedSceneStateDialogueId(npcId: NpcId): string {
-  return `npc_${npcId}`;
-}
-
-function validateDialogueNode(
-  dialogueId: string,
-  nodeKey: string,
-  node: AuthoredDialogueNodeJson,
-  nodeKeys: Set<string>,
-  fatalIssues: string[]
-): boolean {
-  if (!isRecord(node)) {
-    fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey} 가 객체가 아닙니다.`);
-    return false;
+export function buildDialogueNode(nodeId: string, raw: unknown): DialogueNode {
+  const node = (raw ?? {}) as AuthoredDialogueNodeRaw;
+  const text = normalizeString(node.text);
+  if (!text) {
+    throw new Error(`node:${nodeId} text가 비어 있습니다.`);
   }
 
-  let valid = true;
-  const explicitNodeId = normalizeString(node.id);
-  if (explicitNodeId && explicitNodeId !== nodeKey) {
-    fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey}.id=${explicitNodeId} 는 nodes 키와 일치해야 합니다.`);
-    valid = false;
+  const result: DialogueNode = {
+    id: nodeId,
+    speaker: normalizeString(node.speaker) || "???",
+    text,
+    speakerId: normalizeString(node.speakerId) || undefined,
+    emotion: normalizeString(node.emotion) || undefined,
+    speakerGender: node.speakerGender === "male" || node.speakerGender === "female" ? node.speakerGender : undefined,
+    nextNodeId: normalizeString(node.nextNodeId) || undefined,
+    action: node.action ? (normalizeString(node.action) as DialogueAction) : undefined
+  };
+
+  if (Array.isArray(node.choices)) {
+    result.choices = node.choices
+      .map((choiceRaw: any, index: number) => {
+        const choice = (choiceRaw ?? {}) as Record<string, any>;
+        const choiceText = normalizeString(choice.text);
+        if (!choiceText) {
+          warnOnce(`node:${nodeId} choices[${index}] text가 비어 있어 건너뜁니다.`);
+          return null;
+        }
+
+        const typedChoice: DialogueChoice = {
+          id: normalizeString(choice.id) || `choice_${index}`,
+          text: choiceText,
+          nextNodeId: normalizeString(choice.nextNodeId) || undefined,
+          actionType: (normalizeString(choice.actionType) as DialogueChoiceActionType) || "NORMAL",
+          statChanges: choice.statChanges,
+          affectionChanges: choice.affectionChanges,
+          requirements: choice.requirements,
+          affectionRequirements: choice.affectionRequirements,
+          lockedReason: normalizeString(choice.lockedReason) || undefined,
+          feedbackText: normalizeString(choice.feedbackText) || undefined,
+          action: choice.action ? (normalizeString(choice.action) as DialogueAction) : undefined,
+          setFlags: Array.isArray(choice.setFlags) ? (choice.setFlags as string[]) : undefined
+        };
+        return typedChoice;
+      })
+      .filter((c): c is DialogueChoice => c !== null);
   }
 
-  if (!normalizeString(node.text)) {
-    fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey}.text 가 비어 있거나 문자열이 아닙니다.`);
-    valid = false;
+  if (Array.isArray(node.requirements)) {
+    result.requirements = node.requirements;
   }
 
-  const nextNodeId = normalizeString(node.nextNodeId);
-  if (nextNodeId && !nodeKeys.has(nextNodeId)) {
-    fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey}.nextNodeId=${nextNodeId} 가 nodes에 없습니다.`);
-    valid = false;
+  if (node.affectionChanges) {
+    result.affectionChanges = node.affectionChanges;
   }
 
-  if (node.choices !== undefined && !Array.isArray(node.choices)) {
-    fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey}.choices 가 배열이 아닙니다.`);
-    return false;
-  }
-
-  const explicitChoiceIds = new Set<string>();
-
-  (node.choices ?? []).forEach((choice, choiceIndex) => {
-    if (!isRecord(choice)) {
-      fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey}.choices[${choiceIndex}] 가 객체가 아닙니다.`);
-      valid = false;
-      return;
-    }
-
-    if (!normalizeString(choice.text)) {
-      fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey}.choices[${choiceIndex}].text 가 비어 있거나 문자열이 아닙니다.`);
-      valid = false;
-    }
-
-    const choiceId = normalizeString(choice.id);
-    if (choiceId) {
-      if (explicitChoiceIds.has(choiceId)) {
-        fatalIssues.push(`[dialogue:${dialogueId}] nodes.${nodeKey} choice id=${choiceId} 가 중복됩니다.`);
-        valid = false;
-      } else {
-        explicitChoiceIds.add(choiceId);
-      }
-    }
-
-    const choiceNextNodeId = normalizeString(choice.nextNodeId);
-    if (choiceNextNodeId && !nodeKeys.has(choiceNextNodeId)) {
-      fatalIssues.push(
-        `[dialogue:${dialogueId}] nodes.${nodeKey}.choices[${choiceIndex}].nextNodeId=${choiceNextNodeId} 가 nodes에 없습니다.`
-      );
-      valid = false;
-    }
-  });
-
-  return valid;
+  return result;
 }
 
 export function buildDialogueRegistryFromJson(
   raw: unknown,
-  fatalIssues: string[] = []
+  fatalIssues: string[] = [],
+  existingRegistry: Record<string, DialogueScript> = {}
 ): Record<string, DialogueScript> {
   const asset = (raw ?? {}) as AuthoredDialogueJson;
   const dialogues = Array.isArray(asset.dialogues) ? asset.dialogues : [];
-  const registry: Record<string, DialogueScript> = {};
-  const seenDialogueIds = new Set<string>();
+  const registry: Record<string, DialogueScript> = { ...existingRegistry };
+  const seenDialogueIds = new Set<string>(Object.keys(registry));
 
   dialogues.forEach((entry, index) => {
     let id: DialogueScriptId;
@@ -250,11 +169,7 @@ export function buildDialogueRegistryFromJson(
       return;
     }
 
-    if (seenDialogueIds.has(id)) {
-      fatalIssues.push(`[dialogues] 중복 dialogue id=${id} 가 있습니다.`);
-      return;
-    }
-
+    // 중복 ID 발생 시 덮어쓰기 허용 (로그는 생략하거나 다른 방식으로 처리)
     seenDialogueIds.add(id);
 
     const startNodeId = normalizeString(entry.startNodeId);
@@ -270,40 +185,35 @@ export function buildDialogueRegistryFromJson(
 
     const nodeEntries = Object.entries(entry.nodes);
     if (nodeEntries.length === 0) {
-      fatalIssues.push(`[dialogue:${id}] nodes가 비어 있습니다.`);
-      return;
+      warnOnce(`[DialogueAdapter] dialogue:${id} 에 노드가 없습니다.`);
     }
 
-    const nodeKeys = new Set(nodeEntries.map(([nodeKey]) => nodeKey));
-    if (!nodeKeys.has(startNodeId)) {
-      fatalIssues.push(`[dialogue:${id}] startNodeId=${startNodeId} 가 nodes에 없습니다.`);
-      return;
-    }
-
+    const nodes: Record<string, DialogueNode> = {};
     const normalizedNodeIds = new Set<string>();
-    let isValid = true;
 
-    nodeEntries.forEach(([nodeKey, node]) => {
-      if (!validateDialogueNode(id, nodeKey, node as AuthoredDialogueNodeJson, nodeKeys, fatalIssues)) {
-        isValid = false;
+    nodeEntries.forEach(([nodeId, nodeEntry]) => {
+      const normalizedNodeId = normalizeString(nodeId);
+      if (!normalizedNodeId) {
+        fatalIssues.push(`[dialogue:${id}] 유효하지 않은 node id="${nodeId}" 입니다.`);
+        return;
       }
-
-      const normalizedNodeId = normalizeString((node as AuthoredDialogueNodeJson).id) || nodeKey;
       if (normalizedNodeIds.has(normalizedNodeId)) {
         fatalIssues.push(`[dialogue:${id}] node id=${normalizedNodeId} 가 중복됩니다.`);
-        isValid = false;
-      } else {
-        normalizedNodeIds.add(normalizedNodeId);
+        return;
+      }
+      normalizedNodeIds.add(normalizedNodeId);
+
+      try {
+        nodes[normalizedNodeId] = buildDialogueNode(normalizedNodeId, nodeEntry);
+      } catch (error) {
+        fatalIssues.push(`[dialogue:${id}, node:${normalizedNodeId}] ${error instanceof Error ? error.message : "빌드 실패"}`);
       }
     });
 
-    if (!isValid) {
+    if (!normalizedNodeIds.has(startNodeId)) {
+      fatalIssues.push(`[dialogue:${id}] startNodeId=${startNodeId} 가 nodes에 존재하지 않습니다.`);
       return;
     }
-
-    const nodes = Object.fromEntries(
-      nodeEntries.map(([nodeKey, node]) => [nodeKey, normalizeNode(nodeKey, node as AuthoredDialogueNodeJson)])
-    );
 
     registry[id] = {
       id: id as DialogueScript["id"],
@@ -313,117 +223,63 @@ export function buildDialogueRegistryFromJson(
     };
   });
 
-  REQUIRED_DIALOGUE_IDS.forEach((dialogueId) => {
-    if (!registry[dialogueId]) {
-      fatalIssues.push(`[dialogues] 정적 dialogue id=${dialogueId} 가 authored registry에 없습니다.`);
-    }
-  });
-
   return registry;
-}
-
-function normalizeSceneStateNpc(
-  entry: SceneStateNpcJson,
-  sceneStateId: string,
-  npcIndex: number,
-  fatalIssues: string[]
-): SceneStateNpc | null {
-  const rawNpcId = normalizeString(entry.npcId);
-  if (!rawNpcId || !isNpcId(rawNpcId)) {
-    fatalIssues.push(`[${sceneStateId}] npcs[${npcIndex}] npcId=${JSON.stringify(entry.npcId)} 가 유효한 NpcId가 아닙니다.`);
-    return null;
-  }
-
-  if (typeof entry.x !== "number" || typeof entry.y !== "number") {
-    fatalIssues.push(`[${sceneStateId}] npcs[${npcIndex}] npcId=${rawNpcId} 좌표(x,y)가 유효하지 않습니다.`);
-    return null;
-  }
-
-  const dialogueId = normalizeString(entry.dialogueId);
-  if (!dialogueId) {
-    fatalIssues.push(`[${sceneStateId}] npcs[${npcIndex}] npcId=${rawNpcId} dialogueId가 비어 있습니다.`);
-    return null;
-  }
-
-  const expectedDialogueId = buildExpectedSceneStateDialogueId(rawNpcId as NpcId);
-  if (!SCENE_STATE_NPC_DIALOGUE_ID_PATTERN.test(dialogueId) || dialogueId !== expectedDialogueId) {
-    fatalIssues.push(
-      `[${sceneStateId}] npcs[${npcIndex}] npcId=${rawNpcId} dialogueId=${dialogueId} 가 규칙과 다릅니다. expected=${expectedDialogueId}`
-    );
-    return null;
-  }
-
-  return {
-    npcId: rawNpcId as NpcId,
-    x: Math.round(entry.x),
-    y: Math.round(entry.y),
-    facing: isFacing(entry.facing) ? entry.facing : undefined,
-    dialogueId: dialogueId as SceneStateNpc["dialogueId"]
-  };
 }
 
 export function buildSceneStateRegistryFromJson(
   raw: unknown,
   fatalIssues: string[] = []
-): Partial<Record<SceneStateId, SceneState>> {
-  const asset = (raw ?? {}) as SceneStateJson;
-  const entries = Array.isArray(asset.sceneStates) ? asset.sceneStates : [];
-  const registry: Partial<Record<SceneStateId, SceneState>> = {};
-  const seenSceneStateIds = new Set<SceneStateId>();
+): Record<SceneStateId, SceneState> {
+  const asset = (raw ?? {}) as AuthoredSceneStateJson;
+  const scenes = Array.isArray(asset.sceneStates) ? asset.sceneStates : [];
+  const registry = {} as Record<SceneStateId, SceneState>;
 
-  entries.forEach((entry, entryIndex) => {
-    const rawSceneStateId = normalizeString(entry.id);
-    const resolvedSceneStateId = resolveSceneStateId(rawSceneStateId);
-
-    if (!resolvedSceneStateId || !isSceneStateId(resolvedSceneStateId)) {
-      fatalIssues.push(`[sceneStates.${entryIndex}] id=${JSON.stringify(entry.id)} 가 유효한 SceneStateId가 아닙니다.`);
+  scenes.forEach((entry, index) => {
+    const rawId = normalizeString(entry.id);
+    const resolvedSceneStateId = resolveSceneStateId(rawId);
+    if (!resolvedSceneStateId) {
+      fatalIssues.push(`[scenes.${index}] id="${entry.id}" 은 알려진 SceneStateId가 아닙니다.`);
       return;
     }
 
-    if (rawSceneStateId !== resolvedSceneStateId) {
-      fatalIssues.push(
-        `[sceneStates.${entryIndex}] id=${JSON.stringify(entry.id)} 는 레거시 형식입니다. canonical=${resolvedSceneStateId} 를 사용하세요.`
-      );
-      return;
-    }
+    const npcs: SceneStateNpc[] = (Array.isArray(entry.npcs) ? entry.npcs : [])
+      .map((npc, npcIdx) => {
+        const npcId = normalizeNpcId(npc.npcId);
+        if (!npcId) {
+          fatalIssues.push(`[scene:${rawId}, npc:${npcIdx}] npcId="${npc.npcId}" 가 유효하지 않습니다.`);
+          return null;
+        }
 
-    if (seenSceneStateIds.has(resolvedSceneStateId)) {
-      fatalIssues.push(`[sceneStates] 중복 sceneState id=${resolvedSceneStateId} 가 있습니다.`);
-      return;
-    }
-
-    seenSceneStateIds.add(resolvedSceneStateId);
-
-    if (!isAreaId(entry.area)) {
-      fatalIssues.push(`[${resolvedSceneStateId}] area=${JSON.stringify(entry.area)} 가 유효한 AreaId가 아닙니다.`);
-      return;
-    }
-
-    const npcs = Array.isArray(entry.npcs)
-      ? entry.npcs
-          .map((npc, npcIndex) => normalizeSceneStateNpc(npc, resolvedSceneStateId, npcIndex, fatalIssues))
-          .filter((npc): npc is SceneStateNpc => npc !== null)
-      : [];
+        const result: SceneStateNpc = {
+          npcId,
+          x: Number(npc.x) || 0,
+          y: Number(npc.y) || 0,
+          dialogueId: normalizeString(npc.dialogueId) as DialogueScriptId,
+          facing: (normalizeString(npc.facing) as Facing) || undefined
+        };
+        return result;
+      })
+      .filter((npc): npc is SceneStateNpc => npc !== null);
 
     registry[resolvedSceneStateId] = {
       id: resolvedSceneStateId,
-      area: entry.area,
+      area: (normalizeString(entry.area) as AreaId) || "world",
       npcs
     };
-  });
-
-  REQUIRED_SCENE_STATE_IDS.forEach((sceneStateId) => {
-    if (!registry[sceneStateId]) {
-      fatalIssues.push(`[sceneStates] 필수 sceneState id=${sceneStateId} 가 authored scene state registry에 없습니다.`);
-    }
   });
 
   return registry;
 }
 
+function normalizeNpcId(value: string): NpcId | null {
+  const normalized = normalizeString(value);
+  return isNpcId(normalized) ? normalized : null;
+}
+
 export function buildAuthoredStoryAssetsFromJson(
-  dialoguesRaw: unknown,
-  sceneStatesRaw: unknown
+  dialoguesChunksRaw: unknown[],
+  sceneStatesRaw: unknown,
+  week: number = 1
 ): {
   dialogues: Record<string, DialogueScript>;
   sceneStates: Record<SceneStateId, SceneState>;
@@ -432,10 +288,27 @@ export function buildAuthoredStoryAssetsFromJson(
 } {
   const fatalIssues: string[] = [];
   const warnings: string[] = [];
-  const dialogues = buildDialogueRegistryFromJson(dialoguesRaw, fatalIssues);
+
+  let dialogues: Record<string, DialogueScript> = {};
+  dialoguesChunksRaw.forEach((chunk, i) => {
+    dialogues = buildDialogueRegistryFromJson(chunk, fatalIssues, dialogues);
+  });
+  console.log(`[StoryAdapter] Merged Registry IDs: ${Object.keys(dialogues).join(", ")}`);
   dialogues[AUTHORED_DIALOGUE_FALLBACK_ID] ??= createMissingDialogueFallback();
 
+  // 모든 조각이 병합된 후에 필수 ID 검증을 수행합니다.
+  REQUIRED_DIALOGUE_IDS.forEach((dialogueId) => {
+    if (!dialogues[dialogueId]) {
+      fatalIssues.push(`[dialogues] 정적 dialogue id=${dialogueId} 가 authored registry에 없습니다.`);
+    }
+  });
+
   const rawSceneStates = buildSceneStateRegistryFromJson(sceneStatesRaw, fatalIssues);
+  REQUIRED_SCENE_STATE_IDS.forEach((sceneStateId) => {
+    if (!rawSceneStates[sceneStateId]) {
+      fatalIssues.push(`[sceneStates] 정적 id=${sceneStateId} 가 authored registry에 없습니다.`);
+    }
+  });
   const dialogueIds = new Set(Object.keys(dialogues));
 
   const sceneStates = Object.fromEntries(
@@ -445,19 +318,21 @@ export function buildAuthoredStoryAssetsFromJson(
         ...sceneState,
         npcs: sceneState.npcs.map((npc) => {
           if (dialogueIds.has(npc.dialogueId)) {
+            console.log(`[StoryAdapter] Mapping NPC: ${npc.npcId} in ${sceneState.id} -> ${npc.dialogueId}`);
             return npc;
           }
 
           warnings.push(
-            `[${sceneState.id}] npcId=${npc.npcId} dialogueId=${npc.dialogueId} 참조가 dialogues.json에 없습니다. fallback 대화로 치환합니다.`
+            `[${sceneState.id}] npcId=${npc.npcId} dialogueId=${npc.dialogueId} 참조가 dialogues JSON에 없습니다. fallback 대화로 치환합니다.`
           );
+          console.warn(`[StoryAdapter] MISSING dialogue for ${npc.npcId} in ${sceneState.id}: ${npc.dialogueId}`);
 
           return {
             ...npc,
-            dialogueId: AUTHORED_DIALOGUE_FALLBACK_ID
+            dialogueId: AUTHORED_DIALOGUE_FALLBACK_ID as DialogueScriptId
           };
         })
-      } satisfies SceneState
+      }
     ])
   ) as Record<SceneStateId, SceneState>;
 

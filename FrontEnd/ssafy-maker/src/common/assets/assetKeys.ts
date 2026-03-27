@@ -28,6 +28,13 @@ export const ASSET_KEYS = {
   },
   story: {
     authoredDialogues: "story_authored_dialogues",
+    authoredDialoguesCommon: "story_authored_dialogues_common",
+    authoredDialoguesW1: "story_authored_dialogues_w1",
+    authoredDialoguesW2: "story_authored_dialogues_w2",
+    authoredDialoguesW3: "story_authored_dialogues_w3",
+    authoredDialoguesW4: "story_authored_dialogues_w4",
+    authoredDialoguesW5: "story_authored_dialogues_w5",
+    authoredDialoguesW6: "story_authored_dialogues_w6",
     authoredSceneStates: "story_authored_scene_states"
   }
 } as const;
@@ -49,6 +56,13 @@ export const ASSET_PATHS = {
   },
   story: {
     authoredDialogues: "/assets/game/data/story/authored/dialogues.json",
+    authoredDialoguesCommon: "/assets/game/data/story/authored/dialogues_common.json",
+    authoredDialoguesW1: "/assets/game/data/story/authored/dialogues_w1.json",
+    authoredDialoguesW2: "/assets/game/data/story/authored/dialogues_w2.json",
+    authoredDialoguesW3: "/assets/game/data/story/authored/dialogues_w3.json",
+    authoredDialoguesW4: "/assets/game/data/story/authored/dialogues_w4.json",
+    authoredDialoguesW5: "/assets/game/data/story/authored/dialogues_w5.json",
+    authoredDialoguesW6: "/assets/game/data/story/authored/dialogues_w6.json",
     authoredSceneStates: "/assets/game/data/story/authored/scene_states.json"
   }
 } as const;
