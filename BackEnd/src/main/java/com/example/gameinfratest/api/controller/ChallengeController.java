@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping
 public class ChallengeController {
     private final ChallengeService challengeService;
     private final AuthorizationService authorizationService;

@@ -2,17 +2,14 @@ package com.example.gameinfratest.support;
 
 import com.example.gameinfratest.api.dto.ApiResponse;
 import java.util.Optional;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
-@Profile("!staging")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
@@ -29,12 +26,6 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("VALIDATION_ERROR", message));
-    }
-
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException exception) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error("ROUTE_NOT_FOUND", exception.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

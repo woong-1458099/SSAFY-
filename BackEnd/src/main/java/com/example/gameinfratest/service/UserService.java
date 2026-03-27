@@ -1,7 +1,6 @@
 package com.example.gameinfratest.service;
 
 import com.example.gameinfratest.api.dto.auth.UserResponse;
-import com.example.gameinfratest.config.DeathRecordProperties;
 import com.example.gameinfratest.support.ApiException;
 import com.example.gameinfratest.user.User;
 import com.example.gameinfratest.user.UserRepository;
@@ -18,12 +17,9 @@ public class UserService {
     private static final String PROVIDER = "keycloak";
 
     private final UserRepository userRepository;
-    private final DeathRecordProperties deathRecordProperties;
 
-    public UserService(UserRepository userRepository, DeathRecordProperties deathRecordProperties) {
+    public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.deathRecordProperties = deathRecordProperties;
-        this.deathRecordProperties.validateRuntime();
     }
 
     @Transactional
@@ -87,23 +83,6 @@ public class UserService {
 
         user.setDeletedAt(Instant.now());
         userRepository.save(user);
-    }
-
-    @Transactional
-    public UserResponse recordDeath(UUID userId) {
-        User user = userRepository.findByIdAndDeletedAtIsNullForUpdate(userId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "user profile not found"));
-
-        Instant now = Instant.now();
-        Instant lastDeathAt = user.getLastDeathAt();
-        if (lastDeathAt != null && lastDeathAt.plus(deathRecordProperties.getCooldown()).isAfter(now)) {
-            return UserResponse.from(user);
-        }
-
-        user.setDeathCount(user.getDeathCount() + 1);
-        user.setLastDeathAt(now);
-
-        return UserResponse.from(userRepository.saveAndFlush(user));
     }
 
     private JwtIdentity extractIdentity(Jwt jwt) {
