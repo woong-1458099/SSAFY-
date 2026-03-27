@@ -92,6 +92,8 @@ export class PlayerManager {
   update(runtimeGrids?: TmxRuntimeGrids, parsedMap?: ParsedTmxMap) {
     this.runtimeGrids = runtimeGrids;
     this.parsedMap = parsedMap;
+    let nextIsMoving = false;
+    let nextIsMoveInputActive = false;
 
     if (
       !this.player ||
@@ -102,20 +104,20 @@ export class PlayerManager {
       !runtimeGrids ||
       !parsedMap
     ) {
+      this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
       return;
     }
 
     if (this.isInputLocked) {
-      this.isMoving = false;
-      this.isMoveInputActive = false;
+      this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
       return;
     }
 
     const moveVector = this.getRequestedMoveVector();
-    this.isMoveInputActive = moveVector.lengthSq() > 0;
+    nextIsMoveInputActive = moveVector.lengthSq() > 0;
     if (moveVector.lengthSq() === 0) {
-      this.isMoving = false;
+      this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
       return;
     }
@@ -138,7 +140,7 @@ export class PlayerManager {
     }
 
     const didMove = nextX !== this.player.root.x || nextY !== this.player.root.y;
-    this.isMoving = didMove;
+    nextIsMoving = didMove;
     this.player.root.setPosition(nextX, nextY);
     this.player.root.setDepth(getActorDepth(nextY));
 
@@ -146,6 +148,7 @@ export class PlayerManager {
     const prevTileX = this.currentTileX;
     const prevTileY = this.currentTileY;
     this.syncTilePositionFromWorldPosition(nextX, nextY, parsedMap);
+    this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
     updatePlayerVisualFrame(this.player, this.currentFacing, didMove, this.scene.time.now);
 
     // Emit tutorial event only when tile position changes (not every frame)
@@ -173,6 +176,11 @@ export class PlayerManager {
 
   isMoveInputInProgress(): boolean {
     return this.isMoveInputActive;
+  }
+
+  private commitMovementState(isMoving: boolean, isMoveInputActive: boolean) {
+    this.isMoving = isMoving;
+    this.isMoveInputActive = isMoveInputActive;
   }
 
   debugTeleportToTile(tileX: number, tileY: number) {

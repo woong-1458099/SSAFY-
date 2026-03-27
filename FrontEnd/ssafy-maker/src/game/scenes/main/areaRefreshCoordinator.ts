@@ -18,6 +18,7 @@ export class MainSceneAreaRefreshCoordinator {
   private pendingTimer?: Phaser.Time.TimerEvent;
   private pendingRequestId = 0;
   private shutdownHandler: () => void;
+  private isDisposed = false;
 
   constructor(options: AreaRefreshCoordinatorOptions) {
     this.scene = options.scene;
@@ -37,6 +38,10 @@ export class MainSceneAreaRefreshCoordinator {
   }
 
   queue(expectedAreaId: AreaId, expectedPlayerSnapshot?: { tileX: number; tileY: number }): void {
+    if (this.isDisposed) {
+      return;
+    }
+
     this.clear();
     const requestId = ++this.pendingRequestId;
     this.pendingTimer = this.scene.time.delayedCall(0, () => {
@@ -53,14 +58,23 @@ export class MainSceneAreaRefreshCoordinator {
   }
 
   clear(): void {
+    if (this.isDisposed) {
+      return;
+    }
+
     this.pendingRequestId += 1;
     this.finalize();
   }
 
   dispose(): void {
+    if (this.isDisposed) {
+      return;
+    }
+
     this.clear();
     this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
     this.scene.events.off(Phaser.Scenes.Events.DESTROY, this.shutdownHandler);
+    this.isDisposed = true;
   }
 
   finalize(requestId?: number): void {
