@@ -30,6 +30,11 @@ export interface DeathDashboardResponse {
   topDeathCounts: DeathRankingEntry[];
 }
 
+function isUnavailableRouteMessage(message: string): boolean {
+  const normalizedMessage = message.trim().toLowerCase();
+  return normalizedMessage.includes("no static resource") || normalizedMessage.includes("no handler found");
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_PREFIX}${path}`, {
     credentials: "include",
@@ -51,7 +56,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     payload = JSON.parse(raw) as ApiResponse<T>;
   } catch {
+    if (response.status === 404 || response.status >= 500) {
+      throw new DeathDashboardUnavailableError();
+    }
     throw new Error(raw || "Death API request failed");
+  }
+
+  if (
+    response.status === 404 ||
+    (typeof payload.message === "string" && isUnavailableRouteMessage(payload.message))
+  ) {
+    throw new DeathDashboardUnavailableError();
   }
 
   if (!response.ok || payload.code !== "OK") {
