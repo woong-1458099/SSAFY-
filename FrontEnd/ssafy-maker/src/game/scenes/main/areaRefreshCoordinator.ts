@@ -47,6 +47,10 @@ export class MainSceneAreaRefreshCoordinator {
 
     this.clear();
     const requestId = ++this.pendingRequestId;
+    const pendingTask = {
+      requestId,
+      timer: undefined as Phaser.Time.TimerEvent | undefined
+    };
     const timer = this.scene.time.delayedCall(0, () => {
       try {
         if (this.pendingRequestId !== requestId || !this.canRefresh()) {
@@ -55,10 +59,14 @@ export class MainSceneAreaRefreshCoordinator {
 
         this.refresh(expectedAreaId, expectedPlayerSnapshot, requestId);
       } finally {
-        this.finalize(requestId, timer);
+        this.finalize(requestId, pendingTask);
       }
     });
-    this.pendingTask = { requestId, timer };
+    pendingTask.timer = timer;
+    this.pendingTask = {
+      requestId,
+      timer
+    };
   }
 
   clear(): void {
@@ -80,7 +88,13 @@ export class MainSceneAreaRefreshCoordinator {
     this.isDisposed = true;
   }
 
-  finalize(requestId?: number, timer?: Phaser.Time.TimerEvent): void {
+  finalize(
+    requestId?: number,
+    pendingTask?: {
+      requestId: number;
+      timer: Phaser.Time.TimerEvent | undefined;
+    }
+  ): void {
     if (!this.pendingTask) {
       return;
     }
@@ -89,7 +103,7 @@ export class MainSceneAreaRefreshCoordinator {
       return;
     }
 
-    if (timer !== undefined && timer !== this.pendingTask.timer) {
+    if (pendingTask !== undefined && pendingTask.timer !== this.pendingTask.timer) {
       return;
     }
 
