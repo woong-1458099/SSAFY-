@@ -505,6 +505,7 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.clearPendingInitialAreaRefresh();
+      this.areaRefreshCoordinator.dispose();
       this.pendingDeathSceneExit?.remove(false);
       this.pendingDeathSceneExit = undefined;
       this.autoSaveCoordinator.destroy();

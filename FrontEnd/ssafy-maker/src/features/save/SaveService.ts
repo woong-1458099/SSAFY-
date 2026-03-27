@@ -82,6 +82,8 @@ type PersistentStoreReadResult = {
   degraded: boolean;
 };
 
+type MigrationStatus = "idle" | "pending" | "done" | "failed";
+
 function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
@@ -236,27 +238,32 @@ function hasLegacyStoreData(scope = getStorageScope()): boolean {
   return Object.keys(readStore(scope)).length > 0;
 }
 
-function isLegacyMigrationMarked(scope = getStorageScope()): boolean {
+function getMigrationStatus(scope = getStorageScope()): MigrationStatus {
   if (!canUseStorage()) {
-    return false;
+    return "idle";
   }
 
   try {
-    return window.localStorage.getItem(getMigrationStatusKey(scope)) === "done";
+    const raw = window.localStorage.getItem(getMigrationStatusKey(scope));
+    if (raw === "pending" || raw === "done" || raw === "failed") {
+      return raw;
+    }
+
+    return "idle";
   } catch {
-    return false;
+    return "idle";
   }
 }
 
-function markLegacyMigrationComplete(scope = getStorageScope()): void {
+function setMigrationStatus(status: Exclude<MigrationStatus, "idle">, scope = getStorageScope()): void {
   if (!canUseStorage()) {
     return;
   }
 
   try {
-    window.localStorage.setItem(getMigrationStatusKey(scope), "done");
+    window.localStorage.setItem(getMigrationStatusKey(scope), status);
   } catch (error) {
-    logSaveStorageFailure("mark-legacy-migration-complete", { scope, error });
+    logSaveStorageFailure("set-migration-status", { scope, status, error });
   }
 }
 
@@ -415,31 +422,35 @@ async function writeIndexedDbStore(store: SaveStore, scope = getStorageScope()):
 }
 
 async function migrateLegacyStoreIfNeeded(scope: string, legacyStore: SaveStore): Promise<void> {
-  if (!hasLegacyStoreData(scope) || isLegacyMigrationMarked(scope)) {
+  if (!hasLegacyStoreData(scope) || getMigrationStatus(scope) === "done") {
     return;
   }
 
+  setMigrationStatus("pending", scope);
   const writeResult = await writeIndexedDbStore(legacyStore, scope);
   if (writeResult.status !== "success") {
+    setMigrationStatus("failed", scope);
     logSaveStorageFailure("migrate-legacy-write", { scope, status: writeResult.status, error: writeResult.error });
     return;
   }
 
   const verifyResult = await readIndexedDbStore(scope);
   if (verifyResult.status !== "success" || !verifyStoreMigration(legacyStore, verifyResult.store)) {
+    setMigrationStatus("failed", scope);
     logSaveStorageFailure("migrate-legacy-verify", { scope, status: verifyResult.status });
     return;
   }
 
-  markLegacyMigrationComplete(scope);
+  setMigrationStatus("done", scope);
   deleteLegacyStores(scope);
 }
 
 async function readPersistentStore(scope = getStorageScope()): Promise<PersistentStoreReadResult> {
+  const migrationStatus = getMigrationStatus(scope);
   const indexedDbStore = await readIndexedDbStore(scope);
   if (indexedDbStore.status === "success") {
     const legacyStore = readStore(scope);
-    if (Object.keys(legacyStore).length > 0 && !isLegacyMigrationMarked(scope)) {
+    if (Object.keys(legacyStore).length > 0 && migrationStatus !== "done") {
       const mergedStore = mergeStoresByLatest(indexedDbStore.store, legacyStore);
       await migrateLegacyStoreIfNeeded(scope, mergedStore);
       return {
@@ -478,6 +489,7 @@ async function readPersistentStore(scope = getStorageScope()): Promise<Persisten
   if (Object.keys(legacyStore).length > 0) {
     logSaveStorageFailure("read-indexeddb-fallback", {
       scope,
+      migrationStatus,
       status: indexedDbStore.status,
       error: indexedDbStore.error,
       fallback: "legacy"
@@ -492,6 +504,7 @@ async function readPersistentStore(scope = getStorageScope()): Promise<Persisten
 
   logSaveStorageFailure("read-indexeddb-fallback", {
     scope,
+    migrationStatus,
     status: indexedDbStore.status,
     error: indexedDbStore.error,
     fallback: "empty"

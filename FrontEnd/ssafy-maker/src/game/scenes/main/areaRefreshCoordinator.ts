@@ -24,7 +24,7 @@ export class MainSceneAreaRefreshCoordinator {
     this.refresh = options.refresh;
     this.canRefresh = options.canRefresh;
     this.shutdownHandler = () => {
-      this.clear();
+      this.dispose();
     };
 
     this.scene.events.on(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
@@ -53,6 +53,12 @@ export class MainSceneAreaRefreshCoordinator {
 
   clear(): void {
     this.finalize();
+  }
+
+  dispose(): void {
+    this.clear();
+    this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
+    this.scene.events.off(Phaser.Scenes.Events.DESTROY, this.shutdownHandler);
   }
 
   finalize(requestId?: number): void {
