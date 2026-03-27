@@ -92,6 +92,18 @@ type MigrationLockState = {
   startedAt?: number;
 };
 
+export class SaveStorageDegradedError extends Error {
+  readonly scope: string;
+  readonly stage: string;
+
+  constructor(stage: string, scope: string) {
+    super(`Save storage is degraded at stage: ${stage} (${scope})`);
+    this.name = "SaveStorageDegradedError";
+    this.stage = stage;
+    this.scope = scope;
+  }
+}
+
 function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
@@ -697,16 +709,19 @@ function indexRemoteSaveFiles(remoteSaveFiles: BackendSaveFile[]): Map<SaveSlotI
 async function upsertLocalSlot(slotData: SaveSlotData, scope = getStorageScope()): Promise<SaveSlotData> {
   const { store, writeBlocked } = await readPersistentStore(scope);
   if (writeBlocked) {
-    logSaveStorageFailure("upsert-local-slot-blocked", { scope, slotId: slotData.slotId });
-    return slotData;
+    const error = new SaveStorageDegradedError("upsert-local-slot-blocked", scope);
+    logSaveStorageFailure("upsert-local-slot-blocked", { scope, slotId: slotData.slotId, error });
+    throw error;
   }
   store[slotData.slotId] = slotData;
   const writeResult = await writeIndexedDbStore(store, scope);
-  if (writeResult.status !== "success" && writeResult.status !== "fallback-localstorage") {
-    logSaveStorageFailure("upsert-local-slot", { scope, status: writeResult.status, error: writeResult.error });
+  if (writeResult.status === "success" || writeResult.status === "fallback-localstorage") {
+    setCachedStore(store, scope);
+    return slotData;
   }
-  setCachedStore(store, scope);
-  return slotData;
+
+  logSaveStorageFailure("upsert-local-slot", { scope, status: writeResult.status, error: writeResult.error });
+  throw new SaveStorageDegradedError("upsert-local-slot", scope);
 }
 
 async function removeLocalSlot(slotId: SaveSlotId, scope = getStorageScope()): Promise<boolean> {
@@ -716,8 +731,9 @@ async function removeLocalSlot(slotId: SaveSlotId, scope = getStorageScope()): P
 
   const { store, writeBlocked } = await readPersistentStore(scope);
   if (writeBlocked) {
-    logSaveStorageFailure("remove-local-slot-blocked", { scope, slotId });
-    return false;
+    const error = new SaveStorageDegradedError("remove-local-slot-blocked", scope);
+    logSaveStorageFailure("remove-local-slot-blocked", { scope, slotId, error });
+    throw error;
   }
   if (!(slotId in store)) {
     return false;
@@ -725,11 +741,13 @@ async function removeLocalSlot(slotId: SaveSlotId, scope = getStorageScope()): P
 
   delete store[slotId];
   const writeResult = await writeIndexedDbStore(store, scope);
-  if (writeResult.status !== "success" && writeResult.status !== "fallback-localstorage") {
-    logSaveStorageFailure("remove-local-slot", { scope, status: writeResult.status, error: writeResult.error });
+  if (writeResult.status === "success" || writeResult.status === "fallback-localstorage") {
+    setCachedStore(store, scope);
+    return true;
   }
-  setCachedStore(store, scope);
-  return true;
+
+  logSaveStorageFailure("remove-local-slot", { scope, status: writeResult.status, error: writeResult.error });
+  throw new SaveStorageDegradedError("remove-local-slot", scope);
 }
 
 export function formatSaveTime(iso: string): string {

@@ -34,6 +34,7 @@ export class PlayerManager {
   private runtimeGrids?: TmxRuntimeGrids;
   private parsedMap?: ParsedTmxMap;
   private isMoving = false;
+  private isMoveInputActive = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -49,6 +50,7 @@ export class PlayerManager {
     this.cursors = undefined;
     this.moveKeys = undefined;
     this.isMoving = false;
+    this.isMoveInputActive = false;
   }
 
   setRenderBounds(renderBounds?: WorldRenderBounds) {
@@ -105,11 +107,13 @@ export class PlayerManager {
 
     if (this.isInputLocked) {
       this.isMoving = false;
+      this.isMoveInputActive = false;
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
       return;
     }
 
     const moveVector = this.getRequestedMoveVector();
+    this.isMoveInputActive = moveVector.lengthSq() > 0;
     if (moveVector.lengthSq() === 0) {
       this.isMoving = false;
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
@@ -165,6 +169,10 @@ export class PlayerManager {
 
   isPlayerMoving(): boolean {
     return this.isMoving;
+  }
+
+  isMoveInputInProgress(): boolean {
+    return this.isMoveInputActive;
   }
 
   debugTeleportToTile(tileX: number, tileY: number) {

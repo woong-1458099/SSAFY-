@@ -1794,7 +1794,7 @@ hudWeek: number): number {
       return false;
     }
 
-    if (this.playerManager?.isPlayerMoving() === true) {
+    if (this.playerManager?.isPlayerMoving() === true || this.playerManager?.isMoveInputInProgress() === true) {
       return false;
     }
 

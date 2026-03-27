@@ -32,6 +32,7 @@ export class MainSceneAreaRefreshCoordinator {
   }
 
   getRequestId(): number {
+    // This token represents the latest request or cancellation boundary, not only completed refreshes.
     return this.pendingRequestId;
   }
 
