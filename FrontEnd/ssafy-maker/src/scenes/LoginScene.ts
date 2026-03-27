@@ -114,9 +114,11 @@ export class LoginScene extends Phaser.Scene {
       return;
     }
 
+    form.style.display = "block";
     form.style.flex = "0 0 auto";
     form.style.minHeight = "auto";
-    form.style.overflow = "visible";
+    form.style.maxHeight = "none";
+    form.style.overflow = "hidden";
     form.style.paddingRight = "0";
 
     const viewTitle: Record<AuthView, string> = {
@@ -168,7 +170,7 @@ export class LoginScene extends Phaser.Scene {
 
       if (view === "login") {
         form.innerHTML = `
-          <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;overflow:visible;max-height:none;">
+          <div style="display:block;overflow:hidden;padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;">
             로그인 후 시작 화면에서 새 게임이나 이어하기를 선택할 수 있습니다. 세션이 확인되면 한 학기 육성 시뮬레이션으로 바로 이어집니다.
           </div>
         `;
@@ -179,7 +181,7 @@ export class LoginScene extends Phaser.Scene {
 
       if (view === "signup") {
         form.innerHTML = `
-          <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;overflow:visible;max-height:none;">
+          <div style="display:block;overflow:hidden;padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;">
             계정을 만들면 캐릭터 선택, 일정 관리, 미니게임, 랜덤 이벤트가 이어지는 첫 학기 플레이를 바로 시작할 수 있습니다.
           </div>
         `;
