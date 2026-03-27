@@ -23,7 +23,22 @@ export function resolvePlayerMovementActivityState(options: {
   };
 }
 
+export function shouldPreservePlayerMovementActivity(options: {
+  isMoving: boolean;
+  isMoveInputActive: boolean;
+  lastActiveAtMs: number;
+  nowMs: number;
+  graceMs: number;
+}) {
+  if (options.isMoving || options.isMoveInputActive) {
+    return true;
+  }
+
+  return options.nowMs - options.lastActiveAtMs < options.graceMs;
+}
+
 export class PlayerManager {
+  private static readonly MOVEMENT_ACTIVITY_GRACE_MS = 250;
   private static readonly WORLD_BOUNDS_EPSILON = 2;
   private scene: Phaser.Scene;
   private player?: PlayerVisual;
@@ -49,6 +64,7 @@ export class PlayerManager {
   // `isMoveInputActive` means directional input is currently active for gameplay movement checks.
   // Input-locked frames intentionally report `false` so autosave/UI consumers can treat locked scenes as non-movable.
   private isMoveInputActive = false;
+  private lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -65,6 +81,7 @@ export class PlayerManager {
     this.moveKeys = undefined;
     this.isMoving = false;
     this.isMoveInputActive = false;
+    this.lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
   }
 
   setRenderBounds(renderBounds?: WorldRenderBounds) {
@@ -204,13 +221,23 @@ export class PlayerManager {
 
   isMovementActivityInProgress(): boolean {
     // Use this for idle gating such as autosave.
-    // Collision-blocked movement still counts as active play, but input-locked frames do not.
-    return this.isMoving || this.isMoveInputActive;
+    // Collision-blocked movement still counts as active play, input-locked frames do not,
+    // and the last valid activity frame is preserved briefly across lock/load boundaries.
+    return shouldPreservePlayerMovementActivity({
+      isMoving: this.isMoving,
+      isMoveInputActive: this.isMoveInputActive,
+      lastActiveAtMs: this.lastMovementActivityAtMs,
+      nowMs: this.scene.time.now,
+      graceMs: PlayerManager.MOVEMENT_ACTIVITY_GRACE_MS
+    });
   }
 
   private commitMovementState(isMoving: boolean, isMoveInputActive: boolean) {
     this.isMoving = isMoving;
     this.isMoveInputActive = isMoveInputActive;
+    if (isMoving || isMoveInputActive) {
+      this.lastMovementActivityAtMs = this.scene.time.now;
+    }
   }
 
   debugTeleportToTile(tileX: number, tileY: number) {

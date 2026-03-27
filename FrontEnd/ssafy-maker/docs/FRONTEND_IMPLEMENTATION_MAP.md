@@ -83,6 +83,7 @@ Key scenes:
 - Support modules extracted from `MainScene.ts`.
 - `authFlow.ts`: scene entry auth/session checks and logout fallback handling.
 - `autoSaveCoordinator.ts`: dirty-state and idle-aware autosave scheduler.
+- `autoSavePolicy.ts`: pure autosave gating helpers for lock/grace regression checks.
 - `areaRefreshCoordinator.ts`: pending area rerender queue and request-id lifecycle handling.
 - `debugPanel.ts`: debug panel state payload builder.
 - `debugFlow.ts`: debug command routing and debug restart helpers.
@@ -288,6 +289,14 @@ Practical rule:
 - **Refactoring Update**: UI management (HUD, Menus, Dialogues) has been migrated to `InGameUIScene.ts` to reduce coupling.
 - **Refactoring Update**: auth entry/logout flow, autosave scheduling, and save payload helpers now live under `src/game/scenes/main/*`.
 - Map logic, dialogue *execution* (script selection), and progression logic still reside in `MainScene`.
+
+MainScene split checklist:
+
+- Keep Phaser scene lifecycle, manager wiring, and cross-system orchestration in `MainScene.ts`.
+- Keep auth entry/logout guard code in `src/game/scenes/main/authFlow.ts`.
+- Keep autosave scheduling policy in `src/game/scenes/main/autoSaveCoordinator.ts` and pure autosave gating helpers in `src/game/scenes/main/autoSavePolicy.ts`.
+- Keep deferred area rerender ownership/cancellation in `src/game/scenes/main/areaRefreshCoordinator.ts`.
+- Keep payload shaping and scene-state snapshot assembly in `src/game/scenes/main/persistence.ts`.
 
 Practical reading order for future analysis:
 

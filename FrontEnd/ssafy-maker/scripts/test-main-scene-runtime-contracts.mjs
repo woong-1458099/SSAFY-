@@ -77,6 +77,10 @@ class FakeEmitter {
       handler();
     }
   }
+
+  count(eventName) {
+    return (this.handlers.get(eventName) ?? []).length;
+  }
 }
 
 class FakeScene {
@@ -84,15 +88,26 @@ class FakeScene {
     this.events = new FakeEmitter();
     this.timers = [];
     this.time = {
+      now: 0,
       delayedCall: (_delay, callback) => {
         const timer = new FakeTimerEvent(callback);
         this.timers.push(timer);
         return timer;
       }
     };
+    this.destroyed = false;
     this.sys = {
-      isDestroyed: () => false
+      isDestroyed: () => this.destroyed
     };
+  }
+
+  shutdown() {
+    this.events.emit("shutdown");
+  }
+
+  destroy() {
+    this.destroyed = true;
+    this.events.emit("destroy");
   }
 }
 
@@ -185,7 +200,7 @@ const autoSavePolicySourcePath = path.join(
 );
 const autoSavePolicyOutputPath = transpileModuleToTemp(autoSavePolicySourcePath, "autoSavePolicy.mjs");
 
-const { resolvePlayerMovementActivityState } = await import(
+const { resolvePlayerMovementActivityState, shouldPreservePlayerMovementActivity } = await import(
   `${pathToFileURL(playerManagerOutputPath).href}?t=${Date.now()}`
 );
 const { MainSceneAreaRefreshCoordinator, shouldAbortAreaRefreshRequest } = await import(
@@ -216,6 +231,29 @@ const movementCases = [
 movementCases.forEach(({ name, input, expected }) => {
   assert.deepEqual(resolvePlayerMovementActivityState(input), expected, name);
 });
+
+assert.equal(
+  shouldPreservePlayerMovementActivity({
+    isMoving: false,
+    isMoveInputActive: false,
+    lastActiveAtMs: 1_000,
+    nowMs: 1_100,
+    graceMs: 250
+  }),
+  true,
+  "last active frame should be preserved briefly across frame-boundary idle states"
+);
+assert.equal(
+  shouldPreservePlayerMovementActivity({
+    isMoving: false,
+    isMoveInputActive: false,
+    lastActiveAtMs: 1_000,
+    nowMs: 1_400,
+    graceMs: 250
+  }),
+  false,
+  "movement grace window should expire after the configured delay"
+);
 
 assert.equal(
   shouldDelayAutoSaveForInputLock({ nowMs: 1_000, lockedUntilMs: 1_300 }),
@@ -308,9 +346,14 @@ const disposedCoordinator = new MainSceneAreaRefreshCoordinator({
 });
 
 disposedCoordinator.queue("world");
-disposedCoordinator.dispose();
+assert.equal(disposedScene.events.count("shutdown"), 1, "shutdown handler should be registered");
+assert.equal(disposedScene.events.count("destroy"), 1, "destroy handler should be registered");
+disposedScene.shutdown();
+assert.equal(disposedScene.events.count("shutdown"), 0, "shutdown handler should be removed on dispose");
+assert.equal(disposedScene.events.count("destroy"), 0, "destroy handler should be removed on dispose");
+disposedScene.destroy();
 disposedScene.timers.shift().fire();
 await flushMicrotasks();
 assert.equal(disposedRefreshCalled, false, "disposed scenes must not run deferred refresh callbacks");
 
-console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 7} cases)`);
+console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 11} cases)`);
