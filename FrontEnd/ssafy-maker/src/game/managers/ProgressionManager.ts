@@ -61,6 +61,68 @@ type ProgressionManagerOptions = {
   onDayPassed?: () => void;
 };
 
+function normalizeProgressionTimeState(
+  next: Partial<TimeState> | undefined,
+  fallback: TimeState
+): TimeState {
+  const maxActionPoint = Math.max(
+    0,
+    Math.round(
+      typeof next?.maxActionPoint === "number" && Number.isFinite(next.maxActionPoint)
+        ? next.maxActionPoint
+        : fallback.maxActionPoint
+    )
+  );
+  const actionPointCandidate =
+    typeof next?.actionPoint === "number" && Number.isFinite(next.actionPoint)
+      ? next.actionPoint
+      : fallback.actionPoint;
+
+  return {
+    ...fallback,
+    ...next,
+    maxActionPoint,
+    actionPoint: Phaser.Math.Clamp(Math.round(actionPointCandidate), 0, maxActionPoint),
+    timeCycleIndex: Phaser.Math.Clamp(
+      Math.round(
+        typeof next?.timeCycleIndex === "number" && Number.isFinite(next.timeCycleIndex)
+          ? next.timeCycleIndex
+          : fallback.timeCycleIndex
+      ),
+      0,
+      TIME_CYCLE.length - 1
+    ),
+    dayCycleIndex: Phaser.Math.Clamp(
+      Math.round(
+        typeof next?.dayCycleIndex === "number" && Number.isFinite(next.dayCycleIndex)
+          ? next.dayCycleIndex
+          : fallback.dayCycleIndex
+      ),
+      0,
+      DAY_CYCLE.length - 1
+    ),
+    week: Math.max(
+      1,
+      Math.round(
+        typeof next?.week === "number" && Number.isFinite(next.week) ? next.week : fallback.week
+      )
+    )
+  };
+}
+
+function normalizeCompletedPlanSlotIndices(
+  value: unknown,
+  maxSlotCount: number
+): Set<number> {
+  return new Set(
+    Array.isArray(value)
+      ? value
+          .map((entry) => Math.round(Number(entry)))
+          .filter((entry) => Number.isFinite(entry) && entry >= 0 && entry < maxSlotCount)
+      : []
+  );
+}
+
 export type ConsumeActionPointFailureReason = "no-action-point" | "blocked-time-advance" | "busy";
 
 export type ConsumeActionPointResult =
@@ -346,7 +408,7 @@ export class ProgressionManager {
 
   restore(snapshot?: Partial<ProgressionSaveSnapshot>): void {
     if (snapshot?.timeState) {
-      this.timeState = { ...snapshot.timeState };
+      this.timeState = normalizeProgressionTimeState(snapshot.timeState, this.timeState);
     }
     if (Array.isArray(snapshot?.weeklyPlan) && snapshot.weeklyPlan.length === this.weeklyPlan.length) {
       this.weeklyPlan = snapshot.weeklyPlan.map((value, index) =>
@@ -359,12 +421,9 @@ export class ProgressionManager {
     if (typeof snapshot?.lastPaidWeeklySalaryWeek === "number") {
       this.lastPaidWeeklySalaryWeek = Math.max(0, Math.round(snapshot.lastPaidWeeklySalaryWeek));
     }
-    this.completedPlanSlotIndices = new Set(
-      Array.isArray(snapshot?.completedPlanSlotIndices)
-        ? snapshot.completedPlanSlotIndices
-            .map((value) => Math.round(value))
-            .filter((value) => Number.isFinite(value) && value >= 0 && value < this.weeklyPlan.length)
-        : []
+    this.completedPlanSlotIndices = normalizeCompletedPlanSlotIndices(
+      snapshot?.completedPlanSlotIndices,
+      this.weeklyPlan.length
     );
     if (this.weeklyPlanWeek !== this.timeState.week) {
       this.completedPlanSlotIndices.clear();
