@@ -28,6 +28,7 @@ export class MainSceneAreaRefreshCoordinator {
   private readonly canRefresh: AreaRefreshCoordinatorOptions["canRefresh"];
   private pendingTask?: PendingAreaRefreshTask;
   private pendingRequestId = 0;
+  private runningRequestId?: number;
   private shutdownHandler: () => void;
   private isDisposed = false;
   private isRefreshRunning = false;
@@ -86,6 +87,8 @@ export class MainSceneAreaRefreshCoordinator {
     }
 
     this.cancelPending();
+    this.runningRequestId = undefined;
+    this.isRefreshRunning = false;
     this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
     this.scene.events.off(Phaser.Scenes.Events.DESTROY, this.shutdownHandler);
     this.isDisposed = true;
@@ -140,6 +143,12 @@ export class MainSceneAreaRefreshCoordinator {
     delayMs: number
   ): Phaser.Time.TimerEvent {
     return this.scene.time.delayedCall(delayMs, () => {
+      if (!this.canAccessSceneRuntime()) {
+        this.cancelRunningRefresh(pendingTask.requestId);
+        this.finalize(pendingTask.requestId, pendingTask);
+        return;
+      }
+
       if (!this.isCurrentTask(pendingTask.requestId, pendingTask)) {
         this.finalize(pendingTask.requestId, pendingTask);
         return;
@@ -157,6 +166,13 @@ export class MainSceneAreaRefreshCoordinator {
         return;
       }
 
+      if (!this.canAccessSceneRuntime()) {
+        this.cancelRunningRefresh(pendingTask.requestId);
+        this.finalize(pendingTask.requestId, pendingTask);
+        return;
+      }
+
+      this.runningRequestId = pendingTask.requestId;
       this.isRefreshRunning = true;
       void Promise.resolve()
         .then(() =>
@@ -176,9 +192,48 @@ export class MainSceneAreaRefreshCoordinator {
           });
         })
         .finally(() => {
-          this.isRefreshRunning = false;
-          this.finalize(pendingTask.requestId, pendingTask);
+          if (this.runningRequestId === pendingTask.requestId) {
+            this.runningRequestId = undefined;
+            this.isRefreshRunning = false;
+          }
+
+          if (!this.canAccessSceneRuntime()) {
+            return;
+          }
+
+          if (this.isCurrentTask(pendingTask.requestId, pendingTask)) {
+            this.finalize(pendingTask.requestId, pendingTask);
+          }
         });
     });
+  }
+
+  private canAccessSceneRuntime(): boolean {
+    if (this.isDisposed) {
+      return false;
+    }
+
+    const sceneSys = this.scene.sys as Phaser.Scenes.Systems & {
+      isDestroyed?: () => boolean;
+    };
+
+    if (!sceneSys) {
+      return false;
+    }
+
+    if (typeof sceneSys.isDestroyed === "function" && sceneSys.isDestroyed()) {
+      return false;
+    }
+
+    return Boolean(this.scene.time);
+  }
+
+  private cancelRunningRefresh(requestId: number): void {
+    if (this.runningRequestId !== requestId) {
+      return;
+    }
+
+    this.runningRequestId = undefined;
+    this.isRefreshRunning = false;
   }
 }
