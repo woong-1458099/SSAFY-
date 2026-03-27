@@ -37,7 +37,8 @@ process.on("SIGTERM", () => {
 });
 process.on("uncaughtException", (error) => {
   cleanupTempDir();
-  throw error;
+  console.error(error);
+  process.exit(1);
 });
 
 function transpileModuleToTemp(sourcePath, outputName) {
