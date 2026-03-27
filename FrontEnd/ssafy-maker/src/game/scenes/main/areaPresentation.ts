@@ -48,11 +48,7 @@ export function findNearestWalkableRefreshTile(
     { dx: -1, dy: 0 },
     { dx: 1, dy: 0 },
     { dx: 0, dy: -1 },
-    { dx: 0, dy: 1 },
-    { dx: -1, dy: -1 },
-    { dx: -1, dy: 1 },
-    { dx: 1, dy: -1 },
-    { dx: 1, dy: 1 }
+    { dx: 0, dy: 1 }
   ];
 
   while (queueIndex < queue.length) {
