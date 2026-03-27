@@ -34,7 +34,8 @@ Rule of thumb:
 
 - Keep world orchestration and cross-manager runtime flow inside `MainScene.ts`.
 - Move reusable support logic, payload shaping, and lifecycle helpers into this folder.
-- `PlayerManager.isAutoSaveMovementActivityInProgress()` is the autosave-facing contract: it uses raw directional intent plus real movement, then applies the input-lock policy only at the autosave boundary.
+- `PlayerManager.getMovementActivitySnapshot()` is the canonical movement-activity contract.
+- `PlayerManager.isAutoSaveMovementActivityInProgress()` is the autosave-facing shortcut: it uses raw directional intent plus real movement, then applies the input-lock policy only at the autosave boundary.
 - `PlayerManager.isMovementActivityInProgress()` keeps the broader grace-preserved activity policy for lock/load boundaries.
 - `PlayerManager.isImmediateMovementActivityInProgress()` remains available as the raw immediate-activity helper.
-- Current usage note: `MainScene.shouldAutoSave()` is the only current caller of `isAutoSaveMovementActivityInProgress()`. Any future caller should choose explicitly between autosave-facing immediate activity and grace-preserved activity semantics, and regressions should be verified against that single path.
+- Current usage note: `MainScene.shouldAutoSave()` now reads `getMovementActivitySnapshot().autoSaveActive`. Any future caller should choose explicitly between snapshot fields instead of mixing helper semantics ad hoc.

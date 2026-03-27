@@ -3,6 +3,15 @@ import { findFirstWalkableTile, type ParsedTmxMap, type TmxRuntimeGrids } from "
 
 const MAX_REFRESH_SEARCH_RADIUS = 16;
 type RefreshTile = { tileX: number; tileY: number };
+let lastRefreshTileSearchCache:
+  | {
+      runtimeGrids: TmxRuntimeGrids;
+      parsedMap: ParsedTmxMap;
+      originTileX: number;
+      originTileY: number;
+      result: RefreshTile | undefined;
+    }
+  | undefined;
 
 export function getAreaPresentationLabel(areaId: AreaId): string {
   switch (areaId) {
@@ -37,8 +46,25 @@ export function findNearestWalkableRefreshTile(
   runtimeGrids: TmxRuntimeGrids,
   parsedMap: ParsedTmxMap
 ): RefreshTile | undefined {
+  if (
+    lastRefreshTileSearchCache?.runtimeGrids === runtimeGrids &&
+    lastRefreshTileSearchCache.parsedMap === parsedMap &&
+    lastRefreshTileSearchCache.originTileX === originTileX &&
+    lastRefreshTileSearchCache.originTileY === originTileY
+  ) {
+    return lastRefreshTileSearchCache.result;
+  }
+
   if (isWalkableRefreshTile(originTileX, originTileY, runtimeGrids, parsedMap)) {
-    return { tileX: originTileX, tileY: originTileY };
+    const result = { tileX: originTileX, tileY: originTileY };
+    lastRefreshTileSearchCache = {
+      runtimeGrids,
+      parsedMap,
+      originTileX,
+      originTileY,
+      result
+    };
+    return result;
   }
 
   const maxRadius = Math.min(Math.max(parsedMap.width, parsedMap.height), MAX_REFRESH_SEARCH_RADIUS);
@@ -58,7 +84,15 @@ export function findNearestWalkableRefreshTile(
     queueIndex += 1;
 
     if (current.distance > 0 && isWalkableRefreshTile(current.tileX, current.tileY, runtimeGrids, parsedMap)) {
-      return { tileX: current.tileX, tileY: current.tileY };
+      const result = { tileX: current.tileX, tileY: current.tileY };
+      lastRefreshTileSearchCache = {
+        runtimeGrids,
+        parsedMap,
+        originTileX,
+        originTileY,
+        result
+      };
+      return result;
     }
 
     if (current.distance >= maxRadius) {
@@ -95,6 +129,13 @@ export function findNearestWalkableRefreshTile(
     mapWidth: parsedMap.width,
     mapHeight: parsedMap.height
   });
+  lastRefreshTileSearchCache = {
+    runtimeGrids,
+    parsedMap,
+    originTileX,
+    originTileY,
+    result: undefined
+  };
   return undefined;
 }
 

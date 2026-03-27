@@ -62,6 +62,15 @@ export function shouldRefreshMovementActivityOnInputLock(options: {
   return !options.wasInputLocked && (options.isMoving || options.isMoveInputActive);
 }
 
+export type PlayerMovementActivitySnapshot = {
+  isMoving: boolean;
+  isMoveInputActive: boolean;
+  hasRawMoveInput: boolean;
+  immediateActive: boolean;
+  autoSaveActive: boolean;
+  graceActive: boolean;
+};
+
 export class PlayerManager {
   private static readonly WORLD_BOUNDS_EPSILON = 2;
   private scene: Phaser.Scene;
@@ -262,32 +271,44 @@ export class PlayerManager {
     return this.hasRawMoveInput;
   }
 
-  isImmediateMovementActivityInProgress(): boolean {
-    return hasImmediatePlayerMovementActivity({
+  getMovementActivitySnapshot(): PlayerMovementActivitySnapshot {
+    const immediateActive = hasImmediatePlayerMovementActivity({
       isMoving: this.isMoving,
       isMoveInputActive: this.isMoveInputActive
     });
-  }
-
-  isAutoSaveMovementActivityInProgress(): boolean {
-    return hasAutoSaveMovementActivity({
+    const autoSaveActive = hasAutoSaveMovementActivity({
       isMoving: this.isMoving,
       hasRawMoveInput: this.hasRawMoveInput,
       isInputLocked: this.isInputLocked
     });
-  }
-
-  isMovementActivityInProgress(): boolean {
-    // Use this for idle gating such as autosave.
-    // Collision-blocked movement still counts as active play, input-locked frames do not,
-    // and the last valid activity frame is preserved briefly across lock/load boundaries.
-    return shouldPreservePlayerMovementActivity({
+    const graceActive = shouldPreservePlayerMovementActivity({
       isMoving: this.isMoving,
       isMoveInputActive: this.isMoveInputActive,
       lastActiveAtMs: this.lastMovementActivityAtMs,
       nowMs: this.scene.time.now,
       graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
     });
+
+    return {
+      isMoving: this.isMoving,
+      isMoveInputActive: this.isMoveInputActive,
+      hasRawMoveInput: this.hasRawMoveInput,
+      immediateActive,
+      autoSaveActive,
+      graceActive
+    };
+  }
+
+  isImmediateMovementActivityInProgress(): boolean {
+    return this.getMovementActivitySnapshot().immediateActive;
+  }
+
+  isAutoSaveMovementActivityInProgress(): boolean {
+    return this.getMovementActivitySnapshot().autoSaveActive;
+  }
+
+  isMovementActivityInProgress(): boolean {
+    return this.getMovementActivitySnapshot().graceActive;
   }
 
   private commitMovementState(isMoving: boolean, isMoveInputActive: boolean) {

@@ -329,6 +329,24 @@ assert.equal(
   true,
   "autosave should treat raw directional intent as active again immediately after input unlock"
 );
+const movementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: true,
+  isInputLocked: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  movementSnapshot.autoSaveActive,
+  false,
+  "movement snapshots should expose autosave activity as lock-aware even when raw input is still held"
+);
+assert.equal(
+  movementSnapshot.graceActive,
+  true,
+  "movement snapshots should keep grace activity separate from autosave activity"
+);
 assert.equal(
   hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
   true,
