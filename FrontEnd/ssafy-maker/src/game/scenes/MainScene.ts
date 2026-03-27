@@ -117,6 +117,7 @@ export class MainScene extends Phaser.Scene {
   private readonly audioManager = new AudioManager();
   private readonly displaySettingsManager = new DisplaySettingsManager();
   private readonly refreshTileSearchCache = createRefreshTileSearchCache();
+  private refreshTileSearchRevision = 0;
   private readonly autoSaveCoordinator = new MainSceneAutoSaveCoordinator({
     scene: this,
     checkIntervalMs: 10000,
@@ -513,6 +514,7 @@ export class MainScene extends Phaser.Scene {
       this.clearPendingInitialAreaRefresh();
       this.areaRefreshCoordinator.dispose();
       clearRefreshTileSearchCache(this.refreshTileSearchCache);
+      this.refreshTileSearchRevision = 0;
       this.pendingDeathSceneExit?.remove(false);
       this.pendingDeathSceneExit = undefined;
       this.autoSaveCoordinator.destroy();
@@ -831,6 +833,7 @@ export class MainScene extends Phaser.Scene {
     const renderBounds = this.worldManager.getCurrentRenderBounds();
 
     this.playerManager.setRenderBounds(renderBounds);
+    this.refreshTileSearchRevision += 1;
     clearRefreshTileSearchCache(this.refreshTileSearchCache);
 
     const safePlayerTile = this.resolveSafeRefreshTile(playerSnapshot, runtimeGrids, parsedMap);
@@ -873,7 +876,13 @@ export class MainScene extends Phaser.Scene {
     runtimeGrids?: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
     parsedMap?: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
   ) {
-    return resolveSafeRefreshTile(playerSnapshot, runtimeGrids, parsedMap, this.refreshTileSearchCache);
+    return resolveSafeRefreshTile(
+      playerSnapshot,
+      runtimeGrids,
+      parsedMap,
+      this.refreshTileSearchCache,
+      this.refreshTileSearchRevision
+    );
   }
 
   private isWalkableTile(
@@ -896,7 +905,8 @@ export class MainScene extends Phaser.Scene {
       originTileY,
       runtimeGrids,
       parsedMap,
-      this.refreshTileSearchCache
+      this.refreshTileSearchCache,
+      this.refreshTileSearchRevision
     );
   }
 

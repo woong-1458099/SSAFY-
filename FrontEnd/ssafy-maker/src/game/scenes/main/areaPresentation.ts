@@ -6,6 +6,7 @@ type RefreshTile = { tileX: number; tileY: number };
 export type RefreshTileSearchCache = {
   runtimeGrids?: TmxRuntimeGrids;
   parsedMap?: ParsedTmxMap;
+  revision?: number;
   originTileX?: number;
   originTileY?: number;
   result?: RefreshTile | undefined;
@@ -18,6 +19,7 @@ export function createRefreshTileSearchCache(): RefreshTileSearchCache {
 export function clearRefreshTileSearchCache(cache: RefreshTileSearchCache): void {
   cache.runtimeGrids = undefined;
   cache.parsedMap = undefined;
+  cache.revision = undefined;
   cache.originTileX = undefined;
   cache.originTileY = undefined;
   cache.result = undefined;
@@ -55,7 +57,8 @@ export function findNearestWalkableRefreshTile(
   originTileY: number,
   runtimeGrids: TmxRuntimeGrids,
   parsedMap: ParsedTmxMap,
-  cache?: RefreshTileSearchCache
+  cache?: RefreshTileSearchCache,
+  revision = 0
 ): RefreshTile | undefined {
   // Cache hits assume `runtimeGrids` and `parsedMap` are reference-stable snapshots.
   // When callers mutate those objects in place, they must call `clearRefreshTileSearchCache(...)`
@@ -63,6 +66,7 @@ export function findNearestWalkableRefreshTile(
   if (
     cache?.runtimeGrids === runtimeGrids &&
     cache.parsedMap === parsedMap &&
+    cache.revision === revision &&
     cache.originTileX === originTileX &&
     cache.originTileY === originTileY
   ) {
@@ -78,6 +82,7 @@ export function findNearestWalkableRefreshTile(
     if (cache) {
       cache.runtimeGrids = runtimeGrids;
       cache.parsedMap = parsedMap;
+      cache.revision = revision;
       cache.originTileX = originTileX;
       cache.originTileY = originTileY;
       cache.result = undefined;
@@ -90,6 +95,7 @@ export function findNearestWalkableRefreshTile(
     if (cache) {
       cache.runtimeGrids = runtimeGrids;
       cache.parsedMap = parsedMap;
+      cache.revision = revision;
       cache.originTileX = originTileX;
       cache.originTileY = originTileY;
       cache.result = result;
@@ -118,6 +124,7 @@ export function findNearestWalkableRefreshTile(
       if (cache) {
         cache.runtimeGrids = runtimeGrids;
         cache.parsedMap = parsedMap;
+        cache.revision = revision;
         cache.originTileX = originTileX;
         cache.originTileY = originTileY;
         cache.result = result;
@@ -155,6 +162,7 @@ export function findNearestWalkableRefreshTile(
   if (cache) {
     cache.runtimeGrids = runtimeGrids;
     cache.parsedMap = parsedMap;
+    cache.revision = revision;
     cache.originTileX = originTileX;
     cache.originTileY = originTileY;
     cache.result = undefined;
@@ -166,7 +174,8 @@ export function resolveSafeRefreshTile(
   playerSnapshot: { tileX: number; tileY: number } | undefined,
   runtimeGrids?: TmxRuntimeGrids,
   parsedMap?: ParsedTmxMap,
-  cache?: RefreshTileSearchCache
+  cache?: RefreshTileSearchCache,
+  revision = 0
 ) {
   if (!playerSnapshot || !runtimeGrids || !parsedMap) {
     return undefined;
@@ -184,7 +193,8 @@ export function resolveSafeRefreshTile(
     playerSnapshot.tileY,
     runtimeGrids,
     parsedMap,
-    cache
+    cache,
+    revision
   );
   if (nearestRefreshTile) {
     return nearestRefreshTile;

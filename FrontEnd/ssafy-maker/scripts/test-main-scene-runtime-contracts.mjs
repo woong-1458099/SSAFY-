@@ -289,9 +289,11 @@ const { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } = await impo
 const { __getAuthState, __setAuthState } = await import(
   `${pathToFileURL(authSessionStubPath).href}?t=${Date.now()}`
 );
-const { findNearestWalkableRefreshTile, createRefreshTileSearchCache, clearRefreshTileSearchCache } = await import(
-  `${pathToFileURL(areaPresentationOutputPath).href}?t=${Date.now()}`
-);
+const {
+  findNearestWalkableRefreshTile,
+  createRefreshTileSearchCache,
+  clearRefreshTileSearchCache
+} = await import(`${pathToFileURL(areaPresentationOutputPath).href}?t=${Date.now()}`);
 
 const movementCases = [
   {
@@ -475,6 +477,24 @@ assert.equal(
   false,
   "movement snapshots should reopen autosave immediately after unlock when no input or movement remains"
 );
+const relockedWithoutMovementManager = {
+  isInputLocked: false,
+  hasRawMoveInput: false,
+  isMoving: false,
+  isMoveInputActive: false,
+  preserveAutoSaveGateDuringInputLock: false,
+  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
+  lastMovementActivityAtMs: 1_100,
+  scene: { time: { now: 1_120 } }
+};
+PlayerManager.prototype.setInputLocked.call(relockedWithoutMovementManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  relockedWithoutMovementManager.lastAutoSaveGateLockTransitionAtMs,
+  Number.NEGATIVE_INFINITY,
+  "locking again without movement or active input should not start a new autosave gate transition"
+);
 const lockTransitionManager = {
   isInputLocked: false,
   hasRawMoveInput: true,
@@ -502,6 +522,15 @@ assert.equal(
   lockTransitionManager.lastAutoSaveGateLockTransitionAtMs,
   1_050,
   "interaction-style input locks should stamp a dedicated autosave gate transition timestamp"
+);
+const lockThenImmediateSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  ...lockTransitionManager,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  lockThenImmediateSnapshot.autoSaveGateActive,
+  true,
+  "the first locked-frame snapshot should keep autosave gated after an interaction-style lock transition"
 );
 PlayerManager.prototype.setInputLocked.call(lockTransitionManager, false, {
   preserveAutoSaveGateDuringLockTransition: false
@@ -655,19 +684,24 @@ const mutableParsedMap = {
 };
 const mutableRuntimeGrids = { blockedGrid: mutableBlockedGrid };
 assert.deepEqual(
-  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache),
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache, 0),
   { tileX: 1, tileY: 0 },
   "initial refresh search should find the nearest open tile"
 );
 mutableBlockedGrid[0][0] = false;
 assert.deepEqual(
-  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache),
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache, 0),
   { tileX: 1, tileY: 0 },
   "scene-owned caches can return stale data until explicitly invalidated"
 );
+assert.deepEqual(
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache, 1),
+  { tileX: 0, tileY: 0 },
+  "bumping the refresh-search revision should invalidate stale cache entries even for the same objects"
+);
 clearRefreshTileSearchCache(refreshSearchCache);
 assert.deepEqual(
-  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache),
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache, 1),
   { tileX: 0, tileY: 0 },
   "explicit cache invalidation should force refresh-tile searches to observe mutated grid data"
 );
