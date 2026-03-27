@@ -58,10 +58,13 @@ const INDEXED_DB_NAME = "ssafy-maker-save-slots";
 const INDEXED_DB_STORE_NAME = "saveStores";
 const AUTO_SLOT_ID: SaveSlotId = "auto";
 const REMOTE_AUTO_SLOT_NUMBER = 999999;
+const MIGRATION_LOCK_TTL_MS = 30_000;
 
 let cachedSlots: SaveStore | null = null;
 let cachedScope: string | null = null;
 let pendingHydration: Promise<SaveStore> | null = null;
+const migrationLocks = new Map<string, Promise<void>>();
+const writeBlockedScopes = new Set<string>();
 
 type IndexedDbOpenResult =
   | { status: "available"; db: IDBDatabase }
@@ -80,9 +83,14 @@ type PersistentStoreReadResult = {
   store: SaveStore;
   source: "indexeddb" | "legacy" | "empty";
   degraded: boolean;
+  writeBlocked: boolean;
 };
 
 type MigrationStatus = "idle" | "pending" | "done" | "failed";
+type MigrationLockState = {
+  status: MigrationStatus;
+  startedAt?: number;
+};
 
 function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -238,21 +246,45 @@ function hasLegacyStoreData(scope = getStorageScope()): boolean {
   return Object.keys(readStore(scope)).length > 0;
 }
 
-function getMigrationStatus(scope = getStorageScope()): MigrationStatus {
+function getMigrationLockState(scope = getStorageScope()): MigrationLockState {
   if (!canUseStorage()) {
-    return "idle";
+    return { status: "idle" };
   }
 
   try {
     const raw = window.localStorage.getItem(getMigrationStatusKey(scope));
-    if (raw === "pending" || raw === "done" || raw === "failed") {
-      return raw;
+    if (!raw) {
+      return { status: "idle" };
     }
 
-    return "idle";
+    const parsed = JSON.parse(raw) as Partial<MigrationLockState> | null;
+    if (
+      parsed &&
+      (parsed.status === "pending" || parsed.status === "done" || parsed.status === "failed")
+    ) {
+      return {
+        status: parsed.status,
+        startedAt: typeof parsed.startedAt === "number" ? parsed.startedAt : undefined
+      };
+    }
+
+    return { status: "idle" };
   } catch {
-    return "idle";
+    return { status: "idle" };
   }
+}
+
+function getMigrationStatus(scope = getStorageScope()): MigrationStatus {
+  const state = getMigrationLockState(scope);
+  if (
+    state.status === "pending" &&
+    typeof state.startedAt === "number" &&
+    Date.now() - state.startedAt > MIGRATION_LOCK_TTL_MS
+  ) {
+    return "failed";
+  }
+
+  return state.status;
 }
 
 function setMigrationStatus(status: Exclude<MigrationStatus, "idle">, scope = getStorageScope()): void {
@@ -261,10 +293,45 @@ function setMigrationStatus(status: Exclude<MigrationStatus, "idle">, scope = ge
   }
 
   try {
-    window.localStorage.setItem(getMigrationStatusKey(scope), status);
+    const payload: MigrationLockState = {
+      status,
+      startedAt: status === "pending" ? Date.now() : undefined
+    };
+    window.localStorage.setItem(getMigrationStatusKey(scope), JSON.stringify(payload));
   } catch (error) {
     logSaveStorageFailure("set-migration-status", { scope, status, error });
   }
+}
+
+function blockWritesForScope(scope: string): void {
+  writeBlockedScopes.add(scope);
+}
+
+function unblockWritesForScope(scope: string): void {
+  writeBlockedScopes.delete(scope);
+}
+
+function isWriteBlockedForScope(scope: string): boolean {
+  return writeBlockedScopes.has(scope);
+}
+
+async function runWithMigrationLock(scope: string, task: () => Promise<void>): Promise<void> {
+  const pendingTask = migrationLocks.get(scope);
+  if (pendingTask) {
+    await pendingTask;
+    return;
+  }
+
+  const lockPromise = (async () => {
+    try {
+      await task();
+    } finally {
+      migrationLocks.delete(scope);
+    }
+  })();
+
+  migrationLocks.set(scope, lockPromise);
+  await lockPromise;
 }
 
 function verifyStoreMigration(source: SaveStore, target: SaveStore): boolean {
@@ -385,6 +452,13 @@ async function readIndexedDbStore(scope = getStorageScope()): Promise<IndexedDbR
 }
 
 async function writeIndexedDbStore(store: SaveStore, scope = getStorageScope()): Promise<IndexedDbWriteResult> {
+  if (isWriteBlockedForScope(scope)) {
+    return {
+      status: "error",
+      error: new Error(`Write blocked for scope: ${scope}`)
+    };
+  }
+
   const normalized = normalizeStore(store);
   const openResult = await openSaveIndexedDb();
   if (openResult.status !== "available") {
@@ -426,29 +500,36 @@ async function migrateLegacyStoreIfNeeded(scope: string, legacyStore: SaveStore)
     return;
   }
 
-  setMigrationStatus("pending", scope);
-  const writeResult = await writeIndexedDbStore(legacyStore, scope);
-  if (writeResult.status !== "success") {
-    setMigrationStatus("failed", scope);
-    logSaveStorageFailure("migrate-legacy-write", { scope, status: writeResult.status, error: writeResult.error });
-    return;
-  }
+  await runWithMigrationLock(scope, async () => {
+    if (!hasLegacyStoreData(scope) || getMigrationStatus(scope) === "done") {
+      return;
+    }
 
-  const verifyResult = await readIndexedDbStore(scope);
-  if (verifyResult.status !== "success" || !verifyStoreMigration(legacyStore, verifyResult.store)) {
-    setMigrationStatus("failed", scope);
-    logSaveStorageFailure("migrate-legacy-verify", { scope, status: verifyResult.status });
-    return;
-  }
+    setMigrationStatus("pending", scope);
+    const writeResult = await writeIndexedDbStore(legacyStore, scope);
+    if (writeResult.status !== "success") {
+      setMigrationStatus("failed", scope);
+      logSaveStorageFailure("migrate-legacy-write", { scope, status: writeResult.status, error: writeResult.error });
+      return;
+    }
 
-  setMigrationStatus("done", scope);
-  deleteLegacyStores(scope);
+    const verifyResult = await readIndexedDbStore(scope);
+    if (verifyResult.status !== "success" || !verifyStoreMigration(legacyStore, verifyResult.store)) {
+      setMigrationStatus("failed", scope);
+      logSaveStorageFailure("migrate-legacy-verify", { scope, status: verifyResult.status });
+      return;
+    }
+
+    setMigrationStatus("done", scope);
+    deleteLegacyStores(scope);
+  });
 }
 
 async function readPersistentStore(scope = getStorageScope()): Promise<PersistentStoreReadResult> {
   const migrationStatus = getMigrationStatus(scope);
   const indexedDbStore = await readIndexedDbStore(scope);
   if (indexedDbStore.status === "success") {
+    unblockWritesForScope(scope);
     const legacyStore = readStore(scope);
     if (Object.keys(legacyStore).length > 0 && migrationStatus !== "done") {
       const mergedStore = mergeStoresByLatest(indexedDbStore.store, legacyStore);
@@ -456,35 +537,41 @@ async function readPersistentStore(scope = getStorageScope()): Promise<Persisten
       return {
         store: mergedStore,
         source: "indexeddb",
-        degraded: false
+        degraded: false,
+        writeBlocked: false
       };
     }
 
     return {
       store: indexedDbStore.store,
       source: "indexeddb",
-      degraded: false
+      degraded: false,
+      writeBlocked: false
     };
   }
 
   if (indexedDbStore.status === "empty") {
+    unblockWritesForScope(scope);
     const legacyStore = readStore(scope);
     if (Object.keys(legacyStore).length > 0) {
       await migrateLegacyStoreIfNeeded(scope, legacyStore);
       return {
         store: legacyStore,
         source: "legacy",
-        degraded: false
+        degraded: false,
+        writeBlocked: false
       };
     }
 
     return {
       store: {},
       source: "empty",
-      degraded: false
+      degraded: false,
+      writeBlocked: false
     };
   }
 
+  blockWritesForScope(scope);
   const legacyStore = readStore(scope);
   if (Object.keys(legacyStore).length > 0) {
     logSaveStorageFailure("read-indexeddb-fallback", {
@@ -498,7 +585,8 @@ async function readPersistentStore(scope = getStorageScope()): Promise<Persisten
     return {
       store: legacyStore,
       source: "legacy",
-      degraded: true
+      degraded: true,
+      writeBlocked: true
     };
   }
 
@@ -512,7 +600,8 @@ async function readPersistentStore(scope = getStorageScope()): Promise<Persisten
   return {
     store: {},
     source: "empty",
-    degraded: true
+    degraded: true,
+    writeBlocked: true
   };
 }
 
@@ -606,7 +695,11 @@ function indexRemoteSaveFiles(remoteSaveFiles: BackendSaveFile[]): Map<SaveSlotI
 }
 
 async function upsertLocalSlot(slotData: SaveSlotData, scope = getStorageScope()): Promise<SaveSlotData> {
-  const { store } = await readPersistentStore(scope);
+  const { store, writeBlocked } = await readPersistentStore(scope);
+  if (writeBlocked) {
+    logSaveStorageFailure("upsert-local-slot-blocked", { scope, slotId: slotData.slotId });
+    return slotData;
+  }
   store[slotData.slotId] = slotData;
   const writeResult = await writeIndexedDbStore(store, scope);
   if (writeResult.status !== "success" && writeResult.status !== "fallback-localstorage") {
@@ -621,7 +714,11 @@ async function removeLocalSlot(slotId: SaveSlotId, scope = getStorageScope()): P
     return false;
   }
 
-  const { store } = await readPersistentStore(scope);
+  const { store, writeBlocked } = await readPersistentStore(scope);
+  if (writeBlocked) {
+    logSaveStorageFailure("remove-local-slot-blocked", { scope, slotId });
+    return false;
+  }
   if (!(slotId in store)) {
     return false;
   }

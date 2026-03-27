@@ -52,6 +52,7 @@ export class MainSceneAreaRefreshCoordinator {
   }
 
   clear(): void {
+    this.pendingRequestId += 1;
     this.finalize();
   }
 
