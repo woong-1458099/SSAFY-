@@ -315,7 +315,8 @@ const movementCases = [
       isMoveInputActive: false,
       hasRawMoveInput: true,
       isInputLocked: true,
-      lastAutoSaveGateLockTransitionAtMs: 1_000,
+      lastAutoSaveGateLockEnteredAtMs: 1_000,
+      lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
       preserveAutoSaveGateDuringInputLock: true,
       lastMovementActivityAtMs: 1_000,
       scene: { time: { now: 1_050 } }
@@ -329,7 +330,8 @@ const movementCases = [
       isMoveInputActive: false,
       hasRawMoveInput: true,
       isInputLocked: true,
-      lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
+      lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+      lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
       preserveAutoSaveGateDuringInputLock: false,
       lastMovementActivityAtMs: 1_000,
       scene: { time: { now: 1_050 } }
@@ -373,7 +375,8 @@ const movementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.cal
   isMoveInputActive: false,
   hasRawMoveInput: true,
   isInputLocked: true,
-  lastAutoSaveGateLockTransitionAtMs: 1_000,
+  lastAutoSaveGateLockEnteredAtMs: 1_000,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
@@ -416,7 +419,8 @@ const lockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapsh
   isMoveInputActive: false,
   hasRawMoveInput: true,
   isInputLocked: true,
-  lastAutoSaveGateLockTransitionAtMs: 1_000,
+  lastAutoSaveGateLockEnteredAtMs: 1_000,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
@@ -436,7 +440,8 @@ const longLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySn
   isMoveInputActive: false,
   hasRawMoveInput: false,
   isInputLocked: true,
-  lastAutoSaveGateLockTransitionAtMs: 1_000,
+  lastAutoSaveGateLockEnteredAtMs: 1_000,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_000 + PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS + 1 } }
@@ -483,7 +488,8 @@ const relockedWithoutMovementManager = {
   isMoving: false,
   isMoveInputActive: false,
   preserveAutoSaveGateDuringInputLock: false,
-  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   lastMovementActivityAtMs: 1_100,
   scene: { time: { now: 1_120 } }
 };
@@ -491,7 +497,7 @@ PlayerManager.prototype.setInputLocked.call(relockedWithoutMovementManager, true
   preserveAutoSaveGateDuringLockTransition: true
 });
 assert.equal(
-  relockedWithoutMovementManager.lastAutoSaveGateLockTransitionAtMs,
+  relockedWithoutMovementManager.lastAutoSaveGateLockEnteredAtMs,
   Number.NEGATIVE_INFINITY,
   "locking again without movement or active input should not start a new autosave gate transition"
 );
@@ -501,7 +507,8 @@ const lockTransitionManager = {
   isMoving: false,
   isMoveInputActive: true,
   preserveAutoSaveGateDuringInputLock: false,
-  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
 };
@@ -519,7 +526,7 @@ assert.equal(
   "interaction-style input locks should opt into autosave gate preservation"
 );
 assert.equal(
-  lockTransitionManager.lastAutoSaveGateLockTransitionAtMs,
+  lockTransitionManager.lastAutoSaveGateLockEnteredAtMs,
   1_050,
   "interaction-style input locks should stamp a dedicated autosave gate transition timestamp"
 );
@@ -546,16 +553,38 @@ assert.equal(
   "unlocking or non-transition locks should clear autosave gate preservation hints"
 );
 assert.equal(
-  lockTransitionManager.lastAutoSaveGateLockTransitionAtMs,
+  lockTransitionManager.lastAutoSaveGateLockEnteredAtMs,
   Number.NEGATIVE_INFINITY,
-  "unlocking should clear the dedicated autosave gate transition timestamp"
+  "unlocking should clear the dedicated autosave gate lock-enter timestamp"
+);
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockExitedAtMs,
+  1_050,
+  "unlocking should stamp the dedicated autosave gate lock-exit timestamp"
+);
+lockTransitionManager.isMoving = false;
+lockTransitionManager.isMoveInputActive = true;
+lockTransitionManager.scene = { time: { now: 1_080 } };
+PlayerManager.prototype.setInputLocked.call(lockTransitionManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockEnteredAtMs,
+  1_080,
+  "relocking with fresh movement input should stamp a new autosave gate lock-enter timestamp"
+);
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockExitedAtMs,
+  1_050,
+  "relocking should preserve the previous unlock timestamp for transition debugging"
 );
 const repeatedLockManager = {
   isInputLocked: true,
   hasRawMoveInput: false,
   isMoving: false,
   isMoveInputActive: false,
-  lastAutoSaveGateLockTransitionAtMs: 500,
+  lastAutoSaveGateLockEnteredAtMs: 500,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 500,
   scene: { time: { now: 1_000 } }
@@ -569,7 +598,7 @@ assert.equal(
   "reapplying an already-locked input state should not refresh movement activity timestamps"
 );
 assert.equal(
-  repeatedLockManager.lastAutoSaveGateLockTransitionAtMs,
+  repeatedLockManager.lastAutoSaveGateLockEnteredAtMs,
   500,
   "reapplying an already-locked input state should not refresh autosave gate transition timestamps"
 );
@@ -578,7 +607,8 @@ const idleLockManager = {
   hasRawMoveInput: false,
   isMoving: false,
   isMoveInputActive: false,
-  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: false,
   lastMovementActivityAtMs: 400,
   scene: { time: { now: 900 } }
@@ -592,7 +622,7 @@ assert.equal(
   "locking input from an already-idle state should not extend autosave gate grace"
 );
 assert.equal(
-  idleLockManager.lastAutoSaveGateLockTransitionAtMs,
+  idleLockManager.lastAutoSaveGateLockEnteredAtMs,
   Number.NEGATIVE_INFINITY,
   "locking input from an already-idle state should not create a dedicated autosave gate transition timestamp"
 );
@@ -601,7 +631,8 @@ const uiLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnap
   isMoveInputActive: false,
   hasRawMoveInput: true,
   isInputLocked: true,
-  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: false,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
@@ -616,7 +647,8 @@ const staleGraceMovementSnapshot = PlayerManager.prototype.getMovementActivitySn
   isMoveInputActive: false,
   hasRawMoveInput: false,
   isInputLocked: true,
-  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
@@ -657,7 +689,8 @@ assert.equal(
     3,
     { blockedGrid: [[false]] },
     { width: 1, height: 1, tileWidth: 32, tileHeight: 32, layers: [], tilesets: [] },
-    refreshSearchCache
+    refreshSearchCache,
+    0
   ),
   undefined,
   "out-of-bounds refresh origins should fail fast instead of expanding BFS work"
@@ -668,7 +701,8 @@ assert.equal(
     3,
     { blockedGrid: [[false]] },
     { width: 1, height: 1, tileWidth: 32, tileHeight: 32, layers: [], tilesets: [] },
-    refreshSearchCache
+    refreshSearchCache,
+    0
   ),
   undefined,
   "repeated out-of-bounds refresh origins should still fail fast"

@@ -45,4 +45,4 @@ Rule of thumb:
 - Contract note: the lock-transition autosave gate is verified in [`scripts/test-main-scene-runtime-contracts.mjs`](/C:/Users/HOME/Downloads/gitlab/shoot/S14P21E206/FrontEnd/ssafy-maker/scripts/test-main-scene-runtime-contracts.mjs), and code changes to this policy should be updated there in the same change.
 - Boundary note: `findNearestWalkableRefreshTile(...)` now rejects out-of-bounds origin tiles up front and leaves final fallback selection to `resolveSafeRefreshTile(...)`.
 - Refresh-tile search caching is now scene-owned: `MainScene` passes its own cache object into `areaPresentation.ts` and clears it during scene cleanup.
-- Refresh-tile search caching is also revision-scoped: `MainScene` bumps a local revision before rerender sync so same-reference mutable maps/grids cannot replay stale nearest-tile results across refresh passes.
+- Refresh-tile search caching is also revision-scoped: callers must pass the current rerender revision, and `MainScene` bumps a local revision before rerender sync so same-reference mutable maps/grids cannot replay stale nearest-tile results across refresh passes.

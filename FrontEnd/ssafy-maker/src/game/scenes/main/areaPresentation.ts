@@ -58,7 +58,7 @@ export function findNearestWalkableRefreshTile(
   runtimeGrids: TmxRuntimeGrids,
   parsedMap: ParsedTmxMap,
   cache?: RefreshTileSearchCache,
-  revision = 0
+  revision: number
 ): RefreshTile | undefined {
   // Cache hits assume `runtimeGrids` and `parsedMap` are reference-stable snapshots.
   // When callers mutate those objects in place, they must call `clearRefreshTileSearchCache(...)`
@@ -175,7 +175,7 @@ export function resolveSafeRefreshTile(
   runtimeGrids?: TmxRuntimeGrids,
   parsedMap?: ParsedTmxMap,
   cache?: RefreshTileSearchCache,
-  revision = 0
+  revision: number
 ) {
   if (!playerSnapshot || !runtimeGrids || !parsedMap) {
     return undefined;

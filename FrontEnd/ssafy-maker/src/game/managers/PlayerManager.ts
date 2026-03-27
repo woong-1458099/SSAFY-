@@ -59,7 +59,7 @@ function hasAutoSaveGateActivity(options: {
   autoSaveActive: boolean;
   isInputLocked: boolean;
   preserveAutoSaveGateDuringInputLock: boolean;
-  lastLockTransitionAtMs: number;
+  lastLockEnteredAtMs: number;
   nowMs: number;
   graceMs: number;
 }) {
@@ -68,7 +68,7 @@ function hasAutoSaveGateActivity(options: {
     (options.graceMs > 0 &&
       options.isInputLocked &&
       options.preserveAutoSaveGateDuringInputLock &&
-      options.nowMs - options.lastLockTransitionAtMs < options.graceMs)
+      options.nowMs - options.lastLockEnteredAtMs < options.graceMs)
   );
 }
 
@@ -119,9 +119,10 @@ export class PlayerManager {
   // `hasRawMoveInput` tracks held directional intent even while gameplay input is locked.
   private hasRawMoveInput = false;
   private lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
-  // Autosave gate transitions are stamped only from `setInputLocked(...)` so snapshot reads stay pure
-  // and do not depend on whatever movement/update ordering happened earlier in the frame.
-  private lastAutoSaveGateLockTransitionAtMs = Number.NEGATIVE_INFINITY;
+  // Autosave gate transition timestamps are stamped only from `setInputLocked(...)` so snapshot reads stay
+  // pure and do not depend on whatever movement/update ordering happened earlier in the frame.
+  private lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+  private lastAutoSaveGateLockExitedAtMs = Number.NEGATIVE_INFINITY;
   private preserveAutoSaveGateDuringInputLock = false;
 
   constructor(scene: Phaser.Scene) {
@@ -140,7 +141,8 @@ export class PlayerManager {
     this.isMoving = false;
     this.isMoveInputActive = false;
     this.hasRawMoveInput = false;
-    this.lastAutoSaveGateLockTransitionAtMs = Number.NEGATIVE_INFINITY;
+    this.lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+    this.lastAutoSaveGateLockExitedAtMs = Number.NEGATIVE_INFINITY;
     this.preserveAutoSaveGateDuringInputLock = false;
     this.lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
   }
@@ -203,11 +205,18 @@ export class PlayerManager {
     ) {
       this.lastMovementActivityAtMs = this.scene.time.now;
       if (this.preserveAutoSaveGateDuringInputLock) {
-        this.lastAutoSaveGateLockTransitionAtMs = this.scene.time.now;
+        this.lastAutoSaveGateLockEnteredAtMs = this.scene.time.now;
       }
     }
-    if (!locked || !this.preserveAutoSaveGateDuringInputLock) {
-      this.lastAutoSaveGateLockTransitionAtMs = Number.NEGATIVE_INFINITY;
+    if (!wasInputLocked && locked && !this.preserveAutoSaveGateDuringInputLock) {
+      this.lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+    }
+    if (wasInputLocked && !locked) {
+      this.lastAutoSaveGateLockExitedAtMs = this.scene.time.now;
+      this.lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+    }
+    if (!locked && !this.preserveAutoSaveGateDuringInputLock) {
+      this.lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
     }
     this.isInputLocked = locked;
   }
@@ -340,7 +349,7 @@ export class PlayerManager {
       autoSaveActive,
       isInputLocked: this.isInputLocked,
       preserveAutoSaveGateDuringInputLock: this.preserveAutoSaveGateDuringInputLock,
-      lastLockTransitionAtMs: this.lastAutoSaveGateLockTransitionAtMs,
+      lastLockEnteredAtMs: this.lastAutoSaveGateLockEnteredAtMs,
       nowMs: this.scene.time.now,
       graceMs: PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS
     });
