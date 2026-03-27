@@ -190,7 +190,11 @@ let coordinatorOutput = ts.transpileModule(fs.readFileSync(coordinatorSourcePath
 coordinatorOutput = coordinatorOutput.replace(/from "phaser"/g, 'from "./phaser-stub.mjs"');
 writeFile(coordinatorOutputPath, coordinatorOutput);
 
-const { resolvePlayerMovementActivityState, shouldPreservePlayerMovementActivity } = await import(
+const {
+  PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
+  resolvePlayerMovementActivityState,
+  shouldPreservePlayerMovementActivity
+} = await import(
   `${pathToFileURL(playerManagerOutputPath).href}?t=${Date.now()}`
 );
 const { MainSceneAreaRefreshCoordinator, shouldAbortAreaRefreshRequest } = await import(
@@ -225,7 +229,7 @@ assert.equal(
     isMoveInputActive: false,
     lastActiveAtMs: 1_000,
     nowMs: 1_100,
-    graceMs: 250
+    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
   }),
   true,
   "last active frame should be preserved briefly across frame-boundary idle states"
@@ -236,7 +240,7 @@ assert.equal(
     isMoveInputActive: false,
     lastActiveAtMs: 1_000,
     nowMs: 1_400,
-    graceMs: 250
+    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
   }),
   false,
   "movement grace window should expire after the configured delay"
@@ -246,8 +250,8 @@ assert.equal(
     isMoving: false,
     isMoveInputActive: false,
     lastActiveAtMs: 1_000,
-    nowMs: 1_200,
-    graceMs: 250
+    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS - 1,
+    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
   }),
   true,
   "input-lock transition frame should remain active during the movement grace window"
@@ -258,7 +262,7 @@ assert.equal(
     isMoveInputActive: true,
     lastActiveAtMs: Number.NEGATIVE_INFINITY,
     nowMs: 1_200,
-    graceMs: 250
+    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
   }),
   true,
   "collision-blocked input frame should stay active even without position changes"
@@ -268,11 +272,22 @@ assert.equal(
     isMoving: false,
     isMoveInputActive: false,
     lastActiveAtMs: 1_000,
-    nowMs: 1_260,
-    graceMs: 250
+    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
+    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
   }),
   false,
   "unlock frames after the grace window should become idle again"
+);
+assert.equal(
+  shouldPreservePlayerMovementActivity({
+    isMoving: false,
+    isMoveInputActive: false,
+    lastActiveAtMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
+    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS * 2 - 1,
+    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
+  }),
+  true,
+  "repeated lock-transition timestamps should extend the grace window from the latest active boundary"
 );
 
 assert.equal(
@@ -365,4 +380,4 @@ disposedScene.timers.shift().fire();
 await flushMicrotasks();
 assert.equal(disposedRefreshCalled, false, "disposed scenes must not run deferred refresh callbacks");
 
-console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 12} cases)`);
+console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 13} cases)`);

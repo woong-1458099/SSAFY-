@@ -37,8 +37,9 @@ export function shouldPreservePlayerMovementActivity(options: {
   return options.nowMs - options.lastActiveAtMs < options.graceMs;
 }
 
+export const PLAYER_MOVEMENT_ACTIVITY_GRACE_MS = 250;
+
 export class PlayerManager {
-  private static readonly MOVEMENT_ACTIVITY_GRACE_MS = 250;
   private static readonly WORLD_BOUNDS_EPSILON = 2;
   private scene: Phaser.Scene;
   private player?: PlayerVisual;
@@ -231,7 +232,7 @@ export class PlayerManager {
       isMoveInputActive: this.isMoveInputActive,
       lastActiveAtMs: this.lastMovementActivityAtMs,
       nowMs: this.scene.time.now,
-      graceMs: PlayerManager.MOVEMENT_ACTIVITY_GRACE_MS
+      graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
     });
   }
 
