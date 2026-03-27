@@ -2,6 +2,7 @@ import type { AreaId } from "../../../common/enums/area";
 import { findFirstWalkableTile, type ParsedTmxMap, type TmxRuntimeGrids } from "../../systems/tmxNavigation";
 
 const MAX_REFRESH_SEARCH_RADIUS = 16;
+type RefreshTile = { tileX: number; tileY: number };
 
 export function getAreaPresentationLabel(areaId: AreaId): string {
   switch (areaId) {
@@ -35,7 +36,7 @@ export function findNearestWalkableRefreshTile(
   originTileY: number,
   runtimeGrids: TmxRuntimeGrids,
   parsedMap: ParsedTmxMap
-) {
+): RefreshTile | undefined {
   if (isWalkableRefreshTile(originTileX, originTileY, runtimeGrids, parsedMap)) {
     return { tileX: originTileX, tileY: originTileY };
   }
@@ -93,7 +94,7 @@ export function findNearestWalkableRefreshTile(
     mapWidth: parsedMap.width,
     mapHeight: parsedMap.height
   });
-  return findFirstWalkableTile(runtimeGrids.blockedGrid);
+  return undefined;
 }
 
 export function resolveSafeRefreshTile(
@@ -112,5 +113,19 @@ export function resolveSafeRefreshTile(
     };
   }
 
-  return findNearestWalkableRefreshTile(playerSnapshot.tileX, playerSnapshot.tileY, runtimeGrids, parsedMap);
+  const nearestRefreshTile = findNearestWalkableRefreshTile(
+    playerSnapshot.tileX,
+    playerSnapshot.tileY,
+    runtimeGrids,
+    parsedMap
+  );
+  if (nearestRefreshTile) {
+    return nearestRefreshTile;
+  }
+
+  console.warn("[MainScene] refresh tile search falling back to first global walkable tile", {
+    originTileX: playerSnapshot.tileX,
+    originTileY: playerSnapshot.tileY
+  });
+  return findFirstWalkableTile(runtimeGrids.blockedGrid);
 }

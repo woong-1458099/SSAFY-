@@ -1807,7 +1807,7 @@ hudWeek: number): number {
 
     // Autosave uses the immediate activity state only. Grace-preserved activity exists for lock/load
     // boundaries elsewhere, but save timing should only follow real movement or active directional input.
-    if (this.playerManager?.isImmediateMovementActivityInProgress() === true) {
+    if (this.playerManager?.isAutoSaveMovementActivityInProgress() === true) {
       return false;
     }
 

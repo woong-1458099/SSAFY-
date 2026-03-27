@@ -252,6 +252,10 @@ export class PlayerManager {
     });
   }
 
+  isAutoSaveMovementActivityInProgress(): boolean {
+    return this.isImmediateMovementActivityInProgress();
+  }
+
   isMovementActivityInProgress(): boolean {
     // Use this for idle gating such as autosave.
     // Collision-blocked movement still counts as active play, input-locked frames do not,

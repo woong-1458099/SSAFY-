@@ -35,11 +35,6 @@ process.on("SIGTERM", () => {
   cleanupTempDir();
   process.exit(143);
 });
-process.on("uncaughtException", (error) => {
-  cleanupTempDir();
-  console.error(error);
-  process.exit(1);
-});
 
 function transpileModuleToTemp(sourcePath, outputName) {
   const transpiled = ts.transpileModule(fs.readFileSync(sourcePath, "utf8"), {
@@ -209,6 +204,7 @@ coordinatorOutput = coordinatorOutput.replace(/from "phaser"/g, 'from "./phaser-
 writeFile(coordinatorOutputPath, coordinatorOutput);
 
 const {
+  PlayerManager,
   hasImmediatePlayerMovementActivity,
   PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
   resolvePlayerMovementActivityState,
@@ -246,6 +242,15 @@ assert.equal(
   hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: false }),
   false,
   "autosave-facing activity should stay idle when neither movement nor input is active"
+);
+
+const autoSaveActivityReader = PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
+  isImmediateMovementActivityInProgress: () => true
+});
+assert.equal(
+  autoSaveActivityReader,
+  true,
+  "autosave callers should read the dedicated PlayerManager autosave activity contract"
 );
 assert.equal(
   hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
