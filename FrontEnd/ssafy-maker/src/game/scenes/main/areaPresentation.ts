@@ -9,7 +9,6 @@ export type RefreshTileSearchCache = {
   originTileX?: number;
   originTileY?: number;
   result?: RefreshTile | undefined;
-  warnedOutOfBounds?: boolean;
 };
 
 export function createRefreshTileSearchCache(): RefreshTileSearchCache {
@@ -22,7 +21,6 @@ export function clearRefreshTileSearchCache(cache: RefreshTileSearchCache): void
   cache.originTileX = undefined;
   cache.originTileY = undefined;
   cache.result = undefined;
-  cache.warnedOutOfBounds = undefined;
 }
 
 export function getAreaPresentationLabel(areaId: AreaId): string {
@@ -75,28 +73,11 @@ export function findNearestWalkableRefreshTile(
     originTileY >= parsedMap.height
   ) {
     if (cache) {
-      const shouldWarn = cache.warnedOutOfBounds !== true;
       cache.runtimeGrids = runtimeGrids;
       cache.parsedMap = parsedMap;
       cache.originTileX = originTileX;
       cache.originTileY = originTileY;
       cache.result = undefined;
-      cache.warnedOutOfBounds = true;
-      if (shouldWarn) {
-        console.warn("[MainScene] refresh tile search received an out-of-bounds origin", {
-          originTileX,
-          originTileY,
-          mapWidth: parsedMap.width,
-          mapHeight: parsedMap.height
-        });
-      }
-    } else {
-      console.warn("[MainScene] refresh tile search received an out-of-bounds origin", {
-        originTileX,
-        originTileY,
-        mapWidth: parsedMap.width,
-        mapHeight: parsedMap.height
-      });
     }
     return undefined;
   }
@@ -109,7 +90,6 @@ export function findNearestWalkableRefreshTile(
       cache.originTileX = originTileX;
       cache.originTileY = originTileY;
       cache.result = result;
-      cache.warnedOutOfBounds = false;
     }
     return result;
   }
@@ -138,7 +118,6 @@ export function findNearestWalkableRefreshTile(
         cache.originTileX = originTileX;
         cache.originTileY = originTileY;
         cache.result = result;
-        cache.warnedOutOfBounds = false;
       }
       return result;
     }
@@ -170,20 +149,12 @@ export function findNearestWalkableRefreshTile(
     }
   }
 
-  console.warn("[MainScene] refresh tile search exceeded local radius; falling back to first walkable tile", {
-    originTileX,
-    originTileY,
-    maxRadius,
-    mapWidth: parsedMap.width,
-    mapHeight: parsedMap.height
-  });
   if (cache) {
     cache.runtimeGrids = runtimeGrids;
     cache.parsedMap = parsedMap;
     cache.originTileX = originTileX;
     cache.originTileY = originTileY;
     cache.result = undefined;
-    cache.warnedOutOfBounds = false;
   }
   return undefined;
 }
@@ -215,10 +186,5 @@ export function resolveSafeRefreshTile(
   if (nearestRefreshTile) {
     return nearestRefreshTile;
   }
-
-  console.warn("[MainScene] refresh tile search falling back to first global walkable tile", {
-    originTileX: playerSnapshot.tileX,
-    originTileY: playerSnapshot.tileY
-  });
   return findFirstWalkableTile(runtimeGrids.blockedGrid);
 }

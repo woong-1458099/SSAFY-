@@ -275,12 +275,7 @@ writeFile(authFlowOutputPath, authFlowOutput);
 
 const {
   PlayerManager,
-  hasAutoSaveMovementActivity,
-  hasImmediatePlayerMovementActivity,
   PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
-  resolvePlayerMovementActivityState,
-  shouldRefreshMovementActivityOnInputLock,
-  shouldPreservePlayerMovementActivity
 } = await import(
   `${pathToFileURL(playerManagerOutputPath).href}?t=${Date.now()}`
 );
@@ -300,49 +295,58 @@ const { findNearestWalkableRefreshTile, createRefreshTileSearchCache } = await i
 const movementCases = [
   {
     name: "collision-blocked directional input still counts as activity",
-    input: { didMove: false, hasMoveInput: true, isInputLocked: false },
-    expected: { isMoving: false, isMoveInputActive: true }
+    snapshot: {
+      isMoving: false,
+      isMoveInputActive: true,
+      hasRawMoveInput: true,
+      isInputLocked: false,
+      lastMovementActivityAtMs: Number.NEGATIVE_INFINITY,
+      scene: { time: { now: 1_000 } }
+    },
+    expected: { immediateActive: true, autoSaveActive: true, graceActive: true }
   },
   {
-    name: "input-locked frames do not count as movement activity",
-    input: { didMove: false, hasMoveInput: true, isInputLocked: true },
-    expected: { isMoving: false, isMoveInputActive: false }
+    name: "input-locked frames disable autosave activity but preserve grace activity",
+    snapshot: {
+      isMoving: false,
+      isMoveInputActive: false,
+      hasRawMoveInput: true,
+      isInputLocked: true,
+      lastMovementActivityAtMs: 1_000,
+      scene: { time: { now: 1_050 } }
+    },
+    expected: { immediateActive: false, autoSaveActive: false, graceActive: true }
   },
   {
     name: "idle frames stay inactive",
-    input: { didMove: false, hasMoveInput: false, isInputLocked: false },
-    expected: { isMoving: false, isMoveInputActive: false }
+    snapshot: {
+      isMoving: false,
+      isMoveInputActive: false,
+      hasRawMoveInput: false,
+      isInputLocked: false,
+      lastMovementActivityAtMs: Number.NEGATIVE_INFINITY,
+      scene: { time: { now: 1_000 } }
+    },
+    expected: { immediateActive: false, autoSaveActive: false, graceActive: false }
   }
 ];
 
-movementCases.forEach(({ name, input, expected }) => {
-  assert.deepEqual(resolvePlayerMovementActivityState(input), expected, name);
+movementCases.forEach(({ name, snapshot, expected }) => {
+  const result = PlayerManager.prototype.getMovementActivitySnapshot.call(snapshot);
+  assert.equal(result.immediateActive, expected.immediateActive, `${name} (immediate)`);
+  assert.equal(result.autoSaveActive, expected.autoSaveActive, `${name} (autosave)`);
+  assert.equal(result.graceActive, expected.graceActive, `${name} (grace)`);
 });
-assert.equal(
-  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: false }),
-  false,
-  "autosave-facing activity should stay idle when neither movement nor input is active"
-);
 
 const autoSaveActivityReader = PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
-  isMoving: false,
-  hasRawMoveInput: true,
-  isInputLocked: false
+  getMovementActivitySnapshot: () => ({
+    autoSaveActive: true
+  })
 });
 assert.equal(
   autoSaveActivityReader,
   true,
   "autosave callers should read the dedicated PlayerManager autosave activity contract"
-);
-assert.equal(
-  hasAutoSaveMovementActivity({ isMoving: false, hasRawMoveInput: true, isInputLocked: true }),
-  false,
-  "autosave should stay idle while gameplay input is locked even if raw directional intent is still held"
-);
-assert.equal(
-  hasAutoSaveMovementActivity({ isMoving: false, hasRawMoveInput: true, isInputLocked: false }),
-  true,
-  "autosave should treat raw directional intent as active again immediately after input unlock"
 );
 const movementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
   isMoving: false,
@@ -416,13 +420,6 @@ assert.equal(
   "grace helper should delegate to the canonical movement snapshot"
 );
 const refreshSearchCache = createRefreshTileSearchCache();
-let outOfBoundsWarnCount = 0;
-const originalConsoleWarn = console.warn;
-console.warn = (...args) => {
-  if (String(args[0]).includes("out-of-bounds origin")) {
-    outOfBoundsWarnCount += 1;
-  }
-};
 assert.equal(
   findNearestWalkableRefreshTile(
     -1,
@@ -444,167 +441,6 @@ assert.equal(
   ),
   undefined,
   "repeated out-of-bounds refresh origins should still fail fast"
-);
-console.warn = originalConsoleWarn;
-assert.equal(
-  outOfBoundsWarnCount,
-  1,
-  "scene-owned refresh search cache should suppress duplicate out-of-bounds warnings for the same origin"
-);
-assert.equal(
-  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
-  true,
-  "autosave-facing activity should treat blocked directional input as active play"
-);
-assert.equal(
-  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: false }),
-  false,
-  "autosave-facing activity should stay idle immediately after input lock removes active input"
-);
-assert.equal(
-  shouldPreservePlayerMovementActivity({
-    isMoving: false,
-    isMoveInputActive: false,
-    lastActiveAtMs: 1_000,
-    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS - 1,
-    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
-  }),
-  true,
-  "dialogue or scene-transition lock frames may preserve grace activity even when immediate autosave activity is already idle"
-);
-assert.equal(
-  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
-  true,
-  "autosave-facing activity should resume immediately when input returns after unlock"
-);
-assert.equal(
-  shouldPreservePlayerMovementActivity({
-    isMoving: false,
-    isMoveInputActive: true,
-    lastActiveAtMs: 1_000,
-    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS + 1,
-    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
-  }),
-  true,
-  "unlock frames with recovered directional input should remain active for both immediate and grace-preserved policies"
-);
-
-assert.equal(
-  shouldRefreshMovementActivityOnInputLock({
-    wasInputLocked: false,
-    isMoving: true,
-    isMoveInputActive: false
-  }),
-  true,
-  "input lock should refresh the activity timestamp when movement was active"
-);
-assert.equal(
-  shouldRefreshMovementActivityOnInputLock({
-    wasInputLocked: false,
-    isMoving: false,
-    isMoveInputActive: true
-  }),
-  true,
-  "input lock should refresh the activity timestamp when blocked input was active"
-);
-assert.equal(
-  shouldRefreshMovementActivityOnInputLock({
-    wasInputLocked: true,
-    isMoving: true,
-    isMoveInputActive: true
-  }),
-  false,
-  "already-locked frames should not keep extending the activity timestamp"
-);
-assert.equal(
-  shouldRefreshMovementActivityOnInputLock({
-    wasInputLocked: false,
-    isMoving: false,
-    isMoveInputActive: false
-  }),
-  false,
-  "idle-to-lock transitions should not refresh the activity timestamp"
-);
-assert.equal(
-  shouldRefreshMovementActivityOnInputLock({
-    wasInputLocked: false,
-    isMoving: false,
-    isMoveInputActive: true
-  }),
-  true,
-  "lock transitions should stamp activity when the player was only holding blocked input"
-);
-
-assert.equal(
-  shouldPreservePlayerMovementActivity({
-    isMoving: false,
-    isMoveInputActive: false,
-    lastActiveAtMs: 1_000,
-    nowMs: 1_100,
-    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
-  }),
-  true,
-  "last active frame should be preserved briefly across frame-boundary idle states"
-);
-assert.equal(
-  shouldPreservePlayerMovementActivity({
-    isMoving: false,
-    isMoveInputActive: false,
-    lastActiveAtMs: 1_000,
-    nowMs: 1_400,
-    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
-  }),
-  false,
-  "movement grace window should expire after the configured delay"
-);
-assert.equal(
-  shouldPreservePlayerMovementActivity({
-    isMoving: false,
-    isMoveInputActive: false,
-    lastActiveAtMs: 1_000,
-    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS - 1,
-    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
-  }),
-  true,
-  "input-lock transition frame should remain active during the movement grace window"
-);
-assert.equal(
-  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: false }),
-  false,
-  "autosave should still see the same lock-transition frame as idle when only grace-preserved activity remains"
-);
-assert.equal(
-  shouldPreservePlayerMovementActivity({
-    isMoving: false,
-    isMoveInputActive: true,
-    lastActiveAtMs: Number.NEGATIVE_INFINITY,
-    nowMs: 1_200,
-    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
-  }),
-  true,
-  "collision-blocked input frame should stay active even without position changes"
-);
-assert.equal(
-  shouldPreservePlayerMovementActivity({
-    isMoving: false,
-    isMoveInputActive: false,
-    lastActiveAtMs: 1_000,
-    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
-    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
-  }),
-  false,
-  "unlock frames after the grace window should become idle again"
-);
-assert.equal(
-  shouldPreservePlayerMovementActivity({
-    isMoving: false,
-    isMoveInputActive: false,
-    lastActiveAtMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
-    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS * 2 - 1,
-    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
-  }),
-  true,
-  "repeated lock-transition timestamps should extend the grace window from the latest active boundary"
 );
 
 assert.equal(

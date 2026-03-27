@@ -12,7 +12,7 @@ import {
 import { getDefaultPlayerAppearanceDefinition } from "../definitions/player/playerAppearanceDefinitions";
 import type { WorldRenderBounds } from "./WorldManager";
 
-export function resolvePlayerMovementActivityState(options: {
+function resolvePlayerMovementActivityState(options: {
   didMove: boolean;
   hasMoveInput: boolean;
   isInputLocked: boolean;
@@ -23,7 +23,7 @@ export function resolvePlayerMovementActivityState(options: {
   };
 }
 
-export function shouldPreservePlayerMovementActivity(options: {
+function shouldPreservePlayerMovementActivity(options: {
   isMoving: boolean;
   isMoveInputActive: boolean;
   lastActiveAtMs: number;
@@ -39,14 +39,14 @@ export function shouldPreservePlayerMovementActivity(options: {
 
 export const PLAYER_MOVEMENT_ACTIVITY_GRACE_MS = 250;
 
-export function hasImmediatePlayerMovementActivity(options: {
+function hasImmediatePlayerMovementActivity(options: {
   isMoving: boolean;
   isMoveInputActive: boolean;
 }) {
   return options.isMoving || options.isMoveInputActive;
 }
 
-export function hasAutoSaveMovementActivity(options: {
+function hasAutoSaveMovementActivity(options: {
   isMoving: boolean;
   hasRawMoveInput: boolean;
   isInputLocked: boolean;
@@ -54,7 +54,7 @@ export function hasAutoSaveMovementActivity(options: {
   return options.isMoving || (!options.isInputLocked && options.hasRawMoveInput);
 }
 
-export function shouldRefreshMovementActivityOnInputLock(options: {
+function shouldRefreshMovementActivityOnInputLock(options: {
   wasInputLocked: boolean;
   isMoving: boolean;
   isMoveInputActive: boolean;
