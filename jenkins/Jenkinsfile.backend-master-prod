@@ -25,6 +25,7 @@ pipeline {
     COMPOSE_ARGS = '-p prod-app --env-file docker/.env.prod -f docker/compose.app.yml'
     JAVA_HOME = '/opt/java/openjdk'
     PATH = "/opt/java/openjdk/bin:${env.PATH}"
+    EC2_SSH_KNOWN_HOSTS = credentials('ec2-deploy-known-hosts')
     N8N_DEPLOY_TOKEN = credentials('n8n-deploy-token')
   }
 
@@ -99,12 +100,25 @@ pipeline {
       }
     }
 
+    stage('Prepare SSH Known Hosts') {
+      steps {
+        sh '''
+          set -eu
+          mkdir -p "$WORKSPACE/.ssh"
+          chmod 700 "$WORKSPACE/.ssh"
+          printf '%s\n' "$EC2_SSH_KNOWN_HOSTS" > "$WORKSPACE/.ssh/known_hosts"
+          chmod 600 "$WORKSPACE/.ssh/known_hosts"
+          ssh-keygen -F "$EC2_HOST" -f "$WORKSPACE/.ssh/known_hosts" >/dev/null
+        '''
+      }
+    }
+
     stage('Sync Remote Source On EC2') {
       steps {
         sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           sh """
             set -eu
-            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+            ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\$WORKSPACE/.ssh/known_hosts ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
               git fetch --all --prune &&
               git checkout --force ${env.DEPLOY_COMMIT} &&
@@ -140,7 +154,7 @@ pipeline {
         sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           sh """
             set -eu
-            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+            ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\$WORKSPACE/.ssh/known_hosts ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
               docker build -t ${env.BACKEND_IMAGE} BackEnd
             "
@@ -157,7 +171,7 @@ pipeline {
               returnStdout: true,
               script: """
                 set -eu
-                ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+                ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\$WORKSPACE/.ssh/known_hosts ubuntu@${EC2_HOST} "
                   cd ${REMOTE_PROJECT_DIR} &&
                   if grep -q 'prod-api-green:8080' /home/ubuntu/deploy/nginx/upstreams/active-prod.conf; then
                     echo green
@@ -187,7 +201,7 @@ pipeline {
         sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           sh """
             set -eu
-            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+            ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\$WORKSPACE/.ssh/known_hosts ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
               BACKEND_IMAGE=${env.BACKEND_IMAGE} docker compose ${COMPOSE_ARGS} up -d api-${env.TARGET_COLOR}
             "
@@ -206,7 +220,7 @@ pipeline {
           ]) {
             sh '''
 set -eu
-ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "TARGET_COLOR='$TARGET_COLOR' REMOTE_PROJECT_DIR='$REMOTE_PROJECT_DIR' bash -se" <<'EOSSH'
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$WORKSPACE/.ssh/known_hosts" ubuntu@$EC2_HOST "TARGET_COLOR='$TARGET_COLOR' REMOTE_PROJECT_DIR='$REMOTE_PROJECT_DIR' bash -se" <<'EOSSH'
 set -eu
 cd $REMOTE_PROJECT_DIR
 
@@ -237,7 +251,7 @@ EOSSH
         sshagent(credentials: ['ec2-deploy-ssh-v2']) {
           sh """
             set -eu
-            ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+            ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\$WORKSPACE/.ssh/known_hosts ubuntu@${EC2_HOST} "
               cd ${REMOTE_PROJECT_DIR} &&
               printf 'upstream api_upstream_prod {\\n  server prod-api-${env.TARGET_COLOR}:8080;\\n}\\n' > /home/ubuntu/deploy/nginx/upstreams/active-prod.conf &&
               docker exec ingress-nginx-1 nginx -s reload
@@ -265,7 +279,7 @@ if [ "$TARGET_COLOR" = "blue" ]; then
   rollback_color=green
 fi
 
-ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST \
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$WORKSPACE/.ssh/known_hosts" ubuntu@$EC2_HOST \
   "TARGET_COLOR='$TARGET_COLOR' REMOTE_PROJECT_DIR='$REMOTE_PROJECT_DIR' ROLLBACK_COLOR='$rollback_color' bash -se" <<'EOSSH'
 set -eu
 cd "$REMOTE_PROJECT_DIR"
@@ -319,7 +333,7 @@ EOSSH
           sshagent(credentials: ['ec2-deploy-ssh-v2']) {
             sh """
               set -eu
-              ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} "
+              ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\$WORKSPACE/.ssh/known_hosts ubuntu@${EC2_HOST} "
                 cd ${REMOTE_PROJECT_DIR} &&
                 docker compose ${COMPOSE_ARGS} stop api-${env.TARGET_COLOR} || true &&
                 docker compose ${COMPOSE_ARGS} rm -f -s api-${env.TARGET_COLOR} || true

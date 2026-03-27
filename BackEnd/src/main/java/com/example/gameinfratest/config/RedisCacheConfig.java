@@ -1,8 +1,11 @@
 package com.example.gameinfratest.config;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.example.gameinfratest.api.dto.death.DeathDashboardResponse;
+import com.example.gameinfratest.api.dto.death.DeathRankingResponse;
+import com.example.gameinfratest.api.dto.death.DeathRecordEventResponse;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
@@ -14,8 +17,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.RedisSerializer;
 
 @Configuration
 @EnableCaching
@@ -32,28 +36,31 @@ public class RedisCacheConfig implements CachingConfigurer {
             ObjectMapper objectMapper
     ) {
         cacheProperties.validateRuntime();
-        RedisSerializationContext.SerializationPair<Object> serializer =
-                RedisSerializationContext.SerializationPair.fromSerializer(
-                        new GenericJackson2JsonRedisSerializer(cacheObjectMapper(objectMapper))
-                );
-
         RedisCacheConfiguration baseConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .serializeValuesWith(serializer)
                 .disableCachingNullValues();
+        JavaType recentDeathListType = objectMapper.getTypeFactory()
+                .constructCollectionType(List.class, DeathRecordEventResponse.class);
+        JavaType deathRankingListType = objectMapper.getTypeFactory()
+                .constructCollectionType(List.class, DeathRankingResponse.class);
 
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(baseConfig)
                 .withCacheConfiguration(
                     DEATH_RECENT_CACHE,
-                    baseConfig.entryTtl(cacheProperties.getRecentTtl())
+                    typedCacheConfig(baseConfig, objectMapper, recentDeathListType, cacheProperties.getRecentTtl())
                 )
                 .withCacheConfiguration(
                     DEATH_RANKING_CACHE,
-                    baseConfig.entryTtl(cacheProperties.getRankingTtl())
+                    typedCacheConfig(baseConfig, objectMapper, deathRankingListType, cacheProperties.getRankingTtl())
                 )
                 .withCacheConfiguration(
                     DEATH_DASHBOARD_CACHE,
-                    baseConfig.entryTtl(cacheProperties.getDashboardTtl())
+                    typedCacheConfig(
+                            baseConfig,
+                            objectMapper,
+                            objectMapper.getTypeFactory().constructType(DeathDashboardResponse.class),
+                            cacheProperties.getDashboardTtl()
+                    )
                 )
                 .build();
     }
@@ -64,7 +71,13 @@ public class RedisCacheConfig implements CachingConfigurer {
         return new CacheErrorHandler() {
             @Override
             public void handleCacheGetError(RuntimeException exception, org.springframework.cache.Cache cache, Object key) {
-                log.warn("Cache GET failed for cache={} key={}: {}", cache.getName(), key, exception.getMessage());
+                log.error(
+                        "Cache GET failed for cache={} key={} and will fall back to source of truth: {}",
+                        cache.getName(),
+                        key,
+                        exception.getMessage(),
+                        exception
+                );
             }
 
             @Override
@@ -87,13 +100,18 @@ public class RedisCacheConfig implements CachingConfigurer {
         };
     }
 
-    private ObjectMapper cacheObjectMapper(ObjectMapper objectMapper) {
-        ObjectMapper cacheMapper = objectMapper.copy();
-        cacheMapper.activateDefaultTyping(
-                BasicPolymorphicTypeValidator.builder().allowIfSubType(Object.class).build(),
-                ObjectMapper.DefaultTyping.EVERYTHING,
-                JsonTypeInfo.As.PROPERTY
-        );
-        return cacheMapper;
+    private RedisCacheConfiguration typedCacheConfig(
+            RedisCacheConfiguration baseConfig,
+            ObjectMapper objectMapper,
+            JavaType javaType,
+            java.time.Duration ttl
+    ) {
+        RedisSerializationContext.SerializationPair<Object> serializer =
+                RedisSerializationContext.SerializationPair.fromSerializer(typedSerializer(objectMapper, javaType));
+        return baseConfig.serializeValuesWith(serializer).entryTtl(ttl);
+    }
+
+    private RedisSerializer<Object> typedSerializer(ObjectMapper objectMapper, JavaType javaType) {
+        return new Jackson2JsonRedisSerializer<>(objectMapper.copy(), javaType);
     }
 }
