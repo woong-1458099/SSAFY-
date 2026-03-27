@@ -99,6 +99,19 @@ export function updatePlayerVisualFrame(
   isMoving: boolean,
   timeNow: number
 ) {
+  // 씬 전환 중 sprite나 scene이 파괴되면 접근 불가 - early return
+  if (
+    !visual ||
+    !visual.base ||
+    !visual.clothes ||
+    !visual.hair ||
+    !visual.base.scene ||
+    !visual.clothes.scene ||
+    !visual.hair.scene
+  ) {
+    return;
+  }
+
   const facingFrames = visual.asset.directionFrames[facing];
   const walkFrame = isMoving
     ? facingFrames.walk[Math.floor(timeNow / PLAYER_FRAME_DURATION) % facingFrames.walk.length]

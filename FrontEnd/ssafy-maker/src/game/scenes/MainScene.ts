@@ -548,12 +548,28 @@ export class MainScene extends Phaser.Scene {
 
   private async ensureAuthenticatedEntry(): Promise<boolean> {
     const storedSession = readStoredSession();
-    if (this.registry.get("authToken") === "bff-session" && storedSession) {
+    const authToken = this.registry.get("authToken");
+
+    // 디버그: 인증 상태 로깅
+    console.log("[MainScene] ensureAuthenticatedEntry", {
+      hasStoredSession: !!storedSession,
+      authToken
+    });
+
+    if (authToken === "bff-session" && storedSession) {
+      return true;
+    }
+
+    // 이미 세션이 있으면 API 호출 스킵 (네트워크 에러 방지)
+    if (storedSession) {
+      console.log("[MainScene] Using stored session, skipping API call");
+      applySessionToRegistry(this.registry, storedSession);
       return true;
     }
 
     const existingSession = await fetchExistingSession();
     if (!existingSession) {
+      console.warn("[MainScene] No session found, redirecting to login");
       clearAuthRegistry(this.registry);
       clearStoredSession();
       this.scene.start(SceneKey.Login);
