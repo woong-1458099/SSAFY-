@@ -42,6 +42,13 @@ export class PlayerManager {
     this.appearance = appearance;
   }
 
+  destroy() {
+    this.player?.root.destroy(true);
+    this.player = undefined;
+    this.cursors = undefined;
+    this.moveKeys = undefined;
+  }
+
   setRenderBounds(renderBounds?: WorldRenderBounds) {
     this.renderBounds = renderBounds;
 
@@ -84,6 +91,10 @@ export class PlayerManager {
 
     if (
       !this.player ||
+      !this.player.root.active ||
+      !this.player.base.active ||
+      !this.player.clothes.active ||
+      !this.player.hair.active ||
       !runtimeGrids ||
       !parsedMap
     ) {
@@ -135,7 +146,7 @@ export class PlayerManager {
   }
 
   getSnapshot(): PlayerSnapshot | undefined {
-    if (!this.player) {
+    if (!this.player || !this.player.root.active) {
       return undefined;
     }
 
@@ -148,7 +159,7 @@ export class PlayerManager {
   }
 
   debugTeleportToTile(tileX: number, tileY: number) {
-    if (!this.player) {
+    if (!this.player || !this.player.root.active) {
       return false;
     }
 

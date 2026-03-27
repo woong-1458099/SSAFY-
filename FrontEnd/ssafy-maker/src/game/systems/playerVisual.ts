@@ -25,6 +25,17 @@ function resolveSafeFrame(texture: Phaser.Textures.Texture, preferredFrame: numb
   return texture.has(String(preferredFrame)) ? preferredFrame : 0;
 }
 
+function getTextureManager(
+  sprite: Phaser.GameObjects.Sprite
+): Phaser.Textures.TextureManager | null {
+  const scene = sprite.scene;
+  if (!scene?.textures || !sprite.active) {
+    return null;
+  }
+
+  return scene.textures;
+}
+
 export function preloadPlayerVisualAssets(scene: Phaser.Scene) {
   const defaultAppearance = getDefaultPlayerAppearanceDefinition();
   const genders = Object.keys(PLAYER_APPEARANCE_LIMITS) as Array<keyof typeof PLAYER_APPEARANCE_LIMITS>;
@@ -99,6 +110,13 @@ export function updatePlayerVisualFrame(
   isMoving: boolean,
   timeNow: number
 ) {
+  const baseTextures = getTextureManager(visual.base);
+  const clothesTextures = getTextureManager(visual.clothes);
+  const hairTextures = getTextureManager(visual.hair);
+  if (!baseTextures || !clothesTextures || !hairTextures || !visual.root.active) {
+    return;
+  }
+
   const facingFrames = visual.asset.directionFrames[facing];
   const walkFrame = isMoving
     ? facingFrames.walk[Math.floor(timeNow / PLAYER_FRAME_DURATION) % facingFrames.walk.length]
@@ -112,16 +130,24 @@ export function updatePlayerVisualFrame(
   const hairTextureKey = isMoving
     ? visual.asset.hairLayer.walkTextureKey
     : visual.asset.hairLayer.idleTextureKey;
+  if (
+    !baseTextures.exists(baseTextureKey) ||
+    !clothesTextures.exists(clothesTextureKey) ||
+    !hairTextures.exists(hairTextureKey)
+  ) {
+    return;
+  }
+
   const baseFrame = resolveSafeFrame(
-    visual.base.scene.textures.get(baseTextureKey),
+    baseTextures.get(baseTextureKey),
     frame
   );
   const clothesFrame = resolveSafeFrame(
-    visual.clothes.scene.textures.get(clothesTextureKey),
+    clothesTextures.get(clothesTextureKey),
     frame
   );
   const hairFrame = resolveSafeFrame(
-    visual.hair.scene.textures.get(hairTextureKey),
+    hairTextures.get(hairTextureKey),
     frame
   );
 
