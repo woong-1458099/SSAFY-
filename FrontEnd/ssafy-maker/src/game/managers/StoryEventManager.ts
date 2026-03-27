@@ -16,6 +16,7 @@ import {
 } from "../../features/story/fixedEventNpcPresence";
 import { buildDialogueScriptFromFixedEventEntry, findMatchingFixedEvent, getFixedEventEntries, type FixedEventEntry } from "../../features/story/jsonDialogueAdapter";
 import { loadFixedEventWeek } from "../../infra/story/fixedEventRepository";
+import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
 
 export type StoryEventSnapshot = {
   completedFixedEventIds: string[];
@@ -81,7 +82,10 @@ export class StoryEventManager {
   }
 
   async initialize(week: number): Promise<void> {
-    await this.ensureWeekLoaded(week);
+    await Promise.all([
+      this.ensureWeekLoaded(week),
+      ensureAuthoredStoryLoaded(this.scene, week)
+    ]);
   }
 
   destroy(): void {
@@ -109,8 +113,11 @@ export class StoryEventManager {
     };
   }
 
-  syncWeek(week: number): void {
+  syncWeek(week: number, options?: { force?: boolean }): void {
     void this.ensureWeekLoaded(week);
+    // 일반 대화 데이터도 해당 주차에 맞게 동기화합니다.
+    // force 옵션이 true면 기존 데이터를 무시하고 강제 재로드합니다.
+    void ensureAuthoredStoryLoaded(this.scene, week, { force: options?.force });
   }
 
   debugSyncAllWeeks(): void {
@@ -515,7 +522,7 @@ export class StoryEventManager {
       getFixedEventEntries(rawData).find((event) => {
         const rawEventId = event.id ?? event.eventId;
         const eventIdStr = typeof rawEventId === "string" ? rawEventId : "";
-        
+
         if (event.eventType === "ROMANCE") {
           const gender = this.getPlayerGender();
           if (gender === "MALE" && eventIdStr.includes("_MINSU_")) return false;
@@ -568,7 +575,7 @@ export class StoryEventManager {
 
         const rawEventId = event.id ?? event.eventId;
         const eventId = typeof rawEventId === "string" ? rawEventId : "";
-        
+
         if (event.eventType === "ROMANCE") {
           const gender = this.getPlayerGender();
           if (gender === "MALE" && eventId.includes("_MINSU_")) return false;

@@ -18,6 +18,7 @@ import {
 import type { DialogueBox } from "../../features/ui/components/DialogueBox";
 import type { HudState, PlayerStatKey } from "../state/gameState";
 import { resolveRegisteredDialogue } from "../scripts/dialogues/dialogueRegistry";
+import { getCurrentLoadedWeek } from "../../infra/story/authoredStoryRepository";
 
 type DialogueRuntimeHooks = {
   getMetricValue?: (stat: DialogueRequirementStatKey) => number | string;
@@ -28,6 +29,7 @@ type DialogueRuntimeHooks = {
   patchHudState?: (next: Partial<HudState>) => void;
   onNotice?: (message: string) => void;
   runAction?: (action: DialogueAction) => void;
+  getHudState?: () => HudState;
 };
 
 export class DialogueManager {
@@ -52,6 +54,7 @@ export class DialogueManager {
   private patchHudState?: DialogueRuntimeHooks["patchHudState"];
   private onNotice?: DialogueRuntimeHooks["onNotice"];
   private runAction?: DialogueRuntimeHooks["runAction"];
+  private getHudState?: DialogueRuntimeHooks["getHudState"];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -90,6 +93,7 @@ export class DialogueManager {
     this.patchHudState = hooks.patchHudState;
     this.onNotice = hooks.onNotice;
     this.runAction = hooks.runAction;
+    this.getHudState = hooks.getHudState;
   }
 
   async play(dialogueId: string) {
@@ -200,6 +204,27 @@ export class DialogueManager {
 
     if (isRuntimeDialogueId(normalizedDialogueId)) {
       return this.runtimeDialogueScripts[normalizedDialogueId] ?? null;
+    }
+
+    // 주차별(Week) 가변 대화 지원: id_w1, id_w2 형태가 등록되어 있는지 우선 확인
+    if (this.getHudState) {
+      const hudWeek = this.getHudState().week;
+      const loadedWeek = getCurrentLoadedWeek();
+
+      // 로드된 주차와 HUD 주차가 다르면 경고 (주차 불일치 상태)
+      if (loadedWeek !== null && loadedWeek !== hudWeek) {
+        console.warn(`[Dialogue] Week mismatch! HUD: ${hudWeek}, Loaded: ${loadedWeek}. Using loaded week for dialogue lookup.`);
+      }
+
+      // 로드된 주차 데이터를 기준으로 대화를 찾음 (불일치 시 로드된 주차 우선)
+      const effectiveWeek = loadedWeek ?? hudWeek;
+      const weekSpecificId = `${normalizedDialogueId}_w${effectiveWeek}`;
+      console.log(`[Dialogue] Resolving: ${normalizedDialogueId} (HUD Week ${hudWeek}, Loaded Week ${loadedWeek}) -> Checking: ${weekSpecificId}`);
+      const weekScript = resolveRegisteredDialogue(weekSpecificId);
+      if (weekScript) {
+        console.log(`[Dialogue] Found Week-Specific: ${weekSpecificId}`);
+        return weekScript;
+      }
     }
 
     return resolveRegisteredDialogue(normalizedDialogueId);

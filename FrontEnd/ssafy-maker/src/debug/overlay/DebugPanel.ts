@@ -492,12 +492,12 @@ export class DebugPanel {
   private getEndingButtonPresets(): ButtonPreset[] {
     return [
       { label: "현재 스탯 엔딩", row: 0, col: 0, width: 130, onClick: () => this.commandBus.emit({ type: "startEndingFlow" }) },
-      { label: "FE 엔딩", row: 0, col: 1, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "frontend-developer" }) },
-      { label: "BE 엔딩", row: 0, col: 2, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "backend-developer" }) },
-      { label: "협업 엔딩", row: 1, col: 0, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "team-player" }) },
-      { label: "체력 엔딩", row: 1, col: 1, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "stamina-survivor" }) },
-      { label: "운 엔딩", row: 1, col: 2, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "lucky-break" }) },
-      { label: "프론트 리더", row: 2, col: 0, width: 130, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "frontend-leader" }) }
+      { label: "FE 엔딩", row: 0, col: 1, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "frontend_master" }) },
+      { label: "BE 엔딩", row: 0, col: 2, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "backend_master" }) },
+      { label: "대기업", row: 1, col: 0, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "largecompany" }) },
+      { label: "리더형", row: 1, col: 1, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "leader_type" }) },
+      { label: "운 엔딩", row: 1, col: 2, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "lucky_job" }) },
+      { label: "로또 엔딩", row: 2, col: 0, width: 130, onClick: () => this.commandBus.emit({ type: "startEndingFlowPreset", endingId: "lotto" }) }
     ];
   }
 

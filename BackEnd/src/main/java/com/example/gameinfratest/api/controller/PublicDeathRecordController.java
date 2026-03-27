@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/public/deaths")
+@RequestMapping("/api")
 public class PublicDeathRecordController {
     private final DeathRecordService deathRecordService;
 
@@ -20,21 +20,21 @@ public class PublicDeathRecordController {
         this.deathRecordService = deathRecordService;
     }
 
-    @GetMapping("/recent")
+    @GetMapping("/public/deaths/recent")
     public ApiResponse<List<DeathRecordEventResponse>> recentDeaths(
             @RequestParam(value = "limit", required = false) Integer limit
     ) {
         return ApiResponse.ok("public recent death list fetch success", deathRecordService.getRecentDeaths(limit));
     }
 
-    @GetMapping("/ranking")
+    @GetMapping("/public/deaths/ranking")
     public ApiResponse<List<DeathRankingResponse>> deathRanking(
             @RequestParam(value = "limit", required = false) Integer limit
     ) {
         return ApiResponse.ok("public death ranking fetch success", deathRecordService.getDeathRanking(limit));
     }
 
-    @GetMapping("/dashboard")
+    @GetMapping("/public/deaths/dashboard")
     public ApiResponse<DeathDashboardResponse> deathDashboard(
             @RequestParam(value = "recentLimit", required = false) Integer recentLimit,
             @RequestParam(value = "rankingLimit", required = false) Integer rankingLimit

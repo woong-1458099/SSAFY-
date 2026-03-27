@@ -30,6 +30,8 @@ export interface DeathDashboardResponse {
   topDeathCounts: DeathRankingEntry[];
 }
 
+const ROUTE_NOT_FOUND_CODE = "ROUTE_NOT_FOUND";
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_PREFIX}${path}`, {
     credentials: "include",
@@ -51,7 +53,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     payload = JSON.parse(raw) as ApiResponse<T>;
   } catch {
+    if (response.status === 404) {
+      throw new DeathDashboardUnavailableError();
+    }
     throw new Error(raw || "Death API request failed");
+  }
+
+  if (response.status === 404 || payload.code === ROUTE_NOT_FOUND_CODE) {
+    throw new DeathDashboardUnavailableError();
   }
 
   if (!response.ok || payload.code !== "OK") {

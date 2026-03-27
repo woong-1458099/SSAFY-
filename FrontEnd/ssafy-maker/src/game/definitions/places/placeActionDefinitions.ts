@@ -63,7 +63,7 @@ export const HOME_ACTION_DEFINITIONS: Record<HomeActionId, HomeActionDefinition>
 export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDefinition> = {
   cafe: {
     title: "카페",
-    description: "커피 비용 7,000G\n체력 회복 / 스트레스 감소 / FE 상승",
+    description: "커피 비용 7,000G\nHP +8 / 스트레스 -10 / FE +1",
     actionText: "커피 마시기",
     cost: 7000,
     hpDelta: 8,
@@ -73,14 +73,14 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   store: {
     title: "편의점",
-    description: "소모품과 장비를 구매할 수 있습니다.",
+    description: "소모품과 장비를 구매할 수 있습니다.\n아이템별 수치는 상점 목록에서 확인할 수 있습니다.",
     actionText: "상점 열기",
     cost: 0,
     toastMessage: "편의점을 이용합니다"
   },
   gym: {
     title: "헬스장",
-    description: "이용 비용 15,000G\n최대 체력 상승 / 스트레스 감소 / 협업 상승",
+    description: "이용 비용 15,000G\n최대 기준: HP -4 / 스트레스 -8 / HPMAX +8 / 협업 +4",
     actionText: "운동하기",
     cost: 15000,
     hpDelta: -4,
@@ -92,7 +92,7 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   ramen: {
     title: "라멘집",
-    description: "이용 비용 9,000G\n체력 회복 / 스트레스 감소",
+    description: "이용 비용 9,000G\n최대 기준: HP +30 / 스트레스 -8 / 협업 +4",
     actionText: "라멘 먹기",
     cost: 9000,
     hpDelta: 20,
@@ -102,7 +102,7 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   lotto: {
     title: "복권 판매점",
-    description: "이용 비용 8,000G\n복권으로 대박을 노릴 수 있습니다.",
+    description: "이용 비용 8,000G\n능력치 변화 없음 / 1등 당첨 시 즉시 로또 엔딩",
     actionText: "복권 구매",
     cost: 8000,
     minigameSceneKey: "LottoScene",
@@ -110,7 +110,7 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   karaoke: {
     title: "노래방",
-    description: "이용 비용 16,000G\n스트레스 감소 / 협업 상승",
+    description: "이용 비용 16,000G\n최대 기준: HP -4 / 스트레스 -14 / FE +8 / 협업 +6",
     actionText: "노래 부르기",
     cost: 16000,
     hpDelta: -4,
@@ -121,7 +121,7 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   beer: {
     title: "호프집",
-    description: "이용 비용 12,000G\n스트레스 감소 / 협업 상승 / 운 상승",
+    description: "이용 비용 12,000G\n최대 기준: HP -9 / 스트레스 -16 / 협업 +6 / 운 +1",
     actionText: "맥주 마시기",
     cost: 12000,
     hpDelta: -9,

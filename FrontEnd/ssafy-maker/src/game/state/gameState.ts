@@ -17,11 +17,17 @@ export type HudState = {
 
 export type PlayerStatsState = Record<PlayerStatKey, number>;
 
+export type EndingProgressState = {
+  gamePlayCount: number;
+  lottoRank: number | null;
+};
+
 export type RuntimeGameState = {
   hud: HudState;
   stats: PlayerStatsState;
   affection: Record<string, number>;
   flags: string[];
+  endingProgress: EndingProgressState;
 };
 
 export const DEFAULT_HUD_STATE: HudState = {
@@ -45,12 +51,18 @@ export const DEFAULT_STATS_STATE: PlayerStatsState = {
   stress: 20,
 };
 
+export const DEFAULT_ENDING_PROGRESS_STATE: EndingProgressState = {
+  gamePlayCount: 0,
+  lottoRank: null,
+};
+
 export function createDefaultGameState(): RuntimeGameState {
   return {
     hud: { ...DEFAULT_HUD_STATE },
     stats: { ...DEFAULT_STATS_STATE },
     affection: {},
-    flags: []
+    flags: [],
+    endingProgress: { ...DEFAULT_ENDING_PROGRESS_STATE }
   };
 }
 
@@ -59,7 +71,14 @@ export function cloneGameState(state: RuntimeGameState): RuntimeGameState {
     hud: { ...state.hud },
     stats: { ...state.stats },
     affection: { ...(state.affection || {}) },
-    flags: [...(state.flags || [])]
+    flags: [...(state.flags || [])],
+    endingProgress: {
+      gamePlayCount: Math.max(0, Math.round(state.endingProgress?.gamePlayCount ?? 0)),
+      lottoRank:
+        typeof state.endingProgress?.lottoRank === "number"
+          ? Phaser.Math.Clamp(Math.round(state.endingProgress.lottoRank), 1, 5)
+          : null
+    }
   };
 }
 
