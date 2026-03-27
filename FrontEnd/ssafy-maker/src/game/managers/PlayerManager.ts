@@ -113,6 +113,7 @@ export class PlayerManager {
   // `hasRawMoveInput` tracks held directional intent even while gameplay input is locked.
   private hasRawMoveInput = false;
   private lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
+  private preserveAutoSaveGateDuringInputLock = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -130,6 +131,7 @@ export class PlayerManager {
     this.isMoving = false;
     this.isMoveInputActive = false;
     this.hasRawMoveInput = false;
+    this.preserveAutoSaveGateDuringInputLock = false;
     this.lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
   }
 
@@ -165,7 +167,14 @@ export class PlayerManager {
     };
   }
 
-  setInputLocked(locked: boolean) {
+  setInputLocked(
+    locked: boolean,
+    options?: {
+      preserveAutoSaveGateDuringLockTransition?: boolean;
+    }
+  ) {
+    this.preserveAutoSaveGateDuringInputLock =
+      options?.preserveAutoSaveGateDuringLockTransition === true;
     if (this.isInputLocked !== locked) {
       // Reset raw input on lock transitions so autosave does not read a stale held-key snapshot
       // before the next update tick resamples keyboard state.
@@ -311,7 +320,7 @@ export class PlayerManager {
     const autoSaveGateActive = hasAutoSaveGateActivity({
       autoSaveActive,
       graceActive,
-      isInputLocked: this.isInputLocked
+      isInputLocked: this.isInputLocked && this.preserveAutoSaveGateDuringInputLock
     });
 
     return {

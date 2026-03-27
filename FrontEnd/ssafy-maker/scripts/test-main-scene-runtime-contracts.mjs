@@ -313,10 +313,24 @@ const movementCases = [
       isMoveInputActive: false,
       hasRawMoveInput: true,
       isInputLocked: true,
+      preserveAutoSaveGateDuringInputLock: true,
       lastMovementActivityAtMs: 1_000,
       scene: { time: { now: 1_050 } }
     },
     expected: { immediateActive: false, autoSaveActive: false, autoSaveGateActive: true, graceActive: true }
+  },
+  {
+    name: "ui-style input locks do not keep autosave gate active",
+    snapshot: {
+      isMoving: false,
+      isMoveInputActive: false,
+      hasRawMoveInput: true,
+      isInputLocked: true,
+      preserveAutoSaveGateDuringInputLock: false,
+      lastMovementActivityAtMs: 1_000,
+      scene: { time: { now: 1_050 } }
+    },
+    expected: { immediateActive: false, autoSaveActive: false, autoSaveGateActive: false, graceActive: true }
   },
   {
     name: "idle frames stay inactive",
@@ -355,6 +369,7 @@ const movementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.cal
   isMoveInputActive: false,
   hasRawMoveInput: true,
   isInputLocked: true,
+  preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
 });
@@ -396,6 +411,7 @@ const lockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapsh
   isMoveInputActive: false,
   hasRawMoveInput: true,
   isInputLocked: true,
+  preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
 });
@@ -414,6 +430,7 @@ const longLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySn
   isMoveInputActive: false,
   hasRawMoveInput: false,
   isInputLocked: true,
+  preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_000 + PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS + 1 } }
 });
@@ -458,20 +475,49 @@ const lockTransitionManager = {
   hasRawMoveInput: true,
   isMoving: false,
   isMoveInputActive: true,
+  preserveAutoSaveGateDuringInputLock: false,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
 };
-PlayerManager.prototype.setInputLocked.call(lockTransitionManager, true);
+PlayerManager.prototype.setInputLocked.call(lockTransitionManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
 assert.equal(
   lockTransitionManager.hasRawMoveInput,
   false,
   "locking input should clear stale raw movement intent before the next update tick"
 );
-PlayerManager.prototype.setInputLocked.call(lockTransitionManager, false);
+assert.equal(
+  lockTransitionManager.preserveAutoSaveGateDuringInputLock,
+  true,
+  "interaction-style input locks should opt into autosave gate preservation"
+);
+PlayerManager.prototype.setInputLocked.call(lockTransitionManager, false, {
+  preserveAutoSaveGateDuringLockTransition: false
+});
 assert.equal(
   lockTransitionManager.hasRawMoveInput,
   false,
   "unlocking input should also clear stale raw movement intent until update resamples current input"
+);
+assert.equal(
+  lockTransitionManager.preserveAutoSaveGateDuringInputLock,
+  false,
+  "unlocking or non-transition locks should clear autosave gate preservation hints"
+);
+const uiLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: true,
+  isInputLocked: true,
+  preserveAutoSaveGateDuringInputLock: false,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  uiLockedMovementSnapshot.autoSaveGateActive,
+  false,
+  "non-interaction input locks should not extend autosave gating through grace-only activity"
 );
 assert.equal(
   PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({

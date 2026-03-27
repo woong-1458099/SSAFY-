@@ -1012,8 +1012,9 @@ export class MainScene extends Phaser.Scene {
         debugPanelVisible ||
         debugTileEditorVisible
     );
+    const interactionInputLocked = this.interactionManager.isInputLocked();
     const gameplayInputLocked =
-      this.interactionManager.isInputLocked() ||
+      interactionInputLocked ||
       deathSequenceActive ||
       debugHudVisible ||
       debugPanelVisible ||
@@ -1021,7 +1022,9 @@ export class MainScene extends Phaser.Scene {
       menuOpen ||
       placePopupOpen ||
       plannerOpen;
-    this.playerManager.setInputLocked(gameplayInputLocked);
+    this.playerManager.setInputLocked(gameplayInputLocked, {
+      preserveAutoSaveGateDuringLockTransition: interactionInputLocked
+    });
 
     if (
       this.escapeKey &&
