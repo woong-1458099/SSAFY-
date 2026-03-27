@@ -1,0 +1,160 @@
+{
+  "dialogues": [
+    {
+      "id": "minsu_intro_w6",
+      "label": "민수 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "프로젝트 구현 막바지네. 리팩토링 할 시간 없으니까 기능 완성에 중점을 두라."
+        }
+      }
+    },
+    {
+      "id": "npc_hyewon_w6",
+      "label": "혜원 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "혜원",
+          "text": "거의 다 되어가! 우리 팀 결과물 보면 다들 놀랄 거야. 내가 막바지까지 도와줄게!"
+        }
+      }
+    },
+    {
+      "id": "npc_minseok_w6",
+      "label": "민석 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민석",
+          "text": "버그가 살짝씩 나오네요. 우선 크리티컬한 것부터 잡으세요."
+        }
+      }
+    },
+    {
+      "id": "npc_myungjin_w6",
+      "label": "명진 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "명진",
+          "text": "발표 자료 정리 중이야. 동영상 시연 잘 되는 지 확인 부탁해!"
+        }
+      }
+    },
+    {
+      "id": "npc_yeonwoong_w6",
+      "label": "연웅 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "연웅",
+          "text": "막바지 스프린트...! 삼닭 동력으로 버티는 중이야. 곧 끝난다!"
+        }
+      }
+    },
+    {
+      "id": "npc_hyoryeon_w6",
+      "label": "효련 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "효련",
+          "text": "애니메이션 디테일 좀 더 손봤어. 화면이 훨씬 생동감 있지?"
+        }
+      }
+    },
+    {
+      "id": "npc_jiwoo_w6",
+      "label": "지우 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "지우",
+          "text": "배포 테스트 성공했어! 이제 시연 만 잘 하면 되겠네."
+        }
+      }
+    },
+    {
+      "id": "npc_jongmin_w6",
+      "label": "종민 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "종민",
+          "text": "다들 고생 많으셨습니다. 막바지까지 중요한 부분 놓치지 마세요."
+        }
+      }
+    },
+    {
+      "id": "npc_minsu_w6",
+      "label": "민수 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "프로젝트 점수... 장~담~모한다~"
+        }
+      }
+    },
+    {
+      "id": "npc_sunmi_w6",
+      "label": "조선미 프로 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "조선미 프로",
+          "text": "드디어 1학기 첫 관문이 끝나가네요. 여러분이 정말 자랑스러워요!"
+        }
+      }
+    },
+    {
+      "id": "npc_doyeon_w6",
+      "label": "김도연 프로 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김도연 프로",
+          "text": "결과보다는 과정이 중요해요. 수고 많으셨어요!"
+        }
+      }
+    },
+    {
+      "id": "npc_hyunseok_w6",
+      "label": "이현석 컨설턴트 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "이현석 컨설턴트",
+          "text": "피드백을 겸허하게 수용하고 다음 스텝으로 나아가세요."
+        }
+      }
+    },
+    {
+      "id": "npc_nayool_w6",
+      "label": "김나율 프로 (6주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김나율 프로",
+          "text": "발표회 때 맛있는 게 많이 준비할게요! 화이팅!"
+        }
+      }
+    }
+  ]
+}

@@ -145,22 +145,46 @@ function readCachedAuthoredStory(scene?: Phaser.Scene): {
   return { dialoguesRaw, sceneStatesRaw };
 }
 
-async function loadAuthoredStoryJson(scene?: Phaser.Scene): Promise<{
-  dialoguesRaw: unknown;
+function getWeekDialoguePath(week: number): string {
+  switch (week) {
+    case 1: return ASSET_PATHS.story.authoredDialoguesW1;
+    case 2: return ASSET_PATHS.story.authoredDialoguesW2;
+    case 3: return ASSET_PATHS.story.authoredDialoguesW3;
+    case 4: return ASSET_PATHS.story.authoredDialoguesW4;
+    case 5: return ASSET_PATHS.story.authoredDialoguesW5;
+    case 6: return ASSET_PATHS.story.authoredDialoguesW6;
+    default: return ASSET_PATHS.story.authoredDialoguesW1;
+  }
+}
+
+async function loadAuthoredStoryJson(scene?: Phaser.Scene, week: number = 1): Promise<{
+  dialoguesChunksRaw: unknown[];
   sceneStatesRaw: unknown;
 }> {
-  const cached = readCachedAuthoredStory(scene);
-  if (cached) {
-    return cached;
-  }
-
   try {
-    const [dialoguesRaw, sceneStatesRaw] = await Promise.all([
-      loadJson(`${ASSET_PATHS.story.authoredDialogues}`),
+    const weekPath = getWeekDialoguePath(week);
+
+    // dialogues.json (레거시), dialogues_common.json, 그리고 현재 주차 파일을 함께 로드합니다.
+    const [legacyRaw, commonRaw, weekRaw, sceneStatesRaw] = await Promise.all([
+      loadJson(`${ASSET_PATHS.story.authoredDialogues}`).catch((e) => {
+        console.warn(`[StoryRepo] Failed to load legacy dialogues: ${e.message}`);
+        return { dialogues: [] };
+      }),
+      loadJson(`${ASSET_PATHS.story.authoredDialoguesCommon}`).catch((e) => {
+        console.warn(`[StoryRepo] Failed to load common dialogues: ${e.message}`);
+        return { dialogues: [] };
+      }),
+      loadJson(`${weekPath}`).catch((e) => {
+        console.warn(`[StoryRepo] Failed to load week ${week} dialogues from ${weekPath}: ${e.message}`);
+        return { dialogues: [] };
+      }),
       loadJson(`${ASSET_PATHS.story.authoredSceneStates}`)
     ]);
 
-    return { dialoguesRaw, sceneStatesRaw };
+    return {
+      dialoguesChunksRaw: [legacyRaw, commonRaw, weekRaw],
+      sceneStatesRaw
+    };
   } catch (error) {
     throw new AuthoredStoryLoadError("fetch", ["authored JSON fetch에 실패했습니다."], error);
   }
@@ -177,14 +201,53 @@ function installFallbackAuthoredStory(error: unknown): void {
   applyAuthoredStoryAssets(createFallbackAuthoredStoryAssets());
 }
 
-export async function ensureAuthoredStoryLoaded(scene?: Phaser.Scene): Promise<void> {
-  if (loadPromise) {
+let currentLoadedWeek: number | null = null;
+let lastRequestedWeek: number | null = null;
+
+/**
+ * 현재 로드된 주차를 반환합니다.
+ * DialogueManager 등에서 주차 동기화 상태를 확인할 때 사용합니다.
+ */
+export function getCurrentLoadedWeek(): number | null {
+  return currentLoadedWeek;
+}
+
+export async function ensureAuthoredStoryLoaded(
+  scene?: Phaser.Scene,
+  week: number = 1,
+  options?: { force?: boolean }
+): Promise<void> {
+  // force 모드일 경우 기존 상태를 초기화하고 강제 재로드
+  if (options?.force) {
+    console.log(`[StoryRepo] Force reload requested for Week ${week}, clearing previous state (was Week ${currentLoadedWeek})`);
+    loadPromise = null;
+    currentLoadedWeek = null;
+    lastRequestedWeek = null;
+  }
+
+  // 이미 해당 주차의 스토리가 로드되어 있다면 건너뜁니다.
+  if (loadPromise && currentLoadedWeek === week) {
     return loadPromise;
   }
 
-  loadPromise = loadAuthoredStoryJson(scene)
-    .then(({ dialoguesRaw, sceneStatesRaw }) => {
-      const authoredStory = buildAuthoredStoryAssetsFromJson(dialoguesRaw, sceneStatesRaw);
+  // 주차가 다르면 로그를 남깁니다 (디버깅 용도)
+  if (currentLoadedWeek !== null && currentLoadedWeek !== week) {
+    console.log(`[StoryRepo] Week change detected: ${currentLoadedWeek} -> ${week}, reloading...`);
+  }
+
+  const requestedWeek = week;
+  lastRequestedWeek = week;
+
+  loadPromise = loadAuthoredStoryJson(scene, week)
+    .then(({ dialoguesChunksRaw, sceneStatesRaw }) => {
+      // 만약 그 사이 다른 주차 로드 요청이 새로 들어왔다면 (lastRequestedWeek가 바뀌었다면) 
+      // 이 결과는 적용하지 않고 버립니다.
+      if (lastRequestedWeek !== requestedWeek) {
+        console.warn(`[StoryRepo] Discarding stale load for Week ${requestedWeek} (current requested: ${lastRequestedWeek})`);
+        return;
+      }
+
+      const authoredStory = buildAuthoredStoryAssetsFromJson(dialoguesChunksRaw, sceneStatesRaw, week);
       if (authoredStory.fatalIssues.length > 0) {
         throw new AuthoredStoryLoadError("hydrate", authoredStory.fatalIssues);
       }
@@ -194,10 +257,15 @@ export async function ensureAuthoredStoryLoaded(scene?: Phaser.Scene): Promise<v
         throw new AuthoredStoryLoadError("preflight", preflightIssues);
       }
 
+      // 최종 적용 직전에 한 번 더 체크 (간단한 낙관적 락 개념)
       applyAuthoredStoryAssets(authoredStory);
+      currentLoadedWeek = week;
+      console.log(`[StoryRepo] Successfully applied authored story for Week ${week}`);
     })
     .catch((error) => {
+      // 갱신된 요청 때문에 발생한 에러가 아니라면 처리
       installFallbackAuthoredStory(error);
+      currentLoadedWeek = null;
     });
 
   return loadPromise;
