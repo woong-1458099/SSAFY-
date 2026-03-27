@@ -1,4 +1,4 @@
-import type { PlaceId } from "../../../common/enums/area";
+﻿import type { PlaceId } from "../../../common/enums/area";
 import type { LegacyMinigameSceneKey } from "../../../features/minigame/minigameSceneKeys";
 import type { PlayerStatKey } from "../../state/gameState";
 
@@ -63,12 +63,12 @@ export const HOME_ACTION_DEFINITIONS: Record<HomeActionId, HomeActionDefinition>
 export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDefinition> = {
   cafe: {
     title: "카페",
-    description: "커피 비용 7,000G\nHP +8 / 스트레스 -10 / FE +1",
+    description: "커피 비용 7,000G\nHP +8 / 스트레스 -10 / 운 +10",
     actionText: "커피 마시기",
     cost: 7000,
     hpDelta: 8,
     stressDelta: -10,
-    statDelta: { fe: 1 },
+    statDelta: { luck: 10 },
     toastMessage: "카페에서 휴식했습니다"
   },
   store: {
@@ -80,29 +80,29 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   gym: {
     title: "헬스장",
-    description: "이용 비용 15,000G\n최대 기준: HP -4 / 스트레스 -8 / HPMAX +10",
+    description: "이용 비용 10,000G\n최대 기준: HP -4 / 스트레스 -8 / HPMAX +12",
     actionText: "운동하기",
-    cost: 15000,
+    cost: 10000,
     hpDelta: -4,
-    hpMaxDelta: 4,
+    hpMaxDelta: 6,
     stressDelta: -8,
     minigameSceneKey: "GymScene",
     toastMessage: "운동을 시작합니다"
   },
   ramen: {
     title: "라멘집",
-    description: "이용 비용 9,000G\n최대 기준: HP +30 / 스트레스 -8 / BE +5",
+    description: "이용 비용 15,000G\nHP +20 / 스트레스 -8 / BE +7",
     actionText: "라멘 먹기",
-    cost: 9000,
+    cost: 15000,
     hpDelta: 20,
     stressDelta: -8,
-    statDelta: { be: 1 },
+    statDelta: { be: 7 },
     minigameSceneKey: "CookingScene",
     toastMessage: "라멘을 먹고 회복했습니다"
   },
   lotto: {
     title: "복권 판매점",
-    description: "이용 비용 8,000G\n운 +3 / 1등 당첨 시 즉시 로또 엔딩",
+    description: "이용 비용 8,000G\n운 +7 / 1등 당첨 시 즉시 로또 엔딩",
     actionText: "복권 구매",
     cost: 8000,
     minigameSceneKey: "LottoScene",
@@ -110,22 +110,23 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   karaoke: {
     title: "노래방",
-    description: "이용 비용 16,000G\n최대 기준: HP -4 / 스트레스 -14 / FE +8",
+    description: "이용 비용 12,000G\nHP -4 / 스트레스 -14 / FE +6",
     actionText: "노래 부르기",
-    cost: 16000,
+    cost: 12000,
     hpDelta: -4,
     stressDelta: -14,
+    statDelta: { fe: 6 },
     minigameSceneKey: "RhythmScene",
     toastMessage: "노래방을 이용합니다"
   },
   beer: {
     title: "호프집",
-    description: "이용 비용 12,000G\n최대 기준: HP -9 / 스트레스 -16 / 협업 +6",
+    description: "이용 비용 12,000G\nHP -9 / 스트레스 -10 / 협업 +8",
     actionText: "맥주 마시기",
     cost: 12000,
     hpDelta: -9,
     stressDelta: -10,
-    statDelta: { teamwork: 2 },
+    statDelta: { teamwork: 8 },
     minigameSceneKey: "DrinkingScene",
     toastMessage: "호프집을 이용합니다"
   }
