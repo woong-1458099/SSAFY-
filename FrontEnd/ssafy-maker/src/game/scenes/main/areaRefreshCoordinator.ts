@@ -15,7 +15,10 @@ export class MainSceneAreaRefreshCoordinator {
   private readonly scene: Phaser.Scene;
   private readonly refresh: AreaRefreshCoordinatorOptions["refresh"];
   private readonly canRefresh: AreaRefreshCoordinatorOptions["canRefresh"];
-  private pendingTimer?: Phaser.Time.TimerEvent;
+  private pendingTask?: {
+    requestId: number;
+    timer: Phaser.Time.TimerEvent;
+  };
   private pendingRequestId = 0;
   private shutdownHandler: () => void;
   private isDisposed = false;
@@ -44,7 +47,7 @@ export class MainSceneAreaRefreshCoordinator {
 
     this.clear();
     const requestId = ++this.pendingRequestId;
-    this.pendingTimer = this.scene.time.delayedCall(0, () => {
+    const timer = this.scene.time.delayedCall(0, () => {
       try {
         if (this.pendingRequestId !== requestId || !this.canRefresh()) {
           return;
@@ -52,9 +55,10 @@ export class MainSceneAreaRefreshCoordinator {
 
         this.refresh(expectedAreaId, expectedPlayerSnapshot, requestId);
       } finally {
-        this.finalize(requestId);
+        this.finalize(requestId, timer);
       }
     });
+    this.pendingTask = { requestId, timer };
   }
 
   clear(): void {
@@ -76,13 +80,21 @@ export class MainSceneAreaRefreshCoordinator {
     this.isDisposed = true;
   }
 
-  finalize(requestId?: number): void {
-    if (requestId !== undefined && requestId !== this.pendingRequestId) {
+  finalize(requestId?: number, timer?: Phaser.Time.TimerEvent): void {
+    if (!this.pendingTask) {
       return;
     }
 
-    this.pendingTimer?.remove(false);
-    this.pendingTimer = undefined;
+    if (requestId !== undefined && requestId !== this.pendingTask.requestId) {
+      return;
+    }
+
+    if (timer !== undefined && timer !== this.pendingTask.timer) {
+      return;
+    }
+
+    this.pendingTask.timer.remove(false);
+    this.pendingTask = undefined;
   }
 
   private cancelPending(): void {

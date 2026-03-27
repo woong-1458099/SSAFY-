@@ -106,6 +106,7 @@ export class PlayerManager {
       !runtimeGrids ||
       !parsedMap
     ) {
+      this.commitMovementState(false, false);
       return;
     }
 
