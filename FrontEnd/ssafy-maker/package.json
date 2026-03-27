@@ -17,9 +17,10 @@
     "validate:tmx-patch-layers": "node scripts/validate-tmx-patch-layers.mjs",
     "test:tmx-navigation-policy": "node scripts/test-tmx-navigation-policy.mjs",
     "test:main-scene-runtime-contracts": "node scripts/test-main-scene-runtime-contracts.mjs",
-    "build": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:game-assets && npm run validate:tmx-patch-layers && npm run test:tmx-navigation-policy && npm run validate:fixed-events && vite build",
+    "test": "npm run test:tmx-navigation-policy && npm run test:main-scene-runtime-contracts && npm run test:authored-story-validator",
+    "build": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:game-assets && npm run validate:tmx-patch-layers && npm run test:tmx-navigation-policy && npm run test:main-scene-runtime-contracts && npm run validate:fixed-events && vite build",
     "preview": "vite preview",
-    "validate": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:game-assets && npm run validate:tmx-patch-layers && npm run test:tmx-navigation-policy && npm run validate:authored-story && npm run validate:fixed-events && npm run test:authored-story-validator",
+    "validate": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:game-assets && npm run validate:tmx-patch-layers && npm run test:tmx-navigation-policy && npm run test:main-scene-runtime-contracts && npm run validate:authored-story && npm run validate:fixed-events && npm run test:authored-story-validator",
     "validate:authored-story": "node scripts/validate-authored-story.mjs",
     "validate:fixed-events": "node scripts/validate-fixed-events.mjs",
     "test:authored-story-validator": "node scripts/test-authored-story-validator.mjs"
