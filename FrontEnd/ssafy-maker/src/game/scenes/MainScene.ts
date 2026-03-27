@@ -26,7 +26,15 @@ import type { EndingFlowPayload } from "../../features/progression/types/ending"
 import type { EndingId } from "../../features/progression/types/ending";
 import { resolveEnding } from "../../features/progression/services/endingResolver";
 import { issueDeathRecordToken, recordCurrentUserDeath } from "../../features/auth/api";
-import { beginLogout, clearAuthRegistry, clearStoredSession, patchStoredSessionUser, readStoredSession } from "../../features/auth/authSession";
+import {
+  applySessionToRegistry,
+  beginLogout,
+  clearAuthRegistry,
+  clearStoredSession,
+  fetchExistingSession,
+  patchStoredSessionUser,
+  readStoredSession
+} from "../../features/auth/authSession";
 import { SceneKey } from "../../shared/enums/sceneKey";
 import { trackGameStart, trackWeeklyProgressSnapshot } from "../../shared/lib/analytics";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
@@ -137,6 +145,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   async create() {
+    if (!(await this.ensureAuthenticatedEntry())) {
+      return;
+    }
+
     this.initialized = false;
     this.logoutInProgress = false;
     this.deathSequenceActive = false;
@@ -532,6 +544,24 @@ export class MainScene extends Phaser.Scene {
     // 첫 진입 직후 한 프레임 뒤에 현재 맵을 같은 좌표계로 다시 맞춘다.
     // 다른 맵을 갔다 돌아오면 정상화되던 초기 렌더 불안정을 여기서 흡수한다.
     this.queueInitialAreaRefresh(currentArea, this.playerManager.getSnapshot());
+  }
+
+  private async ensureAuthenticatedEntry(): Promise<boolean> {
+    const storedSession = readStoredSession();
+    if (this.registry.get("authToken") === "bff-session" && storedSession) {
+      return true;
+    }
+
+    const existingSession = await fetchExistingSession();
+    if (!existingSession) {
+      clearAuthRegistry(this.registry);
+      clearStoredSession();
+      this.scene.start(SceneKey.Login);
+      return false;
+    }
+
+    applySessionToRegistry(this.registry, existingSession);
+    return true;
   }
 
   private async handleLogout(): Promise<void> {

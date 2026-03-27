@@ -123,7 +123,6 @@ export class LoginScene extends Phaser.Scene {
             <div id="auth-form" style="margin-top:12px;display:block;flex:0 0 auto;min-height:auto;max-height:none;overflow:hidden;padding-right:0;"></div>
           </div>
           <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">로그인</button>
-          <button id="auth-bypass" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[개발용] 인증 없이 입장</button>
         </section>
       </div>
     `;
@@ -140,9 +139,8 @@ export class LoginScene extends Phaser.Scene {
     const recentList = node.querySelector<HTMLElement>("#death-recent-list");
     const rankingList = node.querySelector<HTMLElement>("#death-ranking-list");
     const submit = node.querySelector<HTMLButtonElement>("#auth-submit");
-    const bypassBtn = node.querySelector<HTMLButtonElement>("#auth-bypass");
 
-    if (!title || !message || !form || !recentList || !rankingList || !submit || !bypassBtn) {
+    if (!title || !message || !form || !recentList || !rankingList || !submit) {
       return;
     }
 
@@ -389,19 +387,6 @@ export class LoginScene extends Phaser.Scene {
     });
     submit.addEventListener("click", onSubmitClick);
 
-    const onBypassClick = () => {
-      setMessage("개발용 로컬 계정으로 입장합니다.", "success");
-      this.registry.set("authToken", "dummy-bypass-token");
-      this.registry.set("authUser", {
-        id: "local_test_user_001",
-        email: "tester@ssafy.com",
-        nickname: "테스터"
-      });
-
-      this.time.delayedCall(250, () => this.scene.start(SceneKey.Start));
-    };
-    bypassBtn.addEventListener("click", onBypassClick);
-
     this.submitHandler = onSubmitClick;
     renderView("login");
     initializeSession();
@@ -422,7 +407,6 @@ export class LoginScene extends Phaser.Scene {
       window.removeEventListener("pageshow", onPageShow);
       window.removeEventListener("focus", onWindowFocus);
       submit.removeEventListener("click", onSubmitClick);
-      bypassBtn.removeEventListener("click", onBypassClick);
       this.root?.destroy();
       this.root = undefined;
       this.submitHandler = undefined;
