@@ -17,6 +17,7 @@ Current split:
 - `areaRefreshCoordinator.ts`
   - Deferred area rerender request lifecycle management.
   - Tracks request ownership and refresh-in-progress state for frame-boundary requeue safety.
+  - Refresh helpers may be async; the coordinator keeps the running state until that work settles.
 - `ending.ts`
   - Ending preset payload helpers.
 - `fixedEventDebug.ts`

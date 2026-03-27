@@ -1794,6 +1794,7 @@ hudWeek: number): number {
       return false;
     }
 
+    // Autosave treats both real movement and blocked movement input as active play.
     if (this.playerManager?.isMovementActivityInProgress() === true) {
       return false;
     }

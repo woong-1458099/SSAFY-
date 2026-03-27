@@ -7,7 +7,7 @@ type AreaRefreshCoordinatorOptions = {
     expectedAreaId?: AreaId,
     expectedPlayerSnapshot?: { tileX: number; tileY: number },
     requestId?: number
-  ) => void;
+  ) => void | Promise<void>;
   canRefresh: () => boolean;
 };
 
@@ -57,17 +57,24 @@ export class MainSceneAreaRefreshCoordinator {
       timer: undefined as Phaser.Time.TimerEvent | undefined
     };
     const timer = this.scene.time.delayedCall(0, () => {
-      try {
-        if (this.pendingRequestId !== requestId || !this.canRefresh()) {
-          return;
-        }
-
-        this.isRefreshRunning = true;
-        this.refresh(expectedAreaId, expectedPlayerSnapshot, requestId);
-      } finally {
-        this.isRefreshRunning = false;
+      if (this.pendingRequestId !== requestId || !this.canRefresh()) {
         this.finalize(requestId, pendingTask);
+        return;
       }
+
+      this.isRefreshRunning = true;
+      void Promise.resolve()
+        .then(() => this.refresh(expectedAreaId, expectedPlayerSnapshot, requestId))
+        .catch((error) => {
+          console.error("[MainSceneAreaRefreshCoordinator] refresh failed", {
+            requestId,
+            error
+          });
+        })
+        .finally(() => {
+          this.isRefreshRunning = false;
+          this.finalize(requestId, pendingTask);
+        });
     });
     pendingTask.timer = timer;
     this.pendingTask = {
