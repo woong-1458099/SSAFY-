@@ -1,4 +1,4 @@
-import type { HudState, PlayerStatKey } from "../../game/state/gameState";
+﻿import type { HudState, PlayerStatKey } from "../../game/state/gameState";
 
 export type EquipmentSlotKey = "keyboard" | "mouse";
 
@@ -58,11 +58,11 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     equipSlot: "keyboard",
     price: 35000,
     sellPrice: 17500,
-    effect: "FE 능력치 +5",
+    effect: "FE +10, BE +10",
     stackable: false,
     color: 0x78a6d1,
     iconKey: "shop-item-keyboard",
-    statDelta: { fe: 5 }
+    statDelta: { fe: 10, be: 10 }
   },
   {
     templateId: "mouse-gaming",
@@ -72,11 +72,11 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     equipSlot: "mouse",
     price: 35000,
     sellPrice: 17500,
-    effect: "BE 능력치 +5",
+    effect: "협업 +10, 운 +10",
     stackable: false,
     color: 0x9a86d4,
     iconKey: "shop-item-mouse",
-    statDelta: { be: 5 }
+    statDelta: { teamwork: 10, luck: 10 }
   },
   {
     templateId: "item-chocolate",

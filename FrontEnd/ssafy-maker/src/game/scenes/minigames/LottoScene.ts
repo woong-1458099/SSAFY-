@@ -236,7 +236,7 @@ export default class LottoScene extends Phaser.Scene {
 
   createButtons() {
     this.createBtn(W / 2 - 150, 560, "자동 선택", 0x004466, 0x44aaff, () => this.autoSelect());
-    this.purchaseBtn = this.createBtn(W / 2, 560, "구매하기 (1000GP)", 0x446600, 0x88ff44, () => this.purchase());
+    this.purchaseBtn = this.createBtn(W / 2, 560, "구매하기 (8,000GP)", 0x446600, 0x88ff44, () => this.purchase());
     this.createBtn(W / 2 + 150, 560, "초기화", 0x664400, 0xffaa44, () => this.resetSelection());
 
     this.exitBtn = this.add.text(30, H - 25, "EXIT", {
