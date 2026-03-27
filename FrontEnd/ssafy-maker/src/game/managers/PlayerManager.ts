@@ -39,6 +39,13 @@ export function shouldPreservePlayerMovementActivity(options: {
 
 export const PLAYER_MOVEMENT_ACTIVITY_GRACE_MS = 250;
 
+export function hasImmediatePlayerMovementActivity(options: {
+  isMoving: boolean;
+  isMoveInputActive: boolean;
+}) {
+  return options.isMoving || options.isMoveInputActive;
+}
+
 export function shouldRefreshMovementActivityOnInputLock(options: {
   wasInputLocked: boolean;
   isMoving: boolean;
@@ -236,6 +243,13 @@ export class PlayerManager {
 
   isMoveInputInProgress(): boolean {
     return this.isMoveInputActive;
+  }
+
+  isImmediateMovementActivityInProgress(): boolean {
+    return hasImmediatePlayerMovementActivity({
+      isMoving: this.isMoving,
+      isMoveInputActive: this.isMoveInputActive
+    });
   }
 
   isMovementActivityInProgress(): boolean {

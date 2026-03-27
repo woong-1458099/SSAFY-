@@ -194,6 +194,7 @@ coordinatorOutput = coordinatorOutput.replace(/from "phaser"/g, 'from "./phaser-
 writeFile(coordinatorOutputPath, coordinatorOutput);
 
 const {
+  hasImmediatePlayerMovementActivity,
   PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
   resolvePlayerMovementActivityState,
   shouldRefreshMovementActivityOnInputLock,
@@ -226,6 +227,16 @@ const movementCases = [
 movementCases.forEach(({ name, input, expected }) => {
   assert.deepEqual(resolvePlayerMovementActivityState(input), expected, name);
 });
+assert.equal(
+  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: false }),
+  false,
+  "autosave-facing activity should stay idle when neither movement nor input is active"
+);
+assert.equal(
+  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
+  true,
+  "autosave-facing activity should treat blocked directional input as active play"
+);
 
 assert.equal(
   shouldRefreshMovementActivityOnInputLock({

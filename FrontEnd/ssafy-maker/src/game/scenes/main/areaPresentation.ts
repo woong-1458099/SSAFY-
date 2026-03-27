@@ -38,6 +38,7 @@ export function findNearestWalkableRefreshTile(
 ) {
   const maxRadius = Math.min(Math.max(parsedMap.width, parsedMap.height), MAX_REFRESH_SEARCH_RADIUS);
   const queue = [{ tileX: originTileX, tileY: originTileY, distance: 0 }];
+  let queueIndex = 0;
   const visited = new Set<string>([`${originTileX}:${originTileY}`]);
   const directions = [
     { dx: -1, dy: 0 },
@@ -50,11 +51,9 @@ export function findNearestWalkableRefreshTile(
     { dx: 1, dy: 1 }
   ];
 
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!current) {
-      break;
-    }
+  while (queueIndex < queue.length) {
+    const current = queue[queueIndex];
+    queueIndex += 1;
 
     if (current.distance > 0 && isWalkableRefreshTile(current.tileX, current.tileY, runtimeGrids, parsedMap)) {
       return { tileX: current.tileX, tileY: current.tileY };

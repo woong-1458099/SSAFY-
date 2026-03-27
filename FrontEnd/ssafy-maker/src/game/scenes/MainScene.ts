@@ -1805,8 +1805,9 @@ hudWeek: number): number {
       return false;
     }
 
-    // Autosave treats both real movement and blocked movement input as active play.
-    if (this.playerManager?.isMovementActivityInProgress() === true) {
+    // Autosave uses the immediate activity state only. Grace-based activity preservation stays inside
+    // PlayerManager for lock/load boundaries, but should not delay saves after the player is actually idle.
+    if (this.playerManager?.isImmediateMovementActivityInProgress() === true) {
       return false;
     }
 
