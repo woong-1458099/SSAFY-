@@ -464,6 +464,7 @@ export class MainScene extends Phaser.Scene {
       this.worldGridOverlay = undefined;
       this.worldTileEditor?.destroy();
       this.debugInputController?.destroy();
+      this.playerManager?.destroy();
       this.dialogueManager?.destroy();
       this.fixedEventNpcManager?.destroy();
       this.minigameRewardManager?.destroy();
