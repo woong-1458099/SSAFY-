@@ -114,16 +114,16 @@ export class LoginScene extends Phaser.Scene {
           </div>
           <div style="margin-bottom:10px;padding-top:16px;border-top:1px solid rgba(133,187,222,0.14);">
             <p style="margin:0 0 6px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;">학기 시작</p>
-            <h2 style="margin:0;color:#f4fbff;font-size:34px;" id="auth-title">로그인</h2>
+            <h2 style="margin:0;color:#f4fbff;font-size:32px;line-height:1.05;" id="auth-title">로그인</h2>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;" id="auth-tabs">
+              <button data-view="login" style="min-height:46px;padding:10px 12px;border-radius:14px;border:0;cursor:pointer;background:rgba(55,95,128,0.95);color:#f4fbff;">로그인</button>
+              <button data-view="signup" style="min-height:46px;padding:10px 12px;border-radius:14px;border:0;cursor:pointer;background:rgba(21,33,48,0.86);color:#c0cfdb;">회원가입</button>
+            </div>
+            <div id="auth-msg" style="margin-top:12px;padding:11px 12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;line-height:1.45;">로그인 후 이번 학기의 주인공으로 입장할 수 있습니다.</div>
+            <div id="auth-form" style="margin-top:12px;display:block;flex:0 0 auto;min-height:auto;max-height:none;overflow:hidden;padding-right:0;"></div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;" id="auth-tabs">
-            <button data-view="login" style="padding:12px;border-radius:14px;border:0;cursor:pointer;background:rgba(55,95,128,0.95);color:#f4fbff;">로그인</button>
-            <button data-view="signup" style="padding:12px;border-radius:14px;border:0;cursor:pointer;background:rgba(21,33,48,0.86);color:#c0cfdb;">회원가입</button>
-          </div>
-          <div id="auth-msg" style="margin-top:12px;padding:12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;">로그인 후 이번 학기의 주인공으로 입장할 수 있습니다.</div>
-          <div id="auth-form" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:6px;scrollbar-width:thin;"></div>
-          <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">로그인</button>
-          <button id="auth-bypass" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[개발용] 인증 없이 입장</button>
+          <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">로그인</button>
+          <button id="auth-bypass" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[개발용] 인증 없이 입장</button>
         </section>
       </div>
     `;
@@ -145,6 +145,13 @@ export class LoginScene extends Phaser.Scene {
     if (!title || !message || !form || !recentList || !rankingList || !submit || !bypassBtn) {
       return;
     }
+
+    form.style.display = "block";
+    form.style.flex = "0 0 auto";
+    form.style.minHeight = "auto";
+    form.style.maxHeight = "none";
+    form.style.overflow = "hidden";
+    form.style.paddingRight = "0";
 
     let destroyed = false;
 
@@ -307,10 +314,8 @@ export class LoginScene extends Phaser.Scene {
 
       if (view === "login") {
         form.innerHTML = `
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;">
-              로그인 후 시작 화면에서 새 게임이나 이어하기를 선택할 수 있습니다. 세션이 확인되면 한 학기 육성 시뮬레이션으로 바로 이어집니다.
-            </div>
+          <div style="display:block;overflow:hidden;padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;">
+            로그인 후 시작 화면에서 새 게임이나 이어하기를 선택할 수 있습니다. 세션이 확인되면 한 학기 육성 시뮬레이션으로 바로 이어집니다.
           </div>
         `;
         submit.textContent = "로그인";
@@ -319,10 +324,8 @@ export class LoginScene extends Phaser.Scene {
       }
 
       form.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;">
+        <div style="display:block;overflow:hidden;padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;">
             계정을 만들면 캐릭터 선택, 일정 관리, 미니게임, 랜덤 이벤트가 이어지는 첫 학기 플레이를 바로 시작할 수 있습니다.
-          </div>
         </div>
       `;
       submit.textContent = "회원가입";
