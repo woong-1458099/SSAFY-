@@ -314,9 +314,9 @@ export class PlayerManager {
     return this.getMovementActivitySnapshot().immediateActive;
   }
 
-  /** @deprecated Prefer `getMovementActivitySnapshot().autoSaveActive`. */
+  /** @deprecated Prefer `getMovementActivitySnapshot().autoSaveGateActive`. */
   isAutoSaveMovementActivityInProgress(): boolean {
-    return this.getMovementActivitySnapshot().autoSaveActive;
+    return this.getMovementActivitySnapshot().autoSaveGateActive;
   }
 
   /** @deprecated Prefer `getMovementActivitySnapshot().graceActive`. */

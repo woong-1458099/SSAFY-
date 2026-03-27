@@ -23,13 +23,21 @@ import type { HudState, PlayerStatKey } from "../state/gameState";
 
 const WEEKLY_SALARY_AMOUNT = 50000;
 
-export type ProgressionSnapshot = {
+type ProgressionSnapshot = {
   timeState: TimeState;
   weeklyPlan: WeeklyPlanOptionId[];
   weeklyPlanWeek: number;
   lastPaidWeeklySalaryWeek: number;
   completedPlanSlotIndices: number[];
 };
+
+export type ProgressionSaveSnapshot = Readonly<{
+  timeState: TimeState;
+  weeklyPlan: WeeklyPlanOptionId[];
+  weeklyPlanWeek: number;
+  lastPaidWeeklySalaryWeek: number;
+  completedPlanSlotIndices: number[];
+}>;
 
 type WeeklyPlanActivityPayload = {
   title: string;
@@ -326,7 +334,7 @@ export class ProgressionManager {
     this.openPlanner();
   }
 
-  getSnapshot(): ProgressionSnapshot {
+  getSnapshot(): ProgressionSaveSnapshot {
     return {
       timeState: { ...this.timeState },
       weeklyPlan: [...this.weeklyPlan],
@@ -336,7 +344,7 @@ export class ProgressionManager {
     };
   }
 
-  restore(snapshot?: Partial<ProgressionSnapshot>): void {
+  restore(snapshot?: Partial<ProgressionSaveSnapshot>): void {
     if (snapshot?.timeState) {
       this.timeState = { ...snapshot.timeState };
     }

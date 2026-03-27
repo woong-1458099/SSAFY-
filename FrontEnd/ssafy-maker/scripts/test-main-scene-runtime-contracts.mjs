@@ -440,8 +440,8 @@ assert.equal(
   PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
     getMovementActivitySnapshot: () => movementSnapshot
   }),
-  false,
-  "autosave helper should delegate to the canonical movement snapshot"
+  true,
+  "autosave helper should delegate to the canonical autosave gate snapshot field"
 );
 assert.equal(
   movementSnapshot.autoSaveGateActive,

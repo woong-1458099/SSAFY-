@@ -63,7 +63,7 @@ export function findNearestWalkableRefreshTile(
     cache.originTileX === originTileX &&
     cache.originTileY === originTileY
   ) {
-    return cache.result;
+    return cache.result ? { ...cache.result } : undefined;
   }
 
   if (
@@ -91,7 +91,7 @@ export function findNearestWalkableRefreshTile(
       cache.originTileY = originTileY;
       cache.result = result;
     }
-    return result;
+    return { ...result };
   }
 
   const maxRadius = Math.min(Math.max(parsedMap.width, parsedMap.height), MAX_REFRESH_SEARCH_RADIUS);
@@ -119,7 +119,7 @@ export function findNearestWalkableRefreshTile(
         cache.originTileY = originTileY;
         cache.result = result;
       }
-      return result;
+      return { ...result };
     }
 
     if (current.distance >= maxRadius) {

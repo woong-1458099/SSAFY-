@@ -36,7 +36,7 @@ Rule of thumb:
 - Move reusable support logic, payload shaping, and lifecycle helpers into this folder.
 - `PlayerManager.getMovementActivitySnapshot()` is the canonical movement-activity contract.
 - `PlayerManager.getMovementActivitySnapshot().autoSaveGateActive` is the autosave-facing field: it keeps autosave blocked for real movement/raw input and for the short input-lock transition grace window.
-- `PlayerManager.isAutoSaveMovementActivityInProgress()` is the compatibility shortcut for `autoSaveActive`, not the full autosave gate.
+- `PlayerManager.isAutoSaveMovementActivityInProgress()` is the compatibility shortcut for `autoSaveGateActive`.
 - `PlayerManager.isMovementActivityInProgress()` keeps the broader grace-preserved activity policy for lock/load boundaries.
 - `PlayerManager.isImmediateMovementActivityInProgress()` remains available as the raw immediate-activity helper.
 - Current usage note: `MainScene.shouldAutoSave()` now reads `getMovementActivitySnapshot().autoSaveGateActive`. Any future caller should choose explicitly between snapshot fields instead of mixing helper semantics ad hoc.

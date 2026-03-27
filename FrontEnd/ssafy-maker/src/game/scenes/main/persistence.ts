@@ -8,7 +8,7 @@ import type { RuntimeGameState } from "../../state/gameState";
 import type { SceneId } from "../../scripts/scenes/sceneIds";
 import { normalizeSceneState } from "../../systems/sceneStateRuntime";
 import type { AreaId } from "../../../common/enums/area";
-import type { ProgressionSnapshot } from "../../managers/ProgressionManager";
+import type { ProgressionSaveSnapshot } from "../../managers/ProgressionManager";
 import type { StoryEventSnapshot } from "../../managers/StoryEventManager";
 
 type NpcSnapshotLike = {
@@ -21,7 +21,7 @@ type NpcSnapshotLike = {
 type BuildMainSceneSavePayloadArgs = {
   gameState: RuntimeGameState;
   inventory: InventorySnapshot;
-  progression?: ProgressionSnapshot;
+  progression?: ProgressionSaveSnapshot;
   areaId?: AreaId;
   sceneId?: SceneId;
   baseSceneState?: SceneState;
