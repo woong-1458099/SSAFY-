@@ -51,8 +51,8 @@ Current main flow is:
 Observed from implementation:
 
 - `TitleScene` exists and is registered, but the current live flow does not route through it.
-- `MiniGameCenterScene`, `MiniGameTypingScene`, and `MiniGameReflexScene` exist, but they are not currently included in `SCENE_REGISTRY`.
-- Legacy minigame scenes under `src/scenes/legacyMinigames` are still registered and still referenced.
+- `MiniGameCenterScene` and `MiniGameReflexScene` are included in the current minigame flow.
+- `MiniGameTypingScene` and `DragScene` are intentionally removed and tracked as deprecated keys to catch stale references early.
 
 ## Directory Map
 
@@ -74,7 +74,8 @@ Key scenes:
 - `StartScene.ts`: authenticated landing screen with logout.
 - `IntroScene.ts`: long cinematic intro sequence.
 - `NewCharacterScene.ts`: avatar setup before entering gameplay.
-- `MainScene.ts`: actual gameplay hub, world map, dialogue, shop, save/load, HUD, ending trigger.
+- `MainScene.ts`: actual gameplay hub, world map, NPC management, shop/inventory logic, time/day/week progression.
+- `InGameUIScene.ts`: parallel UI layer hosting HUD, dialogues, menus, and overlays.
 - `FinalSummaryScene.ts`, `EndingIntroScene.ts`, `EndingComicScene.ts`: ending pipeline.
 
 ### `src/features`
@@ -150,16 +151,12 @@ The center of the current implementation is `src/scenes/MainScene.ts`.
 
 This file currently owns most runtime game logic:
 
-- World and sub-area entry
+- Sub-area entry and area navigation
 - TMX-based map parsing and collision handling
 - Player movement and avatar rendering
 - Inventory and equipment
-- Shop UI
-- Dialogue UI
-- HUD updates
-- Save/load slot integration
-- Time/day/week progression
-- Ending trigger
+- Time/day/week progression and Ending trigger
+- *Note: UI rendering (HUD, Dialogue box, Menus) is offloaded to InGameUIScene.*
 
 ### MainScene responsibilities
 
@@ -179,8 +176,9 @@ This file currently owns most runtime game logic:
 
 #### HUD
 
-- HUD is separated into `src/features/ui/components/game-hud.ts`.
-- MainScene still owns the source-of-truth `hudState` and pushes updates into the HUD component.
+- HUD is a dedicated component (`src/features/ui/components/GameHud.ts`).
+- It is now rendered and managed by `InGameUIScene`.
+- `MainScene` emits `ui:patchHud` events to update the HUD state asynchronously.
 
 #### Inventory and equipment
 
@@ -266,8 +264,9 @@ Practical rule:
 
 ### What is still concentrated
 
-- `MainScene.ts` is the largest concentration point in the frontend.
-- Inventory, map logic, dialogue execution, save payload shaping, area navigation, and progression are tightly coupled there.
+- `MainScene.ts` was historically the gameplay monolith.
+- **Refactoring Update**: UI management (HUD, Menus, Dialogues) has been migrated to `InGameUIScene.ts` to reduce coupling.
+- Map logic, dialogue *execution* (script selection), and progression logic still reside in `MainScene`.
 
 Practical reading order for future analysis:
 
@@ -288,11 +287,10 @@ Practical reading order for future analysis:
 - `MainScene.ts` is effectively the gameplay monolith.
 - Future changes to inventory, map, dialogue, and saving can conflict because they live in one file.
 
-### 2. Mixed old/new minigame structure
+### 2. Minigame compatibility boundaries
 
-- New minigame scene files exist.
-- Legacy minigame scenes are still the ones actively registered.
-- This means minigame migration is incomplete.
+- The runtime uses `src/game/scenes/minigames/*` as the active path.
+- Removed scene keys such as `DragScene` and `MiniGameTypingScene` are tracked explicitly so stale registry/catalog references fail fast.
 
 ### 3. Unused or partially wired runtime pieces
 

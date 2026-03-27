@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "oneOf": [
+    { "required": ["dialogues"] },
+    { "required": ["events"] }
+  ],
+  "properties": {
+    "meta": {
+      "type": "object"
+    },
+    "schemaVersion": {
+      "type": ["string", "integer"]
+    },
+    "dialogues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fixedEvent"
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fixedEvent"
+      }
+    }
+  },
+  "$defs": {
+    "dialogueEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "speakerId": { "type": "string", "minLength": 1 },
+        "speakerName": { "type": "string", "minLength": 1 },
+        "emotion": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "triggerTiming": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["week", "day", "timeOfDay"],
+      "properties": {
+        "week": { "type": "integer" },
+        "day": { "type": "integer" },
+        "timeOfDay": { "type": "string", "minLength": 1 }
+      }
+    },
+    "choiceCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "social": { "type": "number" },
+        "code": { "type": "number" },
+        "nunchi": { "type": "number" },
+        "money": { "type": "number" },
+        "luck": { "type": "number" },
+        "hp": { "type": "number" },
+        "stress": { "type": "number" },
+        "stress_max": { "type": "number" },
+        "trait": { "type": "string", "minLength": 1 },
+        "playerGender": { "type": "string", "enum": ["MALE", "FEMALE"] }
+      }
+    },
+    "dialogueRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stat"],
+      "properties": {
+        "stat": {
+          "type": "string",
+          "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "money", "week", "playerGender"]
+        },
+        "equals": { "type": "string" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "label": { "type": "string" }
+      }
+    },
+    "affectionRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["npcId"],
+      "properties": {
+        "npcId": {
+          "type": "string",
+          "enum": ["minsu", "hyoryeon"]
+        },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "label": { "type": "string" }
+      }
+    },
+    "choiceResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "statChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "social",
+              "code",
+              "nunchi",
+              "money",
+              "hp",
+              "stress",
+              "luck",
+              "favor_minsu",
+              "favor_hyoryeon",
+              "fe",
+              "be",
+              "teamwork"
+            ]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "affectionChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "feedbackText": { "type": "string" },
+        "triggerMiniGame": { "type": "string", "minLength": 1 },
+        "feedbackDialogues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueEntry"
+          }
+        },
+        "setFlags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "legacyChoiceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "choiceId": { "type": "number" },
+        "actionType": {
+          "type": "string",
+          "enum": ["NORMAL", "LOCKED", "MADNESS", "ROMANCE_EVENT"]
+        },
+        "condition": {
+          "anyOf": [
+            { "$ref": "#/$defs/choiceCondition" },
+            { "type": "null" }
+          ]
+        },
+        "affectionRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/affectionRequirement"
+          }
+        },
+        "text": { "type": "string", "minLength": 1 },
+        "result": { "$ref": "#/$defs/choiceResult" },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "dialogueChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nextNodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actionType": {
+          "type": "string",
+          "enum": ["NORMAL", "LOCKED", "MADNESS", "ROMANCE_EVENT"]
+        },
+        "statChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["fe", "be", "teamwork", "luck", "stress", "hp", "money"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueRequirement"
+          }
+        },
+        "affectionRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/affectionRequirement"
+          }
+        },
+        "lockedReason": {
+          "type": "string"
+        },
+        "feedbackText": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "setFlags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "affectionChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "dialogueNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "speaker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "speakerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "emotion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nextNodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueChoice"
+          }
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affectionChanges": {
+          "type": "object",
+          "propertyNames": {
+            "enum": ["minsu", "hyoryeon"]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "authoredFixedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "startNodeId", "nodes", "eventType", "triggerTiming", "location"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "eventType": { "type": "string", "minLength": 1 },
+        "triggerTiming": { "$ref": "#/$defs/triggerTiming" },
+        "location": { "type": "string", "minLength": 1 },
+        "isRepeatable": { "type": "boolean" },
+        "startNodeId": { "type": "string", "minLength": 1 },
+        "nodes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/dialogueNode"
+          }
+        }
+      }
+    },
+    "legacyFixedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "eventName", "eventType", "triggerTiming", "location", "dialogues"],
+      "properties": {
+        "eventId": { "type": "string", "minLength": 1 },
+        "eventName": { "type": "string", "minLength": 1 },
+        "eventType": { "type": "string", "minLength": 1 },
+        "triggerTiming": { "$ref": "#/$defs/triggerTiming" },
+        "location": { "type": "string", "minLength": 1 },
+        "isRepeatable": { "type": "boolean" },
+        "dialogues": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/dialogueEntry"
+          }
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/legacyChoiceEntry"
+          }
+        }
+      }
+    },
+    "fixedEvent": {
+      "oneOf": [
+        { "$ref": "#/$defs/authoredFixedEvent" },
+        { "$ref": "#/$defs/legacyFixedEvent" }
+      ]
+    }
+  }
+}

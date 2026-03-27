@@ -5,20 +5,6 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local}
   jpa:
     open-in-view: false
-  web:
-    resources:
-      add-mappings: true
-
-server:
-  forward-headers-strategy: framework
-  servlet:
-    session:
-      timeout: ${SERVER_SESSION_TIMEOUT:30m}
-      cookie:
-        name: ${SESSION_COOKIE_NAME:SSAFY_MAKER_SESSION}
-        http-only: true
-        secure: ${SESSION_COOKIE_SECURE:false}
-        same-site: ${SESSION_COOKIE_SAME_SITE:Lax}
 
 management:
   endpoints:
@@ -30,35 +16,20 @@ management:
       probes:
         enabled: true
 
-springdoc:
-  api-docs:
-    path: /api/v3/api-docs
-  swagger-ui:
-    path: /api/swagger-ui.html
-    operationsSorter: alpha
-    tagsSorter: alpha
-
 app:
   color: ${APP_COLOR:UNKNOWN}
-  assets:
-    base-url: ${ASSET_BASE_URL:https://assets.ssafymaker.cloud/game/v1}
-    manifest-version: ${ASSET_MANIFEST_VERSION:2026-03-12.1}
-  urls:
-    public-base-url: ${APP_PUBLIC_BASE_URL:}
-    frontend-base-url: ${APP_FRONTEND_BASE_URL:}
   security:
     jwt:
       enabled: ${JWT_ENABLED:true}
-    cors:
-      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
-  keycloak:
-    enabled: ${KEYCLOAK_ENABLED:false}
-    require-client-secret: ${KEYCLOAK_REQUIRE_CLIENT_SECRET:true}
-    base-url: ${KEYCLOAK_BASE_URL:http://localhost:8081}
-    public-base-url: ${KEYCLOAK_PUBLIC_BASE_URL:${KEYCLOAK_BASE_URL:http://localhost:8081}}
-    internal-base-url: ${KEYCLOAK_INTERNAL_BASE_URL:${KEYCLOAK_BASE_URL:http://localhost:8081}}
-    realm: ${KEYCLOAK_REALM:app}
-    client-id: ${KEYCLOAK_CLIENT_ID:ssafy-maker-prod}
-    client-secret: ${KEYCLOAK_CLIENT_SECRET:}
-    admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
-    admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  user:
+    death-record:
+      cooldown: ${USER_DEATH_RECORD_COOLDOWN:3s}
+      token-ttl: ${USER_DEATH_RECORD_TOKEN_TTL:30s}
+      max-active-tokens: ${USER_DEATH_RECORD_MAX_ACTIVE_TOKENS:5}
+      max-failure-attempts: ${USER_DEATH_RECORD_MAX_FAILURE_ATTEMPTS:5}
+      failure-lockout: ${USER_DEATH_RECORD_FAILURE_LOCKOUT:30s}
+  cache:
+    death-dashboard:
+      recent-ttl: ${DEATH_DASHBOARD_RECENT_CACHE_TTL:15s}
+      ranking-ttl: ${DEATH_DASHBOARD_RANKING_CACHE_TTL:15s}
+      dashboard-ttl: ${DEATH_DASHBOARD_CACHE_TTL:15s}

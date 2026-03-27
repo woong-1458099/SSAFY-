@@ -51,3 +51,23 @@ alias는 `tsconfig.json`, `vite.config.ts`를 함께 수정해야 합니다.
 - 한글 깨짐: 파일 인코딩을 UTF-8로 재저장
 - 모듈 인식 실패: `node_modules` 삭제 후 `npm install`
 - alias 인식 실패: TS Server 재시작, Vite 재실행
+
+## 8. API 경로 설정
+
+- 프런트 API 기본 경로는 `VITE_API_BASE_URL` 입니다.
+- 값이 없으면 기본값으로 `/api` 를 사용합니다.
+- 로컬 개발에서는 `vite.config.ts` 의 `/api` 프록시가 `http://localhost:8080` 으로 전달합니다.
+- 배포 환경에서는 `VITE_API_BASE_URL` 에 `/api` 까지 포함한 값을 넣습니다.
+- `VITE_API_BASE_URL` 에 포함된 query string 과 hash 는 정규화 과정에서 무시됩니다.
+
+예시:
+
+```bash
+VITE_API_BASE_URL=/api
+```
+
+또는 배포 도메인을 절대 URL로 직접 지정해야 하면:
+
+```bash
+VITE_API_BASE_URL=https://ssafymaker.cloud/api
+```

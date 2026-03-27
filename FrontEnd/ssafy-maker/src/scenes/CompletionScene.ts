@@ -1,6 +1,16 @@
 import Phaser from "phaser";
 import type { EndingFlowPayload } from "@features/progression/types/ending";
 import { SceneKey } from "@shared/enums/sceneKey";
+import {
+  COMPLETION_ASSET_KEYS,
+  COMPLETION_FONT_FAMILY,
+  getCompletionMemoryKey,
+  preloadCompletionAssets
+} from "@features/completion/completionAssets";
+import {
+  COMPLETION_NARRATION_TEXTS,
+  COMPLETION_UI_TEXT
+} from "@features/completion/completionContent";
 
 export class CompletionScene extends Phaser.Scene {
   private resultData: EndingFlowPayload = {
@@ -9,29 +19,14 @@ export class CompletionScene extends Phaser.Scene {
     teamwork: 0,
     luck: 0,
     hp: 0,
+    hpMax: 100,
+    stress: 0,
+    gamePlayCount: 0,
+    lottoRank: null,
     week: 6,
     dayLabel: "금요일",
     timeLabel: "밤"
   };
-  private FONT_FAMILY = 'PFStardustBold';
-  
-  private readonly narrationTexts = [
-    "저번달에 입과한 것 같은데... \n 시간은 정말 쏜살같이 흘러갔다.",         
-    "힘들지 않았다고 한다면 거짓말이겠지.",               
-    "...하지만 함께해 준 친구들이 있어서 즐겁게 지낼 수 있었다.",               
-    "같이 평가를 보고 머리를 싸메던 일, ",    
-    "퇴실하고 함께 나가서 라멘을 먹고, 맥주 한 잔 하기도 하고. ",    
-    "점심시간에 가끔 하던 커피 내기",  
-    "알고리즘 공부 한다고 머리가 터질 뻔 하기도 했지!", 
-    "아, 맞다 입실체크.", 
-    "아무래도 잊기 힘든 추억이 된 것 같다",
-    "나도 친구들도 이제 새로운 시작을 앞두고 있다.",    
-    "나의 성장은 계속될 것이다.", 
-    "앞으로도 쭉",
-    "너도 마찬가지겠지?",
-    "너의 새로운 시작도 우리가 응원할게." 
-  ];
-  
   private typewriterEvent?: Phaser.Time.TimerEvent;
 
   constructor() {
@@ -45,6 +40,10 @@ export class CompletionScene extends Phaser.Scene {
       teamwork: data?.teamwork ?? 0,
       luck: data?.luck ?? 0,
       hp: data?.hp ?? 0,
+      hpMax: data?.hpMax ?? 100,
+      stress: data?.stress ?? 0,
+      gamePlayCount: data?.gamePlayCount ?? 0,
+      lottoRank: typeof data?.lottoRank === "number" ? data.lottoRank : null,
       week: data?.week ?? 6,
       dayLabel: data?.dayLabel ?? "금요일",
       timeLabel: data?.timeLabel ?? "밤"
@@ -52,17 +51,7 @@ export class CompletionScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.audio("completion_bgm", "assets/game/audio/BGM/Completion.mp3");
-    this.load.audio("typing_sound", "assets/game/audio/SoundEffect/type.mp3"); 
-
-    for(let i = 1; i <= 7; i++) {
-        this.load.image(`memory_${i}`, `assets/game/backgrounds/flashback/${i}.png`);
-    }
-    this.load.image('final_memory', 'assets/game/backgrounds/pass_SF.png'); 
-    this.load.spritesheet('ending_ani', 'assets/game/backgrounds/flashback/completion_book.png', {
-        frameWidth: 372, 
-        frameHeight: 318 
-    });
+    preloadCompletionAssets(this);
   }
 
   create(): void {
@@ -70,17 +59,17 @@ export class CompletionScene extends Phaser.Scene {
     this.sound.stopAll(); 
     this.cameras.main.setBackgroundColor("#000000");
 
-    if (!this.anims.exists('ending_once')) {
+    if (!this.anims.exists(COMPLETION_ASSET_KEYS.animationOnce)) {
         this.anims.create({
-            key: 'ending_once',
-            frames: this.anims.generateFrameNumbers('ending_ani', { start: 0, end: -1 }),
+            key: COMPLETION_ASSET_KEYS.animationOnce,
+            frames: this.anims.generateFrameNumbers(COMPLETION_ASSET_KEYS.animationSheet, { start: 0, end: -1 }),
             frameRate: 12,
             repeat: 0 
         });
     }
 
     const titleText = this.add.text(width / 2, height / 2, "", {
-      fontSize: "26px", color: "#ffffff", fontFamily: this.FONT_FAMILY,
+      fontSize: "26px", color: "#ffffff", fontFamily: COMPLETION_FONT_FAMILY,
       align: "center", stroke: "#000000", strokeThickness: 4
     }).setOrigin(0.5).setDepth(100);
 
@@ -89,21 +78,21 @@ export class CompletionScene extends Phaser.Scene {
   }
 
   private startFlashbackSequence(targetText: Phaser.GameObjects.Text, index: number) {
-    if (index >= this.narrationTexts.length) return;
+    if (index >= COMPLETION_NARRATION_TEXTS.length) return;
     const { width, height } = this.scale;
 
-    if (index === this.narrationTexts.length - 1) {
+    if (index === COMPLETION_NARRATION_TEXTS.length - 1) {
         this.playFinalCutscene(targetText, index);
         return; 
     }
 
-    if (index === 1 && !this.sound.get("completion_bgm")?.isPlaying) {
-      this.sound.play("completion_bgm", { loop: true, volume: 0.5 });
+    if (index === 1 && !this.sound.get(COMPLETION_ASSET_KEYS.bgm)?.isPlaying) {
+      this.sound.play(COMPLETION_ASSET_KEYS.bgm, { loop: true, volume: 0.5 });
     }
 
     let flashbackImg: Phaser.GameObjects.Image | null = null;
     if (index >= 1 && index <= 7) {
-      const imgKey = `memory_${index}`; 
+      const imgKey = getCompletionMemoryKey(index); 
       if (this.textures.exists(imgKey)) {
         flashbackImg = this.add.image(width / 2, height / 2, imgKey).setAlpha(0).setScale(0.8); 
         flashbackImg.setTint(0xa28049);
@@ -112,7 +101,7 @@ export class CompletionScene extends Phaser.Scene {
 
     targetText.text = "";
     targetText.setAlpha(1);
-    this.startTypewriter(targetText, this.narrationTexts[index], () => {});
+    this.startTypewriter(targetText, COMPLETION_NARRATION_TEXTS[index] ?? "", () => {});
 
     if (flashbackImg) {
       this.tweens.chain({
@@ -145,7 +134,7 @@ export class CompletionScene extends Phaser.Scene {
     targetText.text = "";
     targetText.setAlpha(1);
     
-    this.startTypewriter(targetText, this.narrationTexts[index], () => {
+    this.startTypewriter(targetText, COMPLETION_NARRATION_TEXTS[index] ?? "", () => {
       this.time.delayedCall(1500, () => {
         this.cameras.main.fadeOut(1000, 255, 255, 255);
 
@@ -159,8 +148,8 @@ export class CompletionScene extends Phaser.Scene {
   }
 
   private showNextFinalImage(width: number, height: number) {
-    if (this.textures.exists('final_memory')) {
-      const finalImg = this.add.image(width / 2, height / 2, 'final_memory')
+    if (this.textures.exists(COMPLETION_ASSET_KEYS.finalMemory)) {
+      const finalImg = this.add.image(width / 2, height / 2, COMPLETION_ASSET_KEYS.finalMemory)
         .setOrigin(0.5)
         .setAlpha(0)
         .setScale(1.1);
@@ -172,10 +161,10 @@ export class CompletionScene extends Phaser.Scene {
         duration: 1200,
         ease: 'Cubic.easeOut',
         onComplete: () => {
-          const aniSprite = this.add.sprite(width / 2, height / 2+20, 'ending_ani');
+          const aniSprite = this.add.sprite(width / 2, height / 2+20, COMPLETION_ASSET_KEYS.animationSheet);
           aniSprite.setDepth(250).setScale(1.8);
           
-          aniSprite.play('ending_once');
+          aniSprite.play(COMPLETION_ASSET_KEYS.animationOnce);
           aniSprite.once('animationcomplete', () => {
             this.time.delayedCall(1000, () => {
               this.showFinalUI();
@@ -196,7 +185,7 @@ export class CompletionScene extends Phaser.Scene {
       callback: () => {
         target.text += fullText[i];
         if (fullText[i] !== " " && fullText[i] !== "\n") {
-          this.sound.play("typing_sound", { volume: 0.1 });
+          this.sound.play(COMPLETION_ASSET_KEYS.typingSound, { volume: 0.1 });
         }
         if (i === fullText.length - 1) onComplete();
         i++;
@@ -208,13 +197,13 @@ export class CompletionScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const uiContainer = this.add.container(0, 0).setAlpha(0).setDepth(300);
 
-    const completeTitle = this.add.text(width / 2, height * 0.2, "SEASON 1. 1학기 COMPLETE", {
-      fontSize: "48px", fontStyle: "bold", color: "#ffffff", fontFamily: this.FONT_FAMILY,
+    const completeTitle = this.add.text(width / 2, height * 0.2, COMPLETION_UI_TEXT.title, {
+      fontSize: "48px", fontStyle: "bold", color: "#ffffff", fontFamily: COMPLETION_FONT_FAMILY,
       stroke: "#1e3c6e", strokeThickness: 6
     }).setOrigin(0.5);
 
-    const trueEndingBtn = this.add.text(width / 2, height-50, "[ 진엔딩 보러가기 ]", {
-      fontSize: "28px", backgroundColor: "#6098c2", padding: { x: 20, y: 10 }, fontFamily: this.FONT_FAMILY,
+    const trueEndingBtn = this.add.text(width / 2, height-50, COMPLETION_UI_TEXT.trueEndingButton, {
+      fontSize: "28px", backgroundColor: "#6098c2", padding: { x: 20, y: 10 }, fontFamily: COMPLETION_FONT_FAMILY,
       stroke: "#1e3c6e", strokeThickness: 4
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
@@ -228,9 +217,9 @@ export class CompletionScene extends Phaser.Scene {
   }
 
   private createSkipButton(width: number) {
-    const skipBtn = this.add.text(width - 20, 20, "클릭해서 스킵", {
+    const skipBtn = this.add.text(width - 20, 20, COMPLETION_UI_TEXT.skip, {
       fontSize: "14px", color: "#ffffff", backgroundColor: "#00000055", 
-      padding: { x: 5, y: 2 }, fontFamily: this.FONT_FAMILY 
+      padding: { x: 5, y: 2 }, fontFamily: COMPLETION_FONT_FAMILY 
     }).setOrigin(1, 0).setDepth(400).setAlpha(0.7).setInteractive({ useHandCursor: true });
 
     skipBtn.on('pointerdown', () => {

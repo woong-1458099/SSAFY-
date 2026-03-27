@@ -53,7 +53,10 @@ public class SecurityConfig {
                             "/public/assets/manifest",
                             "/api/auth/**",
                             "/api/v3/api-docs/**", "/api/v3/api-docs.yaml",
-                            "/api/swagger-ui.html", "/swagger-ui/**", "/error"
+                            "/v3/api-docs/**", "/v3/api-docs.yaml",
+                            "/api/swagger-ui.html", "/api/swagger-ui/**",
+                            "/swagger-ui.html", "/swagger-ui/**",
+                            "/error"
                     ).permitAll()
                     .anyRequest().authenticated()
             ).oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

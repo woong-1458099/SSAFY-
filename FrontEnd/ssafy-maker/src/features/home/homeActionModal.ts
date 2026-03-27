@@ -1,15 +1,10 @@
 import Phaser from "phaser";
-import { GAME_CONSTANTS } from "@core/constants/gameConstants";
-import { createPanelOuterBorder } from "@features/ui/components/uiPrimitives";
-import { HOME_ACTION_LABELS, type HomeActionId } from "@features/home/homeActions";
+import { HOME_ACTION_LABELS, type HomeActionId } from "./homeActions";
 
-type BodyStyleFn = (
-  sizePx: number,
-  color?: string,
-  fontStyle?: "normal" | "bold"
-) => Phaser.Types.GameObjects.Text.TextStyle;
+const FONT_FAMILY =
+  "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 
-type ActionButtonFn = (options: {
+type ButtonFactory = (params: {
   x: number;
   y: number;
   width: number;
@@ -18,91 +13,89 @@ type ActionButtonFn = (options: {
   onClick: () => void;
 }) => Phaser.GameObjects.Container;
 
-export function createHomeActionModal(params: {
-  scene: Phaser.Scene;
+export function createHomeActionModal(scene: Phaser.Scene, options: {
   actionPoint: number;
   maxActionPoint: number;
-  backgroundImage: Phaser.GameObjects.Image | null;
-  getBodyStyle: BodyStyleFn;
-  createActionButton: ActionButtonFn;
-  uiPanelInnerBorderColor: number;
-  uiPanelOuterBorderColor: number;
+  backgroundImage?: Phaser.GameObjects.Image | null;
+  createButton: ButtonFactory;
   onAction: (action: HomeActionId) => void;
   onClose: () => void;
 }): Phaser.GameObjects.Container {
-  const {
-    scene,
-    actionPoint,
-    maxActionPoint,
-    backgroundImage,
-    getBodyStyle,
-    createActionButton,
-    uiPanelInnerBorderColor,
-    uiPanelOuterBorderColor,
-    onAction,
-    onClose,
-  } = params;
+  const centerX = Math.round(scene.scale.width / 2);
+  const centerY = Math.round(scene.scale.height / 2);
+  const overlay = scene.add.rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x04101d, 0.58);
+  const panel = scene.add.rectangle(centerX, centerY, 640, 560, 0x14314f, 0.98);
+  panel.setStrokeStyle(3, 0x8ed2ff, 1);
+  const title = scene.add.text(centerX, centerY - 210, "집 행동", {
+    fontFamily: FONT_FAMILY,
+    fontSize: "34px",
+    fontStyle: "bold",
+    color: "#eef7ff",
+    resolution: 2
+  }).setOrigin(0.5);
+  const apText = scene.add.text(centerX, centerY - 168, `행동력 ${options.actionPoint}/${options.maxActionPoint}`, {
+    fontFamily: FONT_FAMILY,
+    fontSize: "20px",
+    fontStyle: "bold",
+    color: "#9fcdf5",
+    resolution: 2
+  }).setOrigin(0.5);
 
-  const centerX = Math.round(GAME_CONSTANTS.WIDTH / 2);
-  const centerY = Math.round(GAME_CONSTANTS.HEIGHT / 2);
-  const overlay = scene.add.rectangle(
-    centerX,
-    centerY,
-    GAME_CONSTANTS.WIDTH,
-    GAME_CONSTANTS.HEIGHT,
-    0x000000,
-    backgroundImage ? 0.42 : 0.36
-  );
-  const panelOuter = createPanelOuterBorder(scene, centerX, centerY, 560, 460);
-  panelOuter.setStrokeStyle(3, uiPanelOuterBorderColor, 1);
-  const panel = scene.add.rectangle(centerX, centerY, 560, 460, 0x1a375c, 0.95);
-  panel.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
-  const title = scene.add.text(centerX, centerY - 190, "집 행동", getBodyStyle(34, "#e6f3ff", "bold"));
-  title.setOrigin(0.5);
-  const apText = scene.add.text(
-    centerX,
-    centerY - 146,
-    `남은 행동력: ${actionPoint}/${maxActionPoint}`,
-    getBodyStyle(21, "#b6d6fb", "bold")
-  );
-  apText.setOrigin(0.5);
-
-  const sleepBtn = createActionButton({
+  const sleepButton = options.createButton({
     x: centerX,
-    y: centerY - 54,
-    width: 390,
+    y: centerY - 88,
+    width: 430,
     height: 66,
     text: HOME_ACTION_LABELS.sleep,
-    onClick: () => onAction("sleep"),
+    onClick: () => options.onAction("sleep")
   });
-  const studyBtn = createActionButton({
+  const frontendStudyButton = options.createButton({
     x: centerX,
-    y: centerY + 32,
-    width: 390,
+    y: centerY - 4,
+    width: 430,
     height: 66,
-    text: HOME_ACTION_LABELS.study,
-    onClick: () => onAction("study"),
+    text: HOME_ACTION_LABELS.frontendStudy,
+    onClick: () => options.onAction("frontendStudy")
   });
-  const gameBtn = createActionButton({
+  const backendStudyButton = options.createButton({
     x: centerX,
-    y: centerY + 118,
-    width: 390,
+    y: centerY + 80,
+    width: 430,
+    height: 66,
+    text: HOME_ACTION_LABELS.backendStudy,
+    onClick: () => options.onAction("backendStudy")
+  });
+  const gameButton = options.createButton({
+    x: centerX,
+    y: centerY + 164,
+    width: 430,
     height: 66,
     text: HOME_ACTION_LABELS.game,
-    onClick: () => onAction("game"),
+    onClick: () => options.onAction("game")
   });
-  const closeBtn = createActionButton({
+  const closeButton = options.createButton({
     x: centerX,
-    y: centerY + 196,
-    width: 210,
+    y: centerY + 248,
+    width: 220,
     height: 52,
     text: "닫기",
-    onClick: onClose,
+    onClick: options.onClose
   });
 
-  const objects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, apText, sleepBtn, studyBtn, gameBtn, closeBtn];
-  if (backgroundImage) {
-    objects.unshift(backgroundImage);
+  const objects: Phaser.GameObjects.GameObject[] = [
+    overlay,
+    panel,
+    title,
+    apText,
+    sleepButton,
+    frontendStudyButton,
+    backendStudyButton,
+    gameButton,
+    closeButton
+  ];
+
+  if (options.backgroundImage) {
+    objects.unshift(options.backgroundImage);
   }
 
   return scene.add.container(0, 0, objects);

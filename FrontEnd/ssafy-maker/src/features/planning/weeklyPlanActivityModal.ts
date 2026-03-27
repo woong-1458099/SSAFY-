@@ -1,31 +1,17 @@
 import Phaser from "phaser";
-import { createPanelOuterBorder } from "@features/ui/components/uiPrimitives";
+import { UI_DEPTH } from "../../game/systems/uiDepth";
 
-type TextStyleFactory = (
-  size: number,
-  color?: string,
-  fontStyle?: "normal" | "bold"
-) => Phaser.Types.GameObjects.Text.TextStyle;
+const FONT_FAMILY =
+  "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 
-function resolveWeeklyPlanStatusText(
-  rawStatusText: string,
-  backgroundImage?: Phaser.GameObjects.Image | null
-): string {
-  if (!/[?�]/.test(rawStatusText) && rawStatusText.trim().length > 0) {
-    return rawStatusText;
-  }
-
-  switch (backgroundImage?.texture.key) {
-    case "weekly-plan-ui-practice":
-      return "UI 구현 실습 진행 중...";
-    case "weekly-plan-rest-api-db":
-      return "REST API와 데이터베이스 설계 진행 중...";
-    case "weekly-plan-team-project":
-      return "팀 프로젝트 진행 중...";
-    default:
-      return "강의 진행 중...";
-  }
-}
+const PANEL_OUTER_WIDTH = 556;
+const PANEL_OUTER_HEIGHT = 560;
+const PANEL_WIDTH = 546;
+const PANEL_HEIGHT = 550;
+const PREVIEW_IMAGE_MAX_WIDTH = 354;
+const PREVIEW_IMAGE_MAX_HEIGHT = 236;
+const PREVIEW_FRAME_PADDING = 10;
+const PREVIEW_OUTER_PADDING = 10;
 
 export function createWeeklyPlanActivityModal(
   scene: Phaser.Scene,
@@ -34,86 +20,143 @@ export function createWeeklyPlanActivityModal(
     statusText: string;
     description: string;
     accentColor: number;
-    backgroundImage?: Phaser.GameObjects.Image | null;
-    getBodyStyle: TextStyleFactory;
-    uiPanelInnerBorderColor: number;
-    uiPanelOuterBorderColor: number;
+    imageKey?: string;
+    onClose: () => void;
   }
 ): Phaser.GameObjects.Container {
-  const {
-    title,
-    statusText,
-    description,
-    accentColor,
-    backgroundImage,
-    getBodyStyle,
-    uiPanelInnerBorderColor,
-    uiPanelOuterBorderColor,
-  } = options;
-  const resolvedStatusText = resolveWeeklyPlanStatusText(statusText, backgroundImage);
+  const { title, statusText, description, accentColor, imageKey, onClose } = options;
+  const centerX = Math.round(scene.scale.width / 2);
+  const centerY = Math.round(scene.scale.height / 2);
+  const previewCenterY = centerY - 82;
+  const root = scene.add.container(0, 0).setDepth(UI_DEPTH.plannerActivity).setScrollFactor(0);
 
-  const width = 640;
-  const height = 430;
-  const centerX = 640;
-  const centerY = 360;
-  const imageWidth = 520;
-  const imageHeight = 248;
+  const overlay = scene.add
+    .rectangle(centerX, centerY, scene.scale.width, scene.scale.height, 0x04101d, 0.54)
+    .setScrollFactor(0);
+  overlay.setInteractive();
 
-  const overlay = scene.add.rectangle(centerX, centerY, 1280, 720, 0x000000, 0.58);
-  const panelOuter = createPanelOuterBorder(scene, centerX, centerY, width, height);
-  panelOuter.setStrokeStyle(6, uiPanelOuterBorderColor, 1);
+  const panelOuter = scene.add
+    .rectangle(centerX, centerY, PANEL_OUTER_WIDTH, PANEL_OUTER_HEIGHT, 0x000000, 0)
+    .setScrollFactor(0);
+  panelOuter.setStrokeStyle(2, 0x3b6a92, 1);
 
-  const panel = scene.add.rectangle(centerX, centerY, width, height, 0x10263f, 0.96);
-  panel.setStrokeStyle(2, uiPanelInnerBorderColor, 1);
+  const panel = scene.add
+    .rectangle(centerX, centerY, PANEL_WIDTH, PANEL_HEIGHT, 0x14314f, 0.97)
+    .setScrollFactor(0);
+  panel.setStrokeStyle(3, 0x8ed2ff, 1);
 
-  const imageFrame = scene.add.rectangle(centerX, centerY - 54, imageWidth, imageHeight, 0x19324f, 1);
-  imageFrame.setStrokeStyle(3, accentColor, 1);
-  const imageShade = scene.add.rectangle(centerX, centerY - 54, imageWidth, imageHeight, accentColor, 0.08);
+  const accentBar = scene.add
+    .rectangle(centerX, centerY - 230, 404, 4, accentColor, 1)
+    .setScrollFactor(0);
 
-  if (backgroundImage) {
-    backgroundImage.setPosition(centerX, centerY - 54);
-    const fitScale = Math.min(
-      (imageWidth - 12) / Math.max(1, backgroundImage.width),
-      (imageHeight - 12) / Math.max(1, backgroundImage.height)
-    );
-    backgroundImage.setScale(fitScale);
-    backgroundImage.setAlpha(0.98);
+  const titleText = scene.add.text(centerX, centerY - 252, title, {
+    fontFamily: FONT_FAMILY,
+    fontSize: "24px",
+    fontStyle: "bold",
+    color: "#a9d0f4",
+    resolution: 2
+  }).setOrigin(0.5).setScrollFactor(0);
+
+  const previewImage = scene.add.image(centerX, previewCenterY, imageKey ?? "").setScrollFactor(0);
+  let previewDisplayWidth = PREVIEW_IMAGE_MAX_WIDTH;
+  let previewDisplayHeight = PREVIEW_IMAGE_MAX_HEIGHT;
+
+  if (imageKey && scene.textures.exists(imageKey)) {
+    const texture = scene.textures.get(imageKey).getSourceImage() as { width?: number; height?: number } | undefined;
+    const sourceWidth = Math.max(1, texture?.width ?? 1);
+    const sourceHeight = Math.max(1, texture?.height ?? 1);
+    const scale = Math.min(PREVIEW_IMAGE_MAX_WIDTH / sourceWidth, PREVIEW_IMAGE_MAX_HEIGHT / sourceHeight);
+    previewDisplayWidth = Math.round(sourceWidth * scale);
+    previewDisplayHeight = Math.round(sourceHeight * scale);
+    previewImage.setTexture(imageKey);
+    previewImage.setDisplaySize(previewDisplayWidth, previewDisplayHeight);
+    previewImage.setVisible(true);
+  } else {
+    previewDisplayWidth = 0;
+    previewDisplayHeight = 0;
+    previewImage.setVisible(false);
   }
 
-  const badge = scene.add.rectangle(centerX, centerY - 194, 210, 34, accentColor, 1);
-  badge.setStrokeStyle(2, 0xe8f3ff, 0.9);
-  const badgeText = scene.add.text(centerX, centerY - 194, title, getBodyStyle(16, "#f4fbff", "bold"));
-  badgeText.setOrigin(0.5);
+  const previewFrameWidth = Math.max(200, previewDisplayWidth + PREVIEW_FRAME_PADDING);
+  const previewFrameHeight = Math.max(140, previewDisplayHeight + PREVIEW_FRAME_PADDING);
+  const previewOuterWidth = previewFrameWidth + PREVIEW_OUTER_PADDING;
+  const previewOuterHeight = previewFrameHeight + PREVIEW_OUTER_PADDING;
+  const previewOuter = scene.add
+    .rectangle(centerX, previewCenterY, previewOuterWidth, previewOuterHeight, 0x000000, 0)
+    .setScrollFactor(0);
+  previewOuter.setStrokeStyle(2, 0x3b6a92, 1);
 
-  const status = scene.add.text(centerX, centerY + 104, resolvedStatusText, getBodyStyle(28, "#f0f7ff", "bold"));
-  status.setOrigin(0.5);
+  const previewFrame = scene.add
+    .rectangle(centerX, previewCenterY, previewFrameWidth, previewFrameHeight, 0x112942, 0.98)
+    .setScrollFactor(0);
+  previewFrame.setStrokeStyle(2, 0x8ed2ff, 1);
 
-  const body = scene.add.text(centerX, centerY + 146, description, getBodyStyle(18, "#c8dbef"));
-  body.setOrigin(0.5);
+  const statusBadge = scene.add
+    .rectangle(centerX, centerY + 96, 412, 54, accentColor, 0.94)
+    .setScrollFactor(0);
+  statusBadge.setStrokeStyle(2, 0xeef7ff, 0.9);
 
-  const hint = scene.add.text(
-    centerX,
-    centerY + 180,
-    "일정 진행 후 다음 시간대로 이동합니다.",
-    getBodyStyle(15, "#90b3d4")
-  );
-  hint.setOrigin(0.5);
+  const status = scene.add.text(centerX, centerY + 95, statusText, {
+    fontFamily: FONT_FAMILY,
+    fontSize: "28px",
+    fontStyle: "bold",
+    color: "#f4fbff",
+    resolution: 2,
+    align: "center",
+    wordWrap: { width: 372 }
+  }).setOrigin(0.5).setScrollFactor(0);
 
-  const objects: Phaser.GameObjects.GameObject[] = [
+  const descriptionText = scene.add.text(centerX, centerY + 162, description, {
+    fontFamily: FONT_FAMILY,
+    fontSize: "18px",
+    fontStyle: "bold",
+    color: "#d9ebff",
+    resolution: 2,
+    align: "center",
+    wordWrap: { width: 406 }
+  }).setOrigin(0.5).setScrollFactor(0);
+
+  const hint = scene.add.text(centerX, centerY + 208, "닫기 버튼을 누르면 다음 단계로 진행합니다.", {
+    fontFamily: FONT_FAMILY,
+    fontSize: "15px",
+    fontStyle: "bold",
+    color: "#90b3d4",
+    resolution: 2
+  }).setOrigin(0.5).setScrollFactor(0);
+
+  const closeButtonBg = scene.add
+    .rectangle(centerX, centerY + 252, 154, 46, 0x29527d, 1)
+    .setScrollFactor(0);
+  closeButtonBg.setStrokeStyle(2, 0x8ed2ff, 1);
+  closeButtonBg.setInteractive({ useHandCursor: true });
+  closeButtonBg.on("pointerdown", onClose);
+  closeButtonBg.on("pointerover", () => closeButtonBg.setFillStyle(0x34679d, 1));
+  closeButtonBg.on("pointerout", () => closeButtonBg.setFillStyle(0x29527d, 1));
+
+  const closeButtonText = scene.add.text(centerX, centerY + 252, "닫기", {
+    fontFamily: FONT_FAMILY,
+    fontSize: "18px",
+    fontStyle: "bold",
+    color: "#eef7ff",
+    resolution: 2
+  }).setOrigin(0.5).setScrollFactor(0);
+
+  root.add([
     overlay,
     panelOuter,
     panel,
-    imageFrame,
-    ...(backgroundImage ? [backgroundImage] : []),
-    imageShade,
-    badge,
-    badgeText,
+    accentBar,
+    titleText,
+    previewOuter,
+    previewFrame,
+    previewImage,
+    statusBadge,
     status,
-    body,
+    descriptionText,
     hint,
-  ];
+    closeButtonBg,
+    closeButtonText
+  ]);
 
-  const root = scene.add.container(0, 0, objects);
-  root.setDepth(1300);
   return root;
 }
