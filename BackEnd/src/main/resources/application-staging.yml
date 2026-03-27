@@ -32,10 +32,3 @@ app:
   keycloak:
     enabled: ${KEYCLOAK_ENABLED:true}
     client-id: ${KEYCLOAK_CLIENT_ID:ssafy-maker-prod}
-
-server:
-  error:
-    include-message: always
-    include-binding-errors: always
-    include-exception: true
-    include-stacktrace: on_param
