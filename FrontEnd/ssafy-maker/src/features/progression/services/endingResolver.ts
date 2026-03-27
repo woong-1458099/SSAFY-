@@ -144,7 +144,7 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     postComicAction: "credit",
     shortDescription: "백엔드 구조와 데이터 설계 역량이 충분히 쌓여 안정적인 서버 개발 루트에 올랐습니다.",
     dominantLabels: ["BE", "서버", "구조"],
-    imageFiles: [],
+    imageFiles: createPanelFileNames("ending_be_panel"),
     matches: (input) => input.be >= 200
   }),
   createEndingDefinition({
