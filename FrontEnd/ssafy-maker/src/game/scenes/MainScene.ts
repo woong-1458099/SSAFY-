@@ -831,6 +831,7 @@ export class MainScene extends Phaser.Scene {
     const renderBounds = this.worldManager.getCurrentRenderBounds();
 
     this.playerManager.setRenderBounds(renderBounds);
+    clearRefreshTileSearchCache(this.refreshTileSearchCache);
 
     const safePlayerTile = this.resolveSafeRefreshTile(playerSnapshot, runtimeGrids, parsedMap);
     if (safePlayerTile) {

@@ -505,6 +505,40 @@ assert.equal(
   false,
   "unlocking or non-transition locks should clear autosave gate preservation hints"
 );
+const repeatedLockManager = {
+  isInputLocked: true,
+  hasRawMoveInput: false,
+  isMoving: false,
+  isMoveInputActive: false,
+  preserveAutoSaveGateDuringInputLock: true,
+  lastMovementActivityAtMs: 500,
+  scene: { time: { now: 1_000 } }
+};
+PlayerManager.prototype.setInputLocked.call(repeatedLockManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  repeatedLockManager.lastMovementActivityAtMs,
+  500,
+  "reapplying an already-locked input state should not refresh movement activity timestamps"
+);
+const idleLockManager = {
+  isInputLocked: false,
+  hasRawMoveInput: false,
+  isMoving: false,
+  isMoveInputActive: false,
+  preserveAutoSaveGateDuringInputLock: false,
+  lastMovementActivityAtMs: 400,
+  scene: { time: { now: 900 } }
+};
+PlayerManager.prototype.setInputLocked.call(idleLockManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  idleLockManager.lastMovementActivityAtMs,
+  400,
+  "locking input from an already-idle state should not extend autosave gate grace"
+);
 const uiLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
   isMoving: false,
   isMoveInputActive: false,
