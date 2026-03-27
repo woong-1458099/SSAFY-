@@ -36,6 +36,10 @@ export function findNearestWalkableRefreshTile(
   runtimeGrids: TmxRuntimeGrids,
   parsedMap: ParsedTmxMap
 ) {
+  if (isWalkableRefreshTile(originTileX, originTileY, runtimeGrids, parsedMap)) {
+    return { tileX: originTileX, tileY: originTileY };
+  }
+
   const maxRadius = Math.min(Math.max(parsedMap.width, parsedMap.height), MAX_REFRESH_SEARCH_RADIUS);
   const queue = [{ tileX: originTileX, tileY: originTileY, distance: 0 }];
   let queueIndex = 0;

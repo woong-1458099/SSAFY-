@@ -237,6 +237,16 @@ assert.equal(
   true,
   "autosave-facing activity should treat blocked directional input as active play"
 );
+assert.equal(
+  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: false }),
+  false,
+  "autosave-facing activity should stay idle immediately after input lock removes active input"
+);
+assert.equal(
+  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
+  true,
+  "autosave-facing activity should resume immediately when input returns after unlock"
+);
 
 assert.equal(
   shouldRefreshMovementActivityOnInputLock({
@@ -273,6 +283,15 @@ assert.equal(
   }),
   false,
   "idle-to-lock transitions should not refresh the activity timestamp"
+);
+assert.equal(
+  shouldRefreshMovementActivityOnInputLock({
+    wasInputLocked: false,
+    isMoving: false,
+    isMoveInputActive: true
+  }),
+  true,
+  "lock transitions should stamp activity when the player was only holding blocked input"
 );
 
 assert.equal(
@@ -432,4 +451,4 @@ disposedScene.timers.shift().fire();
 await flushMicrotasks();
 assert.equal(disposedRefreshCalled, false, "disposed scenes must not run deferred refresh callbacks");
 
-console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 17} cases)`);
+console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 20} cases)`);
