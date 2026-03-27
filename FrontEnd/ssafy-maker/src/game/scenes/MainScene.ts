@@ -549,7 +549,10 @@ export class MainScene extends Phaser.Scene {
 
   private async ensureAuthenticatedEntry(): Promise<boolean> {
     const storedSession = readStoredSession();
-    if (this.registry.get("authToken") === "bff-session" && storedSession) {
+    if (storedSession) {
+      if (this.registry.get("authToken") !== "bff-session") {
+        applySessionToRegistry(this.registry, storedSession);
+      }
       return true;
     }
 

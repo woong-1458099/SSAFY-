@@ -1,5 +1,11 @@
 import type Phaser from "phaser";
-import { API_PREFIX, fetchBackendSession, type BackendAuthSession, type UserProfile } from "@features/auth/api";
+import {
+  API_PREFIX,
+  fetchBackendSession,
+  isApiRequestError,
+  type BackendAuthSession,
+  type UserProfile
+} from "@features/auth/api";
 
 export interface AuthSession {
   authenticated: boolean;
@@ -56,6 +62,19 @@ function toAuthSession(session: BackendAuthSession): AuthSession | null {
     expiresAt: session.expiresAt,
     user: session.user
   };
+}
+
+function isUnauthenticatedSessionError(error: unknown): boolean {
+  if (!isApiRequestError(error)) {
+    return false;
+  }
+
+  const normalizedCode = error.code?.trim().toUpperCase();
+  return error.status === 401 ||
+    error.status === 403 ||
+    normalizedCode === "UNAUTHORIZED" ||
+    normalizedCode === "FORBIDDEN" ||
+    normalizedCode === "AUTH_REQUIRED";
 }
 
 function isAuthSession(value: unknown): value is AuthSession {
@@ -229,6 +248,7 @@ export async function completeAuthIfPresent(): Promise<AuthSession | null> {
 }
 
 export async function fetchExistingSession(): Promise<AuthSession | null> {
+  const storedSession = readStoredSession();
   try {
     const session = toAuthSession(await fetchBackendSession());
     if (session) {
@@ -238,7 +258,19 @@ export async function fetchExistingSession(): Promise<AuthSession | null> {
       clearStoredSession();
     }
     return session;
-  } catch {
+  } catch (error) {
+    if (isUnauthenticatedSessionError(error)) {
+      clearStoredSession();
+      return null;
+    }
+
+    if (storedSession) {
+      console.warn("[auth-session] fetchExistingSession failed; reusing stored session", {
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return storedSession;
+    }
+
     clearStoredSession();
     return null;
   }
