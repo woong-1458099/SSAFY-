@@ -1,10 +1,11 @@
 export const FIXED_EVENT_LOCATION_ALIASES: Record<string, string[]> = {
-  campus: ["캠퍼스", "캠퍼스 내부", "캠퍼스내부", "강의동", "inssafy"],
+  campus: ["캠퍼스", "캠퍼스 내부", "캠퍼스내부", "강의장", "강의동", "강의실", "실습장", "휴게실", "inssafy"],
+  classroom: ["교실", "classroom"],
   downtown: ["번화가", "시내", "city"],
   world: ["전체지도", "전체 지도", "월드", "맵", "map"],
   home: ["집", "자취방", "기숙사", "home"],
   cafe: ["카페", "cafe"],
-  store: ["편의점", "store"],
+  store: ["편의점", "store"]
 };
 
 export function normalizeFixedEventLocationToken(value: unknown): string {

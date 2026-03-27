@@ -1,20 +1,25 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
+import {
+  preloadCharacterCreationAssets,
+  CHARACTER_CREATION_ASSET_KEYS
+} from "@features/character/characterCreationAssets";
+import {
+  CHARACTER_CREATION_DEFAULT_NAME,
+  CHARACTER_CREATION_FONT_FAMILY,
+  CHARACTER_CREATION_MAX_CLOTH,
+  CHARACTER_CREATION_MAX_HAIR,
+  CHARACTER_CREATION_TEXT
+} from "@features/character/characterCreationConfig";
+import { getCharacterCreationLayout, type CharacterCreationLayout } from "@features/character/characterCreationLayout";
 
 export class NewCharacterScene extends Phaser.Scene {
   private readonly audioManager = new AudioManager();
-  private userName: string = "싸피생";
+  private userName: string = CHARACTER_CREATION_DEFAULT_NAME;
   private gender: 'male' | 'female' = 'male';
   private hairIndex: number = 1;
   private clothIndex: number = 1;
-
-  private readonly MAX_HAIR = 3;
-  private readonly MAX_CLOTH = 3;
-  private readonly FONT_FAMILY = 'PFStardustBold';
-
-  private readonly FRAME_WIDTH = 16; 
-  private readonly FRAME_HEIGHT = 32;
 
   private characterPreview!: Phaser.GameObjects.Container;
   private charBase!: Phaser.GameObjects.Sprite;
@@ -29,112 +34,90 @@ export class NewCharacterScene extends Phaser.Scene {
   private clothButtons: Phaser.GameObjects.Text[] = [];
 
   constructor() {
-    super(SceneKey.NewCharacter || 'NewCharacterScene');
+    super(SceneKey.NewCharacter);
   }
 
   preload(): void {
-    // 1. 공통 UI 리소스
-    this.load.image('title_bg', '../../assets/game/backgrounds/title_background.png');
-    this.load.image('ui_box', '../../assets/game/ui/medium_ui_box.png');
-    this.load.image('male_button', '../../assets/game/ui/male.png');
-    this.load.image('female_button', '../../assets/game/ui/female.png');
-    this.load.audio('create_bgm', '../../assets/game/audio/BGM/bye.mp3');
-    this.load.audio('click_sfx', '../../assets/game/audio/SoundEffect/click.wav');
-
-    const spriteConfig = { frameWidth: this.FRAME_WIDTH, frameHeight: this.FRAME_HEIGHT };
-    
-    // 2. 캐릭터 베이스 로드
-    this.load.spritesheet('base_male', '../../assets/game/character/base_male.png', spriteConfig);
-    this.load.spritesheet('base_female', '../../assets/game/character/base_female.png', spriteConfig);
-
-    // 3. 성별별 헤어 리소스 로드 (male_hair_1~3, female_hair_1~3)
-    for (let i = 1; i <= this.MAX_HAIR; i++) {
-      this.load.spritesheet(`male_hair_${i}`, `../../assets/game/character/male_hair_${i}.png`, spriteConfig);
-      this.load.spritesheet(`female_hair_${i}`, `../../assets/game/character/female_hair_${i}.png`, spriteConfig);
-    }
-
-    // 4. 성별별 의상 리소스 로드 (male_clothes_1~3, female_clothes_1~3)
-    for (let i = 1; i <= this.MAX_CLOTH; i++) {
-      this.load.spritesheet(`male_clothes_${i}`, `../../assets/game/character/male_clothes_${i}.png`, spriteConfig);
-      this.load.spritesheet(`female_clothes_${i}`, `../../assets/game/character/female_clothes_${i}.png`, spriteConfig);
-    }
+    preloadCharacterCreationAssets(this);
   }
 
   create(): void {
     const { width, height } = this.sys.canvas;
+    const layout = getCharacterCreationLayout(width, height);
     this.cameras.main.setRoundPixels(true);
 
-    const bg = this.add.image(width / 2, height / 2, 'title_bg');
+    const bg = this.add.image(width / 2, height / 2, CHARACTER_CREATION_ASSET_KEYS.background);
     bg.setScale(Math.max(width / bg.width, height / bg.height)).setScrollFactor(0);
     
-    const uiBox = this.add.image(width / 2, height / 2, 'ui_box');
-    uiBox.setDisplaySize(width * 0.9, height * 0.8).setAlpha(0.9);
+    const uiBox = this.add.image(width / 2, height / 2, CHARACTER_CREATION_ASSET_KEYS.uiBox);
+    uiBox.setDisplaySize(layout.uiBoxWidth, layout.uiBoxHeight).setAlpha(0.9);
 
-    if (this.cache.audio.exists('create_bgm')) {
-      const bgm = this.audioManager.add(this, 'create_bgm', 'bgm', { loop: true, volume: 0.8 });
+    if (this.cache.audio.exists(CHARACTER_CREATION_ASSET_KEYS.bgm)) {
+      const bgm = this.audioManager.add(this, CHARACTER_CREATION_ASSET_KEYS.bgm, 'bgm', { loop: true, volume: 0.8 });
       if (bgm) {
         this.bgm = bgm;
         this.bgm.play();
       }
     }
     
-    this.add.text(width / 2, height * 0.18, "캐릭터 생성", {
-      fontSize: "42px", fontFamily: this.FONT_FAMILY, color: "#ffffff", stroke: "#000", strokeThickness: 6
+    this.add.text(width / 2, layout.titleY, CHARACTER_CREATION_TEXT.title, {
+      fontSize: "42px", fontFamily: CHARACTER_CREATION_FONT_FAMILY, color: "#ffffff", stroke: "#000", strokeThickness: 6
     }).setOrigin(0.5);
 
-    this.characterPreview = this.add.container(Math.floor(width * 0.35), Math.floor(height * 0.5));
+    this.characterPreview = this.add.container(layout.previewX, layout.previewY);
     
-    const uiX = width * 0.65;
-    this.setupUI(uiX, width, height);
+    this.setupUI(layout, width);
     this.updateCharacterPreview();
   }
 
-  private setupUI(uiX: number, width: number, height: number) {
+  private setupUI(layout: CharacterCreationLayout, width: number) {
+    const uiX = layout.uiX;
+
     // 1. 이름 입력
-    this.nameText = this.add.text(uiX, height * 0.35, `이름: ${this.userName} [수정]`, {
-      fontSize: "24px", fontFamily: this.FONT_FAMILY, backgroundColor: "#333", padding: {x:15, y:10}
+    this.nameText = this.add.text(uiX, layout.nameY, this.getNameLabelText(), {
+      fontSize: "24px", fontFamily: CHARACTER_CREATION_FONT_FAMILY, backgroundColor: "#333", padding: {x:15, y:10}
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     
     this.nameText.on('pointerdown', () => {
       this.playClick();
-      const input = prompt("이름을 입력해주세요", this.userName);
+      const input = prompt(CHARACTER_CREATION_TEXT.namePrompt, this.userName);
       if (input) {
-        this.userName = input.trim().substring(0, 6) || "싸피생";
-        this.nameText.setText(`이름: ${this.userName} [수정]`);
+        this.userName = input.trim().substring(0, 6) || CHARACTER_CREATION_DEFAULT_NAME;
+        this.nameText.setText(this.getNameLabelText());
       }
     });
 
     // 2. 성별 버튼
-    this.add.text(uiX - 130, height * 0.47, "성별", { fontSize: "22px", fontFamily: this.FONT_FAMILY }).setOrigin(0.5);
-    this.maleBtn = this.add.image(uiX - 20, height * 0.47, 'male_button').setInteractive({ useHandCursor: true }).setScale(1.2);
-    this.femaleBtn = this.add.image(uiX + 60, height * 0.47, 'female_button').setInteractive({ useHandCursor: true }).setScale(1.2);
+    this.add.text(uiX - layout.labelOffsetX, layout.genderY, CHARACTER_CREATION_TEXT.genderLabel, { fontSize: "22px", fontFamily: CHARACTER_CREATION_FONT_FAMILY }).setOrigin(0.5);
+    this.maleBtn = this.add.image(uiX + layout.maleButtonOffsetX, layout.genderY, CHARACTER_CREATION_ASSET_KEYS.maleButton).setInteractive({ useHandCursor: true }).setScale(layout.genderButtonScale);
+    this.femaleBtn = this.add.image(uiX + layout.femaleButtonOffsetX, layout.genderY, CHARACTER_CREATION_ASSET_KEYS.femaleButton).setInteractive({ useHandCursor: true }).setScale(layout.genderButtonScale);
     
     this.maleBtn.on('pointerdown', () => { this.playClick(); this.selectGender('male'); });
     this.femaleBtn.on('pointerdown', () => { this.playClick(); this.selectGender('female'); });
     this.updateGenderButtonUI();
 
     // 3. 헤어 선택
-    this.add.text(uiX - 130, height * 0.57, "헤어", { fontSize: "22px", fontFamily: this.FONT_FAMILY }).setOrigin(0.5);
-    this.hairButtons = this.createNumberButtons(uiX - 40, height * 0.57, this.MAX_HAIR, (idx) => {
+    this.add.text(uiX - layout.labelOffsetX, layout.selectorY.hair, CHARACTER_CREATION_TEXT.hairLabel, { fontSize: "22px", fontFamily: CHARACTER_CREATION_FONT_FAMILY }).setOrigin(0.5);
+    this.hairButtons = this.createNumberButtons(uiX + layout.selectorStartOffsetX, layout.selectorY.hair, CHARACTER_CREATION_MAX_HAIR, layout.selectorSpacing, (idx) => {
       this.hairIndex = idx;
       this.updateButtonColors(this.hairButtons, this.hairIndex);
       this.updateCharacterPreview();
     });
 
     // 4. 의상 선택 (선택 시 성별에 맞는 의상 적용)
-    this.add.text(uiX - 130, height * 0.67, "의상", { fontSize: "22px", fontFamily: this.FONT_FAMILY }).setOrigin(0.5);
-    this.clothButtons = this.createNumberButtons(uiX - 40, height * 0.67, this.MAX_CLOTH, (idx) => {
+    this.add.text(uiX - layout.labelOffsetX, layout.selectorY.cloth, CHARACTER_CREATION_TEXT.clothLabel, { fontSize: "22px", fontFamily: CHARACTER_CREATION_FONT_FAMILY }).setOrigin(0.5);
+    this.clothButtons = this.createNumberButtons(uiX + layout.selectorStartOffsetX, layout.selectorY.cloth, CHARACTER_CREATION_MAX_CLOTH, layout.selectorSpacing, (idx) => {
       this.clothIndex = idx;
       this.updateButtonColors(this.clothButtons, this.clothIndex);
       this.updateCharacterPreview();
     });
 
     // 5. 생성하기 버튼
-    const startBtnBg = this.add.image(0, 0, 'ui_box').setDisplaySize(200, 60).setInteractive({ useHandCursor: true });
-    const startBtnText = this.add.text(0, 0, "생성하기", {
-      fontSize: "28px", fontFamily: this.FONT_FAMILY, color: "#fff"
+    const startBtnBg = this.add.image(0, 0, CHARACTER_CREATION_ASSET_KEYS.uiBox).setDisplaySize(layout.startButtonWidth, layout.startButtonHeight).setInteractive({ useHandCursor: true });
+    const startBtnText = this.add.text(0, 0, CHARACTER_CREATION_TEXT.createButton, {
+      fontSize: "28px", fontFamily: CHARACTER_CREATION_FONT_FAMILY, color: "#fff"
     }).setOrigin(0.5);
-    const startBtnContainer = this.add.container(width / 2, height * 0.94, [startBtnBg, startBtnText]);
+    const startBtnContainer = this.add.container(width / 2, layout.startButtonY, [startBtnBg, startBtnText]);
 
     startBtnBg.on('pointerdown', () => {
       this.playClick();
@@ -142,6 +125,7 @@ export class NewCharacterScene extends Phaser.Scene {
         targets: startBtnContainer, scale: 0.95, duration: 80, yoyo: true,
         onComplete: () => {
           this.registry.set('playerData', { name: this.userName, gender: this.gender, hair: this.hairIndex, cloth: this.clothIndex });
+          this.registry.set('isNewCharacter', true);
           this.scene.start(SceneKey.Main);
         }
       });
@@ -216,11 +200,11 @@ export class NewCharacterScene extends Phaser.Scene {
     this.charHair.play(hairAnimKey);
   }
 
-  private createNumberButtons(x: number, y: number, count: number, callback: (i: number) => void) {
+  private createNumberButtons(x: number, y: number, count: number, spacing: number, callback: (i: number) => void) {
     const btns: Phaser.GameObjects.Text[] = [];
     for (let i = 1; i <= count; i++) {
-      const btn = this.add.text(x + (i - 1) * 60, y, ` ${i} `, {
-        fontSize: "20px", fontFamily: this.FONT_FAMILY, backgroundColor: "#444", padding: { x: 10, y: 5 }
+      const btn = this.add.text(x + (i - 1) * spacing, y, ` ${i} `, {
+        fontSize: "20px", fontFamily: CHARACTER_CREATION_FONT_FAMILY, backgroundColor: "#444", padding: { x: 10, y: 5 }
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       btn.on('pointerdown', () => { this.playClick(); callback(i); });
       btns.push(btn);
@@ -233,7 +217,7 @@ export class NewCharacterScene extends Phaser.Scene {
   }
 
   private playClick() {
-    this.audioManager.play(this, 'click_sfx', 'sfx');
+    this.audioManager.play(this, CHARACTER_CREATION_ASSET_KEYS.click, 'sfx');
   }
 
   private selectGender(gender: 'male' | 'female') {
@@ -248,5 +232,9 @@ export class NewCharacterScene extends Phaser.Scene {
   private updateGenderButtonUI() {
     this.maleBtn.setAlpha(this.gender === 'male' ? 1 : 0.5);
     this.femaleBtn.setAlpha(this.gender === 'female' ? 1 : 0.5);
+  }
+
+  private getNameLabelText(): string {
+    return `이름: ${this.userName} ${CHARACTER_CREATION_TEXT.nameEditSuffix}`;
   }
 }

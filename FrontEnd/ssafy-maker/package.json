@@ -10,13 +10,25 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
+    "validate:scene-registry": "node scripts/validate-scene-registry.mjs",
+    "validate:minigame-structure": "node scripts/validate-minigame-structure.mjs",
+    "validate:game-assets": "node scripts/validate-game-assets.mjs",
+    "validate:tmx-patch-layers": "node scripts/validate-tmx-patch-layers.mjs",
+    "test:tmx-navigation-policy": "node scripts/test-tmx-navigation-policy.mjs",
+    "build": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:game-assets && npm run validate:tmx-patch-layers && npm run test:tmx-navigation-policy && npm run validate:fixed-events && vite build",
+    "preview": "vite preview",
+    "validate": "npm run typecheck && npm run validate:scene-registry && npm run validate:minigame-structure && npm run validate:game-assets && npm run validate:tmx-patch-layers && npm run test:tmx-navigation-policy && npm run validate:authored-story && npm run validate:fixed-events && npm run test:authored-story-validator",
+    "validate:authored-story": "node scripts/validate-authored-story.mjs",
+    "validate:fixed-events": "node scripts/validate-fixed-events.mjs",
+    "test:authored-story-validator": "node scripts/test-authored-story-validator.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "ajv": "^8.18.0",
+    "fast-xml-parser": "^5.5.9",
     "typescript": "^5.8.2",
     "vite": "^7.3.1"
   }

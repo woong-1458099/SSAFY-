@@ -6,39 +6,38 @@ export type WeeklyPlanOption = {
   label: string;
   description: string;
   statDelta: Partial<Record<WeeklyPlanStatKey, number>>;
+  hpDelta: number;
   color: number;
 };
 
 export const WEEKLY_PLAN_TIME_LABELS = ["오전", "오후"] as const;
 export const WEEKLY_PLAN_DAY_INDICES = [0, 1, 2, 3, 4] as const;
-export const WEEKLY_PLAN_ACTIVITY_TEXTURE_KEYS: Record<WeeklyPlanOptionId, string> = {
-  ui_practice: "weekly-plan-ui-practice",
-  rest_api_db: "weekly-plan-rest-api-db",
-  team_project: "weekly-plan-team-project",
-};
 
 export const WEEKLY_PLAN_OPTIONS: WeeklyPlanOption[] = [
   {
     id: "ui_practice",
-    label: "UI 구현 실습",
-    description: "FE 능력치 획득",
-    statDelta: { fe: 4 },
-    color: 0x4c8ed9,
+    label: "UI 구현 연습",
+    description: "FE +10 / HP -20 / 스트레스 +2",
+    statDelta: { fe: 10, stress: 2 },
+    hpDelta: -20,
+    color: 0x4c8ed9
   },
   {
     id: "rest_api_db",
-    label: "REST API와 데이터베이스 설계",
-    description: "BE 능력치 획득",
-    statDelta: { be: 4 },
-    color: 0x3d9d7a,
+    label: "REST API와 DB 설계",
+    description: "BE +10 / HP -20 / 스트레스 +2",
+    statDelta: { be: 10, stress: 2 },
+    hpDelta: -20,
+    color: 0x3d9d7a
   },
   {
     id: "team_project",
     label: "팀 프로젝트",
-    description: "협업 능력치 획득",
-    statDelta: { teamwork: 4 },
-    color: 0xb68543,
-  },
+    description: "협업 +10 / HP -20 / 스트레스 +2",
+    statDelta: { teamwork: 10, stress: 2 },
+    hpDelta: -20,
+    color: 0xb68543
+  }
 ];
 
 export function createDefaultWeeklyPlan(): WeeklyPlanOptionId[] {
@@ -57,31 +56,8 @@ export function getWeeklyPlanOption(optionId: WeeklyPlanOptionId): WeeklyPlanOpt
 }
 
 export function parseWeeklyPlanOptionId(value: unknown): WeeklyPlanOptionId | null {
-  if (value === "ui_practice" || value === "rest_api_db" || value === "team_project") return value;
-  return null;
-}
-
-export function getCurrentWeeklyPlanSlotKey(
-  week: number,
-  dayIndex: number,
-  timeIndex: number
-): string | null {
-  if (dayIndex < 0 || dayIndex >= WEEKLY_PLAN_DAY_INDICES.length) return null;
-  if (timeIndex < 0 || timeIndex >= WEEKLY_PLAN_TIME_LABELS.length) return null;
-  return `${week}-${dayIndex}-${timeIndex}`;
-}
-
-export function parseWeeklyPlanSlotKey(
-  value: string
-): { week: number; dayIndex: number; timeIndex: number } | null {
-  const [weekText, dayText, timeText] = value.split("-");
-  const week = Number.parseInt(weekText ?? "", 10);
-  const dayIndex = Number.parseInt(dayText ?? "", 10);
-  const timeIndex = Number.parseInt(timeText ?? "", 10);
-  if (!Number.isFinite(week) || !Number.isFinite(dayIndex) || !Number.isFinite(timeIndex)) {
-    return null;
+  if (value === "ui_practice" || value === "rest_api_db" || value === "team_project") {
+    return value;
   }
-  if (dayIndex < 0 || dayIndex >= WEEKLY_PLAN_DAY_INDICES.length) return null;
-  if (timeIndex < 0 || timeIndex >= WEEKLY_PLAN_TIME_LABELS.length) return null;
-  return { week, dayIndex, timeIndex };
+  return null;
 }

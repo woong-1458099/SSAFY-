@@ -54,7 +54,7 @@ class SaveFileControllerSessionSecurityTest {
 
     @Test
     void userSaveFilesRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/users/{userId}/save-files", UUID.randomUUID()))
+        mockMvc.perform(get("/api/users/{userId}/save-files", UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -63,7 +63,7 @@ class SaveFileControllerSessionSecurityTest {
         UserResponse signedInUser = user("signed-in@example.com");
         when(userService.getCurrentUser(eq(signedInUser.id()))).thenReturn(signedInUser);
 
-        mockMvc.perform(get("/users/{userId}/save-files", UUID.randomUUID()).session(authenticatedSession(signedInUser)))
+        mockMvc.perform(get("/api/users/{userId}/save-files", UUID.randomUUID()).session(authenticatedSession(signedInUser)))
                 .andExpect(status().isForbidden());
     }
 
@@ -73,7 +73,7 @@ class SaveFileControllerSessionSecurityTest {
         when(userService.getCurrentUser(eq(signedInUser.id()))).thenReturn(signedInUser);
         when(saveFileService.getUserSaveFiles(eq(signedInUser.id()))).thenReturn(List.of());
 
-        mockMvc.perform(get("/users/{userId}/save-files", signedInUser.id()).session(authenticatedSession(signedInUser)))
+        mockMvc.perform(get("/api/users/{userId}/save-files", signedInUser.id()).session(authenticatedSession(signedInUser)))
                 .andExpect(status().isOk());
     }
 
@@ -86,7 +86,7 @@ class SaveFileControllerSessionSecurityTest {
         SaveFile saveFile = saveFile(ownerId);
         when(saveFileService.getSaveFileEntity(eq(saveFile.getId()))).thenReturn(saveFile);
 
-        mockMvc.perform(get("/save-files/{saveFileId}", saveFile.getId()).session(authenticatedSession(signedInUser)))
+        mockMvc.perform(get("/api/save-files/{saveFileId}", saveFile.getId()).session(authenticatedSession(signedInUser)))
                 .andExpect(status().isForbidden());
     }
 

@@ -1,0 +1,160 @@
+{
+  "dialogues": [
+    {
+      "id": "minsu_intro_w5",
+      "label": "민수 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "프로젝트 기획 주간이네. 요구사항 정의서 똑바로 써라. 나중에 고생한다."
+        }
+      }
+    },
+    {
+      "id": "npc_hyewon_w5",
+      "label": "혜원 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "혜원",
+          "text": "우리 팀 아이디어 너무 좋지 않아? 내가 UI 설계 다 끝내두었어!"
+        }
+      }
+    },
+    {
+      "id": "npc_minseok_w5",
+      "label": "민석 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민석",
+          "text": "DB 설계가 제일 어렵네요. ERD 부터 차근차근 그려봅시다."
+        }
+      }
+    },
+    {
+      "id": "npc_myungjin_w5",
+      "label": "명진 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "명진",
+          "text": "팀 컨벤션 정하는 게 시급해. 파일 구조랑 네이밍 규칙 다 중요해."
+        }
+      }
+    },
+    {
+      "id": "npc_yeonwoong_w5",
+      "label": "연웅 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "연웅",
+          "text": "프로토타입 만들다가 또 밤새갔어... 몸이 열 개라도 모자랄."
+        }
+      }
+    },
+    {
+      "id": "npc_hyoryeon_w5",
+      "label": "효련 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "효련",
+          "text": "팀 로고랑 메인 테마 색상 정했어! 다들 마음에 들었으면 좋겠네."
+        }
+      }
+    },
+    {
+      "id": "npc_jiwoo_w5",
+      "label": "지우 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "지우",
+          "text": "Git Hub Flow 잘 지키자! PR 리뷰도 꼼꼼히 해줄게."
+        }
+      }
+    },
+    {
+      "id": "npc_jongmin_w5",
+      "label": "종민 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "종민",
+          "text": "팀원들간의 협업이 제일 중요합니다. 의사소통 많이 하세요."
+        }
+      }
+    },
+    {
+      "id": "npc_minsu_w5",
+      "label": "민수 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "민수",
+          "text": "기능 명세서... 장~담~모한다~"
+        }
+      }
+    },
+    {
+      "id": "npc_sunmi_w5",
+      "label": "조선미 프로 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "조선미 프로",
+          "text": "팀 빌딩은 잘 되어가나요? 서로 배려하면서 해보세요!"
+        }
+      }
+    },
+    {
+      "id": "npc_doyeon_w5",
+      "label": "김도연 프로 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김도연 프로",
+          "text": "여러분의 아이디어가 세상을 바꿀 수 있어요!"
+        }
+      }
+    },
+    {
+      "id": "npc_hyunseok_w5",
+      "label": "이현석 컨설턴트 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "이현석 컨설턴트",
+          "text": "프로젝트 현실 가능한 범위 내에서 기획하는 게 중요합니다. 너무 욕심 부리지 마세요."
+        }
+      }
+    },
+    {
+      "id": "npc_nayool_w5",
+      "label": "김나율 프로 (5주차)",
+      "startNodeId": "start",
+      "nodes": {
+        "start": {
+          "id": "start",
+          "speaker": "김나율 프로",
+          "text": "팀명 정하는 게 제일 재미있죠? 우리 반 학생들 팀네임 기대할게요!"
+        }
+      }
+    }
+  ]
+}

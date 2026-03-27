@@ -1,0 +1,106 @@
+{
+  "sceneStates": [
+    {
+      "id": "world_default",
+      "area": "world",
+      "npcs": [
+        {
+          "npcId": "hyoryeon",
+          "x": 325,
+          "y": 480,
+          "dialogueId": "npc_hyoryeon"
+        },
+        {
+          "npcId": "jiwoo",
+          "x": 700,
+          "y": 600,
+          "dialogueId": "npc_jiwoo"
+        },
+        {
+          "npcId": "jongmin",
+          "x": 1120,
+          "y": 480,
+          "dialogueId": "npc_jongmin"
+        }
+      ]
+    },
+    {
+      "id": "downtown_default",
+      "area": "downtown",
+      "npcs": [
+        {
+          "npcId": "yeonwoong",
+          "x": 380,
+          "y": 300,
+          "dialogueId": "npc_yeonwoong"
+        },
+        {
+          "npcId": "minsu",
+          "x": 590,
+          "y": 290,
+          "dialogueId": "npc_minsu"
+        },
+        {
+          "npcId": "myungjin",
+          "x": 696,
+          "y": 520,
+          "dialogueId": "npc_myungjin"
+        }
+      ]
+    },
+    {
+      "id": "campus_default",
+      "area": "campus",
+      "npcs": [
+        {
+          "npcId": "minseok",
+          "x": 100,
+          "y": 480,
+          "dialogueId": "npc_minseok"
+        },
+        {
+          "npcId": "hyewon",
+          "x": 300,
+          "y": 480,
+          "dialogueId": "npc_hyewon"
+        },
+        {
+          "npcId": "sunmi",
+          "x": 780,
+          "y": 480,
+          "dialogueId": "npc_sunmi"
+        },
+        {
+          "npcId": "doyeon",
+          "x": 900,
+          "y": 480,
+          "dialogueId": "npc_doyeon"
+        },
+        {
+          "npcId": "hyunseok",
+          "x": 500,
+          "y": 480,
+          "dialogueId": "npc_hyunseok"
+        },
+        {
+          "npcId": "nayool",
+          "x": 1180,
+          "y": 480,
+          "dialogueId": "npc_nayool"
+        }
+      ]
+    },
+    {
+      "id": "classroom_default",
+      "area": "classroom",
+      "npcs": [
+        {
+          "npcId": "minigame_npc",
+          "x": 1020,
+          "y": 280,
+          "dialogueId": "npc_minigame_npc"
+        }
+      ]
+    }
+  ]
+}
