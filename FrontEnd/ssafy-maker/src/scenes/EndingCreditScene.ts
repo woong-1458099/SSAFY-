@@ -36,9 +36,6 @@ type CreditNpcDefinition = {
   key: string;
   assetPath: string;
   displayName: string;
-  frameRate?: number;
-  frameStart?: number;
-  frameEnd?: number;
 };
 
 const FONT_FAMILY = "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
@@ -56,7 +53,7 @@ const CREDIT_NPCS: readonly CreditNpcDefinition[] = [
   { key: "ending-credit-yeonwoong", assetPath: "/assets/game/npc/walking-yeonwoong.png", displayName: "최연웅" },
   { key: "ending-credit-doyeon", assetPath: "/assets/game/npc/walking-doyeon.png", displayName: "김도연 프로님" },
   { key: "ending-credit-sunmi", assetPath: "/assets/game/npc/walking-sunmi.png", displayName: "조선미 프로님" },
-  { key: "ending-credit-nayool", assetPath: "/assets/game/npc/walking-nayool.png", displayName: "김나율 프로님", frameRate: 6, frameStart: 0, frameEnd: 2 },
+  { key: "ending-credit-nayool", assetPath: "/assets/game/npc/walking-nayool.png", displayName: "김나율 프로님" },
   { key: "ending-credit-hyunseok", assetPath: "/assets/game/npc/walking-hyeonsok.png", displayName: "이현석 컨설턴트님" },
   { key: "ending-credit-hyewon", assetPath: "/assets/game/npc/walking-hyewon.png", displayName: "이혜원 실습코치님" },
   { key: "ending-credit-minseok", assetPath: "/assets/game/npc/walking-minsok.png", displayName: "최민석 실습코치님" }
@@ -160,11 +157,8 @@ export class EndingCreditScene extends Phaser.Scene {
 
       this.anims.create({
         key: animationKey,
-        frames: this.anims.generateFrameNumbers(npc.key, {
-          start: npc.frameStart ?? 9,
-          end: npc.frameEnd ?? 12
-        }),
-        frameRate: npc.frameRate ?? 7,
+        frames: this.anims.generateFrameNumbers(npc.key, { start: 9, end: 12 }),
+        frameRate: 7,
         repeat: -1
       });
     });
