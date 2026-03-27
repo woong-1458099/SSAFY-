@@ -32,6 +32,40 @@ export interface RecordDeathRequest {
 
 export type BackendApiStatus = "unknown" | "available" | "unavailable";
 
+export class ApiRequestError extends Error {
+  readonly url: string;
+  readonly status?: number;
+  readonly code?: string;
+
+  constructor(
+    message: string,
+    options: {
+      url: string;
+      status?: number;
+      code?: string;
+      cause?: unknown;
+    }
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.url = options.url;
+    this.status = options.status;
+    this.code = options.code;
+    if (options.cause !== undefined) {
+      Object.defineProperty(this, "cause", {
+        configurable: true,
+        enumerable: false,
+        value: options.cause,
+        writable: true
+      });
+    }
+  }
+}
+
+export function isApiRequestError(value: unknown): value is ApiRequestError {
+  return value instanceof ApiRequestError;
+}
+
 const RAW_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
 const API_PATH_SEGMENT = "/api";
 
@@ -102,24 +136,28 @@ export function getBackendApiStatus(): BackendApiStatus {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const url = `${API_PREFIX}${path}`;
   console.log("[auth-api] request", {
-    url: `${API_PREFIX}${path}`,
+    url,
     method: init.method ?? "GET"
   });
   let response: Response;
   try {
-    response = await fetch(`${API_PREFIX}${path}`, {
+    response = await fetch(url, {
       credentials: "include",
       ...init
     });
     backendApiStatus = "available";
   } catch (error) {
     backendApiStatus = "unavailable";
-    throw error;
+    throw new ApiRequestError("API request failed", {
+      url,
+      cause: error
+    });
   }
   const raw = await response.text();
   console.log("[auth-api] response", {
-    url: `${API_PREFIX}${path}`,
+    url,
     status: response.status,
     ok: response.ok,
     raw
@@ -129,11 +167,18 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     payload = JSON.parse(raw) as ApiResponse<T>;
   } catch {
-    throw new Error(raw || "API request failed");
+    throw new ApiRequestError(raw || "API request failed", {
+      url,
+      status: response.status
+    });
   }
 
   if (!response.ok || payload.code !== "OK") {
-    throw new Error(payload.message || "API request failed");
+    throw new ApiRequestError(payload.message || "API request failed", {
+      url,
+      status: response.status,
+      code: payload.code
+    });
   }
 
   return payload.data;
