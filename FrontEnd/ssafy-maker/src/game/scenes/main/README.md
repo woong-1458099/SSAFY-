@@ -8,8 +8,6 @@ Current split:
   - Session gate and logout fallback flow for entering/leaving `MainScene`.
 - `autoSaveCoordinator.ts`
   - Dirty/idle/min-interval based autosave scheduling.
-- `autoSavePolicy.ts`
-  - Small pure helpers for autosave gating contracts that need regression coverage.
 - `debugPanel.ts`
   - Debug panel view-state payload shaping.
 - `debugFlow.ts`
@@ -37,5 +35,5 @@ Rule of thumb:
 - Keep world orchestration and cross-manager runtime flow inside `MainScene.ts`.
 - Move reusable support logic, payload shaping, and lifecycle helpers into this folder.
 - `PlayerManager.isMovementActivityInProgress()` is the autosave-facing contract: collision-blocked input counts as active play, but input-locked frames do not.
-- `MainScene` also applies a short autosave grace window immediately after gameplay input becomes locked so menu/dialogue/interact transitions do not trigger a save too aggressively.
+- `PlayerManager.isMovementActivityInProgress()` is the autosave-facing contract: collision-blocked input counts as active play, input-locked frames do not, and the last valid activity frame is preserved briefly across lock/load boundaries.
 - Current usage note: `PlayerManager.isMovementActivityInProgress()` is currently consumed by `MainScene.shouldAutoSave()` only, so activity-policy regressions should be verified against that path first.

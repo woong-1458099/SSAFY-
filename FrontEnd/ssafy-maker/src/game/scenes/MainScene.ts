@@ -77,7 +77,6 @@ import {
 import { UI_DEPTH } from "../systems/uiDepth";
 import type { LegacyMinigameSceneKey } from "../../features/minigame/minigameSceneKeys";
 import { MainSceneAutoSaveCoordinator } from "./main/autoSaveCoordinator";
-import { shouldDelayAutoSaveForInputLock } from "./main/autoSavePolicy";
 import { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } from "./main/authFlow";
 import {
   buildCurrentSceneStateSnapshot,
@@ -108,7 +107,6 @@ import {
 } from "./main/targets";
 
 export class MainScene extends Phaser.Scene {
-  private static readonly AUTOSAVE_INPUT_LOCK_GRACE_MS = 400;
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
   private static readonly PENDING_RESTORE_PAYLOAD_KEY = "pendingRestorePayload";
   private static readonly PENDING_DEBUG_FIXED_EVENT_KEY = "pendingDebugFixedEvent";
@@ -177,8 +175,6 @@ export class MainScene extends Phaser.Scene {
     frame: number;
   };
   private hasLoggedDialogueWeekMismatch = false;
-  private autoSaveInputLockUntil = 0;
-  private wasGameplayInputLocked = false;
   constructor() {
     super(SCENE_KEYS.main);
   }
@@ -192,8 +188,6 @@ export class MainScene extends Phaser.Scene {
     this.logoutInProgress = false;
     this.deathSequenceActive = false;
     this.endingFlowRequested = false;
-    this.autoSaveInputLockUntil = 0;
-    this.wasGameplayInputLocked = false;
     this.pendingDeathSceneExit?.remove(false);
     this.pendingDeathSceneExit = undefined;
     this.autoSaveCoordinator.reset();
@@ -1018,10 +1012,6 @@ export class MainScene extends Phaser.Scene {
       placePopupOpen ||
       plannerOpen;
     this.playerManager.setInputLocked(gameplayInputLocked);
-    if (gameplayInputLocked && !this.wasGameplayInputLocked) {
-      this.autoSaveInputLockUntil = this.time.now + MainScene.AUTOSAVE_INPUT_LOCK_GRACE_MS;
-    }
-    this.wasGameplayInputLocked = gameplayInputLocked;
 
     if (
       this.escapeKey &&
@@ -1812,10 +1802,6 @@ hudWeek: number): number {
     }
 
     if (!this.sys.isActive() || !this.scene.isActive()) {
-      return false;
-    }
-
-    if (shouldDelayAutoSaveForInputLock({ nowMs: this.time.now, lockedUntilMs: this.autoSaveInputLockUntil })) {
       return false;
     }
 

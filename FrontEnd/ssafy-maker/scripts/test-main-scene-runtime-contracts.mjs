@@ -190,24 +190,11 @@ let coordinatorOutput = ts.transpileModule(fs.readFileSync(coordinatorSourcePath
 coordinatorOutput = coordinatorOutput.replace(/from "phaser"/g, 'from "./phaser-stub.mjs"');
 writeFile(coordinatorOutputPath, coordinatorOutput);
 
-const autoSavePolicySourcePath = path.join(
-  projectRoot,
-  "src",
-  "game",
-  "scenes",
-  "main",
-  "autoSavePolicy.ts"
-);
-const autoSavePolicyOutputPath = transpileModuleToTemp(autoSavePolicySourcePath, "autoSavePolicy.mjs");
-
 const { resolvePlayerMovementActivityState, shouldPreservePlayerMovementActivity } = await import(
   `${pathToFileURL(playerManagerOutputPath).href}?t=${Date.now()}`
 );
 const { MainSceneAreaRefreshCoordinator, shouldAbortAreaRefreshRequest } = await import(
   `${pathToFileURL(coordinatorOutputPath).href}?t=${Date.now()}`
-);
-const { shouldDelayAutoSaveForInputLock } = await import(
-  `${pathToFileURL(autoSavePolicyOutputPath).href}?t=${Date.now()}`
 );
 
 const movementCases = [
@@ -254,16 +241,38 @@ assert.equal(
   false,
   "movement grace window should expire after the configured delay"
 );
-
 assert.equal(
-  shouldDelayAutoSaveForInputLock({ nowMs: 1_000, lockedUntilMs: 1_300 }),
+  shouldPreservePlayerMovementActivity({
+    isMoving: false,
+    isMoveInputActive: false,
+    lastActiveAtMs: 1_000,
+    nowMs: 1_200,
+    graceMs: 250
+  }),
   true,
-  "input lock grace window should delay autosave immediately after locking"
+  "input-lock transition frame should remain active during the movement grace window"
 );
 assert.equal(
-  shouldDelayAutoSaveForInputLock({ nowMs: 1_500, lockedUntilMs: 1_300 }),
+  shouldPreservePlayerMovementActivity({
+    isMoving: false,
+    isMoveInputActive: true,
+    lastActiveAtMs: Number.NEGATIVE_INFINITY,
+    nowMs: 1_200,
+    graceMs: 250
+  }),
+  true,
+  "collision-blocked input frame should stay active even without position changes"
+);
+assert.equal(
+  shouldPreservePlayerMovementActivity({
+    isMoving: false,
+    isMoveInputActive: false,
+    lastActiveAtMs: 1_000,
+    nowMs: 1_260,
+    graceMs: 250
+  }),
   false,
-  "autosave grace window should expire after the configured delay"
+  "unlock frames after the grace window should become idle again"
 );
 
 assert.equal(
@@ -356,4 +365,4 @@ disposedScene.timers.shift().fire();
 await flushMicrotasks();
 assert.equal(disposedRefreshCalled, false, "disposed scenes must not run deferred refresh callbacks");
 
-console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 11} cases)`);
+console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 12} cases)`);
