@@ -145,13 +145,24 @@ function readCachedAuthoredStory(scene?: Phaser.Scene): {
   return { dialoguesRaw, sceneStatesRaw };
 }
 
+function getWeekDialoguePath(week: number): string {
+  switch (week) {
+    case 1: return ASSET_PATHS.story.authoredDialoguesW1;
+    case 2: return ASSET_PATHS.story.authoredDialoguesW2;
+    case 3: return ASSET_PATHS.story.authoredDialoguesW3;
+    case 4: return ASSET_PATHS.story.authoredDialoguesW4;
+    case 5: return ASSET_PATHS.story.authoredDialoguesW5;
+    case 6: return ASSET_PATHS.story.authoredDialoguesW6;
+    default: return ASSET_PATHS.story.authoredDialoguesW1;
+  }
+}
+
 async function loadAuthoredStoryJson(scene?: Phaser.Scene, week: number = 1): Promise<{
   dialoguesChunksRaw: unknown[];
   sceneStatesRaw: unknown;
 }> {
   try {
-    const weekKey = `authoredDialoguesW${week}` as keyof typeof ASSET_PATHS.story;
-    const weekPath = ASSET_PATHS.story[weekKey];
+    const weekPath = getWeekDialoguePath(week);
 
     // dialogues.json (레거시), dialogues_common.json, 그리고 현재 주차 파일을 함께 로드합니다.
     const [legacyRaw, commonRaw, weekRaw, sceneStatesRaw] = await Promise.all([
