@@ -22,7 +22,13 @@ const transpileCompilerOptions = {
   noEmit: false
 };
 
+let didCleanupTempDir = false;
+
 function cleanupTempDir() {
+  if (didCleanupTempDir) {
+    return;
+  }
+  didCleanupTempDir = true;
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
 
@@ -134,6 +140,8 @@ const phaserStubPath = path.join(tempDir, "phaser-stub.mjs");
 const renderDepthStubPath = path.join(tempDir, "renderDepth-stub.mjs");
 const playerVisualStubPath = path.join(tempDir, "playerVisual-stub.mjs");
 const appearanceStubPath = path.join(tempDir, "playerAppearanceDefinitions-stub.mjs");
+const authSessionStubPath = path.join(tempDir, "authSession-stub.mjs");
+const sceneKeyStubPath = path.join(tempDir, "sceneKey-stub.mjs");
 
 writeFile(
   phaserStubPath,
@@ -170,6 +178,45 @@ writeFile(
   appearanceStubPath,
   "export function getDefaultPlayerAppearanceDefinition() { return {}; }\n"
 );
+writeFile(
+  authSessionStubPath,
+  [
+    "let state = {",
+    "  storedSession: null,",
+    "  existingSession: null,",
+    "  activeAuthUserId: null,",
+    "  logoutShouldReject: false,",
+    "  registryApplications: [],",
+    "  clearRegistryCalls: 0,",
+    "  clearStoredSessionCalls: 0,",
+    "  beginLogoutCalls: 0",
+    "};",
+    "export function __setAuthState(nextState) { state = { ...state, ...nextState }; }",
+    "export function __getAuthState() { return state; }",
+    "export function applySessionToRegistry(registry, session) {",
+    "  state.registryApplications.push(session);",
+    "  registry.set('authToken', 'bff-session');",
+    "  registry.set('authUser', { id: session.userId });",
+    "}",
+    "export async function beginLogout() {",
+    "  state.beginLogoutCalls += 1;",
+    "  if (state.logoutShouldReject) { throw new Error('logout failed'); }",
+    "}",
+    "export function clearAuthRegistry(registry) {",
+    "  state.clearRegistryCalls += 1;",
+    "  registry.remove('authToken');",
+    "  registry.remove('authUser');",
+    "}",
+    "export function clearStoredSession() { state.clearStoredSessionCalls += 1; state.storedSession = null; }",
+    "export async function fetchExistingSession() { return state.existingSession; }",
+    "export function getActiveAuthUserId() { return state.activeAuthUserId; }",
+    "export function readStoredSession() { return state.storedSession; }"
+  ].join("\n")
+);
+writeFile(
+  sceneKeyStubPath,
+  "export const SceneKey = { Login: 'LoginScene' };\n"
+);
 
 const playerManagerSourcePath = path.join(projectRoot, "src", "game", "managers", "PlayerManager.ts");
 const playerManagerOutputPath = transpileModuleToTemp(playerManagerSourcePath, "PlayerManager.mjs");
@@ -203,6 +250,17 @@ let coordinatorOutput = ts.transpileModule(fs.readFileSync(coordinatorSourcePath
 coordinatorOutput = coordinatorOutput.replace(/from "phaser"/g, 'from "./phaser-stub.mjs"');
 writeFile(coordinatorOutputPath, coordinatorOutput);
 
+const authFlowSourcePath = path.join(projectRoot, "src", "game", "scenes", "main", "authFlow.ts");
+const authFlowOutputPath = transpileModuleToTemp(authFlowSourcePath, "authFlow.mjs");
+let authFlowOutput = ts.transpileModule(fs.readFileSync(authFlowSourcePath, "utf8"), {
+  compilerOptions: transpileCompilerOptions,
+  fileName: authFlowSourcePath
+}).outputText;
+authFlowOutput = authFlowOutput
+  .replace(/from "\.\.\/\.\.\/\.\.\/features\/auth\/authSession"/g, 'from "./authSession-stub.mjs"')
+  .replace(/from "\.\.\/\.\.\/\.\.\/shared\/enums\/sceneKey"/g, 'from "./sceneKey-stub.mjs"');
+writeFile(authFlowOutputPath, authFlowOutput);
+
 const {
   PlayerManager,
   hasImmediatePlayerMovementActivity,
@@ -215,6 +273,12 @@ const {
 );
 const { MainSceneAreaRefreshCoordinator, shouldAbortAreaRefreshRequest } = await import(
   `${pathToFileURL(coordinatorOutputPath).href}?t=${Date.now()}`
+);
+const { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } = await import(
+  `${pathToFileURL(authFlowOutputPath).href}?t=${Date.now()}`
+);
+const { __getAuthState, __setAuthState } = await import(
+  `${pathToFileURL(authSessionStubPath).href}?t=${Date.now()}`
 );
 
 const movementCases = [
@@ -498,4 +562,101 @@ disposedScene.timers.shift().fire();
 await flushMicrotasks();
 assert.equal(disposedRefreshCalled, false, "disposed scenes must not run deferred refresh callbacks");
 
-console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 20} cases)`);
+function createFakeRegistry(initialState = {}) {
+  const store = new Map(Object.entries(initialState));
+  return {
+    get(key) {
+      return store.get(key);
+    },
+    set(key, value) {
+      store.set(key, value);
+    },
+    remove(key) {
+      store.delete(key);
+    }
+  };
+}
+
+function createFakeScenePlugin() {
+  return {
+    starts: [],
+    start(key) {
+      this.starts.push(key);
+    }
+  };
+}
+
+__setAuthState({
+  storedSession: { userId: "stored-user" },
+  existingSession: null,
+  activeAuthUserId: null,
+  logoutShouldReject: false,
+  registryApplications: [],
+  clearRegistryCalls: 0,
+  clearStoredSessionCalls: 0,
+  beginLogoutCalls: 0
+});
+const storedRegistry = createFakeRegistry();
+const storedScenePlugin = createFakeScenePlugin();
+assert.equal(
+  await ensureMainSceneAuthenticatedEntry(storedRegistry, storedScenePlugin),
+  true,
+  "stored sessions should allow MainScene entry without redirect"
+);
+assert.equal(
+  storedScenePlugin.starts.length,
+  0,
+  "stored-session entry should not redirect to login"
+);
+
+__setAuthState({
+  storedSession: null,
+  existingSession: null,
+  activeAuthUserId: null,
+  logoutShouldReject: false,
+  registryApplications: [],
+  clearRegistryCalls: 0,
+  clearStoredSessionCalls: 0,
+  beginLogoutCalls: 0
+});
+const missingRegistry = createFakeRegistry();
+const missingScenePlugin = createFakeScenePlugin();
+assert.equal(
+  await ensureMainSceneAuthenticatedEntry(missingRegistry, missingScenePlugin),
+  false,
+  "missing sessions should deny MainScene entry"
+);
+assert.deepEqual(
+  missingScenePlugin.starts,
+  ["LoginScene"],
+  "missing sessions should redirect to login"
+);
+
+__setAuthState({
+  storedSession: null,
+  existingSession: null,
+  activeAuthUserId: null,
+  logoutShouldReject: true,
+  registryApplications: [],
+  clearRegistryCalls: 0,
+  clearStoredSessionCalls: 0,
+  beginLogoutCalls: 0
+});
+const logoutRegistry = createFakeRegistry({
+  authToken: "bff-session",
+  authUser: { id: "user-1" }
+});
+const logoutScenePlugin = createFakeScenePlugin();
+let fallbackCalls = 0;
+await logoutMainSceneSession(logoutRegistry, logoutScenePlugin, () => {
+  fallbackCalls += 1;
+});
+assert.equal(fallbackCalls, 1, "logout failure should trigger exactly one local fallback");
+assert.deepEqual(
+  logoutScenePlugin.starts,
+  ["LoginScene"],
+  "logout failure should still land on the login scene exactly once"
+);
+assert.equal(__getAuthState().beginLogoutCalls, 1, "logout flow should attempt remote logout once");
+
+console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 23} cases)`);
