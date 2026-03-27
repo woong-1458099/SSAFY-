@@ -405,6 +405,26 @@ assert.equal(
   true,
   "movement snapshots should re-enable autosave activity immediately after input unlock with held input"
 );
+const lockTransitionManager = {
+  isInputLocked: false,
+  hasRawMoveInput: true,
+  isMoving: false,
+  isMoveInputActive: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+};
+PlayerManager.prototype.setInputLocked.call(lockTransitionManager, true);
+assert.equal(
+  lockTransitionManager.hasRawMoveInput,
+  false,
+  "locking input should clear stale raw movement intent before the next update tick"
+);
+PlayerManager.prototype.setInputLocked.call(lockTransitionManager, false);
+assert.equal(
+  lockTransitionManager.hasRawMoveInput,
+  false,
+  "unlocking input should also clear stale raw movement intent until update resamples current input"
+);
 assert.equal(
   PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
     getMovementActivitySnapshot: () => movementSnapshot

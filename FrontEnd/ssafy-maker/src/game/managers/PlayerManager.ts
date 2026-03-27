@@ -153,6 +153,11 @@ export class PlayerManager {
   }
 
   setInputLocked(locked: boolean) {
+    if (this.isInputLocked !== locked) {
+      // Reset raw input on lock transitions so autosave does not read a stale held-key snapshot
+      // before the next update tick resamples keyboard state.
+      this.hasRawMoveInput = false;
+    }
     if (
       locked &&
       shouldRefreshMovementActivityOnInputLock({
