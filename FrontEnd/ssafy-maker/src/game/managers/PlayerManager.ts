@@ -35,7 +35,7 @@ export class PlayerManager {
   private parsedMap?: ParsedTmxMap;
   // `isMoving` means the player position changed during the latest completed update tick.
   private isMoving = false;
-  // `isMoveInputActive` means directional input is currently being pressed, even if movement is blocked.
+  // `isMoveInputActive` means directional input is currently active for gameplay movement checks.
   private isMoveInputActive = false;
 
   constructor(scene: Phaser.Scene) {
@@ -112,7 +112,7 @@ export class PlayerManager {
     }
 
     if (this.isInputLocked) {
-      this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
+      this.commitMovementState(nextIsMoving, false);
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
       return;
     }

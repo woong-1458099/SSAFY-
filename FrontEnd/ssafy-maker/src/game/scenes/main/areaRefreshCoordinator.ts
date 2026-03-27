@@ -17,7 +17,7 @@ type AreaRefreshCoordinatorOptions = {
 
 type PendingAreaRefreshTask = {
   requestId: number;
-  timer: Phaser.Time.TimerEvent;
+  timer?: Phaser.Time.TimerEvent;
   controller: AbortController;
   retryCount: number;
 };
@@ -61,20 +61,15 @@ export class MainSceneAreaRefreshCoordinator {
     this.clear();
     const requestId = ++this.pendingRequestId;
     const controller = new AbortController();
-    const pendingTask = {
+    const pendingTask: PendingAreaRefreshTask = {
       requestId,
       controller,
       retryCount: 0,
-      timer: undefined as Phaser.Time.TimerEvent | undefined
+      timer: undefined
     };
+    this.pendingTask = pendingTask;
     const timer = this.scheduleTask(expectedAreaId, expectedPlayerSnapshot, pendingTask, 0);
     pendingTask.timer = timer;
-    this.pendingTask = {
-      requestId,
-      controller,
-      retryCount: 0,
-      timer
-    };
   }
 
   clear(): void {
@@ -159,12 +154,6 @@ export class MainSceneAreaRefreshCoordinator {
         pendingTask.retryCount += 1;
         const retryTimer = this.scheduleTask(expectedAreaId, expectedPlayerSnapshot, pendingTask, 0);
         pendingTask.timer = retryTimer;
-        this.pendingTask = {
-          requestId: pendingTask.requestId,
-          controller: pendingTask.controller,
-          retryCount: pendingTask.retryCount,
-          timer: retryTimer
-        };
         return;
       }
 
