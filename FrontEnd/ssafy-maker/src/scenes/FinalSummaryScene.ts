@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { resolveEnding } from "@features/progression/services/endingResolver";
 import type { EndingFlowPayload, EndingResult, EndingSummaryStat } from "@features/progression/types/ending";
 import { SceneKey } from "@shared/enums/sceneKey";
+import { trackAnalyticsEvent } from "@shared/lib/analytics";
 
 type FinalSummarySceneData = Partial<EndingFlowPayload>;
 type EndingFlowScenePayload = {
@@ -52,6 +53,12 @@ export class FinalSummaryScene extends Phaser.Scene {
   }
 
   create(): void {
+    trackAnalyticsEvent("ending_complete", {
+      ending_id: this.ending.endingId,
+      week: this.payload.week,
+      game_play_count: this.payload.gamePlayCount
+    });
+
     const { width, height } = this.scale;
     const layout = this.buildLayout(width, height, this.ending.summaryStats.length);
 

@@ -4,6 +4,7 @@ import Phaser from "phaser";
 import { LEGACY_MINIGAME_CARDS } from "@features/minigame/minigameCatalog";
 import { LEGACY_MINIGAME_MENU_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
 import { isMinigameUnlocked } from "@features/minigame/minigameUnlocks";
+import { trackAnalyticsEvent } from "@shared/lib/analytics";
 
 import { applyLegacyViewport } from "./viewport";
 import { SCREEN, PIXEL_FONT } from './utils';
@@ -145,6 +146,11 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   startSelectedGame(sceneKey) {
+    trackAnalyticsEvent("minigame_start", {
+      minigame_id: sceneKey,
+      launch_source: "menu",
+      return_scene_key: this.returnSceneKey
+    });
     this.cameras.main.flash(160, 255, 255, 255, false);
     this.time.delayedCall(160, () => this.scene.start(sceneKey, { returnSceneKey: this.returnSceneKey }));
   }
