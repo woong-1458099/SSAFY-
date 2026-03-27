@@ -39,6 +39,7 @@ Rule of thumb:
 - `PlayerManager.isAutoSaveMovementActivityInProgress()` is the compatibility shortcut for `autoSaveGateActive`.
 - `PlayerManager.isMovementActivityInProgress()` keeps the broader grace-preserved activity policy for lock/load boundaries.
 - `PlayerManager.isImmediateMovementActivityInProgress()` remains available as the raw immediate-activity helper.
-- Current usage note: `MainScene.shouldAutoSave()` now reads `getMovementActivitySnapshot().autoSaveGateActive`. Any future caller should choose explicitly between snapshot fields instead of mixing helper semantics ad hoc.
+- Current usage note: `MainScene.shouldAutoSave()` now reads `getMovementActivitySnapshot().autoSaveGateActive`.
+- Contract note: the lock-transition autosave gate is verified in [`scripts/test-main-scene-runtime-contracts.mjs`](/C:/Users/HOME/Downloads/gitlab/shoot/S14P21E206/FrontEnd/ssafy-maker/scripts/test-main-scene-runtime-contracts.mjs), and code changes to this policy should be updated there in the same change.
 - Boundary note: `findNearestWalkableRefreshTile(...)` now rejects out-of-bounds origin tiles up front and leaves final fallback selection to `resolveSafeRefreshTile(...)`.
 - Refresh-tile search caching is now scene-owned: `MainScene` passes its own cache object into `areaPresentation.ts` and clears it during scene cleanup.

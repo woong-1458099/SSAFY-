@@ -404,6 +404,24 @@ assert.equal(
   false,
   "movement snapshots should disable autosave activity immediately once input becomes locked"
 );
+assert.equal(
+  lockedMovementSnapshot.autoSaveGateActive,
+  true,
+  "movement snapshots should keep autosave gated during the initial input-lock transition window"
+);
+const longLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: false,
+  isInputLocked: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_000 + PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS + 1 } }
+});
+assert.equal(
+  longLockedMovementSnapshot.autoSaveGateActive,
+  false,
+  "movement snapshots should release autosave gating after the configured lock-transition grace expires"
+);
 const unlockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
   isMoving: false,
   isMoveInputActive: true,
@@ -421,6 +439,19 @@ assert.equal(
   unlockedMovementSnapshot.autoSaveGateActive,
   true,
   "movement snapshots should keep autosave gating active immediately after input unlock with held input"
+);
+const unlockedIdleMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: false,
+  isInputLocked: false,
+  lastMovementActivityAtMs: 1_050,
+  scene: { time: { now: 1_060 } }
+});
+assert.equal(
+  unlockedIdleMovementSnapshot.autoSaveGateActive,
+  false,
+  "movement snapshots should reopen autosave immediately after unlock when no input or movement remains"
 );
 const lockTransitionManager = {
   isInputLocked: false,

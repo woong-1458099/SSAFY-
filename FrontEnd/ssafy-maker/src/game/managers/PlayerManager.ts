@@ -55,6 +55,17 @@ function hasAutoSaveMovementActivity(options: {
   return options.isMoving || (!options.isInputLocked && options.hasRawMoveInput);
 }
 
+function hasAutoSaveGateActivity(options: {
+  autoSaveActive: boolean;
+  graceActive: boolean;
+  isInputLocked: boolean;
+}) {
+  return (
+    options.autoSaveActive ||
+    (PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS > 0 && options.isInputLocked && options.graceActive)
+  );
+}
+
 function shouldRefreshMovementActivityOnInputLock(options: {
   wasInputLocked: boolean;
   isMoving: boolean;
@@ -297,9 +308,11 @@ export class PlayerManager {
       nowMs: this.scene.time.now,
       graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
     });
-    const autoSaveGateActive =
-      autoSaveActive ||
-      (PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS > 0 && this.isInputLocked && graceActive);
+    const autoSaveGateActive = hasAutoSaveGateActivity({
+      autoSaveActive,
+      graceActive,
+      isInputLocked: this.isInputLocked
+    });
 
     return {
       isMoving: this.isMoving,
