@@ -388,16 +388,31 @@ export function createSettingsPage(
   applyScroll();
 
   const destroyInteractiveTree = (object: Phaser.GameObjects.GameObject): void => {
+    // 객체의 scene이 유효한지 확인 (이미 파괴된 객체는 건너뜀)
+    if (!object || !object.scene?.sys) {
+      return;
+    }
+
     if ("removeAllListeners" in object && typeof object.removeAllListeners === "function") {
       object.removeAllListeners();
     }
 
-    if ("disableInteractive" in object && typeof object.disableInteractive === "function") {
-      object.disableInteractive();
+    const interactiveObject = object as Phaser.GameObjects.GameObject & {
+      input?: unknown;
+      scene?: Phaser.Scene;
+      disableInteractive?: () => void;
+    };
+
+    if (interactiveObject.input && interactiveObject.scene?.input && typeof interactiveObject.disableInteractive === "function") {
+      try {
+        interactiveObject.disableInteractive();
+      } catch {
+        // Scene shutdown can invalidate Phaser input internals before menu cleanup runs.
+      }
     }
 
     if (object instanceof Phaser.GameObjects.Container) {
-      object.list.forEach((child) => {
+      [...object.list].forEach((child) => {
         destroyInteractiveTree(child as Phaser.GameObjects.GameObject);
       });
     }

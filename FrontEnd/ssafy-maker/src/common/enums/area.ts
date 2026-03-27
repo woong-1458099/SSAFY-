@@ -2,7 +2,8 @@
 export const AREA_IDS = {
   world: "world",
   downtown: "downtown",
-  campus: "campus"
+  campus: "campus",
+  classroom: "classroom"
 } as const;
 
 export type AreaId = (typeof AREA_IDS)[keyof typeof AREA_IDS];

@@ -12,6 +12,10 @@ import {
 const FONT_FAMILY =
   "\"PFStardustBold\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif";
 const FIXED_EVENT_SLOT_COLOR = 0x5e3654;
+const SLOT_BADGE_HORIZONTAL_PADDING = 10;
+const SLOT_CONTENT_LEFT_PADDING = 14;
+const SLOT_CONTENT_RIGHT_PADDING = 16;
+const SLOT_CONTENT_GAP = 12;
 
 export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   week: number;
@@ -21,11 +25,12 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   actionPoint: number;
   maxActionPoint: number;
   fixedEventSlots?: ReadonlyMap<number, string>;
+  completedSlotIndices?: ReadonlySet<number>;
   initialPlan: WeeklyPlanOptionId[];
   onConfirm: (plan: WeeklyPlanOptionId[]) => void;
   onAdvance: (plan: WeeklyPlanOptionId[]) => void;
 }): Phaser.GameObjects.Container {
-  const { week, dayLabels, currentDayLabel, currentTimeLabel, actionPoint, maxActionPoint, fixedEventSlots, initialPlan, onConfirm, onAdvance } =
+  const { week, dayLabels, currentDayLabel, currentTimeLabel, actionPoint, maxActionPoint, fixedEventSlots, completedSlotIndices, initialPlan, onConfirm, onAdvance } =
     options;
 
   const centerX = Math.round(scene.scale.width / 2);
@@ -59,19 +64,62 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
 
   const draftPlan = [...initialPlan];
   const objects: Phaser.GameObjects.GameObject[] = [overlay, panelOuter, panel, title, subtitle];
-  const gridCenterX = centerX - 124;
-  const amX = gridCenterX - 145;
-  const pmX = gridCenterX + 145;
+  const contentWidth = panelWidth - 100;
+  const gridColumnGap = 22;
+  const minGridColumnGap = 12;
+  const legendGap = 38;
+  const minLegendGap = 16;
+  const dayColumnWidth = 78;
+  const slotWidth = 280;
+  const slotHeight = 70;
+  const legendPanelWidth = 280;
+  const legendPanelHeight = 346;
+  const legendPaddingX = 18;
+  const legendPaddingTop = 24;
+  const legendTitleGap = 28;
+  const legendRowHeight = 64;
+  const fixedColumnWidth = dayColumnWidth + slotWidth * 2 + legendPanelWidth;
+  const desiredGapBudget = gridColumnGap * 2 + legendGap;
+  const minimumGapBudget = minGridColumnGap * 2 + minLegendGap;
+  const availableGapBudget = Math.max(0, contentWidth - fixedColumnWidth);
+  const gapBudget = Math.max(minimumGapBudget, availableGapBudget);
+  let effectiveGridColumnGap = gridColumnGap;
+  let effectiveLegendGap = legendGap;
+
+  const excessGap = Math.max(0, desiredGapBudget - gapBudget);
+  if (excessGap > 0) {
+    const legendReduction = Math.min(excessGap, effectiveLegendGap - minLegendGap);
+    effectiveLegendGap -= legendReduction;
+
+    const remainingExcess = excessGap - legendReduction;
+    if (remainingExcess > 0) {
+      const perColumnReduction = Math.min(
+        effectiveGridColumnGap - minGridColumnGap,
+        Math.ceil(remainingExcess / 2)
+      );
+      effectiveGridColumnGap -= perColumnReduction;
+    }
+
+    console.warn("[weeklyPlannerModal] planner grid exceeded content width, reduced gaps to keep modal visible.", {
+      contentWidth,
+      fixedColumnWidth,
+      desiredGapBudget,
+      effectiveGridColumnGap,
+      effectiveLegendGap
+    });
+  }
+
+  const plannerGridWidth =
+    fixedColumnWidth + effectiveGridColumnGap * 2 + effectiveLegendGap;
+  const plannerGridLeft = centerX - plannerGridWidth / 2;
+  const dayColumnRightX = plannerGridLeft + dayColumnWidth;
+  const amX = dayColumnRightX + effectiveGridColumnGap + slotWidth / 2;
+  const pmX = amX + slotWidth / 2 + effectiveGridColumnGap + slotWidth / 2;
+  const legendPanelX = pmX + slotWidth / 2 + effectiveLegendGap + legendPanelWidth / 2;
   const headerY = centerY - 180;
   const rowStartY = centerY - 126;
   const rowGap = 84;
-  const slotWidth = 268;
-  const slotHeight = 70;
   const slotInfoWidth = slotWidth - 112;
-  const dayLabelRightX = amX - slotWidth / 2 - 28;
-  const legendPanelWidth = 270;
-  const legendPanelHeight = 346;
-  const legendPanelX = centerX + 320;
   const legendPanelY = centerY + 12;
 
   const amHeader = scene.add.text(amX, headerY, "오전 일정", {
@@ -90,38 +138,85 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   }).setOrigin(0.5).setScrollFactor(0);
   objects.push(amHeader, pmHeader);
 
+  const badgeMeasureText = scene.add.text(-1000, -1000, "", {
+    fontFamily: FONT_FAMILY,
+    fontSize: "13px",
+    fontStyle: "bold",
+    color: "#f4fbff",
+    resolution: 2
+  });
+  const slotBadgeBaseWidth = Math.max(
+    ...WEEKLY_PLAN_TIME_LABELS.map((label) => {
+      badgeMeasureText.setText(`${label} 이벤트`);
+      return badgeMeasureText.width + SLOT_BADGE_HORIZONTAL_PADDING * 2;
+    })
+  );
+  badgeMeasureText.destroy();
+
   const refreshSlot = (
+    slotIndex: number,
     bg: Phaser.GameObjects.Rectangle,
     badgeBg: Phaser.GameObjects.Rectangle,
     badgeText: Phaser.GameObjects.Text,
     infoText: Phaser.GameObjects.Text,
+    completionBadge: Phaser.GameObjects.Arc,
+    completionText: Phaser.GameObjects.Text,
     optionId: WeeklyPlanOptionId,
     fixedEventName?: string
   ): void => {
     const option = getWeeklyPlanOption(optionId);
     const isFixedEvent = typeof fixedEventName === "string" && fixedEventName.trim().length > 0;
+    const isCompleted = completedSlotIndices?.has(slotIndex) === true;
+
+    const updateSlotLayout = () => {
+      const badgeWidth = Math.max(slotBadgeBaseWidth, badgeText.width + SLOT_BADGE_HORIZONTAL_PADDING * 2);
+      const slotLeftX = bg.x - bg.width / 2;
+      const badgeCenterX = slotLeftX + SLOT_CONTENT_LEFT_PADDING + badgeWidth / 2;
+      const infoX = slotLeftX + SLOT_CONTENT_LEFT_PADDING + badgeWidth + SLOT_CONTENT_GAP;
+      const infoWidth = Math.max(
+        72,
+        bg.width - SLOT_CONTENT_LEFT_PADDING - SLOT_CONTENT_RIGHT_PADDING - badgeWidth - SLOT_CONTENT_GAP
+      );
+
+      badgeBg.setSize(badgeWidth, badgeBg.height);
+      badgeBg.setPosition(badgeCenterX, bg.y);
+      badgeText.setPosition(badgeCenterX, bg.y);
+      infoText.setPosition(infoX, bg.y);
+      infoText.setWordWrapWidth(infoWidth);
+      completionBadge.setPosition(bg.x + bg.width / 2 - 24, bg.y - bg.height / 2 + 22);
+      completionText.setPosition(completionBadge.x, completionBadge.y - 1);
+    };
+
     if (isFixedEvent) {
-      bg.setFillStyle(FIXED_EVENT_SLOT_COLOR, 0.96);
-      bg.setStrokeStyle(2, 0xffaacb, 1);
+      bg.setFillStyle(isCompleted ? 0x4d2640 : FIXED_EVENT_SLOT_COLOR, 0.96);
+      bg.setStrokeStyle(2, isCompleted ? 0xffdced : 0xffaacb, 1);
       badgeBg.setFillStyle(0x321631, 0.98);
       badgeText.setText(`${badgeText.text.replace(" 이벤트", "")} 이벤트`);
       infoText.setText(`${fixedEventName}\n고정 이벤트`);
+      completionBadge.setVisible(isCompleted);
+      completionText.setVisible(isCompleted);
+      updateSlotLayout();
       bg.disableInteractive();
       return;
     }
 
-    bg.setFillStyle(option.color, 0.95);
-    bg.setStrokeStyle(2, 0x8ed2ff, 1);
+    bg.setFillStyle(isCompleted ? Phaser.Display.Color.IntegerToColor(option.color).darken(28).color : option.color, 0.95);
+    bg.setStrokeStyle(2, isCompleted ? 0xeaf6ff : 0x8ed2ff, 1);
     badgeBg.setFillStyle(0x133150, 0.96);
     badgeText.setText(badgeText.text.replace(" 이벤트", ""));
     infoText.setText(`${option.label}\n${option.description}`);
+    completionBadge.setVisible(isCompleted);
+    completionText.setVisible(isCompleted);
+    updateSlotLayout();
     bg.disableInteractive();
-    bg.setInteractive({ useHandCursor: true });
+    if (!isCompleted) {
+      bg.setInteractive({ useHandCursor: true });
+    }
   };
 
   WEEKLY_PLAN_DAY_INDICES.forEach((dayIndex) => {
     const rowY = rowStartY + dayIndex * rowGap;
-    const dayLabel = scene.add.text(dayLabelRightX, rowY, dayLabels[dayIndex] ?? "", {
+    const dayLabel = scene.add.text(dayColumnRightX, rowY, dayLabels[dayIndex] ?? "", {
       fontFamily: FONT_FAMILY,
       fontSize: "22px",
       fontStyle: "bold",
@@ -153,18 +248,37 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
         wordWrap: { width: slotInfoWidth }
       }).setOrigin(0, 0.5).setScrollFactor(0);
       infoText.setLineSpacing(2);
-      refreshSlot(bg, badge, badgeText, infoText, draftPlan[slotIndex], fixedEventSlots?.get(slotIndex));
+      const completionBadge = scene.add.circle(x + slotWidth / 2 - 24, rowY - slotHeight / 2 + 22, 14, 0xeaf6ff, 0.95).setScrollFactor(0);
+      completionBadge.setStrokeStyle(2, 0x123150, 1);
+      const completionText = scene.add.text(completionBadge.x, completionBadge.y - 1, "V", {
+        fontFamily: FONT_FAMILY,
+        fontSize: "16px",
+        fontStyle: "bold",
+        color: "#123150",
+        resolution: 2
+      }).setOrigin(0.5).setScrollFactor(0);
+      refreshSlot(
+        slotIndex,
+        bg,
+        badge,
+        badgeText,
+        infoText,
+        completionBadge,
+        completionText,
+        draftPlan[slotIndex],
+        fixedEventSlots?.get(slotIndex)
+      );
 
-      if (!fixedEventSlots?.has(slotIndex)) {
+      if (!fixedEventSlots?.has(slotIndex) && !completedSlotIndices?.has(slotIndex)) {
         bg.on("pointerdown", () => {
           const currentIndex = WEEKLY_PLAN_OPTIONS.findIndex((option) => option.id === draftPlan[slotIndex]);
           const nextIndex = (currentIndex + 1) % WEEKLY_PLAN_OPTIONS.length;
           draftPlan[slotIndex] = WEEKLY_PLAN_OPTIONS[nextIndex].id;
-          refreshSlot(bg, badge, badgeText, infoText, draftPlan[slotIndex]);
+          refreshSlot(slotIndex, bg, badge, badgeText, infoText, completionBadge, completionText, draftPlan[slotIndex]);
         });
       }
 
-      objects.push(bg, badge, badgeText, infoText);
+      objects.push(bg, badge, badgeText, infoText, completionBadge, completionText);
     });
   });
 
@@ -174,13 +288,18 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   legendOuter.setStrokeStyle(2, 0x3b6a92, 1);
   const legendBox = scene.add.rectangle(legendPanelX, legendPanelY, legendPanelWidth, legendPanelHeight, 0x112942, 0.94).setScrollFactor(0);
   legendBox.setStrokeStyle(2, 0x5aa8ee, 1);
-  const legendTitle = scene.add.text(legendPanelX, legendPanelY - 136, "범례", {
+  const legendLeftX = legendPanelX - legendPanelWidth / 2 + legendPaddingX;
+  const legendTopY = legendPanelY - legendPanelHeight / 2 + legendPaddingTop;
+  const legendSwatchOffsetX = 8;
+  const legendTextOffsetX = 24;
+  const legendTextWidth = legendPanelWidth - legendPaddingX * 2 - legendTextOffsetX;
+  const legendTitle = scene.add.text(legendLeftX, legendTopY, "범례", {
     fontFamily: FONT_FAMILY,
     fontSize: "22px",
     fontStyle: "bold",
     color: "#eef7ff",
     resolution: 2
-  }).setOrigin(0.5).setScrollFactor(0);
+  }).setOrigin(0, 0).setScrollFactor(0);
 
   const legendEntries = [
     ...WEEKLY_PLAN_OPTIONS.map((option) => ({
@@ -197,25 +316,25 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
 
   objects.push(legendOuter, legendBox, legendTitle);
   legendEntries.forEach((entry, index) => {
-    const legendY = legendPanelY - legendPanelHeight / 2 + 64 + index * 72;
-    const swatch = scene.add.rectangle(legendPanelX - 102, legendY - 8, 18, 18, entry.color, 1).setScrollFactor(0);
+    const rowTopY = legendTopY + legendTitle.height + legendTitleGap + index * legendRowHeight;
+    const swatch = scene.add.rectangle(legendLeftX + legendSwatchOffsetX, rowTopY + 10, 18, 18, entry.color, 1).setScrollFactor(0);
     swatch.setStrokeStyle(2, 0x8ed2ff, 1);
-    const label = scene.add.text(legendPanelX - 82, legendY - 16, entry.label, {
+    const label = scene.add.text(legendLeftX + legendTextOffsetX, rowTopY, entry.label, {
       fontFamily: FONT_FAMILY,
       fontSize: "15px",
       fontStyle: "bold",
       color: "#eef7ff",
       resolution: 2,
-      wordWrap: { width: 164 }
+      wordWrap: { width: legendTextWidth }
     }).setOrigin(0, 0).setScrollFactor(0);
     label.setLineSpacing(4);
-    const description = scene.add.text(legendPanelX - 82, label.y + label.height + 8, entry.description, {
+    const description = scene.add.text(legendLeftX + legendTextOffsetX, label.y + label.height + 6, entry.description, {
       fontFamily: FONT_FAMILY,
-      fontSize: "13px",
+      fontSize: "12px",
       fontStyle: "bold",
       color: "#bddcff",
       resolution: 2,
-      wordWrap: { width: 164 }
+      wordWrap: { width: legendTextWidth }
     }).setOrigin(0, 0).setScrollFactor(0);
     objects.push(swatch, label, description);
   });

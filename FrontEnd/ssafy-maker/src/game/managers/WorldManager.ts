@@ -1,10 +1,9 @@
 // 월드 TMX/TSX를 읽고 실제 타일맵 레이어를 렌더하는 매니저다.
 import Phaser from "phaser";
-import { ASSET_KEYS } from "../../common/assets/assetKeys";
+import { getMapTilesetAssetBySource } from "../../common/assets/assetKeys";
 import type { AreaId } from "../../common/enums/area";
 import {
   getAreaDefinition,
-  getAreaMapDefinition,
   getAreaTmxConfig,
   type AreaDefinition
 } from "../definitions/areas/areaDefinitions";
@@ -41,7 +40,7 @@ export class WorldManager {
   private currentAreaId?: AreaId;
   private background?: Phaser.GameObjects.Rectangle;
   private currentParsedTmxMap?: ParsedTmxMap;
-  private currentParsedTsxTileset?: ParsedTsxTileset;
+  private currentParsedTsxTilesets = new Map<string, ParsedTsxTileset>();
   private currentResolvedTmxLayers?: ResolvedTmxLayers;
   private currentRuntimeGrids?: TmxRuntimeGrids;
   private currentRenderBounds?: WorldRenderBounds;
@@ -65,12 +64,23 @@ export class WorldManager {
     this.background.setFillStyle(this.resolveBackgroundColor(areaId));
     this.background.setVisible(true);
     this.currentParsedTmxMap = this.parseCurrentAreaTmx(area);
-    this.currentParsedTsxTileset = this.parseCurrentAreaTsx();
+    this.currentParsedTsxTilesets = this.parseCurrentAreaTilesets();
     this.currentResolvedTmxLayers = this.resolveCurrentAreaLayers();
     this.currentRuntimeGrids = this.buildCurrentRuntimeGrids();
     this.renderCurrentAreaMap();
 
     return area;
+  }
+
+  rerenderCurrentArea() {
+    if (!this.currentAreaId || !this.currentParsedTmxMap || !this.currentResolvedTmxLayers || !this.currentRuntimeGrids) {
+      return false;
+    }
+
+    this.background?.setFillStyle(this.resolveBackgroundColor(this.currentAreaId));
+    this.background?.setVisible(true);
+    this.renderCurrentAreaMap();
+    return true;
   }
 
   getCurrentAreaId() {
@@ -122,13 +132,33 @@ export class WorldManager {
     return parseTmxMap(rawTmx) ?? undefined;
   }
 
-  private parseCurrentAreaTsx() {
-    const rawTsx = this.scene.cache.text.get(ASSET_KEYS.map.tilesetTsx) as string | undefined;
-    if (!rawTsx) {
-      return undefined;
-    }
+  private parseCurrentAreaTilesets() {
+    const parsedTilesets = new Map<string, ParsedTsxTileset>();
+    const parsedMap = this.currentParsedTmxMap;
 
-    return parseTsxTileset(rawTsx) ?? undefined;
+    parsedMap?.tilesets.forEach((tilesetRef) => {
+      const source = getTilesetSourceBasename(tilesetRef.source);
+      if (!source || parsedTilesets.has(source)) {
+        return;
+      }
+
+      const tilesetAsset = getMapTilesetAssetBySource(tilesetRef.source);
+      if (!tilesetAsset) {
+        return;
+      }
+
+      const rawTsx = this.scene.cache.text.get(tilesetAsset.tsxKey) as string | undefined;
+      if (!rawTsx) {
+        return;
+      }
+
+      const parsedTsx = parseTsxTileset(rawTsx);
+      if (parsedTsx) {
+        parsedTilesets.set(source, parsedTsx);
+      }
+    });
+
+    return parsedTilesets;
   }
 
   private resolveCurrentAreaLayers() {
@@ -158,7 +188,7 @@ export class WorldManager {
     );
   }
 
-  private renderCurrentAreaMap() {
+  private clearRenderedAreaMap() {
     this.renderedTilemaps.forEach((tilemap) => tilemap.destroy());
     this.renderedTilemaps = [];
     this.renderedLayers.forEach((layer) => layer.destroy());
@@ -166,12 +196,15 @@ export class WorldManager {
     this.blockedOverlayGraphics.forEach((overlay) => overlay.destroy());
     this.blockedOverlayGraphics = [];
     this.currentRenderBounds = undefined;
+  }
+
+  private renderCurrentAreaMap() {
+    this.clearRenderedAreaMap();
 
     const parsedMap = this.currentParsedTmxMap;
-    const parsedTsx = this.currentParsedTsxTileset;
     const area = this.getCurrentAreaDefinition();
 
-    if (!parsedMap || !parsedTsx || !area) {
+    if (!parsedMap || !area) {
       return;
     }
 
@@ -213,7 +246,7 @@ export class WorldManager {
 
       const tilesets = parsedMap.tilesets
         .map((tilesetRef, tilesetIndex) =>
-          this.addResolvedTileset(tilemap, parsedTsx, tilesetRef, tilesetIndex)
+          this.addResolvedTileset(tilemap, tilesetRef, tilesetIndex)
         )
         .filter((tileset): tileset is Phaser.Tilemaps.Tileset => Boolean(tileset));
 
@@ -247,12 +280,18 @@ export class WorldManager {
 
   private addResolvedTileset(
     tilemap: Phaser.Tilemaps.Tilemap,
-    parsedTsx: ParsedTsxTileset,
     tilesetRef: ParsedTmxTilesetRef,
     tilesetIndex: number
   ) {
-    // TMX 외부 tileset source와 TSX 메타를 함께 써서 연결 이름을 안정화한다.
+    const tilesetAsset = getMapTilesetAssetBySource(tilesetRef.source);
     const sourceBaseName = getTilesetSourceBasename(tilesetRef.source);
+    const parsedTsx = sourceBaseName ? this.currentParsedTsxTilesets.get(sourceBaseName) : undefined;
+
+    if (!tilesetAsset || !parsedTsx) {
+      return null;
+    }
+
+    // TMX 외부 tileset source와 TSX 메타를 함께 써서 연결 이름을 안정화한다.
     const imageBaseName = getTilesetSourceBasename(parsedTsx.imageSource);
     const tilesetName =
       sourceBaseName ??
@@ -262,7 +301,7 @@ export class WorldManager {
 
     return tilemap.addTilesetImage(
       `${tilesetName}_${tilesetIndex}`,
-      ASSET_KEYS.map.tilesetImage,
+      tilesetAsset.imageKey,
       parsedTsx.tileWidth,
       parsedTsx.tileHeight,
       parsedTsx.margin,
@@ -321,6 +360,8 @@ export class WorldManager {
       case "downtown":
         return 0x4a4032;
       case "campus":
+        return 0x31473a;
+      case "classroom":
         return 0x31473a;
       default:
         return 0x222222;

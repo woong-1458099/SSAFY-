@@ -1,16 +1,24 @@
 import type Phaser from "phaser";
 import type { PlayerStatKey } from "../../game/state/gameState";
+import type { LegacyMinigameSceneKey } from "./minigameSceneKeys";
 
 export const MINIGAME_REWARD_EVENT = "minigame:reward";
+export const MINIGAME_COMPLETION_EVENT = "minigame:completion";
 
 export type MinigameRewardPayload = {
   sceneKey: string;
   rewardText: string;
 };
 
+export type MinigameCompletionPayload = {
+  sceneKey: string;
+  unlockSceneKey?: LegacyMinigameSceneKey;
+};
+
 export type ParsedMinigameReward = {
   hudDelta: {
     hp?: number;
+    hpMax?: number;
     money?: number;
     stress?: number;
   };
@@ -18,18 +26,40 @@ export type ParsedMinigameReward = {
 };
 
 const STAT_LABEL_TO_KEY: Record<string, PlayerStatKey> = {
-  // 영문 스탯명 (권장)
   FE: "fe",
   BE: "be",
   LUCK: "luck",
   TEAMWORK: "teamwork",
-  // 한글 스탯명
-  "협업": "teamwork",
-  "운": "luck"
+  협업: "teamwork",
+  운: "luck"
 };
+
+function resolveCompletionPayload(scene: Phaser.Scene, sceneKey: string): MinigameCompletionPayload {
+  const launchData = (scene.sys.settings.data ?? {}) as {
+    unlockOnComplete?: boolean;
+    unlockSceneKey?: LegacyMinigameSceneKey;
+  };
+
+  if (launchData.unlockOnComplete && typeof launchData.unlockSceneKey === "string" && launchData.unlockSceneKey.length > 0) {
+    return {
+      sceneKey,
+      unlockSceneKey: launchData.unlockSceneKey
+    };
+  }
+
+  return { sceneKey };
+}
 
 export function emitMinigameReward(scene: Phaser.Scene, payload: MinigameRewardPayload): void {
   scene.game.events.emit(MINIGAME_REWARD_EVENT, payload);
+  scene.game.events.emit(MINIGAME_COMPLETION_EVENT, resolveCompletionPayload(scene, payload.sceneKey));
+}
+
+export function emitMinigameCompletion(scene: Phaser.Scene, payload: MinigameCompletionPayload): void {
+  scene.game.events.emit(
+    MINIGAME_COMPLETION_EVENT,
+    payload.unlockSceneKey ? payload : resolveCompletionPayload(scene, payload.sceneKey)
+  );
 }
 
 export function parseMinigameRewardText(rewardText: string): ParsedMinigameReward {
@@ -54,8 +84,13 @@ export function parseMinigameRewardText(rewardText: string): ParsedMinigameRewar
       continue;
     }
 
-    if (upperLabel === "HP" || rawLabel === "체력") {
+    if (upperLabel === "HP") {
       hudDelta.hp = (hudDelta.hp ?? 0) + delta;
+      continue;
+    }
+
+    if (upperLabel === "HPMAX") {
+      hudDelta.hpMax = (hudDelta.hpMax ?? 0) + delta;
       continue;
     }
 

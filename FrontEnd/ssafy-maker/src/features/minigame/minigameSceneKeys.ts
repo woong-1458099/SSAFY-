@@ -6,7 +6,7 @@ export const LEGACY_RHYTHM_SCENE_KEY = "RhythmScene" as const;
 export const LEGACY_INTERVIEW_SCENE_KEY = "InterviewScene" as const;
 export const LEGACY_RUNNER_SCENE_KEY = "RunnerScene" as const;
 export const LEGACY_TANK_SCENE_KEY = "TankScene" as const;
-// export const LEGACY_TYPING_SCENE_KEY = "TypingScene" as const; // 타이핑 게임 비활성화
+export const LEGACY_TYPING_SCENE_KEY = "TypingScene" as const;
 export const LEGACY_BUSINESS_SMILE_SCENE_KEY = "BusinessSmileScene" as const;
 export const LEGACY_DONT_SMILE_SCENE_KEY = "DontSmileScene" as const;
 export const LEGACY_GYM_SCENE_KEY = "GymScene" as const;
@@ -24,7 +24,7 @@ export const MINIGAME_SCENE_KEYS = {
   interview: LEGACY_INTERVIEW_SCENE_KEY,
   runner: LEGACY_RUNNER_SCENE_KEY,
   tank: LEGACY_TANK_SCENE_KEY,
-  // typing: LEGACY_TYPING_SCENE_KEY, // 타이핑 게임 비활성화
+  typing: LEGACY_TYPING_SCENE_KEY,
   businessSmile: LEGACY_BUSINESS_SMILE_SCENE_KEY,
   dontSmile: LEGACY_DONT_SMILE_SCENE_KEY,
   gym: LEGACY_GYM_SCENE_KEY,
@@ -46,7 +46,7 @@ export const LEGACY_MINIGAME_SCENE_KEYS = [
   LEGACY_INTERVIEW_SCENE_KEY,
   LEGACY_RUNNER_SCENE_KEY,
   LEGACY_TANK_SCENE_KEY,
-  // LEGACY_TYPING_SCENE_KEY, // 타이핑 게임 비활성화
+  LEGACY_TYPING_SCENE_KEY,
   LEGACY_BUSINESS_SMILE_SCENE_KEY,
   LEGACY_DONT_SMILE_SCENE_KEY,
   LEGACY_GYM_SCENE_KEY,
@@ -68,6 +68,7 @@ export const LEGACY_MINIGAME_FLOW_SCENE_KEYS = [
 
 export const SUPPORTED_MINIGAME_SCENE_KEYS = [...LEGACY_MINIGAME_FLOW_SCENE_KEYS] as const;
 export const SUPPORTED_MINIGAME_SCENE_KEY_SET = new Set<string>(SUPPORTED_MINIGAME_SCENE_KEYS);
+export const LEGACY_MINIGAME_SCENE_KEY_SET = new Set<string>(LEGACY_MINIGAME_SCENE_KEYS);
 
 export type DeprecatedMinigameSceneKey = (typeof DEPRECATED_MINIGAME_SCENE_KEYS)[number];
 export type LegacyMinigameSceneKey = (typeof LEGACY_MINIGAME_SCENE_KEYS)[number];
@@ -80,6 +81,10 @@ export function isDeprecatedMinigameSceneKey(sceneKey: string): sceneKey is Depr
 
 export function isSupportedMinigameSceneKey(sceneKey: string): sceneKey is SupportedMinigameSceneKey {
   return SUPPORTED_MINIGAME_SCENE_KEY_SET.has(sceneKey);
+}
+
+export function isLegacyMinigameSceneKey(sceneKey: string): sceneKey is LegacyMinigameSceneKey {
+  return LEGACY_MINIGAME_SCENE_KEY_SET.has(sceneKey);
 }
 
 export function assertMinigameSceneKeyIntegrity(): void {

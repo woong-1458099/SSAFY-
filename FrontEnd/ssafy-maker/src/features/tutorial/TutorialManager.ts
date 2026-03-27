@@ -16,11 +16,13 @@ import { SCENE_KEYS } from "../../common/enums/scene";
 
 export interface TutorialManagerOptions {
   scene: Phaser.Scene;
+  gameEvents: Phaser.Events.EventEmitter;
   onComplete?: () => void;
 }
 
 export class TutorialManager {
   private scene: Phaser.Scene;
+  private gameEvents: Phaser.Events.EventEmitter;
   private overlay: TutorialOverlay;
   private progress: TutorialProgress;
   private isActive: boolean = false;
@@ -32,6 +34,7 @@ export class TutorialManager {
 
   constructor(options: TutorialManagerOptions) {
     this.scene = options.scene;
+    this.gameEvents = options.gameEvents;
     this.onComplete = options.onComplete;
 
     // Initialize progress from registry or create new
@@ -72,42 +75,44 @@ export class TutorialManager {
 
   private setupEventListeners(): void {
     // Listen for player movement
-    this.scene.events.on("tutorial:playerMoved", this.onPlayerMoved, this);
+    this.gameEvents.on("tutorial:playerMoved", this.onPlayerMoved, this);
 
     // Listen for NPC interaction
-    this.scene.events.on("tutorial:npcInteraction", this.onNpcInteraction, this);
+    this.gameEvents.on("tutorial:npcInteraction", this.onNpcInteraction, this);
 
     // Listen for place interaction
-    this.scene.events.on("tutorial:placeInteraction", this.onPlaceInteraction, this);
+    this.gameEvents.on("tutorial:placeInteraction", this.onPlaceInteraction, this);
 
     // Listen for area transition
-    this.scene.events.on("tutorial:areaTransition", this.onAreaTransition, this);
+    this.gameEvents.on("tutorial:areaTransition", this.onAreaTransition, this);
 
     // Listen for planner opened
-    this.scene.events.on("tutorial:plannerOpened", this.onPlannerOpened, this);
+    this.gameEvents.on("tutorial:plannerOpened", this.onPlannerOpened, this);
 
     // Listen for menu opened
-    this.scene.events.on("tutorial:menuOpened", this.onMenuOpened, this);
+    this.gameEvents.on("tutorial:menuOpened", this.onMenuOpened, this);
   }
 
   private removeEventListeners(): void {
-    this.scene.events.off("tutorial:playerMoved", this.onPlayerMoved, this);
-    this.scene.events.off("tutorial:npcInteraction", this.onNpcInteraction, this);
-    this.scene.events.off("tutorial:placeInteraction", this.onPlaceInteraction, this);
-    this.scene.events.off("tutorial:areaTransition", this.onAreaTransition, this);
-    this.scene.events.off("tutorial:plannerOpened", this.onPlannerOpened, this);
-    this.scene.events.off("tutorial:menuOpened", this.onMenuOpened, this);
+    this.gameEvents.off("tutorial:playerMoved", this.onPlayerMoved, this);
+    this.gameEvents.off("tutorial:npcInteraction", this.onNpcInteraction, this);
+    this.gameEvents.off("tutorial:placeInteraction", this.onPlaceInteraction, this);
+    this.gameEvents.off("tutorial:areaTransition", this.onAreaTransition, this);
+    this.gameEvents.off("tutorial:plannerOpened", this.onPlannerOpened, this);
+    this.gameEvents.off("tutorial:menuOpened", this.onMenuOpened, this);
   }
 
   start(): void {
     if (this.isActive) return;
 
+    console.log("[TutorialManager] Starting tutorial...");
     this.isActive = true;
     this.overlay.show();
     this.showCurrentStep();
   }
 
   pause(): void {
+    console.log("[TutorialManager] Pausing tutorial");
     this.isPaused = true;
     this.overlay.hide();
     this.cancelAutoAdvance();
@@ -115,6 +120,7 @@ export class TutorialManager {
 
   resume(): void {
     if (!this.isActive) return;
+    console.log("[TutorialManager] Resuming tutorial");
     this.isPaused = false;
     this.overlay.show();
     this.showCurrentStep();
@@ -123,10 +129,12 @@ export class TutorialManager {
   private showCurrentStep(): void {
     const step = getTutorialStep(this.progress.currentStepIndex);
     if (!step) {
+      console.log("[TutorialManager] No more steps, completing tutorial");
       this.completeTutorial();
       return;
     }
 
+    console.log(`[TutorialManager] Showing step ${this.progress.currentStepIndex}: ${step.id} (${step.completionType})`);
     this.overlay.updateStep(step, this.progress.currentStepIndex);
 
     // Setup auto-advance if needed
@@ -137,6 +145,7 @@ export class TutorialManager {
 
   private setupAutoAdvance(delayMs: number): void {
     this.cancelAutoAdvance();
+    console.log(`[TutorialManager] Auto-advance setup for ${delayMs}ms`);
     this.autoAdvanceTimer = this.scene.time.delayedCall(delayMs, () => {
       this.advanceStep();
     });
@@ -154,11 +163,12 @@ export class TutorialManager {
 
     const currentStep = getTutorialStep(this.progress.currentStepIndex);
     if (currentStep) {
+      console.log(`[TutorialManager] Advancing from step ${this.progress.currentStepIndex} (${currentStep.id})`);
       this.progress.stepStatuses[currentStep.id] = "completed";
     }
 
     this.progress.currentStepIndex++;
-    this.moveCount = 0;
+    this.scene.registry.set("tutorialProgress", this.progress);
 
     if (this.progress.currentStepIndex >= TUTORIAL_STEP_COUNT) {
       this.completeTutorial();
@@ -175,6 +185,7 @@ export class TutorialManager {
   }
 
   private skipTutorial(): void {
+    console.log("[TutorialManager] Skipping tutorial");
     // Mark all remaining steps as skipped
     TUTORIAL_STEPS.forEach((step) => {
       if (this.progress.stepStatuses[step.id] === "pending" ||
@@ -187,6 +198,7 @@ export class TutorialManager {
   }
 
   private completeTutorial(): void {
+    console.log("[TutorialManager] Tutorial completed!");
     this.isActive = false;
     this.progress.completedAt = Date.now();
     this.scene.registry.set("tutorialProgress", this.progress);
@@ -206,6 +218,7 @@ export class TutorialManager {
     if (step?.completionType === "playerMoved") {
       this.moveCount++;
       if (step.moveCountRequired && this.moveCount >= step.moveCountRequired) {
+        console.log(`[TutorialManager] Player moved enough (${this.moveCount}/${step.moveCountRequired}). Advancing.`);
         this.advanceStep();
       }
     }
@@ -215,17 +228,22 @@ export class TutorialManager {
     if (!this.isActive || this.isPaused) return;
 
     const step = getTutorialStep(this.progress.currentStepIndex);
+    console.log(`[TutorialManager] NPC interaction: ${eventInfo?.npcId}. Current step: ${step?.id}`);
+    
     if (step?.completionType === "npcInteraction") {
       if (eventInfo) {
         eventInfo.handled = true;
       }
       
+      console.log("[TutorialManager] Handling tutorial NPC interaction. Waiting for resume to advance.");
       // 미니게임에서 돌아왔을 때 다음 튜토리얼 단계로 넘어가도록 이벤트 등록
-      this.scene.events.once(Phaser.Scenes.Events.RESUME, () => {
+      // UI씬은 일시정지되지 않으므로, 메인씬의 RESUME 이벤트를 구독해야 함
+      this.gameEvents.once(Phaser.Scenes.Events.RESUME, () => {
+        console.log("[TutorialManager] Main scene resumed after NPC interaction. Advancing.");
         this.advanceStep();
       });
 
-      launchMinigame(this.scene, "BusinessSmileScene", SCENE_KEYS.main);
+      launchMinigame(this.scene, "DontSmileScene", SCENE_KEYS.main);
     }
   }
 
@@ -233,6 +251,8 @@ export class TutorialManager {
     if (!this.isActive || this.isPaused) return;
 
     const step = getTutorialStep(this.progress.currentStepIndex);
+    console.log(`[TutorialManager] Place interaction. Current step: ${step?.id}`);
+
     if (step?.completionType === "placeInteraction") {
       this.advanceStep();
     }
@@ -242,6 +262,8 @@ export class TutorialManager {
     if (!this.isActive || this.isPaused) return;
 
     const step = getTutorialStep(this.progress.currentStepIndex);
+    console.log(`[TutorialManager] Area transition. Current step: ${step?.id}`);
+
     if (step?.completionType === "areaTransition") {
       this.advanceStep();
     }
@@ -251,6 +273,8 @@ export class TutorialManager {
     if (!this.isActive || this.isPaused) return;
 
     const step = getTutorialStep(this.progress.currentStepIndex);
+    console.log(`[TutorialManager] Planner opened. Current step: ${step?.id}`);
+
     if (step?.completionType === "plannerOpened") {
       this.advanceStep();
     }
@@ -260,6 +284,8 @@ export class TutorialManager {
     if (!this.isActive || this.isPaused) return;
 
     const step = getTutorialStep(this.progress.currentStepIndex);
+    console.log(`[TutorialManager] Menu opened. Current step: ${step?.id}`);
+
     if (step?.completionType === "menuOpened") {
       this.advanceStep();
     }

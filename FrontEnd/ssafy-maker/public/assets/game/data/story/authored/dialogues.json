@@ -104,6 +104,7 @@
         "start": {
           "id": "start",
           "speaker": "민수",
+          "emotion": "NORMAL",
           "text": "모르는 건 바로 묻는 게 빠르다. 혼자 끌어안지 말고."
         }
       }
@@ -111,12 +112,27 @@
     {
       "id": "npc_hyewon",
       "label": "혜원 인사",
-      "startNodeId": "start",
+      "startNodeId": "week1",
       "nodes": {
-        "start": {
-          "id": "start",
+        "week1": {
+          "id": "week1",
           "speaker": "혜원",
-          "text": "오늘도 너무 무리하지 말고, 막히는 건 같이 보자."
+          "text": "SSAFY 1주차네! 처음엔 힘들어도 금방 적응할 거야. 나중에 프로젝트할 때 보탬이 되려면 미리미리 기본을 닦아둬야 해.",
+          "requirements": [{ "stat": "week", "min": 1, "max": 1 }],
+          "nextNodeId": "week2"
+        },
+        "week2": {
+          "id": "week2",
+          "speaker": "혜원",
+          "text": "벌써 2주차네! 이제 슬슬 팀원들이랑 손발이 맞기 시작했을 거야. 협업이 제일 중요한 거 잊지 마!",
+          "requirements": [{ "stat": "week", "min": 2, "max": 2 }],
+          "nextNodeId": "default"
+        },
+        "default": {
+          "id": "default",
+          "speaker": "혜원",
+          "text": "오늘도 너무 무리하지 말고, 막히는 건 같이 보자. 꾸준함이 정답이니까!",
+          "requirements": []
         }
       }
     },
@@ -146,6 +162,7 @@
         "intro": {
           "id": "intro",
           "speaker": "명진",
+          "emotion": "NORMAL",
           "text": "오늘도 팀 일은 차분하게 정리하면 돼.",
           "choices": [
             {
@@ -164,6 +181,7 @@
         "intro": {
           "id": "intro",
           "speaker": "연웅",
+          "emotion": "NORMAL",
           "text": "와이리 할 게 많노",
           "choices": [
             {
@@ -182,6 +200,7 @@
         "intro": {
           "id": "intro",
           "speaker": "효련",
+          "emotion": "NORMAL",
           "text": "에셋 찍다 쿨타임 오면 딴짓하는 게 국룰이지",
           "choices": [
             {
@@ -200,6 +219,7 @@
         "intro": {
           "id": "intro",
           "speaker": "지우",
+          "emotion": "NORMAL",
           "text": "스크립트 짜다가 막히면 바로바로 말해줘.",
           "choices": [
             {
@@ -218,6 +238,7 @@
         "intro": {
           "id": "intro",
           "speaker": "종민",
+          "emotion": "NORMAL",
           "text": " UI Explain and fix problem ",
           "choices": [
             {
@@ -236,6 +257,7 @@
         "intro": {
           "id": "intro",
           "speaker": "민수",
+          "emotion": "NORMAL",
           "text": "진짜 장~담~ 모한다~",
           "choices": [
             {
@@ -295,6 +317,47 @@
             {
               "id": "bye",
               "text": "네, 확인해볼게요."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_minigame_npc",
+      "label": "미니게임 NPC",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "미니게임 NPC",
+          "text": "이미 해금한 미니게임만 다시 연습할 수 있어. 스토리나 번화가에서 한 번 해본 게임부터 열릴 거야.",
+          "choices": [
+            {
+              "id": "open_menu",
+              "text": "해금한 미니게임 보기",
+              "action": "openMiniGame"
+            },
+            {
+              "id": "bye",
+              "text": "알겠어, 나중에 다시 올게."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "npc_nayool",
+      "label": "김나율 프로",
+      "startNodeId": "intro",
+      "nodes": {
+        "intro": {
+          "id": "intro",
+          "speaker": "김나율 프로",
+          "text": "부탁할 게 있다구? 말만해!",
+          "choices": [
+            {
+              "id": "bye",
+              "text": "고마워, 필요하면 부탁할게."
             }
           ]
         }

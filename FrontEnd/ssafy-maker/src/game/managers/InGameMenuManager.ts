@@ -35,7 +35,7 @@ import { createSaveConfirmDialog } from "../../features/save/components/saveConf
 import type { HudState, PlayerStatsState, PlayerStatKey } from "../state/gameState";
 import { UI_DEPTH } from "../systems/uiDepth";
 
-type InGameMenuManagerOptions = {
+export type InGameMenuManagerOptions = {
   scene: Phaser.Scene;
   getStatsState: () => PlayerStatsState;
   getHudState: () => HudState;
@@ -52,6 +52,7 @@ type InGameMenuManagerOptions = {
   onToggleSfx: () => void;
   onAdjustBrightness: (delta: number) => void;
   onLogout: () => void;
+  gameEvents: Phaser.Events.EventEmitter;
 };
 
 const FONT_FAMILY =
@@ -79,6 +80,7 @@ export class InGameMenuManager {
   private readonly onToggleSfx: () => void;
   private readonly onAdjustBrightness: (delta: number) => void;
   private readonly onLogout: () => void;
+  private readonly gameEvents: Phaser.Events.EventEmitter;
 
   private frame?: MenuFrameView;
   private menuOpen = false;
@@ -115,6 +117,7 @@ export class InGameMenuManager {
     this.onToggleSfx = options.onToggleSfx;
     this.onAdjustBrightness = options.onAdjustBrightness;
     this.onLogout = options.onLogout;
+    this.gameEvents = options.gameEvents;
   }
 
   build(): void {
@@ -193,7 +196,7 @@ export class InGameMenuManager {
     this.frame?.root.setVisible(this.menuOpen);
     if (this.menuOpen) {
       // Emit tutorial event for menu opened
-      this.scene.events.emit("tutorial:menuOpened");
+      this.gameEvents.emit("tutorial:menuOpened");
       this.refreshStatsUi();
       this.refreshInventoryUi();
       this.refreshSaveUi();

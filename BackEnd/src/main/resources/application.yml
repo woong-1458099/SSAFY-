@@ -62,3 +62,15 @@ app:
     client-secret: ${KEYCLOAK_CLIENT_SECRET:}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
     admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  user:
+    death-record:
+      cooldown: ${USER_DEATH_RECORD_COOLDOWN:3s}
+      token-ttl: ${USER_DEATH_RECORD_TOKEN_TTL:30s}
+      max-active-tokens: ${USER_DEATH_RECORD_MAX_ACTIVE_TOKENS:5}
+      max-failure-attempts: ${USER_DEATH_RECORD_MAX_FAILURE_ATTEMPTS:5}
+      failure-lockout: ${USER_DEATH_RECORD_FAILURE_LOCKOUT:30s}
+  cache:
+    death-dashboard:
+      recent-ttl: ${DEATH_DASHBOARD_RECENT_CACHE_TTL:15s}
+      ranking-ttl: ${DEATH_DASHBOARD_RANKING_CACHE_TTL:15s}
+      dashboard-ttl: ${DEATH_DASHBOARD_CACHE_TTL:15s}

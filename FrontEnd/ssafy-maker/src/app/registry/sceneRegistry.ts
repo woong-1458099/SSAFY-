@@ -23,7 +23,7 @@ import {
   LEGACY_RHYTHM_SCENE_KEY,
   LEGACY_RUNNER_SCENE_KEY,
   LEGACY_TANK_SCENE_KEY,
-  // LEGACY_TYPING_SCENE_KEY, // 타이핑 게임 비활성화
+  LEGACY_TYPING_SCENE_KEY,
   isDeprecatedMinigameSceneKey,
   SUPPORTED_MINIGAME_SCENE_KEYS
 } from "../../features/minigame/minigameSceneKeys";
@@ -38,6 +38,8 @@ import { CompletionScene } from "../../scenes/CompletionScene";
 import { FinalSummaryScene } from "../../scenes/FinalSummaryScene";
 import { EndingIntroScene } from "../../scenes/EndingIntroScene";
 import { EndingComicScene } from "../../scenes/EndingComicScene";
+import { EndingCreditScene } from "../../scenes/EndingCreditScene";
+import { InGameUIScene } from "../../game/scenes/InGameUIScene";
 import { MiniGameCenterScene } from "../../game/scenes/minigames/MiniGameCenterScene";
 import LegacyBusinessSmileScene from "../../game/scenes/minigames/BusinessSmileScene";
 import LegacyCookingScene from "../../game/scenes/minigames/CookingScene";
@@ -52,7 +54,7 @@ import LegacyQuizScene from "../../game/scenes/minigames/QuizScene";
 import LegacyRhythmScene from "../../game/scenes/minigames/RhythmScene";
 import LegacyRunnerScene from "../../game/scenes/minigames/RunnerScene";
 import LegacyTankScene from "../../game/scenes/minigames/TankScene";
-// import LegacyTypingScene from "../../game/scenes/minigames/TypingScene"; // 타이핑 게임 비활성화
+import LegacyTypingScene from "../../game/scenes/minigames/TypingScene";
 
 type SceneConstructor = new () => Phaser.Scene;
 
@@ -73,6 +75,8 @@ const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: SCENE_KEYS.finalSummary, scene: FinalSummaryScene },
   { key: SCENE_KEYS.endingIntro, scene: EndingIntroScene },
   { key: SCENE_KEYS.endingComic, scene: EndingComicScene },
+  { key: SCENE_KEYS.endingCredit, scene: EndingCreditScene },
+  { key: SCENE_KEYS.inGameUI, scene: InGameUIScene },
   { key: LEGACY_MINIGAME_MENU_SCENE_KEY, scene: LegacyMenuScene },
   { key: LEGACY_MINIGAME_PAUSE_SCENE_KEY, scene: LegacyMinigamePauseScene },
   { key: LEGACY_QUIZ_SCENE_KEY, scene: LegacyQuizScene },
@@ -80,7 +84,7 @@ const SCENE_REGISTRY_ENTRIES: readonly SceneRegistryEntry[] = [
   { key: LEGACY_INTERVIEW_SCENE_KEY, scene: LegacyInterviewScene },
   { key: LEGACY_RUNNER_SCENE_KEY, scene: LegacyRunnerScene },
   { key: LEGACY_TANK_SCENE_KEY, scene: LegacyTankScene },
-  // 타이핑 게임 비활성화 (TypingScene)
+  { key: LEGACY_TYPING_SCENE_KEY, scene: LegacyTypingScene },
   { key: LEGACY_BUSINESS_SMILE_SCENE_KEY, scene: LegacyBusinessSmileScene },
   { key: LEGACY_DONT_SMILE_SCENE_KEY, scene: LegacyDontSmileScene },
   { key: LEGACY_GYM_SCENE_KEY, scene: LegacyGymScene },
@@ -138,7 +142,9 @@ export function assertSceneRegistryIntegrity(): void {
     SCENE_KEYS.completion,
     SCENE_KEYS.finalSummary,
     SCENE_KEYS.endingIntro,
-    SCENE_KEYS.endingComic
+    SCENE_KEYS.endingComic,
+    SCENE_KEYS.endingCredit,
+    SCENE_KEYS.inGameUI
   ] as const;
   const registeredKeys = SCENE_REGISTRY_ENTRIES.map((entry) => entry.key);
   const declaredKeysByScene = SCENE_REGISTRY_ENTRIES.map((entry) => ({

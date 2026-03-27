@@ -81,6 +81,24 @@
           "x": 500,
           "y": 480,
           "dialogueId": "npc_hyunseok"
+        },
+        {
+          "npcId": "nayool",
+          "x": 1180,
+          "y": 480,
+          "dialogueId": "npc_nayool"
+        }
+      ]
+    },
+    {
+      "id": "classroom_default",
+      "area": "classroom",
+      "npcs": [
+        {
+          "npcId": "minigame_npc",
+          "x": 1020,
+          "y": 280,
+          "dialogueId": "npc_minigame_npc"
         }
       ]
     }

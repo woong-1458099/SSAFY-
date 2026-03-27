@@ -148,8 +148,12 @@ export class AudioManager {
   }
 
   private static setBgmEnabled(enabled: boolean): void {
+    console.log(`[AudioManager] BGM Enabled set to: ${enabled}`);
     AudioManager.bgmEnabled = enabled;
     AudioManager.persistSettings();
+    if (!enabled) {
+      AudioManager.stopManagedSounds("bgm", {});
+    }
     AudioManager.refreshManagedSounds();
   }
 

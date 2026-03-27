@@ -17,6 +17,7 @@ export const UI_DEPTH = {
   worldGridPlayerProbe: SCREEN_UI_BASE + 505,
   menu: SCREEN_UI_BASE + 900,
   planner: SCREEN_UI_BASE + 1000,
+  plannerActivity: SCREEN_UI_BASE + 1025,
   salary: SCREEN_UI_BASE + 1050,
   placeModal: SCREEN_UI_BASE + 1100,
   tutorial: SCREEN_UI_BASE + 1150,

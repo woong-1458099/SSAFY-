@@ -1,13 +1,27 @@
 // 대화 스크립트와 대화 매니저가 함께 사용하는 공통 대화 타입 정의
 import type { DialogueId } from "../enums/dialogue";
 
-export type DialogueBaseStatKey = "fe" | "be" | "teamwork" | "luck" | "stress";
-export type DialogueCurrencyStatKey = "gold" | "money";
-export type DialogueStatKey = DialogueBaseStatKey | "hp" | DialogueCurrencyStatKey;
+export const DIALOGUE_METRIC_KEYS = ["fe", "be", "teamwork", "luck", "stress", "hp", "money"] as const;
+export const DIALOGUE_REQUIREMENT_STAT_KEYS = [
+  "fe",
+  "be",
+  "teamwork",
+  "luck",
+  "stress",
+  "hp",
+  "money",
+  "playerGender",
+  "week"
+] as const;
+
+export type DialogueMetricKey = (typeof DIALOGUE_METRIC_KEYS)[number];
+export type DialogueRequirementStatKey = (typeof DIALOGUE_REQUIREMENT_STAT_KEYS)[number];
+export type DialogueCurrencyStatKey = Extract<DialogueMetricKey, "money">;
+export type DialogueStatKey = DialogueMetricKey;
 export type StaticDialogueId = string & { readonly __staticDialogueId: unique symbol };
 export type RuntimeDialogueId = string & { readonly __runtimeDialogueId: unique symbol };
 export type DialogueScriptId = DialogueId | StaticDialogueId | RuntimeDialogueId;
-export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS";
+export type DialogueChoiceActionType = "NORMAL" | "LOCKED" | "MADNESS" | "ROMANCE_EVENT";
 export const DIALOGUE_ACTIONS = [
   "openShop",
   "openMiniGame",
@@ -15,12 +29,27 @@ export const DIALOGUE_ACTIONS = [
   "playInterview",
   "playGym",
   "playRhythm",
-  "playCooking"
+  "playCooking",
+  "playTank",
+  "playQuiz",
+  "playRunner",
+  "playBusinessSmile",
+  "playTyping",
+  "playLotto",
+  "playDontSmile"
 ] as const;
 export type DialogueAction = (typeof DIALOGUE_ACTIONS)[number];
 
 export type DialogueRequirement = {
-  stat: DialogueStatKey;
+  stat: DialogueRequirementStatKey;
+  equals?: string;
+  min?: number;
+  max?: number;
+  label?: string;
+};
+
+export type AffectionRequirement = {
+  npcId: string;
   min?: number;
   max?: number;
   label?: string;
@@ -34,10 +63,13 @@ export type DialogueChoice = {
   nextNodeId?: string;
   actionType?: DialogueChoiceActionType;
   statChanges?: Partial<Record<DialogueStatKey, number>>;
+  affectionChanges?: Record<string, number>;
   requirements?: DialogueRequirement[];
+  affectionRequirements?: AffectionRequirement[];
   lockedReason?: string;
   feedbackText?: string;
   action?: DialogueAction;
+  setFlags?: string[];
 };
 
 export type DialogueNode = {
@@ -49,7 +81,9 @@ export type DialogueNode = {
   speakerGender?: Gender;
   nextNodeId?: string;
   choices?: DialogueChoice[];
+  requirements?: DialogueRequirement[];
   action?: DialogueAction;
+  affectionChanges?: Record<string, number>;
 };
 
 export type DialogueScript = {
@@ -61,7 +95,7 @@ export type DialogueScript = {
 
 const RUNTIME_DIALOGUE_ID_PREFIX = "runtime:";
 export function isDialogueCurrencyStatKey(stat: DialogueStatKey): stat is DialogueCurrencyStatKey {
-  return stat === "gold" || stat === "money";
+  return stat === "money";
 }
 
 export function toDialogueCurrencyHudKey(stat: DialogueCurrencyStatKey): "money" {
@@ -87,4 +121,32 @@ export function createRuntimeDialogueId(value: string): RuntimeDialogueId {
     : `${RUNTIME_DIALOGUE_ID_PREFIX}${normalized}`;
 
   return runtimeId as RuntimeDialogueId;
+}
+
+export function isDialogueScriptId(value: string): value is DialogueScriptId {
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  // Runtime ID pattern
+  if (isRuntimeDialogueId(normalized)) {
+    return true;
+  }
+
+  // Authored ID pattern (npc_ prefix, place_ prefix or etc)
+  if (/^[a-z0-9_]+$/.test(normalized)) {
+    return true;
+  }
+
+  return false;
+}
+
+export function normalizeDialogueScriptId(value: string): DialogueScriptId {
+  const normalized = value.trim();
+  if (!isDialogueScriptId(normalized)) {
+    throw new Error(`Invalid DialogueScriptId format: ${value}. Expected alphanumeric with underscores.`);
+  }
+
+  return normalized as DialogueScriptId;
 }

@@ -1,12 +1,19 @@
 import Phaser from "phaser";
 import { GAME_CONSTANTS } from "@core/constants/gameConstants";
 import { getAuthBootstrapState } from "@features/auth/AuthGateway";
+import { getBackendApiStatus } from "@features/auth/api";
 import {
   beginBackendAuth,
   clearPendingAuthRedirect,
   clearStoredSession,
   hasPendingAuthRedirect
 } from "@features/auth/authSession";
+import {
+  DeathDashboardUnavailableError,
+  fetchDeathDashboard,
+  type DeathRankingEntry,
+  type DeathRecordEvent
+} from "@features/death/deathApi";
 import { SceneKey } from "@shared/enums/sceneKey";
 
 type AuthView = "login" | "signup";
@@ -58,59 +65,84 @@ export class LoginScene extends Phaser.Scene {
 
   private buildAuthLayout(): void {
     const html = `
-      <div style="width:1120px;height:640px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:24px;align-items:stretch;font-family:'PFStardustBold','Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
-        <section style="position:relative;overflow:hidden;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:34px 36px;">
-          <p style="margin:0 0 10px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;">SSAFY Maker</p>
-          <h1 style="margin:0;color:#f4fbff;font-size:62px;line-height:0.94;">SSAFY 1학기,<br/>당신의 엔딩 만들기</h1>
-          <p style="margin:18px 0 0;color:#b6c5d3;font-size:16px;line-height:1.5;">6명의 개성 있는 교육생 중 한 명이 되어 강의장, 번화가, 자취방을 오가며 학습, 체력, 멘탈, 친밀도를 키우세요. 한 학기 동안의 선택이 어떤 개발자 엔딩으로 이어질지 결정합니다.</p>
-          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:28px;">
-            <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
-              <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">01</span>
-              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">캐릭터와 성장</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">코딩형, 체력형, 행운형 등 서로 다른 성향의 주인공으로 1학기를 시작합니다.</p>
-            </article>
-            <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
-              <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">02</span>
-              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">일정과 선택</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">평일 강의는 버티고, 방과 후와 주말엔 원하는 활동으로 능력치를 설계합니다.</p>
-            </article>
-            <article style="padding:14px;border-radius:16px;background:linear-gradient(180deg,rgba(15,33,52,0.86),rgba(7,18,30,0.92));border:1px solid rgba(120,193,231,0.12);">
-              <span style="display:inline-block;margin-bottom:10px;color:#7ce8ff;font-weight:700;">03</span>
-              <strong style="display:block;margin-bottom:8px;color:#f4fbff;">미니게임과 엔딩</strong>
-              <p style="margin:0;color:#9baebe;font-size:13px;">퀴즈, 타이핑, 웃음참기와 랜덤 이벤트를 거쳐 자신만의 결말에 도달합니다.</p>
-            </article>
+      <div style="width:1120px;height:640px;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,0.98fr);gap:24px;align-items:stretch;font-family:'PFStardustBold','Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+        <section style="position:relative;overflow:hidden;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:
+          radial-gradient(circle at 18% 18%,rgba(73,170,215,0.22),transparent 34%),
+          linear-gradient(180deg,#0b1620 0%,#081118 100%);box-shadow:0 24px 90px rgba(0,0,0,0.32);">
+          <video autoplay muted loop playsinline preload="auto" poster="/assets/raw/TTPP.mp4" style="position:absolute;left:0;bottom:0;width:100%;height:100%;object-fit:cover;object-position:center bottom;filter:saturate(1.02) brightness(0.94) contrast(1.04);" src="/assets/raw/TTPP.mp4"></video>
+          <div style="position:absolute;inset:0;background:
+            linear-gradient(180deg,rgba(4,11,20,0.06) 0%,rgba(4,11,20,0.18) 34%,rgba(4,11,20,0.52) 100%),
+            linear-gradient(90deg,rgba(6,18,28,0.28) 0%,rgba(6,18,28,0.10) 54%,rgba(6,18,28,0.20) 100%);"></div>
+          <div style="position:relative;z-index:1;display:flex;flex-direction:column;height:100%;padding:24px 24px 28px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+              <div style="padding:8px 12px;border-radius:999px;background:rgba(9,24,36,0.44);backdrop-filter:blur(8px);border:1px solid rgba(133,187,222,0.16);color:#d9eef8;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;">Death Dashboard</div>
+              <div style="padding:7px 11px;border-radius:999px;background:rgba(9,24,36,0.30);backdrop-filter:blur(8px);border:1px solid rgba(133,187,222,0.12);color:#a9d8ea;font-size:11px;">실시간 사망 집계</div>
+            </div>
+            <div style="margin-top:18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;min-height:0;max-width:760px;">
+              <article style="display:flex;flex-direction:column;min-height:0;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+                  <div>
+                    <p style="margin:0 0 4px;color:#7ce8ff;font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;">Recent Deaths</p>
+                    <strong style="color:#f4fbff;font-size:20px;">최근 사망자</strong>
+                  </div>
+                  <span style="padding:6px 10px;border-radius:999px;background:rgba(201,74,97,0.16);color:#ffd2dc;font-size:11px;">시점 포함</span>
+                </div>
+                <div id="death-recent-list" style="display:flex;flex-direction:column;gap:10px;min-height:0;max-height:210px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;color:#e7f4ff;">
+                  <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.16);color:#d4e7f1;">사망 기록을 불러오는 중입니다.</div>
+                </div>
+              </article>
+              <article style="display:flex;flex-direction:column;min-height:0;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+                  <div>
+                    <p style="margin:0 0 4px;color:#7ce8ff;font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;">Death Ranking</p>
+                    <strong style="color:#f4fbff;font-size:20px;">사망 카운트 랭킹</strong>
+                  </div>
+                  <span style="padding:6px 10px;border-radius:999px;background:rgba(92,166,255,0.14);color:#d4e9ff;font-size:11px;">TOP 순위</span>
+                </div>
+                <div id="death-ranking-list" style="display:flex;flex-direction:column;gap:10px;min-height:0;max-height:210px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;color:#e7f4ff;">
+                  <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.16);color:#d4e7f1;">랭킹을 불러오는 중입니다.</div>
+                </div>
+              </article>
+            </div>
           </div>
         </section>
-        <section style="position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:22px;">
-          <div style="display:flex;flex-direction:column;gap:10px;">
+        <section style="position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0;box-sizing:border-box;height:100%;border:1px solid rgba(133,187,222,0.18);border-radius:28px;background:rgba(5,14,24,0.80);box-shadow:0 24px 90px rgba(0,0,0,0.32);padding:24px;">
+          <div style="margin-bottom:16px;padding-top:8px;">
+            <p style="margin:0 0 10px;color:#7ce8ff;font-size:12px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;">SSAFY Maker</p>
+            <h1 style="margin:0;color:#f4fbff;font-size:46px;line-height:1.04;">SSAFY 1학기,<br/>당신의 엔딩 만들기</h1>
+            <p style="max-width:420px;margin:14px 0 0;color:#d5e5ef;font-size:15px;line-height:1.6;">로그인 후 한 학기 육성 시뮬레이션을 시작하세요. 좌측에서는 최근 탈락 기록과 누적 사망 랭킹을 바로 확인할 수 있습니다.</p>
+          </div>
+          <div style="margin-bottom:10px;padding-top:16px;border-top:1px solid rgba(133,187,222,0.14);">
             <p style="margin:0 0 6px;color:#6be6ff;font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;">학기 시작</p>
             <h2 style="margin:0;color:#f4fbff;font-size:32px;line-height:1.05;" id="auth-title">로그인</h2>
             <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;" id="auth-tabs">
               <button data-view="login" style="min-height:46px;padding:10px 12px;border-radius:14px;border:0;cursor:pointer;background:rgba(55,95,128,0.95);color:#f4fbff;">로그인</button>
               <button data-view="signup" style="min-height:46px;padding:10px 12px;border-radius:14px;border:0;cursor:pointer;background:rgba(21,33,48,0.86);color:#c0cfdb;">회원가입</button>
             </div>
-            <div id="auth-msg" style="padding:11px 12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;line-height:1.45;">로그인 후 이번 학기의 주인공으로 입장할 수 있습니다.</div>
-            <div id="auth-form" style="display:flex;flex-direction:column;gap:10px;"></div>
+            <div id="auth-msg" style="margin-top:12px;padding:11px 12px;border-radius:14px;background:rgba(40,66,92,0.48);color:#c4dae9;font-size:14px;line-height:1.45;">로그인 후 이번 학기의 주인공으로 입장할 수 있습니다.</div>
+            <div id="auth-form" style="margin-top:12px;display:block;flex:0 0 auto;min-height:auto;max-height:none;overflow:hidden;padding-right:0;"></div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:12px;padding-top:16px;">
-            <button id="auth-submit" type="button" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">로그인</button>
-            <button id="auth-bypass" type="button" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[개발용] 인증 없이 입장</button>
-          </div>
+          <button id="auth-submit" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(135deg,#4cd5ff,#1387c9);color:#031019;font-size:16px;font-weight:700;cursor:pointer;">로그인</button>
+          <button id="auth-bypass" type="button" style="margin-top:14px;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:14px;border:1px solid #ffcc00;background:rgba(255,204,0,0.15);color:#ffcc00;font-size:16px;font-weight:700;cursor:pointer;">[개발용] 인증 없이 입장</button>
         </section>
       </div>
     `;
 
-    this.root = this.add.dom(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2)).createFromHTML(html);
+    this.root = this.add
+      .dom(this.px(GAME_CONSTANTS.WIDTH / 2), this.px(GAME_CONSTANTS.HEIGHT / 2))
+      .createFromHTML(html);
     const node = this.root.node as HTMLDivElement;
 
     const tabs = Array.from(node.querySelectorAll<HTMLButtonElement>("#auth-tabs button[data-view]"));
     const title = node.querySelector<HTMLElement>("#auth-title");
     const message = node.querySelector<HTMLElement>("#auth-msg");
     const form = node.querySelector<HTMLElement>("#auth-form");
+    const recentList = node.querySelector<HTMLElement>("#death-recent-list");
+    const rankingList = node.querySelector<HTMLElement>("#death-ranking-list");
     const submit = node.querySelector<HTMLButtonElement>("#auth-submit");
     const bypassBtn = node.querySelector<HTMLButtonElement>("#auth-bypass");
 
-    if (!title || !message || !form || !submit || !bypassBtn) {
+    if (!title || !message || !form || !recentList || !rankingList || !submit || !bypassBtn) {
       return;
     }
 
@@ -121,9 +153,121 @@ export class LoginScene extends Phaser.Scene {
     form.style.overflow = "hidden";
     form.style.paddingRight = "0";
 
+    let destroyed = false;
+
     const viewTitle: Record<AuthView, string> = {
       login: "로그인",
       signup: "회원가입"
+    };
+
+    const renderRecentDeaths = (entries: DeathRecordEvent[]): void => {
+      if (entries.length === 0) {
+        recentList.innerHTML = `
+          <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.16);color:#bfd2de;">
+            아직 기록된 사망 이력이 없습니다.
+          </div>
+        `;
+        return;
+      }
+
+      recentList.innerHTML = entries
+        .map(
+          (entry) => `
+            <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.14);">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <strong style="color:#f4fbff;font-size:15px;">${this.getPlayerLabel(entry.username, entry.userId)}</strong>
+                <span style="color:#ffd2dc;font-size:12px;">${entry.deathCountSnapshot}회차</span>
+              </div>
+              <div style="margin-top:6px;color:#dbeaf2;font-size:13px;">${this.formatDashboardTimestamp(entry.diedAt)}</div>
+              <div style="margin-top:6px;color:#afc2cf;font-size:12px;">${this.getDeathContextLabel(entry.areaId, entry.sceneId, entry.cause)}</div>
+            </div>
+          `
+        )
+        .join("");
+    };
+
+    const renderDeathRanking = (entries: DeathRankingEntry[]): void => {
+      if (entries.length === 0) {
+        rankingList.innerHTML = `
+          <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.16);color:#bfd2de;">
+            아직 집계된 사망 랭킹이 없습니다.
+          </div>
+        `;
+        return;
+      }
+
+      rankingList.innerHTML = entries
+        .map(
+          (entry, index) => `
+            <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.14);">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:${index < 3 ? "rgba(108,231,255,0.14)" : "rgba(88,107,126,0.18)"};color:${index < 3 ? "#c9fbff" : "#c9d5de"};font-size:12px;">${index + 1}</span>
+              <div style="min-width:0;">
+                <strong style="display:block;color:#f4fbff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.getPlayerLabel(entry.username, entry.userId)}</strong>
+                <span style="display:block;margin-top:4px;color:#b4c5d1;font-size:12px;">${
+                  entry.lastDeathAt
+                    ? `마지막 사망 ${this.formatDashboardTimestamp(entry.lastDeathAt)}`
+                    : "마지막 사망 기록 없음"
+                }</span>
+              </div>
+              <strong style="color:#ffd2dc;font-size:16px;">${entry.deathCount}회</strong>
+            </div>
+          `
+        )
+        .join("");
+    };
+
+    const renderDashboardError = (target: HTMLElement, text: string): void => {
+      target.innerHTML = `
+        <div style="padding:12px 0;border-bottom:1px solid rgba(214,98,128,0.28);color:#ffd0d8;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${text}
+        </div>
+      `;
+    };
+
+    const renderDashboardUnavailable = (): void => {
+      recentList.innerHTML = `
+        <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.16);color:#bfd2de;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          백엔드 연결 대기 중입니다.
+        </div>
+      `;
+      rankingList.innerHTML = `
+        <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.16);color:#bfd2de;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          백엔드 연결 대기 중입니다.
+        </div>
+      `;
+    };
+
+    const loadDeathDashboard = async (): Promise<void> => {
+      if (getBackendApiStatus() === "unavailable") {
+        renderDashboardUnavailable();
+        return;
+      }
+
+      try {
+        const dashboard = await fetchDeathDashboard({ recentLimit: 8, rankingLimit: 8 });
+        if (destroyed) {
+          return;
+        }
+
+        renderRecentDeaths(dashboard.recentDeaths);
+        renderDeathRanking(dashboard.topDeathCounts);
+      } catch (error) {
+        if (destroyed) {
+          return;
+        }
+
+        if (
+          getBackendApiStatus() === "unavailable" ||
+          error instanceof DeathDashboardUnavailableError
+        ) {
+          renderDashboardUnavailable();
+          return;
+        }
+
+        renderDashboardError(recentList, "최근 사망자 기록을 불러오지 못했습니다.");
+        renderDashboardError(rankingList, "사망 랭킹을 불러오지 못했습니다.");
+        console.error("[LoginScene] failed to load death dashboard", error);
+      }
     };
 
     const setMessage = (text: string, tone: MessageTone = "info"): void => {
@@ -179,17 +323,13 @@ export class LoginScene extends Phaser.Scene {
         return;
       }
 
-      if (view === "signup") {
-        form.innerHTML = `
-          <div style="display:block;overflow:hidden;padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;">
+      form.innerHTML = `
+        <div style="display:block;overflow:hidden;padding:14px;border-radius:16px;border:1px solid rgba(120,193,231,0.12);background:rgba(12,23,35,0.90);color:#9fb8ca;line-height:1.6;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;">
             계정을 만들면 캐릭터 선택, 일정 관리, 미니게임, 랜덤 이벤트가 이어지는 첫 학기 플레이를 바로 시작할 수 있습니다.
-          </div>
-        `;
-        submit.textContent = "회원가입";
-        setMessage("회원가입 후 나만의 능력치 빌드와 엔딩 루트를 시작할 수 있습니다.", "info");
-        return;
-      }
-
+        </div>
+      `;
+      submit.textContent = "회원가입";
+      setMessage("회원가입 후 나만의 능력치 빌드와 엔딩 루트를 시작할 수 있습니다.", "info");
     };
 
     const initializeSession = (): void => {
@@ -203,7 +343,10 @@ export class LoginScene extends Phaser.Scene {
             : "기존 세션을 확인했습니다. 게임으로 이동합니다.",
           "success"
         );
-        this.time.delayedCall(authBootstrap.source === "callback" ? 250 : 150, () => this.scene.start(SceneKey.Start));
+        this.time.delayedCall(
+          authBootstrap.source === "callback" ? 250 : 150,
+          () => this.scene.start(SceneKey.Start)
+        );
         return;
       }
 
@@ -262,6 +405,7 @@ export class LoginScene extends Phaser.Scene {
     this.submitHandler = onSubmitClick;
     renderView("login");
     initializeSession();
+    void loadDeathDashboard();
 
     const onPageShow = (): void => {
       restoreAuthUiAfterNavigation();
@@ -274,6 +418,7 @@ export class LoginScene extends Phaser.Scene {
     window.addEventListener("focus", onWindowFocus);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      destroyed = true;
       window.removeEventListener("pageshow", onPageShow);
       window.removeEventListener("focus", onWindowFocus);
       submit.removeEventListener("click", onSubmitClick);
@@ -286,5 +431,45 @@ export class LoginScene extends Phaser.Scene {
 
   private px(value: number): number {
     return Math.round(value);
+  }
+
+  private formatDashboardTimestamp(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat("ko-KR", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }).format(date);
+  }
+
+  private getPlayerLabel(username: string | null, userId: string): string {
+    const trimmedName = username?.trim();
+    if (trimmedName) {
+      return trimmedName;
+    }
+
+    return `player-${userId.slice(0, 8)}`;
+  }
+
+  private getDeathContextLabel(
+    areaId: string | null,
+    sceneId: string | null,
+    cause: string | null
+  ): string {
+    const parts = [areaId, sceneId, cause]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .map((value) => value.trim());
+
+    if (parts.length === 0) {
+      return "사망 위치 정보 없음";
+    }
+
+    return parts.join(" / ");
   }
 }

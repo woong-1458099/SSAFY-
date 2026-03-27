@@ -3,6 +3,7 @@ export const SCENE_IDS = {
   worldDefault: "scene_world_default",
   downtownDefault: "scene_downtown_default",
   campusDefault: "scene_campus_default",
+  classroomDefault: "scene_classroom_default",
   campusSample: "scene_001"
 } as const;
 

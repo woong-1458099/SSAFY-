@@ -7,6 +7,7 @@ import {
   getLegacyLottoBallColor
 } from "@features/minigame/legacy/legacyLottoConfig";
 import { LOTTO_COMPLETED_EVENT, rollLottoOutcome } from "@features/minigame/lottoOutcome";
+import { emitMinigameCompletion } from "@features/minigame/minigameRewardEvents";
 import { returnToScene } from "@features/minigame/minigameLauncher";
 import { LEGACY_LOTTO_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
 import { applyLegacyViewport } from "./viewport";
@@ -130,6 +131,7 @@ export default class LottoScene extends Phaser.Scene {
 
   completeAndReturn() {
     this.emitCompletedOutcome();
+    emitMinigameCompletion(this, { sceneKey: this.scene.key });
     this.cleanup();
     returnToScene(this, this.returnSceneKey);
   }

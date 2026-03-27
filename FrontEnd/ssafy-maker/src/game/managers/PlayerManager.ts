@@ -13,6 +13,7 @@ import { getDefaultPlayerAppearanceDefinition } from "../definitions/player/play
 import type { WorldRenderBounds } from "./WorldManager";
 
 export class PlayerManager {
+  private static readonly WORLD_BOUNDS_EPSILON = 2;
   private scene: Phaser.Scene;
   private player?: PlayerVisual;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -26,7 +27,7 @@ export class PlayerManager {
   private tileSize = 32;
   private currentTileX = 0;
   private currentTileY = 0;
-  private moveSpeed = 180;
+  private moveSpeed = 260;
   private renderBounds?: WorldRenderBounds;
   private currentFacing: Facing = "down";
   private appearance: PlayerAppearanceDefinition = getDefaultPlayerAppearanceDefinition();
@@ -120,8 +121,17 @@ export class PlayerManager {
     const didMove = nextX !== this.player.root.x || nextY !== this.player.root.y;
     this.player.root.setPosition(nextX, nextY);
     this.player.root.setDepth(getActorDepth(nextY));
+
+    // Track tile position change for tutorial event
+    const prevTileX = this.currentTileX;
+    const prevTileY = this.currentTileY;
     this.syncTilePositionFromWorldPosition(nextX, nextY, parsedMap);
     updatePlayerVisualFrame(this.player, this.currentFacing, didMove, this.scene.time.now);
+
+    // Emit tutorial event only when tile position changes (not every frame)
+    if (this.currentTileX !== prevTileX || this.currentTileY !== prevTileY) {
+      this.scene.events.emit("tutorial:playerMoved");
+    }
   }
 
   getSnapshot(): PlayerSnapshot | undefined {
@@ -193,6 +203,10 @@ export class PlayerManager {
     runtimeGrids: TmxRuntimeGrids,
     parsedMap: ParsedTmxMap
   ) {
+    if (!this.isWithinWorldBounds(worldX, worldY, parsedMap)) {
+      return false;
+    }
+
     const { tileX, tileY } = this.getTilePositionFromWorld(worldX, worldY, parsedMap);
     return this.canMoveTo(tileX, tileY, runtimeGrids, parsedMap);
   }
@@ -226,6 +240,19 @@ export class PlayerManager {
         parsedMap.height - 1
       )
     };
+  }
+
+  private isWithinWorldBounds(worldX: number, worldY: number, parsedMap: ParsedTmxMap) {
+    const minPosition = this.getWorldPositionFromTile(0, 0);
+    const maxPosition = this.getWorldPositionFromTile(parsedMap.width - 1, parsedMap.height - 1);
+    const epsilon = PlayerManager.WORLD_BOUNDS_EPSILON;
+
+    return (
+      worldX >= minPosition.x - epsilon &&
+      worldX <= maxPosition.x + epsilon &&
+      worldY >= minPosition.y - epsilon &&
+      worldY <= maxPosition.y + epsilon
+    );
   }
 
   private getWorldPositionFromTile(tileX: number, tileY: number) {

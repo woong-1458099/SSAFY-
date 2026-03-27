@@ -40,6 +40,12 @@ public class User {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
+    @Column(name = "death_count", nullable = false)
+    private int deathCount;
+
+    @Column(name = "last_death_at")
+    private Instant lastDeathAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -131,6 +137,22 @@ public class User {
 
     public void setLastLoginAt(Instant lastLoginAt) {
         this.lastLoginAt = lastLoginAt;
+    }
+
+    public int getDeathCount() {
+        return deathCount;
+    }
+
+    public void setDeathCount(int deathCount) {
+        this.deathCount = deathCount;
+    }
+
+    public Instant getLastDeathAt() {
+        return lastDeathAt;
+    }
+
+    public void setLastDeathAt(Instant lastDeathAt) {
+        this.lastDeathAt = lastDeathAt;
     }
 
     public Instant getCreatedAt() {

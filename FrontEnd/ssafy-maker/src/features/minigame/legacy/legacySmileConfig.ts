@@ -18,7 +18,7 @@ export const LEGACY_BUSINESS_SMILE_CONFIG = {
   initialStatus: "자연스럽게 웃으세요. 웃음이 커질수록 게이지가 더 잘 찹니다."
 } as const;
 
-export const LEGACY_DONT_SMILE_SURVIVAL_TICKS = 100;
+export const LEGACY_DONT_SMILE_SURVIVAL_TICKS = 800;
 
 export const LEGACY_DONT_SMILE_CONFIG = {
   title: "웃음참기",
