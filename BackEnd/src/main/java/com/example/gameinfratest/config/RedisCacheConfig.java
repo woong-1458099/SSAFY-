@@ -1,7 +1,13 @@
 package com.example.gameinfratest.config;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,10 +19,11 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 @Configuration
 @EnableCaching
-public class RedisCacheConfig {
+public class RedisCacheConfig implements CachingConfigurer {
     public static final String DEATH_RECENT_CACHE = "deathDashboard:recent";
     public static final String DEATH_RANKING_CACHE = "deathDashboard:ranking";
     public static final String DEATH_DASHBOARD_CACHE = "deathDashboard:dashboard";
+    private static final Logger log = LoggerFactory.getLogger(RedisCacheConfig.class);
 
     @Bean
     public CacheManager cacheManager(
@@ -27,7 +34,7 @@ public class RedisCacheConfig {
         cacheProperties.validateRuntime();
         RedisSerializationContext.SerializationPair<Object> serializer =
                 RedisSerializationContext.SerializationPair.fromSerializer(
-                        new GenericJackson2JsonRedisSerializer(objectMapper)
+                        new GenericJackson2JsonRedisSerializer(cacheObjectMapper(objectMapper))
                 );
 
         RedisCacheConfiguration baseConfig = RedisCacheConfiguration.defaultCacheConfig()
@@ -49,5 +56,41 @@ public class RedisCacheConfig {
                     baseConfig.entryTtl(cacheProperties.getDashboardTtl())
                 )
                 .build();
+    }
+
+    @Override
+    @Bean
+    public CacheErrorHandler errorHandler() {
+        return new CacheErrorHandler() {
+            @Override
+            public void handleCacheGetError(RuntimeException exception, org.springframework.cache.Cache cache, Object key) {
+                log.warn("Cache GET failed for cache={} key={}: {}", cache.getName(), key, exception.getMessage());
+            }
+
+            @Override
+            public void handleCachePutError(RuntimeException exception, org.springframework.cache.Cache cache, Object key, Object value) {
+                log.warn("Cache PUT failed for cache={} key={}: {}", cache.getName(), key, exception.getMessage());
+            }
+
+            @Override
+            public void handleCacheEvictError(RuntimeException exception, org.springframework.cache.Cache cache, Object key) {
+                log.warn("Cache EVICT failed for cache={} key={}: {}", cache.getName(), key, exception.getMessage());
+            }
+
+            @Override
+            public void handleCacheClearError(RuntimeException exception, org.springframework.cache.Cache cache) {
+                log.warn("Cache CLEAR failed for cache={}: {}", cache.getName(), exception.getMessage());
+            }
+        };
+    }
+
+    private ObjectMapper cacheObjectMapper(ObjectMapper objectMapper) {
+        ObjectMapper cacheMapper = objectMapper.copy();
+        cacheMapper.activateDefaultTyping(
+                BasicPolymorphicTypeValidator.builder().allowIfSubType(Object.class).build(),
+                ObjectMapper.DefaultTyping.EVERYTHING,
+                JsonTypeInfo.As.PROPERTY
+        );
+        return cacheMapper;
     }
 }
