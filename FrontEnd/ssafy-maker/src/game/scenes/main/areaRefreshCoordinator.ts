@@ -37,7 +37,7 @@ export class MainSceneAreaRefreshCoordinator {
 
   queue(expectedAreaId: AreaId, expectedPlayerSnapshot?: { tileX: number; tileY: number }): void {
     this.clear();
-    const requestId = this.pendingRequestId;
+    const requestId = ++this.pendingRequestId;
     this.pendingTimer = this.scene.time.delayedCall(0, () => {
       try {
         if (this.pendingRequestId !== requestId || !this.canRefresh()) {
@@ -56,13 +56,11 @@ export class MainSceneAreaRefreshCoordinator {
   }
 
   finalize(requestId?: number): void {
-    const activeRequestId = this.pendingRequestId;
-    if (requestId !== undefined && requestId !== activeRequestId) {
+    if (requestId !== undefined && requestId !== this.pendingRequestId) {
       return;
     }
 
     this.pendingTimer?.remove(false);
     this.pendingTimer = undefined;
-    this.pendingRequestId = activeRequestId + 1;
   }
 }

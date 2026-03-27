@@ -280,6 +280,48 @@ function verifyStoreMigration(source: SaveStore, target: SaveStore): boolean {
   });
 }
 
+function mergeStoresByLatest(primary: SaveStore, secondary: SaveStore): SaveStore {
+  const merged: SaveStore = {};
+  const slotIds = new Set<SaveSlotId>([
+    AUTO_SLOT_ID,
+    ...Object.keys(normalizeStore(primary))
+      .map((slotId) => normalizeSlotId(slotId))
+      .filter((slotId): slotId is SaveSlotId => slotId !== null),
+    ...Object.keys(normalizeStore(secondary))
+      .map((slotId) => normalizeSlotId(slotId))
+      .filter((slotId): slotId is SaveSlotId => slotId !== null)
+  ]);
+
+  slotIds.forEach((slotId) => {
+    const primarySlot = primary[slotId] ?? null;
+    const secondarySlot = secondary[slotId] ?? null;
+
+    if (!primarySlot && !secondarySlot) {
+      if (slotId === AUTO_SLOT_ID) {
+        merged[slotId] = null;
+      }
+      return;
+    }
+
+    if (!primarySlot) {
+      merged[slotId] = secondarySlot;
+      return;
+    }
+
+    if (!secondarySlot) {
+      merged[slotId] = primarySlot;
+      return;
+    }
+
+    merged[slotId] =
+      parseSavedAt(primarySlot.savedAt) >= parseSavedAt(secondarySlot.savedAt)
+        ? primarySlot
+        : secondarySlot;
+  });
+
+  return normalizeStore(merged);
+}
+
 function openSaveIndexedDb(): Promise<IndexedDbOpenResult> {
   if (!canUseIndexedDb()) {
     return Promise.resolve({ status: "unsupported" });
@@ -396,6 +438,17 @@ async function migrateLegacyStoreIfNeeded(scope: string, legacyStore: SaveStore)
 async function readPersistentStore(scope = getStorageScope()): Promise<PersistentStoreReadResult> {
   const indexedDbStore = await readIndexedDbStore(scope);
   if (indexedDbStore.status === "success") {
+    const legacyStore = readStore(scope);
+    if (Object.keys(legacyStore).length > 0 && !isLegacyMigrationMarked(scope)) {
+      const mergedStore = mergeStoresByLatest(indexedDbStore.store, legacyStore);
+      await migrateLegacyStoreIfNeeded(scope, mergedStore);
+      return {
+        store: mergedStore,
+        source: "indexeddb",
+        degraded: false
+      };
+    }
+
     return {
       store: indexedDbStore.store,
       source: "indexeddb",
