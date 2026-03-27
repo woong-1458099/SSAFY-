@@ -11,6 +11,7 @@ import { emitMinigameCompletion } from "@features/minigame/minigameRewardEvents"
 import { returnToScene } from "@features/minigame/minigameLauncher";
 import { LEGACY_LOTTO_SCENE_KEY } from "@features/minigame/minigameSceneKeys";
 import { applyLegacyViewport } from "./viewport";
+import { installMinigamePause } from './installMinigamePause';
 import { SCREEN, PIXEL_FONT, COLORS, createBackground, createButton } from './utils';
 import { showMinigameTutorial } from './utils/minigameTutorial';
 import { getMinigameCard } from '@features/minigame/minigameCatalog';
@@ -80,6 +81,8 @@ export default class LottoScene extends Phaser.Scene {
   }
 
   startGame() {
+    installMinigamePause(this, this.returnSceneKey);
+
     this.cameras.main.setBackgroundColor("#1a1a2e");
     this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
     this.add.rectangle(W / 2, 0, W, 4, 0xffd700);
@@ -90,7 +93,7 @@ export default class LottoScene extends Phaser.Scene {
       fontFamily: PIXEL_FONT,
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 55, "구매 비용: 1,000 GP | 번호 6개 선택", {
+    this.add.text(W / 2, 55, "구매 비용: 8,000 GP | 번호 6개 선택", {
       fontSize: "9px",
       color: "#88ccff",
       fontFamily: PIXEL_FONT,
@@ -236,7 +239,7 @@ export default class LottoScene extends Phaser.Scene {
 
   createButtons() {
     this.createBtn(W / 2 - 150, 560, "자동 선택", 0x004466, 0x44aaff, () => this.autoSelect());
-    this.purchaseBtn = this.createBtn(W / 2, 560, "구매하기 (1000GP)", 0x446600, 0x88ff44, () => this.purchase());
+    this.purchaseBtn = this.createBtn(W / 2, 560, "구매하기 (8000GP)", 0x446600, 0x88ff44, () => this.purchase());
     this.createBtn(W / 2 + 150, 560, "초기화", 0x664400, 0xffaa44, () => this.resetSelection());
 
     this.exitBtn = this.add.text(30, H - 25, "EXIT", {

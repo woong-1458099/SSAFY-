@@ -330,11 +330,11 @@ export class HelpModal {
     this.contentText.setPosition(panelX + 40, panelY + 80);
 
     // Page indicator
-    this.pageIndicator.setPosition(panelX + this.panelWidth / 2, panelY + this.panelHeight - 80);
+    this.pageIndicator.setPosition(panelX + this.panelWidth / 2, panelY + this.panelHeight - 62);
 
     // Navigation buttons
-    this.prevButton.setPosition(panelX + 70, panelY + this.panelHeight - 40);
-    this.nextButton.setPosition(panelX + this.panelWidth - 70, panelY + this.panelHeight - 40);
-    this.closeButton.setPosition(panelX + this.panelWidth / 2, panelY + this.panelHeight - 40);
+    this.prevButton.setPosition(panelX + 70, panelY + this.panelHeight - 28);
+    this.nextButton.setPosition(panelX + this.panelWidth - 70, panelY + this.panelHeight - 28);
+    this.closeButton.setPosition(panelX + this.panelWidth / 2, panelY + this.panelHeight - 28);
   }
 }
