@@ -557,28 +557,41 @@ export class MainScene extends Phaser.Scene {
       authToken
     });
 
+    // 이미 인증된 상태면 바로 통과
     if (authToken === "bff-session" && storedSession) {
       return true;
     }
 
-    // 이미 세션이 있으면 API 호출 스킵 (네트워크 에러 방지)
+    // 저장된 세션이 있으면 API 호출 스킵 (CORS/네트워크 에러 방지)
     if (storedSession) {
       console.log("[MainScene] Using stored session, skipping API call");
       applySessionToRegistry(this.registry, storedSession);
       return true;
     }
 
-    const existingSession = await fetchExistingSession();
-    if (!existingSession) {
-      console.warn("[MainScene] No session found, redirecting to login");
-      clearAuthRegistry(this.registry);
-      clearStoredSession();
-      this.scene.start(SceneKey.Login);
-      return false;
+    // authToken이 있으면 (레지스트리에 인증 정보 있음) API 호출 스킵
+    if (authToken) {
+      console.log("[MainScene] authToken exists, skipping API call");
+      return true;
     }
 
-    applySessionToRegistry(this.registry, existingSession);
-    return true;
+    // 세션 정보가 전혀 없을 때만 API 호출
+    try {
+      const existingSession = await fetchExistingSession();
+      if (!existingSession) {
+        console.warn("[MainScene] No session found, redirecting to login");
+        clearAuthRegistry(this.registry);
+        clearStoredSession();
+        this.scene.start(SceneKey.Login);
+        return false;
+      }
+      applySessionToRegistry(this.registry, existingSession);
+      return true;
+    } catch (error) {
+      console.error("[MainScene] Session fetch failed (CORS?), but continuing anyway", error);
+      // CORS 에러 등으로 실패해도 게임 진행 허용 (개발 환경 대응)
+      return true;
+    }
   }
 
   private async handleLogout(): Promise<void> {
