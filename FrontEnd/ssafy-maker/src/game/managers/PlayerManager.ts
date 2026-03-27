@@ -180,6 +180,10 @@ export class PlayerManager {
     return this.isMoveInputActive;
   }
 
+  isMovementActivityInProgress(): boolean {
+    return this.isMoving || this.isMoveInputActive;
+  }
+
   private commitMovementState(isMoving: boolean, isMoveInputActive: boolean) {
     this.isMoving = isMoving;
     this.isMoveInputActive = isMoveInputActive;

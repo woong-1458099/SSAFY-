@@ -16,6 +16,7 @@ Current split:
   - Safe rerender tile resolution and area presentation helpers.
 - `areaRefreshCoordinator.ts`
   - Deferred area rerender request lifecycle management.
+  - Tracks request ownership and refresh-in-progress state for frame-boundary requeue safety.
 - `ending.ts`
   - Ending preset payload helpers.
 - `fixedEventDebug.ts`

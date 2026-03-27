@@ -22,6 +22,7 @@ export class MainSceneAreaRefreshCoordinator {
   private pendingRequestId = 0;
   private shutdownHandler: () => void;
   private isDisposed = false;
+  private isRefreshRunning = false;
 
   constructor(options: AreaRefreshCoordinatorOptions) {
     this.scene = options.scene;
@@ -38,6 +39,10 @@ export class MainSceneAreaRefreshCoordinator {
   getRequestId(): number {
     // This token represents the latest request or cancellation boundary, not only completed refreshes.
     return this.pendingRequestId;
+  }
+
+  isRefreshInProgress(): boolean {
+    return this.isRefreshRunning;
   }
 
   queue(expectedAreaId: AreaId, expectedPlayerSnapshot?: { tileX: number; tileY: number }): void {
@@ -57,8 +62,10 @@ export class MainSceneAreaRefreshCoordinator {
           return;
         }
 
+        this.isRefreshRunning = true;
         this.refresh(expectedAreaId, expectedPlayerSnapshot, requestId);
       } finally {
+        this.isRefreshRunning = false;
         this.finalize(requestId, pendingTask);
       }
     });
