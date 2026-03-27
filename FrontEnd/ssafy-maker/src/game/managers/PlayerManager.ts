@@ -39,6 +39,14 @@ export function shouldPreservePlayerMovementActivity(options: {
 
 export const PLAYER_MOVEMENT_ACTIVITY_GRACE_MS = 250;
 
+export function shouldRefreshMovementActivityOnInputLock(options: {
+  wasInputLocked: boolean;
+  isMoving: boolean;
+  isMoveInputActive: boolean;
+}) {
+  return !options.wasInputLocked && (options.isMoving || options.isMoveInputActive);
+}
+
 export class PlayerManager {
   private static readonly WORLD_BOUNDS_EPSILON = 2;
   private scene: Phaser.Scene;
@@ -118,7 +126,14 @@ export class PlayerManager {
   }
 
   setInputLocked(locked: boolean) {
-    if (locked && !this.isInputLocked && (this.isMoving || this.isMoveInputActive)) {
+    if (
+      locked &&
+      shouldRefreshMovementActivityOnInputLock({
+        wasInputLocked: this.isInputLocked,
+        isMoving: this.isMoving,
+        isMoveInputActive: this.isMoveInputActive
+      })
+    ) {
       this.lastMovementActivityAtMs = this.scene.time.now;
     }
     this.isInputLocked = locked;

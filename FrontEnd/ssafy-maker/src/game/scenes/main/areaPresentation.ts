@@ -1,6 +1,8 @@
 import type { AreaId } from "../../../common/enums/area";
 import { findFirstWalkableTile, type ParsedTmxMap, type TmxRuntimeGrids } from "../../systems/tmxNavigation";
 
+const MAX_REFRESH_SEARCH_RADIUS = 16;
+
 export function getAreaPresentationLabel(areaId: AreaId): string {
   switch (areaId) {
     case "campus":
@@ -34,21 +36,49 @@ export function findNearestWalkableRefreshTile(
   runtimeGrids: TmxRuntimeGrids,
   parsedMap: ParsedTmxMap
 ) {
-  const maxRadius = Math.max(parsedMap.width, parsedMap.height);
+  const maxRadius = Math.min(Math.max(parsedMap.width, parsedMap.height), MAX_REFRESH_SEARCH_RADIUS);
+  const queue = [{ tileX: originTileX, tileY: originTileY, distance: 0 }];
+  const visited = new Set<string>([`${originTileX}:${originTileY}`]);
+  const directions = [
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 },
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: -1 },
+    { dx: -1, dy: 1 },
+    { dx: 1, dy: -1 },
+    { dx: 1, dy: 1 }
+  ];
 
-  for (let radius = 1; radius <= maxRadius; radius += 1) {
-    for (let dy = -radius; dy <= radius; dy += 1) {
-      for (let dx = -radius; dx <= radius; dx += 1) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) {
-          continue;
-        }
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) {
+      break;
+    }
 
-        const tileX = originTileX + dx;
-        const tileY = originTileY + dy;
-        if (isWalkableRefreshTile(tileX, tileY, runtimeGrids, parsedMap)) {
-          return { tileX, tileY };
-        }
+    if (current.distance > 0 && isWalkableRefreshTile(current.tileX, current.tileY, runtimeGrids, parsedMap)) {
+      return { tileX: current.tileX, tileY: current.tileY };
+    }
+
+    if (current.distance >= maxRadius) {
+      continue;
+    }
+
+    for (const direction of directions) {
+      const nextTileX = current.tileX + direction.dx;
+      const nextTileY = current.tileY + direction.dy;
+      const key = `${nextTileX}:${nextTileY}`;
+
+      if (visited.has(key)) {
+        continue;
       }
+
+      visited.add(key);
+      queue.push({
+        tileX: nextTileX,
+        tileY: nextTileY,
+        distance: current.distance + 1
+      });
     }
   }
 

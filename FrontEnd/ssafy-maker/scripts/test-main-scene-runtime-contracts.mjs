@@ -9,6 +9,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "ssafy-maker-main-scene-runtime-"));
+const tsconfigPath = path.join(projectRoot, "tsconfig.json");
+const tsconfigResult = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+const parsedTsconfig = ts.parseJsonConfigFileContent(
+  tsconfigResult.config,
+  ts.sys,
+  projectRoot
+);
+const transpileCompilerOptions = {
+  ...parsedTsconfig.options,
+  module: ts.ModuleKind.ESNext,
+  noEmit: false
+};
 
 process.on("exit", () => {
   fs.rmSync(tempDir, { recursive: true, force: true });
@@ -16,10 +28,7 @@ process.on("exit", () => {
 
 function transpileModuleToTemp(sourcePath, outputName) {
   const transpiled = ts.transpileModule(fs.readFileSync(sourcePath, "utf8"), {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2020
-    },
+    compilerOptions: transpileCompilerOptions,
     fileName: sourcePath
   });
 
@@ -155,10 +164,7 @@ writeFile(
 const playerManagerSourcePath = path.join(projectRoot, "src", "game", "managers", "PlayerManager.ts");
 const playerManagerOutputPath = transpileModuleToTemp(playerManagerSourcePath, "PlayerManager.mjs");
 let playerManagerOutput = ts.transpileModule(fs.readFileSync(playerManagerSourcePath, "utf8"), {
-  compilerOptions: {
-    module: ts.ModuleKind.ESNext,
-    target: ts.ScriptTarget.ES2020
-  },
+  compilerOptions: transpileCompilerOptions,
   fileName: playerManagerSourcePath
 }).outputText;
 playerManagerOutput = playerManagerOutput
@@ -181,10 +187,7 @@ const coordinatorSourcePath = path.join(
 );
 const coordinatorOutputPath = transpileModuleToTemp(coordinatorSourcePath, "areaRefreshCoordinator.mjs");
 let coordinatorOutput = ts.transpileModule(fs.readFileSync(coordinatorSourcePath, "utf8"), {
-  compilerOptions: {
-    module: ts.ModuleKind.ESNext,
-    target: ts.ScriptTarget.ES2020
-  },
+  compilerOptions: transpileCompilerOptions,
   fileName: coordinatorSourcePath
 }).outputText;
 coordinatorOutput = coordinatorOutput.replace(/from "phaser"/g, 'from "./phaser-stub.mjs"');
@@ -193,6 +196,7 @@ writeFile(coordinatorOutputPath, coordinatorOutput);
 const {
   PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
   resolvePlayerMovementActivityState,
+  shouldRefreshMovementActivityOnInputLock,
   shouldPreservePlayerMovementActivity
 } = await import(
   `${pathToFileURL(playerManagerOutputPath).href}?t=${Date.now()}`
@@ -222,6 +226,43 @@ const movementCases = [
 movementCases.forEach(({ name, input, expected }) => {
   assert.deepEqual(resolvePlayerMovementActivityState(input), expected, name);
 });
+
+assert.equal(
+  shouldRefreshMovementActivityOnInputLock({
+    wasInputLocked: false,
+    isMoving: true,
+    isMoveInputActive: false
+  }),
+  true,
+  "input lock should refresh the activity timestamp when movement was active"
+);
+assert.equal(
+  shouldRefreshMovementActivityOnInputLock({
+    wasInputLocked: false,
+    isMoving: false,
+    isMoveInputActive: true
+  }),
+  true,
+  "input lock should refresh the activity timestamp when blocked input was active"
+);
+assert.equal(
+  shouldRefreshMovementActivityOnInputLock({
+    wasInputLocked: true,
+    isMoving: true,
+    isMoveInputActive: true
+  }),
+  false,
+  "already-locked frames should not keep extending the activity timestamp"
+);
+assert.equal(
+  shouldRefreshMovementActivityOnInputLock({
+    wasInputLocked: false,
+    isMoving: false,
+    isMoveInputActive: false
+  }),
+  false,
+  "idle-to-lock transitions should not refresh the activity timestamp"
+);
 
 assert.equal(
   shouldPreservePlayerMovementActivity({
@@ -380,4 +421,4 @@ disposedScene.timers.shift().fire();
 await flushMicrotasks();
 assert.equal(disposedRefreshCalled, false, "disposed scenes must not run deferred refresh callbacks");
 
-console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 13} cases)`);
+console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 17} cases)`);
