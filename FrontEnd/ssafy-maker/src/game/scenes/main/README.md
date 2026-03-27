@@ -39,3 +39,4 @@ Rule of thumb:
 - `PlayerManager.isMovementActivityInProgress()` keeps the broader grace-preserved activity policy for lock/load boundaries.
 - `PlayerManager.isImmediateMovementActivityInProgress()` remains available as the raw immediate-activity helper.
 - Current usage note: `MainScene.shouldAutoSave()` now reads `getMovementActivitySnapshot().autoSaveActive`. Any future caller should choose explicitly between snapshot fields instead of mixing helper semantics ad hoc.
+- Refresh-tile search caching is now scene-owned: `MainScene` passes its own cache object into `areaPresentation.ts` and clears it during scene cleanup so map/scene transitions cannot reuse stale module-global search state.

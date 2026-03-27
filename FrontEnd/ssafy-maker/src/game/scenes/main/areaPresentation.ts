@@ -3,15 +3,25 @@ import { findFirstWalkableTile, type ParsedTmxMap, type TmxRuntimeGrids } from "
 
 const MAX_REFRESH_SEARCH_RADIUS = 16;
 type RefreshTile = { tileX: number; tileY: number };
-let lastRefreshTileSearchCache:
-  | {
-      runtimeGrids: TmxRuntimeGrids;
-      parsedMap: ParsedTmxMap;
-      originTileX: number;
-      originTileY: number;
-      result: RefreshTile | undefined;
-    }
-  | undefined;
+export type RefreshTileSearchCache = {
+  runtimeGrids?: TmxRuntimeGrids;
+  parsedMap?: ParsedTmxMap;
+  originTileX?: number;
+  originTileY?: number;
+  result?: RefreshTile | undefined;
+};
+
+export function createRefreshTileSearchCache(): RefreshTileSearchCache {
+  return {};
+}
+
+export function clearRefreshTileSearchCache(cache: RefreshTileSearchCache): void {
+  cache.runtimeGrids = undefined;
+  cache.parsedMap = undefined;
+  cache.originTileX = undefined;
+  cache.originTileY = undefined;
+  cache.result = undefined;
+}
 
 export function getAreaPresentationLabel(areaId: AreaId): string {
   switch (areaId) {
@@ -44,26 +54,27 @@ export function findNearestWalkableRefreshTile(
   originTileX: number,
   originTileY: number,
   runtimeGrids: TmxRuntimeGrids,
-  parsedMap: ParsedTmxMap
+  parsedMap: ParsedTmxMap,
+  cache?: RefreshTileSearchCache
 ): RefreshTile | undefined {
   if (
-    lastRefreshTileSearchCache?.runtimeGrids === runtimeGrids &&
-    lastRefreshTileSearchCache.parsedMap === parsedMap &&
-    lastRefreshTileSearchCache.originTileX === originTileX &&
-    lastRefreshTileSearchCache.originTileY === originTileY
+    cache?.runtimeGrids === runtimeGrids &&
+    cache.parsedMap === parsedMap &&
+    cache.originTileX === originTileX &&
+    cache.originTileY === originTileY
   ) {
-    return lastRefreshTileSearchCache.result;
+    return cache.result;
   }
 
   if (isWalkableRefreshTile(originTileX, originTileY, runtimeGrids, parsedMap)) {
     const result = { tileX: originTileX, tileY: originTileY };
-    lastRefreshTileSearchCache = {
-      runtimeGrids,
-      parsedMap,
-      originTileX,
-      originTileY,
-      result
-    };
+    if (cache) {
+      cache.runtimeGrids = runtimeGrids;
+      cache.parsedMap = parsedMap;
+      cache.originTileX = originTileX;
+      cache.originTileY = originTileY;
+      cache.result = result;
+    }
     return result;
   }
 
@@ -85,13 +96,13 @@ export function findNearestWalkableRefreshTile(
 
     if (current.distance > 0 && isWalkableRefreshTile(current.tileX, current.tileY, runtimeGrids, parsedMap)) {
       const result = { tileX: current.tileX, tileY: current.tileY };
-      lastRefreshTileSearchCache = {
-        runtimeGrids,
-        parsedMap,
-        originTileX,
-        originTileY,
-        result
-      };
+      if (cache) {
+        cache.runtimeGrids = runtimeGrids;
+        cache.parsedMap = parsedMap;
+        cache.originTileX = originTileX;
+        cache.originTileY = originTileY;
+        cache.result = result;
+      }
       return result;
     }
 
@@ -129,20 +140,21 @@ export function findNearestWalkableRefreshTile(
     mapWidth: parsedMap.width,
     mapHeight: parsedMap.height
   });
-  lastRefreshTileSearchCache = {
-    runtimeGrids,
-    parsedMap,
-    originTileX,
-    originTileY,
-    result: undefined
-  };
+  if (cache) {
+    cache.runtimeGrids = runtimeGrids;
+    cache.parsedMap = parsedMap;
+    cache.originTileX = originTileX;
+    cache.originTileY = originTileY;
+    cache.result = undefined;
+  }
   return undefined;
 }
 
 export function resolveSafeRefreshTile(
   playerSnapshot: { tileX: number; tileY: number } | undefined,
   runtimeGrids?: TmxRuntimeGrids,
-  parsedMap?: ParsedTmxMap
+  parsedMap?: ParsedTmxMap,
+  cache?: RefreshTileSearchCache
 ) {
   if (!playerSnapshot || !runtimeGrids || !parsedMap) {
     return undefined;
@@ -159,7 +171,8 @@ export function resolveSafeRefreshTile(
     playerSnapshot.tileX,
     playerSnapshot.tileY,
     runtimeGrids,
-    parsedMap
+    parsedMap,
+    cache
   );
   if (nearestRefreshTile) {
     return nearestRefreshTile;

@@ -348,6 +348,20 @@ assert.equal(
   "movement snapshots should keep grace activity separate from autosave activity"
 );
 assert.equal(
+  PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
+    getMovementActivitySnapshot: () => movementSnapshot
+  }),
+  false,
+  "autosave helper should delegate to the canonical movement snapshot"
+);
+assert.equal(
+  PlayerManager.prototype.isMovementActivityInProgress.call({
+    getMovementActivitySnapshot: () => movementSnapshot
+  }),
+  true,
+  "grace helper should delegate to the canonical movement snapshot"
+);
+assert.equal(
   hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
   true,
   "autosave-facing activity should treat blocked directional input as active play"

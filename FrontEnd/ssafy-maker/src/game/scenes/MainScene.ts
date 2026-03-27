@@ -87,6 +87,8 @@ import {
 import { buildMainSceneDebugPanelState } from "./main/debugPanel";
 import { buildMainSceneEndingPresetPayload } from "./main/ending";
 import {
+  clearRefreshTileSearchCache,
+  createRefreshTileSearchCache,
   getAreaPresentationLabel,
   findNearestWalkableRefreshTile,
   isWalkableRefreshTile,
@@ -114,6 +116,7 @@ export class MainScene extends Phaser.Scene {
   private static readonly DEBUG_MODE_REGISTRY_KEY = "debug.arcadePhysics.enabled";
   private readonly audioManager = new AudioManager();
   private readonly displaySettingsManager = new DisplaySettingsManager();
+  private readonly refreshTileSearchCache = createRefreshTileSearchCache();
   private readonly autoSaveCoordinator = new MainSceneAutoSaveCoordinator({
     scene: this,
     checkIntervalMs: 10000,
@@ -509,6 +512,7 @@ export class MainScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.clearPendingInitialAreaRefresh();
       this.areaRefreshCoordinator.dispose();
+      clearRefreshTileSearchCache(this.refreshTileSearchCache);
       this.pendingDeathSceneExit?.remove(false);
       this.pendingDeathSceneExit = undefined;
       this.autoSaveCoordinator.destroy();
@@ -868,7 +872,7 @@ export class MainScene extends Phaser.Scene {
     runtimeGrids?: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
     parsedMap?: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
   ) {
-    return resolveSafeRefreshTile(playerSnapshot, runtimeGrids, parsedMap);
+    return resolveSafeRefreshTile(playerSnapshot, runtimeGrids, parsedMap, this.refreshTileSearchCache);
   }
 
   private isWalkableTile(
@@ -886,7 +890,13 @@ export class MainScene extends Phaser.Scene {
     runtimeGrids: NonNullable<ReturnType<WorldManager["getCurrentRuntimeGrids"]>>,
     parsedMap: NonNullable<ReturnType<WorldManager["getCurrentParsedTmxMap"]>>
   ) {
-    return findNearestWalkableRefreshTile(originTileX, originTileY, runtimeGrids, parsedMap);
+    return findNearestWalkableRefreshTile(
+      originTileX,
+      originTileY,
+      runtimeGrids,
+      parsedMap,
+      this.refreshTileSearchCache
+    );
   }
 
   private adjustBgmVolume(delta: number): void {

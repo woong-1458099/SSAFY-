@@ -271,6 +271,8 @@ export class PlayerManager {
     return this.hasRawMoveInput;
   }
 
+  // Canonical API for external movement-state consumers. Prefer selecting a field from this snapshot
+  // instead of recomputing or mixing the helper methods ad hoc.
   getMovementActivitySnapshot(): PlayerMovementActivitySnapshot {
     const immediateActive = hasImmediatePlayerMovementActivity({
       isMoving: this.isMoving,
