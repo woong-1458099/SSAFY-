@@ -32,7 +32,7 @@ export type PlaceActionDefinition = {
 export const HOME_ACTION_DEFINITIONS: Record<HomeActionId, HomeActionDefinition> = {
   sleep: {
     label: "잠자기 - 체력 회복 / 스트레스 감소",
-    hpDelta: 20,
+    hpDelta: 30,
     stressDelta: -6,
     statDelta: {},
     toastMessage: "잠자기를 마쳤습니다"
@@ -80,29 +80,29 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   gym: {
     title: "헬스장",
-    description: "이용 비용 15,000G\n최대 기준: HP -4 / 스트레스 -8 / HPMAX +8 / 협업 +4",
+    description: "이용 비용 15,000G\n최대 기준: HP -4 / 스트레스 -8 / HPMAX +10",
     actionText: "운동하기",
     cost: 15000,
     hpDelta: -4,
-    hpMaxDelta: 2,
+    hpMaxDelta: 4,
     stressDelta: -8,
-    statDelta: { teamwork: 1 },
     minigameSceneKey: "GymScene",
     toastMessage: "운동을 시작합니다"
   },
   ramen: {
     title: "라멘집",
-    description: "이용 비용 9,000G\n최대 기준: HP +30 / 스트레스 -8 / 협업 +4",
+    description: "이용 비용 9,000G\n최대 기준: HP +30 / 스트레스 -8 / BE +5",
     actionText: "라멘 먹기",
     cost: 9000,
     hpDelta: 20,
     stressDelta: -8,
+    statDelta: { be: 1 },
     minigameSceneKey: "CookingScene",
     toastMessage: "라멘을 먹고 회복했습니다"
   },
   lotto: {
     title: "복권 판매점",
-    description: "이용 비용 8,000G\n능력치 변화 없음 / 1등 당첨 시 즉시 로또 엔딩",
+    description: "이용 비용 8,000G\n운 +3 / 1등 당첨 시 즉시 로또 엔딩",
     actionText: "복권 구매",
     cost: 8000,
     minigameSceneKey: "LottoScene",
@@ -110,23 +110,22 @@ export const PLACE_ACTION_DEFINITIONS: Record<PlaceActionPlaceId, PlaceActionDef
   },
   karaoke: {
     title: "노래방",
-    description: "이용 비용 16,000G\n최대 기준: HP -4 / 스트레스 -14 / FE +8 / 협업 +6",
+    description: "이용 비용 16,000G\n최대 기준: HP -4 / 스트레스 -14 / FE +8",
     actionText: "노래 부르기",
     cost: 16000,
     hpDelta: -4,
     stressDelta: -14,
-    statDelta: { teamwork: 2 },
     minigameSceneKey: "RhythmScene",
     toastMessage: "노래방을 이용합니다"
   },
   beer: {
     title: "호프집",
-    description: "이용 비용 12,000G\n최대 기준: HP -9 / 스트레스 -16 / 협업 +6 / 운 +1",
+    description: "이용 비용 12,000G\n최대 기준: HP -9 / 스트레스 -16 / 협업 +6",
     actionText: "맥주 마시기",
     cost: 12000,
     hpDelta: -9,
     stressDelta: -10,
-    statDelta: { teamwork: 2, luck: 1 },
+    statDelta: { teamwork: 2 },
     minigameSceneKey: "DrinkingScene",
     toastMessage: "호프집을 이용합니다"
   }

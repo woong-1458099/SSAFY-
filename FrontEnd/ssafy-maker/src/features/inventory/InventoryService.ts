@@ -129,12 +129,12 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     kind: "consumable",
     price: 5000,
     sellPrice: 2500,
-    effect: "HP +6, 스트레스 +6, FE +1",
+    effect: "HP +6, 스트레스 -6, FE +1",
     stackable: true,
     color: 0x7dd2d4,
     iconKey: "shop-item-energy-drink",
     hpDelta: 6,
-    stressDelta: 6,
+    stressDelta: -6,
     statDelta: { fe: 1 }
   },
   {
