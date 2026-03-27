@@ -15,6 +15,13 @@ type EndingDefinition = {
   presentationMode: "full" | "summaryOnly";
   entryMode: "completion" | "directSummary";
   postComicAction: "start" | "credit";
+  autoSaveMode: "exact" | "recoverable";
+  autoSaveRestoreOverrides?: Partial<
+    Pick<
+      EndingFlowPayload,
+      "fe" | "be" | "teamwork" | "luck" | "hp" | "hpMax" | "stress" | "gamePlayCount" | "lottoRank"
+    >
+  >;
   shortDescription: string;
   introLines: string[];
   npcLine: string;
@@ -48,6 +55,11 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     presentationMode: "full",
     entryMode: "directSummary",
     postComicAction: "start",
+    autoSaveMode: "recoverable",
+    autoSaveRestoreOverrides: {
+      hp: 1,
+      stress: 99
+    },
     shortDescription: "체력이 바닥나면서 이번 학기의 도전이 여기서 멈췄습니다.",
     dominantLabels: ["HP", "한계", "실패"],
     imageFiles: ["ending_yamuchi.png"],
@@ -61,6 +73,10 @@ const ENDING_DEFINITIONS: EndingDefinition[] = [
     presentationMode: "full",
     entryMode: "directSummary",
     postComicAction: "start",
+    autoSaveMode: "recoverable",
+    autoSaveRestoreOverrides: {
+      stress: 99
+    },
     shortDescription: "스트레스가 한계를 넘기면서 모든 일정에서 이탈해 버렸습니다.",
     dominantLabels: ["스트레스", "이탈", "한계"],
     imageFiles: createPanelFileNames("ending_runaway_panel"),
@@ -212,6 +228,8 @@ export function resolveEnding(input: EndingFlowPayload): EndingResult {
     presentationMode: definition.presentationMode,
     entryMode: definition.entryMode,
     postComicAction: definition.postComicAction,
+    autoSaveMode: definition.autoSaveMode,
+    autoSaveRestoreOverrides: definition.autoSaveRestoreOverrides,
     shortDescription: definition.shortDescription,
     summaryStats,
     introLines: definition.introLines,
@@ -232,6 +250,13 @@ function createEndingDefinition(input: {
   presentationMode: "full" | "summaryOnly";
   entryMode: "completion" | "directSummary";
   postComicAction: "start" | "credit";
+  autoSaveMode?: "exact" | "recoverable";
+  autoSaveRestoreOverrides?: Partial<
+    Pick<
+      EndingFlowPayload,
+      "fe" | "be" | "teamwork" | "luck" | "hp" | "hpMax" | "stress" | "gamePlayCount" | "lottoRank"
+    >
+  >;
   shortDescription: string;
   dominantLabels: string[];
   imageFiles: string[];
@@ -239,6 +264,7 @@ function createEndingDefinition(input: {
 }): EndingDefinition {
   return {
     ...input,
+    autoSaveMode: input.autoSaveMode ?? "exact",
     introLines: [
       `${input.title} 조건이 최종 결과로 확정되었습니다.`,
       input.shortDescription,

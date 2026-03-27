@@ -17,24 +17,24 @@ export const WEEKLY_PLAN_OPTIONS: WeeklyPlanOption[] = [
   {
     id: "ui_practice",
     label: "UI 구현 연습",
-    description: "FE +2 / HP -20 / 스트레스 +2",
-    statDelta: { fe: 2, stress: 2 },
+    description: "FE +4 / HP -20 / 스트레스 +2",
+    statDelta: { fe: 4, stress: 2 },
     hpDelta: -20,
     color: 0x4c8ed9
   },
   {
     id: "rest_api_db",
     label: "REST API와 DB 설계",
-    description: "BE +2 / HP -20 / 스트레스 +2",
-    statDelta: { be: 2, stress: 2 },
+    description: "BE +4 / HP -20 / 스트레스 +2",
+    statDelta: { be: 4, stress: 2 },
     hpDelta: -20,
     color: 0x3d9d7a
   },
   {
     id: "team_project",
     label: "팀 프로젝트",
-    description: "협업 +2 / HP -20 / 스트레스 +2",
-    statDelta: { teamwork: 2, stress: 2 },
+    description: "협업 +4 / HP -20 / 스트레스 +2",
+    statDelta: { teamwork: 4, stress: 2 },
     hpDelta: -20,
     color: 0xb68543
   }
