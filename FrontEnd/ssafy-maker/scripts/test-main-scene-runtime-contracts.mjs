@@ -289,7 +289,7 @@ const { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } = await impo
 const { __getAuthState, __setAuthState } = await import(
   `${pathToFileURL(authSessionStubPath).href}?t=${Date.now()}`
 );
-const { findNearestWalkableRefreshTile, createRefreshTileSearchCache } = await import(
+const { findNearestWalkableRefreshTile, createRefreshTileSearchCache, clearRefreshTileSearchCache } = await import(
   `${pathToFileURL(areaPresentationOutputPath).href}?t=${Date.now()}`
 );
 
@@ -313,6 +313,7 @@ const movementCases = [
       isMoveInputActive: false,
       hasRawMoveInput: true,
       isInputLocked: true,
+      lastAutoSaveGateLockTransitionAtMs: 1_000,
       preserveAutoSaveGateDuringInputLock: true,
       lastMovementActivityAtMs: 1_000,
       scene: { time: { now: 1_050 } }
@@ -326,6 +327,7 @@ const movementCases = [
       isMoveInputActive: false,
       hasRawMoveInput: true,
       isInputLocked: true,
+      lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
       preserveAutoSaveGateDuringInputLock: false,
       lastMovementActivityAtMs: 1_000,
       scene: { time: { now: 1_050 } }
@@ -369,6 +371,7 @@ const movementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.cal
   isMoveInputActive: false,
   hasRawMoveInput: true,
   isInputLocked: true,
+  lastAutoSaveGateLockTransitionAtMs: 1_000,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
@@ -411,6 +414,7 @@ const lockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapsh
   isMoveInputActive: false,
   hasRawMoveInput: true,
   isInputLocked: true,
+  lastAutoSaveGateLockTransitionAtMs: 1_000,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
@@ -430,6 +434,7 @@ const longLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySn
   isMoveInputActive: false,
   hasRawMoveInput: false,
   isInputLocked: true,
+  lastAutoSaveGateLockTransitionAtMs: 1_000,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_000 + PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS + 1 } }
@@ -476,6 +481,7 @@ const lockTransitionManager = {
   isMoving: false,
   isMoveInputActive: true,
   preserveAutoSaveGateDuringInputLock: false,
+  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
 };
@@ -492,6 +498,11 @@ assert.equal(
   true,
   "interaction-style input locks should opt into autosave gate preservation"
 );
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockTransitionAtMs,
+  1_050,
+  "interaction-style input locks should stamp a dedicated autosave gate transition timestamp"
+);
 PlayerManager.prototype.setInputLocked.call(lockTransitionManager, false, {
   preserveAutoSaveGateDuringLockTransition: false
 });
@@ -505,11 +516,17 @@ assert.equal(
   false,
   "unlocking or non-transition locks should clear autosave gate preservation hints"
 );
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockTransitionAtMs,
+  Number.NEGATIVE_INFINITY,
+  "unlocking should clear the dedicated autosave gate transition timestamp"
+);
 const repeatedLockManager = {
   isInputLocked: true,
   hasRawMoveInput: false,
   isMoving: false,
   isMoveInputActive: false,
+  lastAutoSaveGateLockTransitionAtMs: 500,
   preserveAutoSaveGateDuringInputLock: true,
   lastMovementActivityAtMs: 500,
   scene: { time: { now: 1_000 } }
@@ -522,11 +539,17 @@ assert.equal(
   500,
   "reapplying an already-locked input state should not refresh movement activity timestamps"
 );
+assert.equal(
+  repeatedLockManager.lastAutoSaveGateLockTransitionAtMs,
+  500,
+  "reapplying an already-locked input state should not refresh autosave gate transition timestamps"
+);
 const idleLockManager = {
   isInputLocked: false,
   hasRawMoveInput: false,
   isMoving: false,
   isMoveInputActive: false,
+  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: false,
   lastMovementActivityAtMs: 400,
   scene: { time: { now: 900 } }
@@ -539,11 +562,17 @@ assert.equal(
   400,
   "locking input from an already-idle state should not extend autosave gate grace"
 );
+assert.equal(
+  idleLockManager.lastAutoSaveGateLockTransitionAtMs,
+  Number.NEGATIVE_INFINITY,
+  "locking input from an already-idle state should not create a dedicated autosave gate transition timestamp"
+);
 const uiLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
   isMoving: false,
   isMoveInputActive: false,
   hasRawMoveInput: true,
   isInputLocked: true,
+  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
   preserveAutoSaveGateDuringInputLock: false,
   lastMovementActivityAtMs: 1_000,
   scene: { time: { now: 1_050 } }
@@ -552,6 +581,26 @@ assert.equal(
   uiLockedMovementSnapshot.autoSaveGateActive,
   false,
   "non-interaction input locks should not extend autosave gating through grace-only activity"
+);
+const staleGraceMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: false,
+  isInputLocked: true,
+  lastAutoSaveGateLockTransitionAtMs: Number.NEGATIVE_INFINITY,
+  preserveAutoSaveGateDuringInputLock: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  staleGraceMovementSnapshot.graceActive,
+  true,
+  "movement grace can remain active after a recent lock transition"
+);
+assert.equal(
+  staleGraceMovementSnapshot.autoSaveGateActive,
+  false,
+  "autosave gate should not piggyback on generic grace without a dedicated lock-transition timestamp"
 );
 assert.equal(
   PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
@@ -594,6 +643,33 @@ assert.equal(
   ),
   undefined,
   "repeated out-of-bounds refresh origins should still fail fast"
+);
+const mutableBlockedGrid = [[true, false]];
+const mutableParsedMap = {
+  width: 2,
+  height: 1,
+  tileWidth: 32,
+  tileHeight: 32,
+  layers: [],
+  tilesets: []
+};
+const mutableRuntimeGrids = { blockedGrid: mutableBlockedGrid };
+assert.deepEqual(
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache),
+  { tileX: 1, tileY: 0 },
+  "initial refresh search should find the nearest open tile"
+);
+mutableBlockedGrid[0][0] = false;
+assert.deepEqual(
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache),
+  { tileX: 1, tileY: 0 },
+  "scene-owned caches can return stale data until explicitly invalidated"
+);
+clearRefreshTileSearchCache(refreshSearchCache);
+assert.deepEqual(
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache),
+  { tileX: 0, tileY: 0 },
+  "explicit cache invalidation should force refresh-tile searches to observe mutated grid data"
 );
 
 assert.equal(

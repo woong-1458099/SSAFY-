@@ -57,12 +57,18 @@ function hasAutoSaveMovementActivity(options: {
 
 function hasAutoSaveGateActivity(options: {
   autoSaveActive: boolean;
-  graceActive: boolean;
   isInputLocked: boolean;
+  preserveAutoSaveGateDuringInputLock: boolean;
+  lastLockTransitionAtMs: number;
+  nowMs: number;
+  graceMs: number;
 }) {
   return (
     options.autoSaveActive ||
-    (PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS > 0 && options.isInputLocked && options.graceActive)
+    (options.graceMs > 0 &&
+      options.isInputLocked &&
+      options.preserveAutoSaveGateDuringInputLock &&
+      options.nowMs - options.lastLockTransitionAtMs < options.graceMs)
   );
 }
 
@@ -113,6 +119,7 @@ export class PlayerManager {
   // `hasRawMoveInput` tracks held directional intent even while gameplay input is locked.
   private hasRawMoveInput = false;
   private lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
+  private lastAutoSaveGateLockTransitionAtMs = Number.NEGATIVE_INFINITY;
   private preserveAutoSaveGateDuringInputLock = false;
 
   constructor(scene: Phaser.Scene) {
@@ -131,6 +138,7 @@ export class PlayerManager {
     this.isMoving = false;
     this.isMoveInputActive = false;
     this.hasRawMoveInput = false;
+    this.lastAutoSaveGateLockTransitionAtMs = Number.NEGATIVE_INFINITY;
     this.preserveAutoSaveGateDuringInputLock = false;
     this.lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
   }
@@ -173,9 +181,10 @@ export class PlayerManager {
       preserveAutoSaveGateDuringLockTransition?: boolean;
     }
   ) {
+    const wasInputLocked = this.isInputLocked;
     this.preserveAutoSaveGateDuringInputLock =
       options?.preserveAutoSaveGateDuringLockTransition === true;
-    if (this.isInputLocked !== locked) {
+    if (wasInputLocked !== locked) {
       // Reset raw input on lock transitions so autosave does not read a stale held-key snapshot
       // before the next update tick resamples keyboard state.
       this.hasRawMoveInput = false;
@@ -183,12 +192,18 @@ export class PlayerManager {
     if (
       locked &&
       shouldRefreshMovementActivityOnInputLock({
-        wasInputLocked: this.isInputLocked,
+        wasInputLocked,
         isMoving: this.isMoving,
         isMoveInputActive: this.isMoveInputActive
       })
     ) {
       this.lastMovementActivityAtMs = this.scene.time.now;
+      if (this.preserveAutoSaveGateDuringInputLock) {
+        this.lastAutoSaveGateLockTransitionAtMs = this.scene.time.now;
+      }
+    }
+    if (!locked || !this.preserveAutoSaveGateDuringInputLock) {
+      this.lastAutoSaveGateLockTransitionAtMs = Number.NEGATIVE_INFINITY;
     }
     this.isInputLocked = locked;
   }
@@ -319,8 +334,11 @@ export class PlayerManager {
     });
     const autoSaveGateActive = hasAutoSaveGateActivity({
       autoSaveActive,
-      graceActive,
-      isInputLocked: this.isInputLocked && this.preserveAutoSaveGateDuringInputLock
+      isInputLocked: this.isInputLocked,
+      preserveAutoSaveGateDuringInputLock: this.preserveAutoSaveGateDuringInputLock,
+      lastLockTransitionAtMs: this.lastAutoSaveGateLockTransitionAtMs,
+      nowMs: this.scene.time.now,
+      graceMs: PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS
     });
 
     return {

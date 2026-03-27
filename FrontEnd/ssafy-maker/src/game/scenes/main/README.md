@@ -36,6 +36,7 @@ Rule of thumb:
 - Move reusable support logic, payload shaping, and lifecycle helpers into this folder.
 - `PlayerManager.getMovementActivitySnapshot()` is the canonical movement-activity contract.
 - `PlayerManager.getMovementActivitySnapshot().autoSaveGateActive` is the autosave-facing field: it keeps autosave blocked for real movement/raw input and for the short input-lock transition grace window configured by `PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS` only when `setInputLocked(..., { preserveAutoSaveGateDuringLockTransition: true })` marks the lock as an interaction-style transition.
+- `autoSaveGateActive` is computed from a dedicated lock-transition timestamp, not from the broader `graceActive` field, so autosave gating is resilient to frame-order differences between generic movement grace and input-lock transitions.
 - The runtime-contract test locks this further: repeated `setInputLocked(true)` calls must not refresh the grace timer, and idle-to-locked transitions must not create new autosave gate activity.
 - `PlayerManager.isAutoSaveMovementActivityInProgress()` is the compatibility shortcut for `autoSaveGateActive`.
 - `PlayerManager.isMovementActivityInProgress()` keeps the broader grace-preserved activity policy for lock/load boundaries.
