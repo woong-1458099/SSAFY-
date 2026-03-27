@@ -23,7 +23,9 @@ function transpileModuleToTemp(sourcePath, outputName) {
     fileName: sourcePath
   });
 
-  return path.join(tempDir, outputName);
+  const outputPath = path.join(tempDir, outputName);
+  fs.writeFileSync(outputPath, transpiled.outputText, "utf8");
+  return outputPath;
 }
 
 function writeFile(filePath, content) {
@@ -173,11 +175,24 @@ let coordinatorOutput = ts.transpileModule(fs.readFileSync(coordinatorSourcePath
 coordinatorOutput = coordinatorOutput.replace(/from "phaser"/g, 'from "./phaser-stub.mjs"');
 writeFile(coordinatorOutputPath, coordinatorOutput);
 
+const autoSavePolicySourcePath = path.join(
+  projectRoot,
+  "src",
+  "game",
+  "scenes",
+  "main",
+  "autoSavePolicy.ts"
+);
+const autoSavePolicyOutputPath = transpileModuleToTemp(autoSavePolicySourcePath, "autoSavePolicy.mjs");
+
 const { resolvePlayerMovementActivityState } = await import(
   `${pathToFileURL(playerManagerOutputPath).href}?t=${Date.now()}`
 );
 const { MainSceneAreaRefreshCoordinator, shouldAbortAreaRefreshRequest } = await import(
   `${pathToFileURL(coordinatorOutputPath).href}?t=${Date.now()}`
+);
+const { shouldDelayAutoSaveForInputLock } = await import(
+  `${pathToFileURL(autoSavePolicyOutputPath).href}?t=${Date.now()}`
 );
 
 const movementCases = [
@@ -201,6 +216,17 @@ const movementCases = [
 movementCases.forEach(({ name, input, expected }) => {
   assert.deepEqual(resolvePlayerMovementActivityState(input), expected, name);
 });
+
+assert.equal(
+  shouldDelayAutoSaveForInputLock({ nowMs: 1_000, lockedUntilMs: 1_300 }),
+  true,
+  "input lock grace window should delay autosave immediately after locking"
+);
+assert.equal(
+  shouldDelayAutoSaveForInputLock({ nowMs: 1_500, lockedUntilMs: 1_300 }),
+  false,
+  "autosave grace window should expire after the configured delay"
+);
 
 assert.equal(
   shouldAbortAreaRefreshRequest({
@@ -287,4 +313,4 @@ disposedScene.timers.shift().fire();
 await flushMicrotasks();
 assert.equal(disposedRefreshCalled, false, "disposed scenes must not run deferred refresh callbacks");
 
-console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 5} cases)`);
+console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 7} cases)`);

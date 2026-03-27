@@ -77,6 +77,7 @@ import {
 import { UI_DEPTH } from "../systems/uiDepth";
 import type { LegacyMinigameSceneKey } from "../../features/minigame/minigameSceneKeys";
 import { MainSceneAutoSaveCoordinator } from "./main/autoSaveCoordinator";
+import { shouldDelayAutoSaveForInputLock } from "./main/autoSavePolicy";
 import { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } from "./main/authFlow";
 import {
   buildCurrentSceneStateSnapshot,
@@ -1814,7 +1815,7 @@ hudWeek: number): number {
       return false;
     }
 
-    if (this.time.now < this.autoSaveInputLockUntil) {
+    if (shouldDelayAutoSaveForInputLock({ nowMs: this.time.now, lockedUntilMs: this.autoSaveInputLockUntil })) {
       return false;
     }
 
