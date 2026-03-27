@@ -119,6 +119,8 @@ export class PlayerManager {
   // `hasRawMoveInput` tracks held directional intent even while gameplay input is locked.
   private hasRawMoveInput = false;
   private lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
+  // Autosave gate transitions are stamped only from `setInputLocked(...)` so snapshot reads stay pure
+  // and do not depend on whatever movement/update ordering happened earlier in the frame.
   private lastAutoSaveGateLockTransitionAtMs = Number.NEGATIVE_INFINITY;
   private preserveAutoSaveGateDuringInputLock = false;
 
@@ -181,6 +183,8 @@ export class PlayerManager {
       preserveAutoSaveGateDuringLockTransition?: boolean;
     }
   ) {
+    // `setInputLocked(...)` is the single source of truth for autosave gate transition timing.
+    // The snapshot below only reads these fields and must remain side-effect free.
     const wasInputLocked = this.isInputLocked;
     this.preserveAutoSaveGateDuringInputLock =
       options?.preserveAutoSaveGateDuringLockTransition === true;

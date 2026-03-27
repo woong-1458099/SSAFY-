@@ -57,6 +57,9 @@ export function findNearestWalkableRefreshTile(
   parsedMap: ParsedTmxMap,
   cache?: RefreshTileSearchCache
 ): RefreshTile | undefined {
+  // Cache hits assume `runtimeGrids` and `parsedMap` are reference-stable snapshots.
+  // When callers mutate those objects in place, they must call `clearRefreshTileSearchCache(...)`
+  // before reusing the cache so stale local search results are not replayed.
   if (
     cache?.runtimeGrids === runtimeGrids &&
     cache.parsedMap === parsedMap &&
