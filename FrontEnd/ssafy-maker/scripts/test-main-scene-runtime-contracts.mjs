@@ -217,6 +217,18 @@ writeFile(
   sceneKeyStubPath,
   "export const SceneKey = { Login: 'LoginScene' };\n"
 );
+const areaPresentationSourcePath = path.join(projectRoot, "src", "game", "scenes", "main", "areaPresentation.ts");
+const areaPresentationOutputPath = transpileModuleToTemp(areaPresentationSourcePath, "areaPresentation.mjs");
+let areaPresentationOutput = ts.transpileModule(fs.readFileSync(areaPresentationSourcePath, "utf8"), {
+  compilerOptions: transpileCompilerOptions,
+  fileName: areaPresentationSourcePath
+}).outputText;
+areaPresentationOutput = areaPresentationOutput.replace(
+  /from "\.\.\/\.\.\/systems\/tmxNavigation"/g,
+  'from "./tmxNavigation-stub.mjs"'
+);
+writeFile(path.join(tempDir, "tmxNavigation-stub.mjs"), "export function findFirstWalkableTile() { return { tileX: 0, tileY: 0 }; }\n");
+writeFile(areaPresentationOutputPath, areaPresentationOutput);
 
 const playerManagerSourcePath = path.join(projectRoot, "src", "game", "managers", "PlayerManager.ts");
 const playerManagerOutputPath = transpileModuleToTemp(playerManagerSourcePath, "PlayerManager.mjs");
@@ -280,6 +292,9 @@ const { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } = await impo
 );
 const { __getAuthState, __setAuthState } = await import(
   `${pathToFileURL(authSessionStubPath).href}?t=${Date.now()}`
+);
+const { findNearestWalkableRefreshTile, createRefreshTileSearchCache } = await import(
+  `${pathToFileURL(areaPresentationOutputPath).href}?t=${Date.now()}`
 );
 
 const movementCases = [
@@ -360,6 +375,18 @@ assert.equal(
   }),
   true,
   "grace helper should delegate to the canonical movement snapshot"
+);
+const refreshSearchCache = createRefreshTileSearchCache();
+assert.equal(
+  findNearestWalkableRefreshTile(
+    -1,
+    3,
+    { blockedGrid: [[false]] },
+    { width: 1, height: 1, tileWidth: 32, tileHeight: 32, layers: [], tilesets: [] },
+    refreshSearchCache
+  ),
+  undefined,
+  "out-of-bounds refresh origins should fail fast instead of expanding BFS work"
 );
 assert.equal(
   hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),

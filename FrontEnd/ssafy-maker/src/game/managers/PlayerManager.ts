@@ -305,10 +305,12 @@ export class PlayerManager {
     return this.getMovementActivitySnapshot().immediateActive;
   }
 
+  // Backward-compatible wrapper over the canonical snapshot. Prefer `getMovementActivitySnapshot()`.
   isAutoSaveMovementActivityInProgress(): boolean {
     return this.getMovementActivitySnapshot().autoSaveActive;
   }
 
+  // Backward-compatible wrapper over the canonical snapshot. Prefer `getMovementActivitySnapshot()`.
   isMovementActivityInProgress(): boolean {
     return this.getMovementActivitySnapshot().graceActive;
   }

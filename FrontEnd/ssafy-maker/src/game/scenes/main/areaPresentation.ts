@@ -66,6 +66,28 @@ export function findNearestWalkableRefreshTile(
     return cache.result;
   }
 
+  if (
+    originTileX < 0 ||
+    originTileY < 0 ||
+    originTileX >= parsedMap.width ||
+    originTileY >= parsedMap.height
+  ) {
+    console.warn("[MainScene] refresh tile search received an out-of-bounds origin", {
+      originTileX,
+      originTileY,
+      mapWidth: parsedMap.width,
+      mapHeight: parsedMap.height
+    });
+    if (cache) {
+      cache.runtimeGrids = runtimeGrids;
+      cache.parsedMap = parsedMap;
+      cache.originTileX = originTileX;
+      cache.originTileY = originTileY;
+      cache.result = undefined;
+    }
+    return undefined;
+  }
+
   if (isWalkableRefreshTile(originTileX, originTileY, runtimeGrids, parsedMap)) {
     const result = { tileX: originTileX, tileY: originTileY };
     if (cache) {
