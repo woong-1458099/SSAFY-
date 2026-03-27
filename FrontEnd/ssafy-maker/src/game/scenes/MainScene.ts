@@ -130,8 +130,13 @@ export class MainScene extends Phaser.Scene {
   async create() {
     this.initialized = false;
     this.logoutInProgress = false;
-    // 초기 데이터 로드 (레지스트리나 기본 설정에서 주령 정보를 가져옵니다.)
-    const initialWeek = this.registry.get("week") || 1;
+    // 초기 데이터 로드: 씬 재시작(구역 이동) 시 저장된 restore payload에서 현재 주차를 먼저 읽어,
+    // 항상 week 1을 불러오는 버그를 방지합니다.
+    const pendingPayload = this.registry.get(MainScene.PENDING_RESTORE_PAYLOAD_KEY) as { gameState?: { hud?: { week?: number } } } | undefined;
+    const initialWeek =
+      (pendingPayload?.gameState?.hud?.week) ??
+      (this.registry.get("week") as number | undefined) ??
+      1;
     await ensureAuthoredStoryLoaded(this, initialWeek);
     this.debugLogger = new DebugEventLogger();
     this.debugCommandBus = new DebugCommandBus();
@@ -254,7 +259,7 @@ export class MainScene extends Phaser.Scene {
       },
       onNotice: (message) => this.events.emit("ui:showNotice", message)
     });
-    await this.storyEventManager.initialize(this.statSystemManager.getHudState().week);
+    await this.storyEventManager.initialize(initialWeek);
     this.minigameRewardManager = new MinigameRewardManager({
       scene: this,
       getHudState: () => this.statSystemManager!.getHudState(),
@@ -877,7 +882,7 @@ export class MainScene extends Phaser.Scene {
         case "toggleDebugPanel":
           this.debugPanel?.toggle();
           if (this.debugPanel?.isVisible()) {
-            this.storyEventManager?.debugSyncAllWeeks();
+            // this.storyEventManager?.debugSyncAllWeeks();
           }
           break;
         case "toggleWorldTileEditor":
@@ -927,7 +932,8 @@ export class MainScene extends Phaser.Scene {
           this.progressionManager?.debugPatchTimeState({
             week: timeState.week + command.delta
           });
-          this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week);
+          // 주차 변경 시 force: true로 대화 데이터를 강제 재로드하여 주차 불일치 방지
+          this.storyEventManager?.syncWeek(this.statSystemManager!.getHudState().week, { force: true });
           this.events.emit("ui:showNotice", `디버그 주차 ${command.delta > 0 ? "+" : ""}${command.delta}`);
           break;
         }

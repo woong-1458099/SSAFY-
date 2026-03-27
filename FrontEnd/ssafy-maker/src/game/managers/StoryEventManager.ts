@@ -82,7 +82,10 @@ export class StoryEventManager {
   }
 
   async initialize(week: number): Promise<void> {
-    await this.ensureWeekLoaded(week);
+    await Promise.all([
+      this.ensureWeekLoaded(week),
+      ensureAuthoredStoryLoaded(this.scene, week)
+    ]);
   }
 
   destroy(): void {
@@ -110,10 +113,11 @@ export class StoryEventManager {
     };
   }
 
-  syncWeek(week: number): void {
+  syncWeek(week: number, options?: { force?: boolean }): void {
     void this.ensureWeekLoaded(week);
     // 일반 대화 데이터도 해당 주차에 맞게 동기화합니다.
-    void ensureAuthoredStoryLoaded(this.scene, week);
+    // force 옵션이 true면 기존 데이터를 무시하고 강제 재로드합니다.
+    void ensureAuthoredStoryLoaded(this.scene, week, { force: options?.force });
   }
 
   debugSyncAllWeeks(): void {
