@@ -66,6 +66,11 @@ export function findNearestWalkableRefreshTile(
     for (const direction of directions) {
       const nextTileX = current.tileX + direction.dx;
       const nextTileY = current.tileY + direction.dy;
+
+      if (nextTileX < 0 || nextTileY < 0 || nextTileX >= parsedMap.width || nextTileY >= parsedMap.height) {
+        continue;
+      }
+
       const key = `${nextTileX}:${nextTileY}`;
 
       if (visited.has(key)) {
