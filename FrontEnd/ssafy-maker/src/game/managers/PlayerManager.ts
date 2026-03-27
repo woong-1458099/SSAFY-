@@ -38,6 +38,7 @@ function shouldPreservePlayerMovementActivity(options: {
 }
 
 export const PLAYER_MOVEMENT_ACTIVITY_GRACE_MS = 250;
+export const PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS = PLAYER_MOVEMENT_ACTIVITY_GRACE_MS;
 
 function hasImmediatePlayerMovementActivity(options: {
   isMoving: boolean;
@@ -296,7 +297,9 @@ export class PlayerManager {
       nowMs: this.scene.time.now,
       graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
     });
-    const autoSaveGateActive = autoSaveActive || (this.isInputLocked && graceActive);
+    const autoSaveGateActive =
+      autoSaveActive ||
+      (PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS > 0 && this.isInputLocked && graceActive);
 
     return {
       isMoving: this.isMoving,

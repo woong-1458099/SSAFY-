@@ -35,7 +35,7 @@ Rule of thumb:
 - Keep world orchestration and cross-manager runtime flow inside `MainScene.ts`.
 - Move reusable support logic, payload shaping, and lifecycle helpers into this folder.
 - `PlayerManager.getMovementActivitySnapshot()` is the canonical movement-activity contract.
-- `PlayerManager.getMovementActivitySnapshot().autoSaveGateActive` is the autosave-facing field: it keeps autosave blocked for real movement/raw input and for the short input-lock transition grace window.
+- `PlayerManager.getMovementActivitySnapshot().autoSaveGateActive` is the autosave-facing field: it keeps autosave blocked for real movement/raw input and for the short input-lock transition grace window configured by `PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS`.
 - `PlayerManager.isAutoSaveMovementActivityInProgress()` is the compatibility shortcut for `autoSaveGateActive`.
 - `PlayerManager.isMovementActivityInProgress()` keeps the broader grace-preserved activity policy for lock/load boundaries.
 - `PlayerManager.isImmediateMovementActivityInProgress()` remains available as the raw immediate-activity helper.

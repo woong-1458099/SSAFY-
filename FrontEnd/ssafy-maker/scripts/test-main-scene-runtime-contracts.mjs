@@ -275,6 +275,7 @@ writeFile(authFlowOutputPath, authFlowOutput);
 
 const {
   PlayerManager,
+  PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS,
   PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
 } = await import(
   `${pathToFileURL(playerManagerOutputPath).href}?t=${Date.now()}`
@@ -341,7 +342,7 @@ movementCases.forEach(({ name, snapshot, expected }) => {
 
 const autoSaveActivityReader = PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
   getMovementActivitySnapshot: () => ({
-    autoSaveActive: true
+    autoSaveGateActive: true
   })
 });
 assert.equal(
@@ -365,7 +366,12 @@ assert.equal(
 assert.equal(
   movementSnapshot.autoSaveGateActive,
   true,
-  "movement snapshots should keep autosave gating active across the short lock-transition grace window"
+  "movement snapshots should keep autosave gating active across the configured lock-transition grace window"
+);
+assert.equal(
+  PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS,
+  PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
+  "autosave lock-transition grace should stay aligned with the shared movement grace budget"
 );
 assert.equal(
   movementSnapshot.graceActive,
