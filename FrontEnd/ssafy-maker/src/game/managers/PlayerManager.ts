@@ -68,6 +68,7 @@ export type PlayerMovementActivitySnapshot = {
   hasRawMoveInput: boolean;
   immediateActive: boolean;
   autoSaveActive: boolean;
+  autoSaveGateActive: boolean;
   graceActive: boolean;
 };
 
@@ -295,6 +296,7 @@ export class PlayerManager {
       nowMs: this.scene.time.now,
       graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
     });
+    const autoSaveGateActive = autoSaveActive || (this.isInputLocked && graceActive);
 
     return {
       isMoving: this.isMoving,
@@ -302,6 +304,7 @@ export class PlayerManager {
       hasRawMoveInput: this.hasRawMoveInput,
       immediateActive,
       autoSaveActive,
+      autoSaveGateActive,
       graceActive
     };
   }

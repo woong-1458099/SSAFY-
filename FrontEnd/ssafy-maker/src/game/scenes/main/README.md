@@ -35,9 +35,10 @@ Rule of thumb:
 - Keep world orchestration and cross-manager runtime flow inside `MainScene.ts`.
 - Move reusable support logic, payload shaping, and lifecycle helpers into this folder.
 - `PlayerManager.getMovementActivitySnapshot()` is the canonical movement-activity contract.
-- `PlayerManager.isAutoSaveMovementActivityInProgress()` is the autosave-facing shortcut: it uses raw directional intent plus real movement, then applies the input-lock policy only at the autosave boundary.
+- `PlayerManager.getMovementActivitySnapshot().autoSaveGateActive` is the autosave-facing field: it keeps autosave blocked for real movement/raw input and for the short input-lock transition grace window.
+- `PlayerManager.isAutoSaveMovementActivityInProgress()` is the compatibility shortcut for `autoSaveActive`, not the full autosave gate.
 - `PlayerManager.isMovementActivityInProgress()` keeps the broader grace-preserved activity policy for lock/load boundaries.
 - `PlayerManager.isImmediateMovementActivityInProgress()` remains available as the raw immediate-activity helper.
-- Current usage note: `MainScene.shouldAutoSave()` now reads `getMovementActivitySnapshot().autoSaveActive`. Any future caller should choose explicitly between snapshot fields instead of mixing helper semantics ad hoc.
+- Current usage note: `MainScene.shouldAutoSave()` now reads `getMovementActivitySnapshot().autoSaveGateActive`. Any future caller should choose explicitly between snapshot fields instead of mixing helper semantics ad hoc.
 - Boundary note: `findNearestWalkableRefreshTile(...)` now rejects out-of-bounds origin tiles up front and leaves final fallback selection to `resolveSafeRefreshTile(...)`.
 - Refresh-tile search caching is now scene-owned: `MainScene` passes its own cache object into `areaPresentation.ts` and clears it during scene cleanup.

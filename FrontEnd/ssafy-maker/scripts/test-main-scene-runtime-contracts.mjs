@@ -303,7 +303,7 @@ const movementCases = [
       lastMovementActivityAtMs: Number.NEGATIVE_INFINITY,
       scene: { time: { now: 1_000 } }
     },
-    expected: { immediateActive: true, autoSaveActive: true, graceActive: true }
+    expected: { immediateActive: true, autoSaveActive: true, autoSaveGateActive: true, graceActive: true }
   },
   {
     name: "input-locked frames disable autosave activity but preserve grace activity",
@@ -315,7 +315,7 @@ const movementCases = [
       lastMovementActivityAtMs: 1_000,
       scene: { time: { now: 1_050 } }
     },
-    expected: { immediateActive: false, autoSaveActive: false, graceActive: true }
+    expected: { immediateActive: false, autoSaveActive: false, autoSaveGateActive: true, graceActive: true }
   },
   {
     name: "idle frames stay inactive",
@@ -327,7 +327,7 @@ const movementCases = [
       lastMovementActivityAtMs: Number.NEGATIVE_INFINITY,
       scene: { time: { now: 1_000 } }
     },
-    expected: { immediateActive: false, autoSaveActive: false, graceActive: false }
+    expected: { immediateActive: false, autoSaveActive: false, autoSaveGateActive: false, graceActive: false }
   }
 ];
 
@@ -335,6 +335,7 @@ movementCases.forEach(({ name, snapshot, expected }) => {
   const result = PlayerManager.prototype.getMovementActivitySnapshot.call(snapshot);
   assert.equal(result.immediateActive, expected.immediateActive, `${name} (immediate)`);
   assert.equal(result.autoSaveActive, expected.autoSaveActive, `${name} (autosave)`);
+  assert.equal(result.autoSaveGateActive, expected.autoSaveGateActive, `${name} (autosave-gate)`);
   assert.equal(result.graceActive, expected.graceActive, `${name} (grace)`);
 });
 
@@ -360,6 +361,11 @@ assert.equal(
   movementSnapshot.autoSaveActive,
   false,
   "movement snapshots should expose autosave activity as lock-aware even when raw input is still held"
+);
+assert.equal(
+  movementSnapshot.autoSaveGateActive,
+  true,
+  "movement snapshots should keep autosave gating active across the short lock-transition grace window"
 );
 assert.equal(
   movementSnapshot.graceActive,
@@ -405,6 +411,11 @@ assert.equal(
   true,
   "movement snapshots should re-enable autosave activity immediately after input unlock with held input"
 );
+assert.equal(
+  unlockedMovementSnapshot.autoSaveGateActive,
+  true,
+  "movement snapshots should keep autosave gating active immediately after input unlock with held input"
+);
 const lockTransitionManager = {
   isInputLocked: false,
   hasRawMoveInput: true,
@@ -431,6 +442,11 @@ assert.equal(
   }),
   false,
   "autosave helper should delegate to the canonical movement snapshot"
+);
+assert.equal(
+  movementSnapshot.autoSaveGateActive,
+  true,
+  "autosave gating should still block saves on the input-lock transition frame even when autosaveActive is already false"
 );
 assert.equal(
   PlayerManager.prototype.isMovementActivityInProgress.call({
