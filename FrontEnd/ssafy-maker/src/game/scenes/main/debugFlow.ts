@@ -1,5 +1,7 @@
 import type { DebugCommand } from "../../../debug/services/DebugCommandBus";
+import type { EndingId } from "../../../features/progression/types/ending";
 import { SCENE_IDS, type SceneId } from "../../scripts/scenes/sceneIds";
+import type { PlayerStatKey } from "../../state/gameState";
 
 type MainSceneDebugCommandHandlers = {
   isDebugOverlayVisible: () => boolean;
@@ -12,7 +14,7 @@ type MainSceneDebugCommandHandlers = {
   teleportPlayerToWorld: (worldX: number, worldY: number) => void;
   restartWithDebugScene: (sceneId: SceneId) => void;
   adjustHudValue: (key: "hp" | "stress" | "money", delta: number) => void;
-  adjustStatValue: (key: DebugCommand extends { type: "adjustStatValue"; key: infer K } ? K : never, delta: number) => void;
+  adjustStatValue: (key: PlayerStatKey, delta: number) => void;
   advanceTime: () => void;
   adjustWeek: (delta: number) => void;
   adjustActionPoint: (delta: number) => void;
@@ -24,7 +26,7 @@ type MainSceneDebugCommandHandlers = {
   resetFixedEventCompletionsForWeek: (week: number) => void;
   saveAuto: () => void;
   startEndingFlow: () => void;
-  startEndingFlowPreset: (endingId: DebugCommand extends { type: "startEndingFlowPreset"; endingId: infer K } ? K : never) => void;
+  startEndingFlowPreset: (endingId: EndingId) => void;
 };
 
 export function handleMainSceneDebugCommand(

@@ -24,7 +24,7 @@ type AreaRefreshCoordinatorOptions = {
 
 type PendingAreaRefreshTask = {
   requestId: number;
-  timer?: Phaser.Time.TimerEvent;
+  timer: Phaser.Time.TimerEvent | undefined;
   controller: AbortController;
   retryCount: number;
 };
@@ -104,10 +104,7 @@ export class MainSceneAreaRefreshCoordinator {
 
   finalize(
     requestId?: number,
-    pendingTask?: {
-      requestId: number;
-      timer: Phaser.Time.TimerEvent | undefined;
-    }
+    pendingTask?: Pick<PendingAreaRefreshTask, "requestId" | "timer">
   ): void {
     if (!this.pendingTask) {
       return;
@@ -121,7 +118,7 @@ export class MainSceneAreaRefreshCoordinator {
       return;
     }
 
-    this.pendingTask.timer.remove(false);
+    this.pendingTask.timer?.remove(false);
     this.pendingTask = undefined;
   }
 
@@ -135,7 +132,7 @@ export class MainSceneAreaRefreshCoordinator {
     this.finalize();
   }
 
-  private isCurrentTask(requestId: number, pendingTask: { timer: Phaser.Time.TimerEvent | undefined }): boolean {
+  private isCurrentTask(requestId: number, pendingTask: Pick<PendingAreaRefreshTask, "timer">): boolean {
     return (
       this.pendingRequestId === requestId &&
       this.pendingTask?.requestId === requestId &&
@@ -146,12 +143,7 @@ export class MainSceneAreaRefreshCoordinator {
   private scheduleTask(
     expectedAreaId: AreaId | undefined,
     expectedPlayerSnapshot: { tileX: number; tileY: number } | undefined,
-    pendingTask: {
-      requestId: number;
-      controller: AbortController;
-      retryCount: number;
-      timer: Phaser.Time.TimerEvent | undefined;
-    },
+    pendingTask: PendingAreaRefreshTask,
     delayMs: number
   ): Phaser.Time.TimerEvent {
     return this.scene.time.delayedCall(delayMs, () => {
@@ -226,7 +218,7 @@ export class MainSceneAreaRefreshCoordinator {
 
   private beginRefresh(
     requestId: number,
-    pendingTask: { timer: Phaser.Time.TimerEvent | undefined }
+    pendingTask: Pick<PendingAreaRefreshTask, "timer">
   ): boolean {
     if (!this.canAccessSceneRuntime() || !this.isCurrentTask(requestId, pendingTask)) {
       return false;

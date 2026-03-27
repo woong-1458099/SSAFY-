@@ -67,6 +67,7 @@ import {
 import { buildRuntimeSceneScript, normalizeSceneState } from "../systems/sceneStateRuntime";
 import {
   countTrueCells,
+  findFirstWalkableTile,
   type ParsedTmxMap,
   type TmxRuntimeGrids
 } from "../systems/tmxNavigation";
@@ -878,10 +879,10 @@ export class MainScene extends Phaser.Scene {
   ) {
     return resolveSafeRefreshTile(
       playerSnapshot,
+      this.refreshTileSearchRevision,
       runtimeGrids,
       parsedMap,
-      this.refreshTileSearchCache,
-      this.refreshTileSearchRevision
+      this.refreshTileSearchCache
     );
   }
 
