@@ -6,6 +6,7 @@ import {
   beginLogout,
   clearStoredSession,
   fetchExistingSession,
+  getActiveAuthUserId,
   readStoredSession
 } from "@features/auth/authSession";
 import { SaveService, type SaveSlotData, type SaveSlotId, getSaveSlotMetaText, getSaveSlotLabel } from "@features/save/SaveService";
@@ -55,14 +56,15 @@ export class StartScene extends Phaser.Scene {
     this.continueSlots = [];
 
     const authToken = this.registry.get("authToken");
+    const authUser = this.registry.get("authUser") as { id?: string } | undefined;
     const storedSession = readStoredSession();
-    if (!storedSession) {
+    if (storedSession) {
+      if (authToken !== "bff-session") {
+        applySessionToRegistry(this.registry, storedSession);
+      }
+    } else if (authToken !== "bff-session" || !authUser?.id || getActiveAuthUserId() !== authUser.id) {
       void this.recoverSessionOrRedirect();
       return;
-    }
-
-    if (authToken !== "bff-session") {
-      applySessionToRegistry(this.registry, storedSession);
     }
 
     const { width, height } = this.scale;

@@ -5,7 +5,7 @@ import type { SceneId } from "../../game/scripts/scenes/sceneIds";
 import type { InventorySnapshot } from "../inventory/InventoryService";
 import type { WeeklyPlanOptionId } from "../planning/weeklyPlan";
 import type { TimeState } from "../progression/TimeService";
-import { readStoredSession } from "../auth/authSession";
+import { getActiveAuthUserId, readStoredSession } from "../auth/authSession";
 import {
   createUserSaveFile,
   deleteUserSaveFile,
@@ -65,7 +65,7 @@ function canUseStorage(): boolean {
 }
 
 function getCurrentUserId(): string | null {
-  return readStoredSession()?.user.id ?? null;
+  return readStoredSession()?.user.id ?? getActiveAuthUserId();
 }
 
 function getStorageScope(): string {

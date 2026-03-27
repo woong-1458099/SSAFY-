@@ -32,6 +32,7 @@ import {
   clearAuthRegistry,
   clearStoredSession,
   fetchExistingSession,
+  getActiveAuthUserId,
   patchStoredSessionUser,
   readStoredSession
 } from "../../features/auth/authSession";
@@ -556,6 +557,11 @@ export class MainScene extends Phaser.Scene {
       return true;
     }
 
+    const authUser = this.registry.get("authUser") as { id?: string } | undefined;
+    if (this.registry.get("authToken") === "bff-session" && authUser?.id && getActiveAuthUserId() === authUser.id) {
+      return true;
+    }
+
     const existingSession = await fetchExistingSession();
     if (!existingSession) {
       clearAuthRegistry(this.registry);
@@ -612,7 +618,7 @@ export class MainScene extends Phaser.Scene {
 
     trackGameStart({
       week: hudState.week,
-      authenticated: readStoredSession() !== null
+      authenticated: readStoredSession() !== null || this.registry.get("authToken") === "bff-session"
     });
   }
 
@@ -671,7 +677,12 @@ export class MainScene extends Phaser.Scene {
 
   private async recordCurrentUserDeathIfAvailable(): Promise<void> {
     const session = readStoredSession();
-    if (!session || this.registry.get("authToken") !== "bff-session") {
+    const authUser = this.registry.get("authUser") as { id?: string } | undefined;
+    if (
+      this.registry.get("authToken") !== "bff-session" ||
+      !authUser?.id ||
+      getActiveAuthUserId() !== authUser.id
+    ) {
       return;
     }
 
@@ -689,6 +700,9 @@ export class MainScene extends Phaser.Scene {
         nickname: updatedUser.username?.trim() || updatedUser.email.split("@")[0]?.slice(0, 8) || "player"
       });
     } catch (error) {
+      if (!session) {
+        console.warn("[MainScene] skipped death record session refresh; active auth context has no persisted session");
+      }
       console.error("[MainScene] failed to record player death", error);
     }
   }
