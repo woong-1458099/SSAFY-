@@ -1805,8 +1805,8 @@ hudWeek: number): number {
       return false;
     }
 
-    // Autosave uses the immediate activity state only. Grace-based activity preservation stays inside
-    // PlayerManager for lock/load boundaries, but should not delay saves after the player is actually idle.
+    // Autosave uses the immediate activity state only. Grace-preserved activity exists for lock/load
+    // boundaries elsewhere, but save timing should only follow real movement or active directional input.
     if (this.playerManager?.isImmediateMovementActivityInProgress() === true) {
       return false;
     }

@@ -342,6 +342,11 @@ assert.equal(
   "input-lock transition frame should remain active during the movement grace window"
 );
 assert.equal(
+  hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: false }),
+  false,
+  "autosave should still see the same lock-transition frame as idle when only grace-preserved activity remains"
+);
+assert.equal(
   shouldPreservePlayerMovementActivity({
     isMoving: false,
     isMoveInputActive: true,

@@ -36,4 +36,4 @@ Rule of thumb:
 - Move reusable support logic, payload shaping, and lifecycle helpers into this folder.
 - `PlayerManager.isImmediateMovementActivityInProgress()` is the autosave-facing contract: collision-blocked input counts as active play, but grace-preserved activity is ignored for save timing.
 - `PlayerManager.isMovementActivityInProgress()` keeps the broader grace-preserved activity policy for lock/load boundaries.
-- Current usage note: `MainScene.shouldAutoSave()` is the only current caller of `isImmediateMovementActivityInProgress()`. Any future caller should choose explicitly between immediate and grace-preserved activity semantics.
+- Current usage note: `MainScene.shouldAutoSave()` is the only current caller of `isImmediateMovementActivityInProgress()`. Any future caller should choose explicitly between immediate and grace-preserved activity semantics, and autosave regressions should be verified against that single path.
