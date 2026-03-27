@@ -529,8 +529,9 @@ export class DialogueBox {
     available: boolean
   ): string {
     const actionType = choice.actionType ?? "NORMAL";
+    const isLocked = actionType === "LOCKED" && !available;
     const prefix =
-      actionType === "LOCKED" ? "[잠금] " : actionType === "MADNESS" ? "※ " : selected ? "> " : `${index + 1}. `;
+      isLocked ? `${selected ? "> " : ""}[잠금] ` : actionType === "MADNESS" ? "※ " : selected ? "> " : `${index + 1}. `;
     let content = `${prefix}${choice.text}`;
 
     if (requirementText.length > 0) {
@@ -544,6 +545,7 @@ export class DialogueBox {
   }
 
   private getChoicePalette(actionType: DialogueChoiceActionType, selected: boolean, available: boolean) {
+    const isLocked = actionType === "LOCKED" && !available;
     if (!available) {
       return {
         fillColor: 0x2b3c4f,
@@ -562,7 +564,7 @@ export class DialogueBox {
       };
     }
 
-    if (actionType === "LOCKED") {
+    if (isLocked) {
       return {
         fillColor: selected ? 0x5d5030 : 0x443a22,
         borderColor: selected ? 0xffefbb : 0xe1c278,

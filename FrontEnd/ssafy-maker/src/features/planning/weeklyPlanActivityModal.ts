@@ -8,12 +8,10 @@ const PANEL_OUTER_WIDTH = 556;
 const PANEL_OUTER_HEIGHT = 560;
 const PANEL_WIDTH = 546;
 const PANEL_HEIGHT = 550;
-const PREVIEW_OUTER_WIDTH = 392;
-const PREVIEW_OUTER_HEIGHT = 276;
-const PREVIEW_FRAME_WIDTH = 382;
-const PREVIEW_FRAME_HEIGHT = 266;
 const PREVIEW_IMAGE_MAX_WIDTH = 354;
 const PREVIEW_IMAGE_MAX_HEIGHT = 236;
+const PREVIEW_FRAME_PADDING = 10;
+const PREVIEW_OUTER_PADDING = 10;
 
 export function createWeeklyPlanActivityModal(
   scene: Phaser.Scene,
@@ -29,6 +27,7 @@ export function createWeeklyPlanActivityModal(
   const { title, statusText, description, accentColor, imageKey, onClose } = options;
   const centerX = Math.round(scene.scale.width / 2);
   const centerY = Math.round(scene.scale.height / 2);
+  const previewCenterY = centerY - 82;
   const root = scene.add.container(0, 0).setDepth(UI_DEPTH.plannerActivity).setScrollFactor(0);
 
   const overlay = scene.add
@@ -47,10 +46,10 @@ export function createWeeklyPlanActivityModal(
   panel.setStrokeStyle(3, 0x8ed2ff, 1);
 
   const accentBar = scene.add
-    .rectangle(centerX, centerY - 242, 404, 14, accentColor, 1)
+    .rectangle(centerX, centerY - 230, 404, 4, accentColor, 1)
     .setScrollFactor(0);
 
-  const titleText = scene.add.text(centerX, centerY - 274, title, {
+  const titleText = scene.add.text(centerX, centerY - 252, title, {
     fontFamily: FONT_FAMILY,
     fontSize: "24px",
     fontStyle: "bold",
@@ -58,40 +57,39 @@ export function createWeeklyPlanActivityModal(
     resolution: 2
   }).setOrigin(0.5).setScrollFactor(0);
 
-  const previewOuter = scene.add
-    .rectangle(centerX, centerY - 82, PREVIEW_OUTER_WIDTH, PREVIEW_OUTER_HEIGHT, 0x000000, 0)
-    .setScrollFactor(0);
-  previewOuter.setStrokeStyle(2, 0x3b6a92, 1);
+  const previewImage = scene.add.image(centerX, previewCenterY, imageKey ?? "").setScrollFactor(0);
+  let previewDisplayWidth = PREVIEW_IMAGE_MAX_WIDTH;
+  let previewDisplayHeight = PREVIEW_IMAGE_MAX_HEIGHT;
 
-  const previewFrame = scene.add
-    .rectangle(centerX, centerY - 82, PREVIEW_FRAME_WIDTH, PREVIEW_FRAME_HEIGHT, 0x112942, 0.98)
-    .setScrollFactor(0);
-  previewFrame.setStrokeStyle(2, 0x8ed2ff, 1);
-
-  const previewAccent = scene.add
-    .rectangle(centerX, centerY - 203, 352, 20, accentColor, 0.92)
-    .setScrollFactor(0);
-
-  const previewLabel = scene.add.text(centerX, centerY - 203, "이번 시간 활동", {
-    fontFamily: FONT_FAMILY,
-    fontSize: "15px",
-    fontStyle: "bold",
-    color: "#f4fbff",
-    resolution: 2
-  }).setOrigin(0.5).setScrollFactor(0);
-
-  const previewImage = scene.add.image(centerX, centerY - 62, imageKey ?? "").setScrollFactor(0);
   if (imageKey && scene.textures.exists(imageKey)) {
     const texture = scene.textures.get(imageKey).getSourceImage() as { width?: number; height?: number } | undefined;
     const sourceWidth = Math.max(1, texture?.width ?? 1);
     const sourceHeight = Math.max(1, texture?.height ?? 1);
     const scale = Math.min(PREVIEW_IMAGE_MAX_WIDTH / sourceWidth, PREVIEW_IMAGE_MAX_HEIGHT / sourceHeight);
+    previewDisplayWidth = Math.round(sourceWidth * scale);
+    previewDisplayHeight = Math.round(sourceHeight * scale);
     previewImage.setTexture(imageKey);
-    previewImage.setDisplaySize(sourceWidth * scale, sourceHeight * scale);
+    previewImage.setDisplaySize(previewDisplayWidth, previewDisplayHeight);
     previewImage.setVisible(true);
   } else {
+    previewDisplayWidth = 0;
+    previewDisplayHeight = 0;
     previewImage.setVisible(false);
   }
+
+  const previewFrameWidth = Math.max(200, previewDisplayWidth + PREVIEW_FRAME_PADDING);
+  const previewFrameHeight = Math.max(140, previewDisplayHeight + PREVIEW_FRAME_PADDING);
+  const previewOuterWidth = previewFrameWidth + PREVIEW_OUTER_PADDING;
+  const previewOuterHeight = previewFrameHeight + PREVIEW_OUTER_PADDING;
+  const previewOuter = scene.add
+    .rectangle(centerX, previewCenterY, previewOuterWidth, previewOuterHeight, 0x000000, 0)
+    .setScrollFactor(0);
+  previewOuter.setStrokeStyle(2, 0x3b6a92, 1);
+
+  const previewFrame = scene.add
+    .rectangle(centerX, previewCenterY, previewFrameWidth, previewFrameHeight, 0x112942, 0.98)
+    .setScrollFactor(0);
+  previewFrame.setStrokeStyle(2, 0x8ed2ff, 1);
 
   const statusBadge = scene.add
     .rectangle(centerX, centerY + 96, 412, 54, accentColor, 0.94)
@@ -118,7 +116,7 @@ export function createWeeklyPlanActivityModal(
     wordWrap: { width: 406 }
   }).setOrigin(0.5).setScrollFactor(0);
 
-  const hint = scene.add.text(centerX, centerY + 208, "닫기 버튼을 누르면 다음 단계로 진행됩니다.", {
+  const hint = scene.add.text(centerX, centerY + 208, "닫기 버튼을 누르면 다음 단계로 진행합니다.", {
     fontFamily: FONT_FAMILY,
     fontSize: "15px",
     fontStyle: "bold",
@@ -151,9 +149,7 @@ export function createWeeklyPlanActivityModal(
     titleText,
     previewOuter,
     previewFrame,
-    previewAccent,
     previewImage,
-    previewLabel,
     statusBadge,
     status,
     descriptionText,
@@ -161,5 +157,6 @@ export function createWeeklyPlanActivityModal(
     closeButtonBg,
     closeButtonText
   ]);
+
   return root;
 }

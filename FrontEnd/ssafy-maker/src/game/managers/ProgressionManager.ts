@@ -411,6 +411,7 @@ export class ProgressionManager {
       maxActionPoint: this.timeState.maxActionPoint,
       fixedEventSlots: this.getFixedEventSlots?.(this.timeState.week) ?? new Map(),
       completedSlotIndices: this.buildCompletedSlotIndices(this.timeState.week),
+      canAdvanceCurrentSlot: this.canAdvanceCurrentScheduledSlot(),
       initialPlan: this.weeklyPlan,
       onConfirm: (plan) => {
         this.weeklyPlan = [...plan];
@@ -459,6 +460,11 @@ export class ProgressionManager {
   }
 
   private advanceCurrentSlot(): void {
+    if (!this.canAdvanceCurrentScheduledSlot()) {
+      this.onNotice?.("현재 시간대에는 진행할 강의가 없습니다");
+      return;
+    }
+
     const previousState = {
       dayCycleIndex: this.timeState.dayCycleIndex,
       timeCycleIndex: this.timeState.timeCycleIndex
@@ -594,6 +600,39 @@ export class ProgressionManager {
 
   private shouldOpenWeeklyPlanner(): boolean {
     return this.timeState.dayCycleIndex === 0 && this.weeklyPlanWeek < this.timeState.week;
+  }
+
+  private canAdvanceCurrentScheduledSlot(): boolean {
+    if (this.timeState.actionPoint <= 0) {
+      return false;
+    }
+
+    const slotIndex = this.getCurrentWeeklyPlanSlotIndex();
+    if (slotIndex === null) {
+      return false;
+    }
+
+    if (this.getFixedEventSlots?.(this.timeState.week)?.has(slotIndex)) {
+      return false;
+    }
+
+    if (this.buildCompletedSlotIndices(this.timeState.week).has(slotIndex)) {
+      return false;
+    }
+
+    return this.buildWeeklyPlanActivityPayload(this.timeState.dayCycleIndex, this.timeState.timeCycleIndex) !== null;
+  }
+
+  private getCurrentWeeklyPlanSlotIndex(): number | null {
+    if (this.timeState.dayCycleIndex < 0 || this.timeState.dayCycleIndex >= 5) {
+      return null;
+    }
+
+    if (this.timeState.timeCycleIndex < 0 || this.timeState.timeCycleIndex >= 2) {
+      return null;
+    }
+
+    return getWeeklyPlanSlotIndex(this.timeState.dayCycleIndex, this.timeState.timeCycleIndex);
   }
 
   private buildCompletedSlotIndices(week: number): ReadonlySet<number> {

@@ -13,6 +13,7 @@ import { getDefaultPlayerAppearanceDefinition } from "../definitions/player/play
 import type { WorldRenderBounds } from "./WorldManager";
 
 export class PlayerManager {
+  private static readonly WORLD_BOUNDS_EPSILON = 2;
   private scene: Phaser.Scene;
   private player?: PlayerVisual;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -202,6 +203,10 @@ export class PlayerManager {
     runtimeGrids: TmxRuntimeGrids,
     parsedMap: ParsedTmxMap
   ) {
+    if (!this.isWithinWorldBounds(worldX, worldY, parsedMap)) {
+      return false;
+    }
+
     const { tileX, tileY } = this.getTilePositionFromWorld(worldX, worldY, parsedMap);
     return this.canMoveTo(tileX, tileY, runtimeGrids, parsedMap);
   }
@@ -235,6 +240,19 @@ export class PlayerManager {
         parsedMap.height - 1
       )
     };
+  }
+
+  private isWithinWorldBounds(worldX: number, worldY: number, parsedMap: ParsedTmxMap) {
+    const minPosition = this.getWorldPositionFromTile(0, 0);
+    const maxPosition = this.getWorldPositionFromTile(parsedMap.width - 1, parsedMap.height - 1);
+    const epsilon = PlayerManager.WORLD_BOUNDS_EPSILON;
+
+    return (
+      worldX >= minPosition.x - epsilon &&
+      worldX <= maxPosition.x + epsilon &&
+      worldY >= minPosition.y - epsilon &&
+      worldY <= maxPosition.y + epsilon
+    );
   }
 
   private getWorldPositionFromTile(tileX: number, tileY: number) {

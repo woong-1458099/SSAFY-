@@ -17,11 +17,17 @@ export type HudState = {
 
 export type PlayerStatsState = Record<PlayerStatKey, number>;
 
+export type EndingProgressState = {
+  gamePlayCount: number;
+  lottoRank: number | null;
+};
+
 export type RuntimeGameState = {
   hud: HudState;
   stats: PlayerStatsState;
   affection: Record<string, number>;
   flags: string[];
+  endingProgress: EndingProgressState;
 };
 
 export const DEFAULT_HUD_STATE: HudState = {
@@ -38,11 +44,16 @@ export const DEFAULT_HUD_STATE: HudState = {
 };
 
 export const DEFAULT_STATS_STATE: PlayerStatsState = {
-  fe: 20,
-  be: 20,
-  teamwork: 40,
+  fe: 10,
+  be: 10,
+  teamwork: 10,
   luck: 10,
   stress: 20,
+};
+
+export const DEFAULT_ENDING_PROGRESS_STATE: EndingProgressState = {
+  gamePlayCount: 0,
+  lottoRank: null,
 };
 
 export function createDefaultGameState(): RuntimeGameState {
@@ -50,7 +61,8 @@ export function createDefaultGameState(): RuntimeGameState {
     hud: { ...DEFAULT_HUD_STATE },
     stats: { ...DEFAULT_STATS_STATE },
     affection: {},
-    flags: []
+    flags: [],
+    endingProgress: { ...DEFAULT_ENDING_PROGRESS_STATE }
   };
 }
 
@@ -59,7 +71,14 @@ export function cloneGameState(state: RuntimeGameState): RuntimeGameState {
     hud: { ...state.hud },
     stats: { ...state.stats },
     affection: { ...(state.affection || {}) },
-    flags: [...(state.flags || [])]
+    flags: [...(state.flags || [])],
+    endingProgress: {
+      gamePlayCount: Math.max(0, Math.round(state.endingProgress?.gamePlayCount ?? 0)),
+      lottoRank:
+        typeof state.endingProgress?.lottoRank === "number"
+          ? Phaser.Math.Clamp(Math.round(state.endingProgress.lottoRank), 1, 5)
+          : null
+    }
   };
 }
 
@@ -80,10 +99,10 @@ export function clampHudState(hud: HudState): HudState {
 
 export function clampStatsState(stats: PlayerStatsState): PlayerStatsState {
   return {
-    fe: Phaser.Math.Clamp(Math.round(stats.fe), 0, 150),
-    be: Phaser.Math.Clamp(Math.round(stats.be), 0, 150),
-    teamwork: Phaser.Math.Clamp(Math.round(stats.teamwork), 0, 150),
-    luck: Phaser.Math.Clamp(Math.round(stats.luck), 0, 150),
+    fe: Phaser.Math.Clamp(Math.round(stats.fe), 0, 300),
+    be: Phaser.Math.Clamp(Math.round(stats.be), 0, 300),
+    teamwork: Phaser.Math.Clamp(Math.round(stats.teamwork), 0, 300),
+    luck: Phaser.Math.Clamp(Math.round(stats.luck), 0, 250),
     stress: Phaser.Math.Clamp(Math.round(stats.stress), 0, 100),
   };
 }
