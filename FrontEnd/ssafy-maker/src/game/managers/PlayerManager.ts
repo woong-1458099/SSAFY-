@@ -33,7 +33,9 @@ export class PlayerManager {
   private appearance: PlayerAppearanceDefinition = getDefaultPlayerAppearanceDefinition();
   private runtimeGrids?: TmxRuntimeGrids;
   private parsedMap?: ParsedTmxMap;
+  // `isMoving` means the player position changed during the latest completed update tick.
   private isMoving = false;
+  // `isMoveInputActive` means directional input is currently being pressed, even if movement is blocked.
   private isMoveInputActive = false;
 
   constructor(scene: Phaser.Scene) {
@@ -104,7 +106,6 @@ export class PlayerManager {
       !runtimeGrids ||
       !parsedMap
     ) {
-      this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
       return;
     }
 
