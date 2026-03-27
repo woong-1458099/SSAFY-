@@ -41,6 +41,7 @@ export class MainSceneAreaRefreshCoordinator {
       this.dispose();
     };
 
+    // These listeners are removed in `dispose()` so restarted scenes do not accumulate coordinator handlers.
     this.scene.events.on(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
     this.scene.events.on(Phaser.Scenes.Events.DESTROY, this.shutdownHandler);
   }

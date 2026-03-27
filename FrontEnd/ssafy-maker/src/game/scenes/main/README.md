@@ -19,6 +19,7 @@ Current split:
   - Tracks request ownership and refresh-in-progress state for frame-boundary requeue safety.
   - Refresh helpers may be async; the coordinator keeps the running state until that work settles.
   - Async refresh handlers also receive a request-current check and abort signal so stale completions can bail out safely.
+  - Scene `SHUTDOWN`/`DESTROY` listeners are detached during `dispose()` to avoid duplicate lifecycle handlers after scene restarts.
 - `ending.ts`
   - Ending preset payload helpers.
 - `fixedEventDebug.ts`
@@ -32,3 +33,4 @@ Rule of thumb:
 
 - Keep world orchestration and cross-manager runtime flow inside `MainScene.ts`.
 - Move reusable support logic, payload shaping, and lifecycle helpers into this folder.
+- `PlayerManager.isMovementActivityInProgress()` is the autosave-facing contract: collision-blocked input counts as active play, but input-locked frames do not.

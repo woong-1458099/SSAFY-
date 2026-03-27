@@ -36,6 +36,7 @@ export class PlayerManager {
   // `isMoving` means the player position changed during the latest completed update tick.
   private isMoving = false;
   // `isMoveInputActive` means directional input is currently active for gameplay movement checks.
+  // Input-locked frames intentionally report `false` so autosave/UI consumers can treat locked scenes as non-movable.
   private isMoveInputActive = false;
 
   constructor(scene: Phaser.Scene) {
@@ -96,7 +97,7 @@ export class PlayerManager {
     this.parsedMap = parsedMap;
     let nextIsMoving = false;
     const moveVector = this.getRequestedMoveVector();
-    let nextIsMoveInputActive = moveVector.lengthSq() > 0;
+    let nextIsMoveInputActive = this.resolveMoveInputActivity(moveVector);
 
     if (
       !this.player ||
@@ -180,7 +181,8 @@ export class PlayerManager {
   }
 
   isMovementActivityInProgress(): boolean {
-    // Use this for idle gating such as autosave: blocked movement input still counts as active play.
+    // Use this for idle gating such as autosave.
+    // Collision-blocked movement still counts as active play, but input-locked frames do not.
     return this.isMoving || this.isMoveInputActive;
   }
 
@@ -225,6 +227,14 @@ export class PlayerManager {
       (this.cursors?.down?.isDown || this.moveKeys?.down?.isDown ? 1 : 0);
 
     return new Phaser.Math.Vector2(horizontal, vertical);
+  }
+
+  private resolveMoveInputActivity(moveVector: Phaser.Math.Vector2): boolean {
+    if (this.isInputLocked) {
+      return false;
+    }
+
+    return moveVector.lengthSq() > 0;
   }
 
   private resolveFacingFromVelocity(velocityX: number, velocityY: number): Facing {
