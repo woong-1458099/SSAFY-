@@ -126,8 +126,8 @@ export class MainScene extends Phaser.Scene {
   });
   private readonly areaRefreshCoordinator = new MainSceneAreaRefreshCoordinator({
     scene: this,
-    refresh: (expectedAreaId, expectedPlayerSnapshot, requestId) =>
-      this.refreshCurrentAreaPresentation(expectedAreaId, expectedPlayerSnapshot, requestId),
+    refresh: (expectedAreaId, expectedPlayerSnapshot, request) =>
+      this.refreshCurrentAreaPresentation(expectedAreaId, expectedPlayerSnapshot, request),
     canRefresh: () => !!(this.sys.isActive() && this.worldManager && this.playerManager && this.interactionManager)
   });
   private initialized = false;
@@ -751,13 +751,17 @@ export class MainScene extends Phaser.Scene {
   private refreshCurrentAreaPresentation(
     expectedAreaId?: AreaId,
     expectedPlayerSnapshot?: { tileX: number; tileY: number },
-    requestId?: number
+    request?: {
+      requestId: number;
+      signal: AbortSignal;
+      isCurrentRequest: () => boolean;
+    }
   ): void {
     if (!this.sys.isActive() || !this.worldManager || !this.playerManager || !this.interactionManager) {
       return;
     }
 
-    if (requestId !== undefined && this.areaRefreshCoordinator.getRequestId() !== requestId) {
+    if (request?.signal.aborted || (request && !request.isCurrentRequest())) {
       return;
     }
 
@@ -782,6 +786,10 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (!this.worldManager.rerenderCurrentArea()) {
+      return;
+    }
+
+    if (request?.signal.aborted || (request && !request.isCurrentRequest())) {
       return;
     }
 

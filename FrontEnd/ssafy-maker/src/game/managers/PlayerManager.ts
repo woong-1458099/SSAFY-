@@ -181,6 +181,7 @@ export class PlayerManager {
   }
 
   isMovementActivityInProgress(): boolean {
+    // Use this for idle gating such as autosave: blocked movement input still counts as active play.
     return this.isMoving || this.isMoveInputActive;
   }
 

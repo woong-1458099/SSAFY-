@@ -18,6 +18,7 @@ Current split:
   - Deferred area rerender request lifecycle management.
   - Tracks request ownership and refresh-in-progress state for frame-boundary requeue safety.
   - Refresh helpers may be async; the coordinator keeps the running state until that work settles.
+  - Async refresh handlers also receive a request-current check and abort signal so stale completions can bail out safely.
 - `ending.ts`
   - Ending preset payload helpers.
 - `fixedEventDebug.ts`

@@ -6,19 +6,26 @@ type AreaRefreshCoordinatorOptions = {
   refresh: (
     expectedAreaId?: AreaId,
     expectedPlayerSnapshot?: { tileX: number; tileY: number },
-    requestId?: number
+    request?: {
+      requestId: number;
+      signal: AbortSignal;
+      isCurrentRequest: () => boolean;
+    }
   ) => void | Promise<void>;
   canRefresh: () => boolean;
+};
+
+type PendingAreaRefreshTask = {
+  requestId: number;
+  timer: Phaser.Time.TimerEvent;
+  controller: AbortController;
 };
 
 export class MainSceneAreaRefreshCoordinator {
   private readonly scene: Phaser.Scene;
   private readonly refresh: AreaRefreshCoordinatorOptions["refresh"];
   private readonly canRefresh: AreaRefreshCoordinatorOptions["canRefresh"];
-  private pendingTask?: {
-    requestId: number;
-    timer: Phaser.Time.TimerEvent;
-  };
+  private pendingTask?: PendingAreaRefreshTask;
   private pendingRequestId = 0;
   private shutdownHandler: () => void;
   private isDisposed = false;
@@ -52,20 +59,31 @@ export class MainSceneAreaRefreshCoordinator {
 
     this.clear();
     const requestId = ++this.pendingRequestId;
+    const controller = new AbortController();
     const pendingTask = {
       requestId,
+      controller,
       timer: undefined as Phaser.Time.TimerEvent | undefined
     };
     const timer = this.scene.time.delayedCall(0, () => {
-      if (this.pendingRequestId !== requestId || !this.canRefresh()) {
+      if (!this.isCurrentTask(requestId, pendingTask) || !this.canRefresh()) {
         this.finalize(requestId, pendingTask);
         return;
       }
 
       this.isRefreshRunning = true;
       void Promise.resolve()
-        .then(() => this.refresh(expectedAreaId, expectedPlayerSnapshot, requestId))
+        .then(() =>
+          this.refresh(expectedAreaId, expectedPlayerSnapshot, {
+            requestId,
+            signal: controller.signal,
+            isCurrentRequest: () => this.isCurrentTask(requestId, pendingTask)
+          })
+        )
         .catch((error) => {
+          if (controller.signal.aborted) {
+            return;
+          }
           console.error("[MainSceneAreaRefreshCoordinator] refresh failed", {
             requestId,
             error
@@ -79,6 +97,7 @@ export class MainSceneAreaRefreshCoordinator {
     pendingTask.timer = timer;
     this.pendingTask = {
       requestId,
+      controller,
       timer
     };
   }
@@ -126,7 +145,16 @@ export class MainSceneAreaRefreshCoordinator {
   }
 
   private cancelPending(): void {
+    this.pendingTask?.controller.abort();
     this.pendingRequestId += 1;
     this.finalize();
+  }
+
+  private isCurrentTask(requestId: number, pendingTask: { timer: Phaser.Time.TimerEvent | undefined }): boolean {
+    return (
+      this.pendingRequestId === requestId &&
+      this.pendingTask?.requestId === requestId &&
+      this.pendingTask?.timer === pendingTask.timer
+    );
   }
 }
