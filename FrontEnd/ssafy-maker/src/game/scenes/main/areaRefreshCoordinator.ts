@@ -15,14 +15,20 @@ export class MainSceneAreaRefreshCoordinator {
   private readonly scene: Phaser.Scene;
   private readonly refresh: AreaRefreshCoordinatorOptions["refresh"];
   private readonly canRefresh: AreaRefreshCoordinatorOptions["canRefresh"];
-  private pendingHandler?: () => void;
-  private pendingEventName?: string;
+  private pendingTimer?: Phaser.Time.TimerEvent;
   private pendingRequestId = 0;
+  private shutdownHandler: () => void;
 
   constructor(options: AreaRefreshCoordinatorOptions) {
     this.scene = options.scene;
     this.refresh = options.refresh;
     this.canRefresh = options.canRefresh;
+    this.shutdownHandler = () => {
+      this.clear();
+    };
+
+    this.scene.events.on(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
+    this.scene.events.on(Phaser.Scenes.Events.DESTROY, this.shutdownHandler);
   }
 
   getRequestId(): number {
@@ -32,9 +38,7 @@ export class MainSceneAreaRefreshCoordinator {
   queue(expectedAreaId: AreaId, expectedPlayerSnapshot?: { tileX: number; tileY: number }): void {
     this.clear();
     const requestId = this.pendingRequestId;
-    const eventName = Phaser.Scenes.Events.RENDER;
-
-    const handler = () => {
+    this.pendingTimer = this.scene.time.delayedCall(0, () => {
       try {
         if (this.pendingRequestId !== requestId || !this.canRefresh()) {
           return;
@@ -44,11 +48,7 @@ export class MainSceneAreaRefreshCoordinator {
       } finally {
         this.finalize(requestId);
       }
-    };
-
-    this.pendingEventName = eventName;
-    this.pendingHandler = handler;
-    this.scene.events.once(eventName, handler);
+    });
   }
 
   clear(): void {
@@ -61,12 +61,8 @@ export class MainSceneAreaRefreshCoordinator {
       return;
     }
 
-    if (this.pendingEventName) {
-      this.scene.events.off(this.pendingEventName, this.pendingHandler);
-    }
-
-    this.pendingHandler = undefined;
-    this.pendingEventName = undefined;
+    this.pendingTimer?.remove(false);
+    this.pendingTimer = undefined;
     this.pendingRequestId = activeRequestId + 1;
   }
 }
