@@ -117,6 +117,9 @@ export class PlayerManager {
   }
 
   setInputLocked(locked: boolean) {
+    if (locked && !this.isInputLocked && (this.isMoving || this.isMoveInputActive)) {
+      this.lastMovementActivityAtMs = this.scene.time.now;
+    }
     this.isInputLocked = locked;
   }
 
