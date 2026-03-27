@@ -26,11 +26,12 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   maxActionPoint: number;
   fixedEventSlots?: ReadonlyMap<number, string>;
   completedSlotIndices?: ReadonlySet<number>;
+  canAdvanceCurrentSlot: boolean;
   initialPlan: WeeklyPlanOptionId[];
   onConfirm: (plan: WeeklyPlanOptionId[]) => void;
   onAdvance: (plan: WeeklyPlanOptionId[]) => void;
 }): Phaser.GameObjects.Container {
-  const { week, dayLabels, currentDayLabel, currentTimeLabel, actionPoint, maxActionPoint, fixedEventSlots, completedSlotIndices, initialPlan, onConfirm, onAdvance } =
+  const { week, dayLabels, currentDayLabel, currentTimeLabel, actionPoint, maxActionPoint, fixedEventSlots, completedSlotIndices, canAdvanceCurrentSlot, initialPlan, onConfirm, onAdvance } =
     options;
 
   const centerX = Math.round(scene.scale.width / 2);
@@ -343,9 +344,21 @@ export function createWeeklyPlannerModal(scene: Phaser.Scene, options: {
   const saveButton = createActionButton(scene, centerX - 126, actionButtonY, 220, 54, "계획 저장", () => {
     onConfirm([...draftPlan]);
   });
-  const advanceButton = createActionButton(scene, centerX + 126, actionButtonY, 220, 54, "현재 시간 진행", () => {
-    onAdvance([...draftPlan]);
-  });
+  const advanceButton = createActionButton(
+    scene,
+    centerX + 126,
+    actionButtonY,
+    220,
+    54,
+    "현재 시간 진행",
+    () => {
+      if (!canAdvanceCurrentSlot) {
+        return;
+      }
+      onAdvance([...draftPlan]);
+    },
+    canAdvanceCurrentSlot
+  );
 
   objects.push(saveButton, advanceButton);
   root.add(objects);
@@ -359,21 +372,28 @@ function createActionButton(
   width: number,
   height: number,
   text: string,
-  onClick: () => void
+  onClick: () => void,
+  enabled = true
 ): Phaser.GameObjects.Container {
-  const bg = scene.add.rectangle(0, 0, width, height, 0x29527d, 1).setScrollFactor(0);
-  bg.setStrokeStyle(2, 0x8ed2ff, 1);
+  const fillColor = enabled ? 0x29527d : 0x2a3440;
+  const hoverColor = enabled ? 0x34679d : 0x2a3440;
+  const borderColor = enabled ? 0x8ed2ff : 0x5e7285;
+  const textColor = enabled ? "#eef7ff" : "#8ea5bb";
+  const bg = scene.add.rectangle(0, 0, width, height, fillColor, 1).setScrollFactor(0);
+  bg.setStrokeStyle(2, borderColor, 1);
   const label = scene.add.text(0, -1, text, {
     fontFamily: FONT_FAMILY,
     fontSize: "20px",
     fontStyle: "bold",
-    color: "#eef7ff",
+    color: textColor,
     resolution: 2
   }).setOrigin(0.5).setScrollFactor(0);
   const container = scene.add.container(x, y, [bg, label]).setScrollFactor(0);
-  bg.setInteractive({ useHandCursor: true });
-  bg.on("pointerdown", onClick);
-  bg.on("pointerover", () => bg.setFillStyle(0x34679d, 1));
-  bg.on("pointerout", () => bg.setFillStyle(0x29527d, 1));
+  if (enabled) {
+    bg.setInteractive({ useHandCursor: true });
+    bg.on("pointerdown", onClick);
+    bg.on("pointerover", () => bg.setFillStyle(hoverColor, 1));
+    bg.on("pointerout", () => bg.setFillStyle(fillColor, 1));
+  }
   return container;
 }
