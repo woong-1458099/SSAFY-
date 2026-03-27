@@ -119,25 +119,8 @@ export class MainScene extends Phaser.Scene {
   private readonly displaySettingsManager = new DisplaySettingsManager();
   private readonly refreshTileSearchCache = createRefreshTileSearchCache();
   private refreshTileSearchRevision = 0;
-  private readonly autoSaveCoordinator = new MainSceneAutoSaveCoordinator({
-    scene: this,
-    checkIntervalMs: 10000,
-    minIntervalMs: 60000,
-    shouldAutoSave: () => this.shouldAutoSave(),
-    buildFingerprint: () => JSON.stringify(this.buildSavePayload()),
-    save: async () => {
-      if (!this.saveService) {
-        return;
-      }
-      await this.saveService.saveSlot("auto", this.buildSavePayload());
-    }
-  });
-  private readonly areaRefreshCoordinator = new MainSceneAreaRefreshCoordinator({
-    scene: this,
-    refresh: (expectedAreaId, expectedPlayerSnapshot, request) =>
-      this.refreshCurrentAreaPresentation(expectedAreaId, expectedPlayerSnapshot, request),
-    canRefresh: () => !!(this.sys.isActive() && this.worldManager && this.playerManager && this.interactionManager)
-  });
+  private autoSaveCoordinator?: MainSceneAutoSaveCoordinator;
+  private areaRefreshCoordinator?: MainSceneAreaRefreshCoordinator;
   private initialized = false;
   private debugLogger?: DebugEventLogger;
   private debugOverlay?: DebugOverlay;
@@ -184,6 +167,34 @@ export class MainScene extends Phaser.Scene {
     super(SCENE_KEYS.main);
   }
 
+  private ensureRuntimeCoordinators(): void {
+    if (!this.autoSaveCoordinator) {
+      this.autoSaveCoordinator = new MainSceneAutoSaveCoordinator({
+        scene: this,
+        checkIntervalMs: 10000,
+        minIntervalMs: 60000,
+        shouldAutoSave: () => this.shouldAutoSave(),
+        buildFingerprint: () => JSON.stringify(this.buildSavePayload()),
+        save: async () => {
+          if (!this.saveService) {
+            return;
+          }
+          await this.saveService.saveSlot("auto", this.buildSavePayload());
+        }
+      });
+    }
+
+    if (!this.areaRefreshCoordinator) {
+      this.areaRefreshCoordinator = new MainSceneAreaRefreshCoordinator({
+        scene: this,
+        refresh: (expectedAreaId, expectedPlayerSnapshot, request) =>
+          this.refreshCurrentAreaPresentation(expectedAreaId, expectedPlayerSnapshot, request),
+        canRefresh: () =>
+          !!(this.sys.isActive() && this.worldManager && this.playerManager && this.interactionManager)
+      });
+    }
+  }
+
   async create() {
     if (!(await this.ensureAuthenticatedEntry())) {
       return;
@@ -195,7 +206,8 @@ export class MainScene extends Phaser.Scene {
     this.endingFlowRequested = false;
     this.pendingDeathSceneExit?.remove(false);
     this.pendingDeathSceneExit = undefined;
-    this.autoSaveCoordinator.reset();
+    this.ensureRuntimeCoordinators();
+    this.autoSaveCoordinator?.reset();
     this.clearPendingInitialAreaRefresh();
     this.cameras.main.setRoundPixels(true);
     // 초기 데이터 로드: 씬 재시작(구역 이동) 시 저장된 restore payload에서 현재 주차를 먼저 읽어,
@@ -513,12 +525,12 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.destroy();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.clearPendingInitialAreaRefresh();
-      this.areaRefreshCoordinator.dispose();
+      this.areaRefreshCoordinator?.dispose();
       clearRefreshTileSearchCache(this.refreshTileSearchCache);
       this.refreshTileSearchRevision = 0;
       this.pendingDeathSceneExit?.remove(false);
       this.pendingDeathSceneExit = undefined;
-      this.autoSaveCoordinator.destroy();
+      this.autoSaveCoordinator?.destroy();
       this.deathSequenceActive = false;
       this.brightnessOverlay?.destroy();
       this.brightnessOverlay = undefined;
@@ -542,8 +554,8 @@ export class MainScene extends Phaser.Scene {
     });
     this.trackAnalyticsGameStart();
     this.trackAnalyticsWeeklyProgress();
-    this.autoSaveCoordinator.markCurrentStateAsSaved();
-    this.autoSaveCoordinator.start();
+    this.autoSaveCoordinator?.markCurrentStateAsSaved();
+    this.autoSaveCoordinator?.start();
 
     const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
     const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
@@ -810,15 +822,15 @@ export class MainScene extends Phaser.Scene {
     expectedAreaId: AreaId,
     expectedPlayerSnapshot?: { tileX: number; tileY: number }
   ): void {
-    this.areaRefreshCoordinator.queue(expectedAreaId, expectedPlayerSnapshot);
+    this.areaRefreshCoordinator?.queue(expectedAreaId, expectedPlayerSnapshot);
   }
 
   private clearPendingInitialAreaRefresh(): void {
-    this.areaRefreshCoordinator.clear();
+    this.areaRefreshCoordinator?.clear();
   }
 
   private finalizePendingInitialAreaRefresh(requestId?: number): void {
-    this.areaRefreshCoordinator.finalize(requestId);
+    this.areaRefreshCoordinator?.finalize(requestId);
   }
 
   private syncAreaPresentationAfterRerender(
@@ -1796,7 +1808,7 @@ hudWeek: number): number {
 
     try {
       await this.saveService.saveSlot("auto", this.buildEndingAutoSavePayload(ending));
-      this.autoSaveCoordinator.markCurrentStateAsSaved();
+      this.autoSaveCoordinator?.markCurrentStateAsSaved();
     } catch (error) {
       console.error("[MainScene] ending auto save failed", error);
       this.events.emit("ui:showNotice", "엔딩 진입 전 오토 세이브에 실패했습니다.");
@@ -1813,7 +1825,7 @@ hudWeek: number): number {
 
     try {
       await this.saveService.saveSlot("auto", this.buildSavePayload());
-      this.autoSaveCoordinator.markCurrentStateAsSaved();
+      this.autoSaveCoordinator?.markCurrentStateAsSaved();
       this.events.emit("ui:showNotice", "오토 세이브 완료");
     } catch (error) {
       console.error("[MainScene] auto save failed", error);
