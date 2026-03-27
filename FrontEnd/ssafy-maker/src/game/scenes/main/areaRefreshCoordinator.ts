@@ -19,6 +19,7 @@ type PendingAreaRefreshTask = {
   requestId: number;
   timer: Phaser.Time.TimerEvent;
   controller: AbortController;
+  retryCount: number;
 };
 
 export class MainSceneAreaRefreshCoordinator {
@@ -63,41 +64,15 @@ export class MainSceneAreaRefreshCoordinator {
     const pendingTask = {
       requestId,
       controller,
+      retryCount: 0,
       timer: undefined as Phaser.Time.TimerEvent | undefined
     };
-    const timer = this.scene.time.delayedCall(0, () => {
-      if (!this.isCurrentTask(requestId, pendingTask) || !this.canRefresh()) {
-        this.finalize(requestId, pendingTask);
-        return;
-      }
-
-      this.isRefreshRunning = true;
-      void Promise.resolve()
-        .then(() =>
-          this.refresh(expectedAreaId, expectedPlayerSnapshot, {
-            requestId,
-            signal: controller.signal,
-            isCurrentRequest: () => this.isCurrentTask(requestId, pendingTask)
-          })
-        )
-        .catch((error) => {
-          if (controller.signal.aborted) {
-            return;
-          }
-          console.error("[MainSceneAreaRefreshCoordinator] refresh failed", {
-            requestId,
-            error
-          });
-        })
-        .finally(() => {
-          this.isRefreshRunning = false;
-          this.finalize(requestId, pendingTask);
-        });
-    });
+    const timer = this.scheduleTask(expectedAreaId, expectedPlayerSnapshot, pendingTask, 0);
     pendingTask.timer = timer;
     this.pendingTask = {
       requestId,
       controller,
+      retryCount: 0,
       timer
     };
   }
@@ -156,5 +131,65 @@ export class MainSceneAreaRefreshCoordinator {
       this.pendingTask?.requestId === requestId &&
       this.pendingTask?.timer === pendingTask.timer
     );
+  }
+
+  private scheduleTask(
+    expectedAreaId: AreaId | undefined,
+    expectedPlayerSnapshot: { tileX: number; tileY: number } | undefined,
+    pendingTask: {
+      requestId: number;
+      controller: AbortController;
+      retryCount: number;
+      timer: Phaser.Time.TimerEvent | undefined;
+    },
+    delayMs: number
+  ): Phaser.Time.TimerEvent {
+    return this.scene.time.delayedCall(delayMs, () => {
+      if (!this.isCurrentTask(pendingTask.requestId, pendingTask)) {
+        this.finalize(pendingTask.requestId, pendingTask);
+        return;
+      }
+
+      if (!this.canRefresh()) {
+        if (pendingTask.retryCount >= 1) {
+          this.finalize(pendingTask.requestId, pendingTask);
+          return;
+        }
+
+        pendingTask.retryCount += 1;
+        const retryTimer = this.scheduleTask(expectedAreaId, expectedPlayerSnapshot, pendingTask, 0);
+        pendingTask.timer = retryTimer;
+        this.pendingTask = {
+          requestId: pendingTask.requestId,
+          controller: pendingTask.controller,
+          retryCount: pendingTask.retryCount,
+          timer: retryTimer
+        };
+        return;
+      }
+
+      this.isRefreshRunning = true;
+      void Promise.resolve()
+        .then(() =>
+          this.refresh(expectedAreaId, expectedPlayerSnapshot, {
+            requestId: pendingTask.requestId,
+            signal: pendingTask.controller.signal,
+            isCurrentRequest: () => this.isCurrentTask(pendingTask.requestId, pendingTask)
+          })
+        )
+        .catch((error) => {
+          if (pendingTask.controller.signal.aborted) {
+            return;
+          }
+          console.error("[MainSceneAreaRefreshCoordinator] refresh failed", {
+            requestId: pendingTask.requestId,
+            error
+          });
+        })
+        .finally(() => {
+          this.isRefreshRunning = false;
+          this.finalize(pendingTask.requestId, pendingTask);
+        });
+    });
   }
 }

@@ -95,7 +95,8 @@ export class PlayerManager {
     this.runtimeGrids = runtimeGrids;
     this.parsedMap = parsedMap;
     let nextIsMoving = false;
-    let nextIsMoveInputActive = false;
+    const moveVector = this.getRequestedMoveVector();
+    let nextIsMoveInputActive = moveVector.lengthSq() > 0;
 
     if (
       !this.player ||
@@ -116,8 +117,6 @@ export class PlayerManager {
       return;
     }
 
-    const moveVector = this.getRequestedMoveVector();
-    nextIsMoveInputActive = moveVector.lengthSq() > 0;
     if (moveVector.lengthSq() === 0) {
       this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
