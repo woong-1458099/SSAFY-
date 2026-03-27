@@ -1,7 +1,13 @@
 import Phaser from "phaser";
 import { SceneKey } from "@shared/enums/sceneKey";
 import { AudioManager } from "@core/managers/AudioManager";
-import { beginLogout, clearStoredSession, fetchExistingSession, readStoredSession } from "@features/auth/authSession";
+import {
+  applySessionToRegistry,
+  beginLogout,
+  clearStoredSession,
+  fetchExistingSession,
+  readStoredSession
+} from "@features/auth/authSession";
 import { SaveService, type SaveSlotData, type SaveSlotId, getSaveSlotMetaText, getSaveSlotLabel } from "@features/save/SaveService";
 import {
   preloadStartSceneAssets,
@@ -50,7 +56,7 @@ export class StartScene extends Phaser.Scene {
 
     const authToken = this.registry.get("authToken");
     const storedSession = readStoredSession();
-    if (!authToken && !storedSession) {
+    if (authToken !== "bff-session" || !storedSession) {
       void this.recoverSessionOrRedirect();
       return;
     }
@@ -242,12 +248,7 @@ export class StartScene extends Phaser.Scene {
       return;
     }
 
-    this.registry.set("authToken", "bff-session");
-    this.registry.set("authUser", {
-      id: existingSession.user.id,
-      email: existingSession.user.email,
-      nickname: existingSession.user.email.split("@")[0]?.slice(0, 8) ?? "player"
-    });
+    applySessionToRegistry(this.registry, existingSession);
     this.scene.restart();
   }
 
