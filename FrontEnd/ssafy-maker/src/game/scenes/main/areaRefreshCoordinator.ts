@@ -62,8 +62,7 @@ export class MainSceneAreaRefreshCoordinator {
       return;
     }
 
-    this.pendingRequestId += 1;
-    this.finalize();
+    this.cancelPending();
   }
 
   dispose(): void {
@@ -71,7 +70,7 @@ export class MainSceneAreaRefreshCoordinator {
       return;
     }
 
-    this.clear();
+    this.cancelPending();
     this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
     this.scene.events.off(Phaser.Scenes.Events.DESTROY, this.shutdownHandler);
     this.isDisposed = true;
@@ -84,5 +83,10 @@ export class MainSceneAreaRefreshCoordinator {
 
     this.pendingTimer?.remove(false);
     this.pendingTimer = undefined;
+  }
+
+  private cancelPending(): void {
+    this.pendingRequestId += 1;
+    this.finalize();
   }
 }
