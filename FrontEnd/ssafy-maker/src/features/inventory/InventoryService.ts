@@ -85,13 +85,13 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     kind: "consumable",
     price: 3500,
     sellPrice: 1750,
-    effect: "HP +4, 스트레스 -3, 운 +1",
+    effect: "HP +6, 스트레스 -4, 운 +2",
     stackable: true,
     color: 0xd89a66,
     iconKey: "shop-item-chocolate",
-    hpDelta: 4,
-    stressDelta: -3,
-    statDelta: { luck: 1 }
+    hpDelta: 6,
+    stressDelta: -4,
+    statDelta: { luck: 2 }
   },
   {
     templateId: "item-ramen",
@@ -100,12 +100,12 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     kind: "consumable",
     price: 6000,
     sellPrice: 3000,
-    effect: "HP +10, 스트레스 -2",
+    effect: "HP +14, 스트레스 -4",
     stackable: true,
     color: 0xb17b4d,
     iconKey: "shop-item-ramen",
-    hpDelta: 10,
-    stressDelta: -2
+    hpDelta: 14,
+    stressDelta: -4
   },
   {
     templateId: "item-dosirak",
@@ -114,13 +114,13 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     kind: "consumable",
     price: 9000,
     sellPrice: 4500,
-    effect: "HP +15, 스트레스 -4, 협업 +1",
+    effect: "HP +18, 스트레스 -5, 협업 +2",
     stackable: true,
     color: 0xc9936a,
     iconKey: "shop-item-dosirak",
-    hpDelta: 15,
-    stressDelta: -4,
-    statDelta: { teamwork: 1 }
+    hpDelta: 18,
+    stressDelta: -5,
+    statDelta: { teamwork: 2 }
   },
   {
     templateId: "item-energy-drink",
@@ -129,13 +129,13 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     kind: "consumable",
     price: 5000,
     sellPrice: 2500,
-    effect: "HP +6, 스트레스 -6, FE +1",
+    effect: "HP +8, 스트레스 -8, FE +2",
     stackable: true,
     color: 0x7dd2d4,
     iconKey: "shop-item-energy-drink",
-    hpDelta: 6,
-    stressDelta: -6,
-    statDelta: { fe: 1 }
+    hpDelta: 8,
+    stressDelta: -8,
+    statDelta: { fe: 2 }
   },
   {
     templateId: "item-snack",
@@ -144,13 +144,13 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     kind: "consumable",
     price: 3000,
     sellPrice: 1500,
-    effect: "HP +3, 스트레스 -2, 운 +1",
+    effect: "HP +5, 스트레스 -3, 운 +2",
     stackable: true,
     color: 0xf0b75d,
     iconKey: "shop-item-snack",
-    hpDelta: 3,
-    stressDelta: -2,
-    statDelta: { luck: 1 }
+    hpDelta: 5,
+    stressDelta: -3,
+    statDelta: { luck: 2 }
   },
   {
     templateId: "item-cigarette",
@@ -159,12 +159,12 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     kind: "consumable",
     price: 2500,
     sellPrice: 1250,
-    effect: "HP -6, 스트레스 -6",
+    effect: "HP -4, 스트레스 -8",
     stackable: true,
     color: 0xb7bcc9,
     iconKey: "shop-item-cigarette",
-    hpDelta: -6,
-    stressDelta: -6
+    hpDelta: -4,
+    stressDelta: -8
   },
   {
     templateId: "item-soju",
@@ -173,13 +173,13 @@ export const SHOP_ITEM_TEMPLATES: InventoryItemTemplate[] = [
     kind: "consumable",
     price: 4500,
     sellPrice: 2250,
-    effect: "HP -4, 스트레스 -7, 협업 +1",
+    effect: "HP -2, 스트레스 -9, 협업 +2",
     stackable: true,
     color: 0x85d5b8,
     iconKey: "shop-item-soju",
-    hpDelta: -4,
-    stressDelta: -7,
-    statDelta: { teamwork: 1 }
+    hpDelta: -2,
+    stressDelta: -9,
+    statDelta: { teamwork: 2 }
   }
 ];
 

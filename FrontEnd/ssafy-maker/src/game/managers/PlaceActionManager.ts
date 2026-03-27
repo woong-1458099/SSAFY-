@@ -332,7 +332,7 @@ export class PlaceActionManager {
 
   private handleLottoCompleted(outcome: LottoOutcome): void {
     this.patchEndingProgress({ lottoRank: getLottoRank(outcome) });
-    this.applyStatDelta({ luck: 3 });
+    this.applyStatDelta({ luck: 7 });
 
     if (outcome.isJackpot) {
       this.onLottoJackpot?.();
