@@ -6,6 +6,7 @@ import {
   beginLogout,
   clearStoredSession,
   fetchExistingSession,
+  getActiveAuthUserId,
   readStoredSession
 } from "@features/auth/authSession";
 import { SaveService, type SaveSlotData, type SaveSlotId, getSaveSlotMetaText, getSaveSlotLabel } from "@features/save/SaveService";
@@ -55,14 +56,15 @@ export class StartScene extends Phaser.Scene {
     this.continueSlots = [];
 
     const authToken = this.registry.get("authToken");
-    const storedSession = readStoredSession({ allowExpired: true });
-    if (!storedSession) {
+    const authUser = this.registry.get("authUser") as { id?: string } | undefined;
+    const storedSession = readStoredSession();
+    if (storedSession) {
+      if (authToken !== "bff-session") {
+        applySessionToRegistry(this.registry, storedSession);
+      }
+    } else if (authToken !== "bff-session" || !authUser?.id || getActiveAuthUserId() !== authUser.id) {
       void this.recoverSessionOrRedirect();
       return;
-    }
-
-    if (authToken !== "bff-session") {
-      applySessionToRegistry(this.registry, storedSession);
     }
 
     const { width, height } = this.scale;
@@ -246,13 +248,6 @@ export class StartScene extends Phaser.Scene {
   }
 
   private async recoverSessionOrRedirect(): Promise<void> {
-    const storedSession = readStoredSession({ allowExpired: true });
-    if (storedSession) {
-      applySessionToRegistry(this.registry, storedSession);
-      this.scene.restart();
-      return;
-    }
-
     const existingSession = await fetchExistingSession();
     if (!existingSession) {
       this.scene.start(SceneKey.Login);

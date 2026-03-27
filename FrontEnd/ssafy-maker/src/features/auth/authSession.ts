@@ -14,11 +14,9 @@ export interface AuthSession {
 }
 
 type AuthAction = "login" | "signup";
-type ReadStoredSessionOptions = {
-  allowExpired?: boolean;
-};
 const AUTH_REDIRECT_PENDING_KEY = "ssafy-maker.auth.redirect.pending";
 const AUTH_SESSION_STORAGE_KEY = "ssafy-maker.auth.session";
+let activeAuthUserId: string | null = null;
 
 function buildLogoutUrl(): string {
   return `${API_PREFIX}/auth/logout`;
@@ -105,7 +103,12 @@ function writeStoredSession(value: AuthSession | null): void {
   }
 }
 
+function setActiveAuthUserId(userId: string | null): void {
+  activeAuthUserId = userId;
+}
+
 export function persistSession(session: AuthSession): AuthSession {
+  setActiveAuthUserId(session.user.id);
   writeStoredSession(session);
   return session;
 }
@@ -122,7 +125,11 @@ export function patchStoredSessionUser(user: UserProfile): void {
   });
 }
 
-export function readStoredSession(options: ReadStoredSessionOptions = {}): AuthSession | null {
+export function getActiveAuthUserId(): string | null {
+  return activeAuthUserId;
+}
+
+export function readStoredSession(): AuthSession | null {
   try {
     const raw = window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
     if (!raw) {
@@ -131,31 +138,30 @@ export function readStoredSession(options: ReadStoredSessionOptions = {}): AuthS
 
     const parsed = JSON.parse(raw) as unknown;
     if (!isAuthSession(parsed)) {
-      clearStoredSession();
+      writeStoredSession(null);
       return null;
     }
 
     if (parsed.expiresAt <= Date.now()) {
-      if (options.allowExpired) {
-        return parsed;
-      }
-
-      clearStoredSession();
+      writeStoredSession(null);
       return null;
     }
 
+    setActiveAuthUserId(parsed.user.id);
     return parsed;
   } catch {
-    clearStoredSession();
+    writeStoredSession(null);
     return null;
   }
 }
 
 export function clearStoredSession(): void {
+  setActiveAuthUserId(null);
   writeStoredSession(null);
 }
 
 export function applySessionToRegistry(registry: Phaser.Data.DataManager, session: AuthSession): void {
+  setActiveAuthUserId(session.user.id);
   registry.set("authToken", "bff-session");
   registry.set("authUser", {
     id: session.user.id,
@@ -260,7 +266,7 @@ export async function completeAuthIfPresent(): Promise<AuthSession | null> {
 }
 
 export async function fetchExistingSession(): Promise<AuthSession | null> {
-  const storedSession = readStoredSession({ allowExpired: true });
+  const storedSession = readStoredSession();
   try {
     const session = toAuthSession(await fetchBackendSession());
     if (session) {
@@ -283,7 +289,6 @@ export async function fetchExistingSession(): Promise<AuthSession | null> {
       return storedSession;
     }
 
-    clearStoredSession();
     return null;
   }
 }
