@@ -287,7 +287,7 @@ const { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } = await impo
   `${pathToFileURL(authFlowOutputPath).href}?t=${Date.now()}`
 );
 const { __getAuthState, __setAuthState } = await import(
-  `${pathToFileURL(authSessionStubPath).href}?t=${Date.now()}`
+  pathToFileURL(authSessionStubPath).href
 );
 const {
   findNearestWalkableRefreshTile,
@@ -789,12 +789,16 @@ const coordinator = new MainSceneAreaRefreshCoordinator({
 
 coordinator.queue("world");
 runningScene.timers.shift().fire();
+await flushMicrotasks();
 assert.equal(coordinator.isRefreshInProgress(), true, "first refresh should start");
+assert.equal(refreshResolvers.length, 1, "first refresh should register a pending resolver");
 
 coordinator.queue("home");
 assert.equal(coordinator.isRefreshInProgress(), false, "cancelled refresh should release running flag");
 runningScene.timers.shift().fire();
+await flushMicrotasks();
 assert.equal(coordinator.isRefreshInProgress(), true, "latest refresh should start");
+assert.equal(refreshResolvers.length, 2, "second refresh should register a pending resolver");
 
 refreshResolvers[0].resolve();
 await flushMicrotasks();

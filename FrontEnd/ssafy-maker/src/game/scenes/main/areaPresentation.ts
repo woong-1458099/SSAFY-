@@ -57,7 +57,7 @@ export function findNearestWalkableRefreshTile(
   originTileY: number,
   runtimeGrids: TmxRuntimeGrids,
   parsedMap: ParsedTmxMap,
-  cache?: RefreshTileSearchCache,
+  cache: RefreshTileSearchCache | undefined,
   revision: number
 ): RefreshTile | undefined {
   // Cache hits assume `runtimeGrids` and `parsedMap` are reference-stable snapshots.
@@ -172,10 +172,10 @@ export function findNearestWalkableRefreshTile(
 
 export function resolveSafeRefreshTile(
   playerSnapshot: { tileX: number; tileY: number } | undefined,
+  revision: number,
   runtimeGrids?: TmxRuntimeGrids,
   parsedMap?: ParsedTmxMap,
-  cache?: RefreshTileSearchCache,
-  revision: number
+  cache?: RefreshTileSearchCache
 ) {
   if (!playerSnapshot || !runtimeGrids || !parsedMap) {
     return undefined;

@@ -1,4 +1,6 @@
 import { DIALOGUE_IDS } from "../../../common/enums/dialogue";
+import type { Facing } from "../../../common/enums/facing";
+import { isNpcId, type NpcId } from "../../../common/enums/npc";
 import type { PlayerSnapshot } from "../../../common/types/player";
 import type { SceneState } from "../../../common/types/sceneState";
 import type { InventorySnapshot } from "../../../features/inventory/InventoryService";
@@ -12,10 +14,10 @@ import type { ProgressionSaveSnapshot } from "../../managers/ProgressionManager"
 import type { StoryEventSnapshot } from "../../managers/StoryEventManager";
 
 type NpcSnapshotLike = {
-  id: string;
+  id: NpcId;
   x: number;
   y: number;
-  facing: string;
+  facing: Facing;
 };
 
 type BuildMainSceneSavePayloadArgs = {
@@ -50,13 +52,15 @@ export function buildCurrentSceneStateSnapshot(
 
   return normalizeSceneState({
     ...baseSceneState,
-    npcs: npcSnapshots.map((npc) => ({
-      npcId: npc.id,
-      x: npc.x,
-      y: npc.y,
-      facing: npc.facing,
-      dialogueId: dialogueIdByNpcId.get(npc.id) ?? fallbackDialogueId
-    }))
+    npcs: npcSnapshots
+      .filter((npc) => isNpcId(npc.id))
+      .map((npc) => ({
+        npcId: npc.id,
+        x: npc.x,
+        y: npc.y,
+        facing: npc.facing,
+        dialogueId: dialogueIdByNpcId.get(npc.id) ?? fallbackDialogueId
+      }))
   });
 }
 

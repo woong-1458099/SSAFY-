@@ -1,11 +1,12 @@
 import type { DebugPanelState } from "../../../debug/types/debugTypes";
+import type { FixedEventDebugEntry } from "../../../features/story/fixedEventDebug";
 import type { EndingResult } from "../../../features/progression/types/ending";
 import type { HudState, PlayerStatsState } from "../../state/gameState";
 
 type StoryWeekDebug = {
   week: number;
   loaded: boolean;
-  events: unknown[];
+  events: FixedEventDebugEntry[];
 };
 
 type BuildMainSceneDebugPanelStateArgs = {
