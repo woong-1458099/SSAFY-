@@ -8,6 +8,7 @@ import {
 } from "./minigameSceneKeys";
 import { openLegacyMinigameMenu } from "./minigameLauncher";
 import { resolveUnlockableMinigameSceneKey } from "./minigameUnlocks";
+import { trackAnalyticsEvent } from "@shared/lib/analytics";
 
 export type MinigameLaunchKey = SupportedMinigameSceneKey;
 export type MinigameLaunchOptions = {
@@ -108,6 +109,12 @@ export function launchMinigame(
     returnSceneFallback: resolution.usedFallback,
     unlockOnComplete: options.unlockOnComplete === true,
     unlockSceneKey: unlockableSceneKey ?? undefined
+  });
+
+  trackAnalyticsEvent("minigame_start", {
+    minigame_id: sceneKey,
+    launch_source: "gateway",
+    return_scene_key: resolution.resolvedKey
   });
 
   if (options.unlockOnComplete && !unlockableSceneKey) {

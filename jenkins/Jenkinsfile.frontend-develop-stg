@@ -29,6 +29,9 @@ pipeline {
     VITE_KEYCLOAK_BASE_URL = 'https://auth.ssafymaker.cloud'
     VITE_KEYCLOAK_REALM = 'app'
     VITE_KEYCLOAK_CLIENT_ID = 'ssafy-maker-bff'
+    VITE_ENABLE_DEBUG_SHORTCUTS = 'true'
+    VITE_ENABLE_DEBUG_OVERLAY = 'true'
+    VITE_ENABLE_DEBUG_WORLD_GRID = 'true'
     N8N_DEPLOY_TOKEN = credentials('n8n-deploy-token')
   }
 

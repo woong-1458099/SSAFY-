@@ -28,6 +28,7 @@ import { resolveEnding } from "../../features/progression/services/endingResolve
 import { issueDeathRecordToken, recordCurrentUserDeath } from "../../features/auth/api";
 import { beginLogout, clearAuthRegistry, clearStoredSession, patchStoredSessionUser, readStoredSession } from "../../features/auth/authSession";
 import { SceneKey } from "../../shared/enums/sceneKey";
+import { trackGameStart, trackWeeklyProgressSnapshot } from "../../shared/lib/analytics";
 import { SaveService, type SavePayload } from "../../features/save/SaveService";
 import { ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
 import { SceneDirector } from "../directors/SceneDirector";
@@ -481,6 +482,8 @@ export class MainScene extends Phaser.Scene {
       this.storyEventManager?.refreshCurrentWeekLoadState();
       this.storyEventManager?.tryStartQueuedOrCurrentFixedEvent();
     });
+    this.trackAnalyticsGameStart();
+    this.trackAnalyticsWeeklyProgress();
 
     const currentArea = this.worldManager.getCurrentAreaId() ?? "world";
     const cycle: TimeOfDay[] = ["오전", "오후", "저녁", "밤"];
@@ -561,9 +564,43 @@ export class MainScene extends Phaser.Scene {
 
   private handleHudStateApplied(hudState: Partial<HudState>): void {
     this.events.emit("ui:patchHud", hudState);
+    this.trackAnalyticsWeeklyProgress();
     if (typeof hudState.hp === "number") {
       this.maybeTriggerPlayerDeath(hudState.hp);
     }
+  }
+
+  private trackAnalyticsGameStart(): void {
+    const hudState = this.statSystemManager?.getHudState();
+    if (!hudState) {
+      return;
+    }
+
+    trackGameStart({
+      week: hudState.week,
+      authenticated: readStoredSession() !== null
+    });
+  }
+
+  private trackAnalyticsWeeklyProgress(): void {
+    const hudState = this.statSystemManager?.getHudState();
+    const statsState = this.statSystemManager?.getStatsState();
+    const endingProgress = this.statSystemManager?.getEndingProgress();
+    if (!hudState || !statsState || !endingProgress) {
+      return;
+    }
+
+    trackWeeklyProgressSnapshot({
+      week: hudState.week,
+      money: hudState.money,
+      fe: statsState.fe,
+      be: statsState.be,
+      teamwork: statsState.teamwork,
+      luck: statsState.luck,
+      hp: hudState.hp,
+      stress: hudState.stress,
+      game_play_count: endingProgress.gamePlayCount
+    });
   }
 
   private maybeTriggerPlayerDeath(hp: number): void {

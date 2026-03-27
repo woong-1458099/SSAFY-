@@ -1,6 +1,7 @@
-import Phaser from "phaser";
+﻿import Phaser from "phaser";
 import type { DebugCommand, DebugCommandBus } from "./DebugCommandBus";
 import { SCENE_IDS } from "../../game/scripts/scenes/sceneIds";
+import { ENABLE_DEBUG_SHORTCUTS } from "../../shared/config/debugFlags";
 
 type DebugBinding = {
   eventName: string;
@@ -26,7 +27,7 @@ type SceneSwitchKeys = {
   classroomNumpad?: Phaser.Input.Keyboard.Key;
 };
 
-// 디버그 입력은 명령만 발행하고 실제 상태 변경은 각 책임자에게 위임한다.
+// ?붾쾭洹??낅젰? 紐낅졊留?諛쒗뻾?섍퀬 ?ㅼ젣 ?곹깭 蹂寃쎌? 媛?梨낆엫?먯뿉寃??꾩엫?쒕떎.
 export class DebugInputController {
   private readonly keyboard: Phaser.Input.Keyboard.KeyboardPlugin | null;
   private bindings: DebugBinding[] = [];
@@ -45,7 +46,7 @@ export class DebugInputController {
   }
 
   bind() {
-    if (this.destroyed || this.bound || !this.keyboard) {
+    if (!ENABLE_DEBUG_SHORTCUTS || this.destroyed || this.bound || !this.keyboard) {
       return;
     }
 
@@ -202,3 +203,4 @@ export class DebugInputController {
     };
   }
 }
+
