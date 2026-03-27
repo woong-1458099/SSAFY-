@@ -362,6 +362,45 @@ assert.equal(
   true,
   "movement snapshots should keep grace activity separate from autosave activity"
 );
+const preLockMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: true,
+  isMoveInputActive: true,
+  hasRawMoveInput: true,
+  isInputLocked: false,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_000 } }
+});
+assert.equal(
+  preLockMovementSnapshot.autoSaveActive,
+  true,
+  "movement snapshots should keep autosave active during the last unlocked movement frame"
+);
+const lockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: true,
+  isInputLocked: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  lockedMovementSnapshot.autoSaveActive,
+  false,
+  "movement snapshots should disable autosave activity immediately once input becomes locked"
+);
+const unlockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: true,
+  hasRawMoveInput: true,
+  isInputLocked: false,
+  lastMovementActivityAtMs: 1_050,
+  scene: { time: { now: 1_060 } }
+});
+assert.equal(
+  unlockedMovementSnapshot.autoSaveActive,
+  true,
+  "movement snapshots should re-enable autosave activity immediately after input unlock with held input"
+);
 assert.equal(
   PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
     getMovementActivitySnapshot: () => movementSnapshot
@@ -377,6 +416,13 @@ assert.equal(
   "grace helper should delegate to the canonical movement snapshot"
 );
 const refreshSearchCache = createRefreshTileSearchCache();
+let outOfBoundsWarnCount = 0;
+const originalConsoleWarn = console.warn;
+console.warn = (...args) => {
+  if (String(args[0]).includes("out-of-bounds origin")) {
+    outOfBoundsWarnCount += 1;
+  }
+};
 assert.equal(
   findNearestWalkableRefreshTile(
     -1,
@@ -387,6 +433,23 @@ assert.equal(
   ),
   undefined,
   "out-of-bounds refresh origins should fail fast instead of expanding BFS work"
+);
+assert.equal(
+  findNearestWalkableRefreshTile(
+    -1,
+    3,
+    { blockedGrid: [[false]] },
+    { width: 1, height: 1, tileWidth: 32, tileHeight: 32, layers: [], tilesets: [] },
+    refreshSearchCache
+  ),
+  undefined,
+  "repeated out-of-bounds refresh origins should still fail fast"
+);
+console.warn = originalConsoleWarn;
+assert.equal(
+  outOfBoundsWarnCount,
+  1,
+  "scene-owned refresh search cache should suppress duplicate out-of-bounds warnings for the same origin"
 );
 assert.equal(
   hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),

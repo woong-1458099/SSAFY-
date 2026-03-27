@@ -40,4 +40,4 @@ Rule of thumb:
 - `PlayerManager.isImmediateMovementActivityInProgress()` remains available as the raw immediate-activity helper.
 - Current usage note: `MainScene.shouldAutoSave()` now reads `getMovementActivitySnapshot().autoSaveActive`. Any future caller should choose explicitly between snapshot fields instead of mixing helper semantics ad hoc.
 - Boundary note: `findNearestWalkableRefreshTile(...)` now rejects out-of-bounds origin tiles up front and leaves final fallback selection to `resolveSafeRefreshTile(...)`.
-- Refresh-tile search caching is now scene-owned: `MainScene` passes its own cache object into `areaPresentation.ts` and clears it during scene cleanup so map/scene transitions cannot reuse stale module-global search state.
+- Refresh-tile search caching is now scene-owned: `MainScene` passes its own cache object into `areaPresentation.ts`, clears it during scene cleanup, and suppresses duplicate out-of-bounds warnings for repeated identical bad origins.

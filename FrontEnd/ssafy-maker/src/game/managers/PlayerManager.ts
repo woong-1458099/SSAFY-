@@ -301,16 +301,17 @@ export class PlayerManager {
     };
   }
 
+  /** @deprecated Prefer `getMovementActivitySnapshot().immediateActive`. */
   isImmediateMovementActivityInProgress(): boolean {
     return this.getMovementActivitySnapshot().immediateActive;
   }
 
-  // Backward-compatible wrapper over the canonical snapshot. Prefer `getMovementActivitySnapshot()`.
+  /** @deprecated Prefer `getMovementActivitySnapshot().autoSaveActive`. */
   isAutoSaveMovementActivityInProgress(): boolean {
     return this.getMovementActivitySnapshot().autoSaveActive;
   }
 
-  // Backward-compatible wrapper over the canonical snapshot. Prefer `getMovementActivitySnapshot()`.
+  /** @deprecated Prefer `getMovementActivitySnapshot().graceActive`. */
   isMovementActivityInProgress(): boolean {
     return this.getMovementActivitySnapshot().graceActive;
   }
