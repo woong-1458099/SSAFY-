@@ -258,9 +258,31 @@ assert.equal(
   "autosave-facing activity should stay idle immediately after input lock removes active input"
 );
 assert.equal(
+  shouldPreservePlayerMovementActivity({
+    isMoving: false,
+    isMoveInputActive: false,
+    lastActiveAtMs: 1_000,
+    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS - 1,
+    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
+  }),
+  true,
+  "dialogue or scene-transition lock frames may preserve grace activity even when immediate autosave activity is already idle"
+);
+assert.equal(
   hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
   true,
   "autosave-facing activity should resume immediately when input returns after unlock"
+);
+assert.equal(
+  shouldPreservePlayerMovementActivity({
+    isMoving: false,
+    isMoveInputActive: true,
+    lastActiveAtMs: 1_000,
+    nowMs: 1_000 + PLAYER_MOVEMENT_ACTIVITY_GRACE_MS + 1,
+    graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
+  }),
+  true,
+  "unlock frames with recovered directional input should remain active for both immediate and grace-preserved policies"
 );
 
 assert.equal(

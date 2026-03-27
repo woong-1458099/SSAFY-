@@ -86,6 +86,13 @@ export function findNearestWalkableRefreshTile(
     }
   }
 
+  console.warn("[MainScene] refresh tile search exceeded local radius; falling back to first walkable tile", {
+    originTileX,
+    originTileY,
+    maxRadius,
+    mapWidth: parsedMap.width,
+    mapHeight: parsedMap.height
+  });
   return findFirstWalkableTile(runtimeGrids.blockedGrid);
 }
 
