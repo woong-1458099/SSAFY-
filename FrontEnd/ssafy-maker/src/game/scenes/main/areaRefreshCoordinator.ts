@@ -119,7 +119,11 @@ export class MainSceneAreaRefreshCoordinator {
   }
 
   private cancelPending(): void {
+    const canceledRequestId = this.pendingTask?.requestId;
     this.pendingTask?.controller.abort();
+    if (canceledRequestId !== undefined) {
+      this.cancelRunningRefresh(canceledRequestId);
+    }
     this.pendingRequestId += 1;
     this.finalize();
   }
@@ -173,8 +177,11 @@ export class MainSceneAreaRefreshCoordinator {
         return;
       }
 
-      this.runningRequestId = pendingTask.requestId;
-      this.isRefreshRunning = true;
+      if (!this.beginRefresh(pendingTask.requestId, pendingTask)) {
+        this.finalize(pendingTask.requestId, pendingTask);
+        return;
+      }
+
       void Promise.resolve()
         .then(() =>
           this.refresh(expectedAreaId, expectedPlayerSnapshot, {
@@ -193,9 +200,10 @@ export class MainSceneAreaRefreshCoordinator {
           });
         })
         .finally(() => {
-          if (this.runningRequestId === pendingTask.requestId) {
-            this.runningRequestId = undefined;
-            this.isRefreshRunning = false;
+          const finishedOwnedRefresh = this.finishRefresh(pendingTask.requestId);
+
+          if (pendingTask.controller.signal.aborted && !finishedOwnedRefresh) {
+            return;
           }
 
           if (!this.canAccessSceneRuntime()) {
@@ -207,6 +215,29 @@ export class MainSceneAreaRefreshCoordinator {
           }
         });
     });
+  }
+
+  private beginRefresh(
+    requestId: number,
+    pendingTask: { timer: Phaser.Time.TimerEvent | undefined }
+  ): boolean {
+    if (!this.canAccessSceneRuntime() || !this.isCurrentTask(requestId, pendingTask)) {
+      return false;
+    }
+
+    this.runningRequestId = requestId;
+    this.isRefreshRunning = true;
+    return true;
+  }
+
+  private finishRefresh(requestId: number): boolean {
+    if (this.runningRequestId !== requestId) {
+      return false;
+    }
+
+    this.runningRequestId = undefined;
+    this.isRefreshRunning = false;
+    return true;
   }
 
   private canAccessSceneRuntime(): boolean {
@@ -230,11 +261,6 @@ export class MainSceneAreaRefreshCoordinator {
   }
 
   private cancelRunningRefresh(requestId: number): void {
-    if (this.runningRequestId !== requestId) {
-      return;
-    }
-
-    this.runningRequestId = undefined;
-    this.isRefreshRunning = false;
+    this.finishRefresh(requestId);
   }
 }
