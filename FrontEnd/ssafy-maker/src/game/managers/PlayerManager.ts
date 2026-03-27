@@ -46,6 +46,14 @@ export function hasImmediatePlayerMovementActivity(options: {
   return options.isMoving || options.isMoveInputActive;
 }
 
+export function hasAutoSaveMovementActivity(options: {
+  isMoving: boolean;
+  hasRawMoveInput: boolean;
+  isInputLocked: boolean;
+}) {
+  return options.isMoving || (!options.isInputLocked && options.hasRawMoveInput);
+}
+
 export function shouldRefreshMovementActivityOnInputLock(options: {
   wasInputLocked: boolean;
   isMoving: boolean;
@@ -80,6 +88,8 @@ export class PlayerManager {
   // `isMoveInputActive` means directional input is currently active for gameplay movement checks.
   // Input-locked frames intentionally report `false` so autosave/UI consumers can treat locked scenes as non-movable.
   private isMoveInputActive = false;
+  // `hasRawMoveInput` tracks held directional intent even while gameplay input is locked.
+  private hasRawMoveInput = false;
   private lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
 
   constructor(scene: Phaser.Scene) {
@@ -97,6 +107,7 @@ export class PlayerManager {
     this.moveKeys = undefined;
     this.isMoving = false;
     this.isMoveInputActive = false;
+    this.hasRawMoveInput = false;
     this.lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
   }
 
@@ -150,9 +161,11 @@ export class PlayerManager {
     this.runtimeGrids = runtimeGrids;
     this.parsedMap = parsedMap;
     const moveVector = this.getRequestedMoveVector();
+    const hasRawMoveInput = moveVector.lengthSq() > 0;
+    this.hasRawMoveInput = hasRawMoveInput;
     const baseActivityState = resolvePlayerMovementActivityState({
       didMove: false,
-      hasMoveInput: moveVector.lengthSq() > 0,
+      hasMoveInput: hasRawMoveInput,
       isInputLocked: this.isInputLocked
     });
     let nextIsMoving = baseActivityState.isMoving;
@@ -177,7 +190,7 @@ export class PlayerManager {
       return;
     }
 
-    if (moveVector.lengthSq() === 0) {
+    if (!hasRawMoveInput) {
       this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
       return;
@@ -203,7 +216,7 @@ export class PlayerManager {
     const didMove = nextX !== this.player.root.x || nextY !== this.player.root.y;
     const activityState = resolvePlayerMovementActivityState({
       didMove,
-      hasMoveInput: moveVector.lengthSq() > 0,
+      hasMoveInput: hasRawMoveInput,
       isInputLocked: this.isInputLocked
     });
     nextIsMoving = activityState.isMoving;
@@ -245,6 +258,10 @@ export class PlayerManager {
     return this.isMoveInputActive;
   }
 
+  hasRawMoveInputIntent(): boolean {
+    return this.hasRawMoveInput;
+  }
+
   isImmediateMovementActivityInProgress(): boolean {
     return hasImmediatePlayerMovementActivity({
       isMoving: this.isMoving,
@@ -253,7 +270,11 @@ export class PlayerManager {
   }
 
   isAutoSaveMovementActivityInProgress(): boolean {
-    return this.isImmediateMovementActivityInProgress();
+    return hasAutoSaveMovementActivity({
+      isMoving: this.isMoving,
+      hasRawMoveInput: this.hasRawMoveInput,
+      isInputLocked: this.isInputLocked
+    });
   }
 
   isMovementActivityInProgress(): boolean {

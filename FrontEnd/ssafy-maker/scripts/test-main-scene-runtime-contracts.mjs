@@ -263,6 +263,7 @@ writeFile(authFlowOutputPath, authFlowOutput);
 
 const {
   PlayerManager,
+  hasAutoSaveMovementActivity,
   hasImmediatePlayerMovementActivity,
   PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
   resolvePlayerMovementActivityState,
@@ -309,12 +310,24 @@ assert.equal(
 );
 
 const autoSaveActivityReader = PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
-  isImmediateMovementActivityInProgress: () => true
+  isMoving: false,
+  hasRawMoveInput: true,
+  isInputLocked: false
 });
 assert.equal(
   autoSaveActivityReader,
   true,
   "autosave callers should read the dedicated PlayerManager autosave activity contract"
+);
+assert.equal(
+  hasAutoSaveMovementActivity({ isMoving: false, hasRawMoveInput: true, isInputLocked: true }),
+  false,
+  "autosave should stay idle while gameplay input is locked even if raw directional intent is still held"
+);
+assert.equal(
+  hasAutoSaveMovementActivity({ isMoving: false, hasRawMoveInput: true, isInputLocked: false }),
+  true,
+  "autosave should treat raw directional intent as active again immediately after input unlock"
 );
 assert.equal(
   hasImmediatePlayerMovementActivity({ isMoving: false, isMoveInputActive: true }),
