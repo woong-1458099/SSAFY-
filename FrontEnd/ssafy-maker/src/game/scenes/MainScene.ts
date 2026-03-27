@@ -548,7 +548,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private async ensureAuthenticatedEntry(): Promise<boolean> {
-    const storedSession = readStoredSession();
+    const storedSession = readStoredSession({ allowExpired: true });
     if (storedSession) {
       if (this.registry.get("authToken") !== "bff-session") {
         applySessionToRegistry(this.registry, storedSession);
@@ -612,7 +612,7 @@ export class MainScene extends Phaser.Scene {
 
     trackGameStart({
       week: hudState.week,
-      authenticated: readStoredSession() !== null
+      authenticated: readStoredSession({ allowExpired: true }) !== null
     });
   }
 
@@ -670,7 +670,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private async recordCurrentUserDeathIfAvailable(): Promise<void> {
-    const session = readStoredSession();
+    const session = readStoredSession({ allowExpired: true });
     if (!session || this.registry.get("authToken") !== "bff-session") {
       return;
     }

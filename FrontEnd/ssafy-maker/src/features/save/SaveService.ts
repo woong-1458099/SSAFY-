@@ -65,7 +65,7 @@ function canUseStorage(): boolean {
 }
 
 function getCurrentUserId(): string | null {
-  return readStoredSession()?.user.id ?? null;
+  return readStoredSession({ allowExpired: true })?.user.id ?? null;
 }
 
 function getStorageScope(): string {

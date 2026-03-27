@@ -14,6 +14,9 @@ export interface AuthSession {
 }
 
 type AuthAction = "login" | "signup";
+type ReadStoredSessionOptions = {
+  allowExpired?: boolean;
+};
 const AUTH_REDIRECT_PENDING_KEY = "ssafy-maker.auth.redirect.pending";
 const AUTH_SESSION_STORAGE_KEY = "ssafy-maker.auth.session";
 
@@ -119,7 +122,7 @@ export function patchStoredSessionUser(user: UserProfile): void {
   });
 }
 
-export function readStoredSession(): AuthSession | null {
+export function readStoredSession(options: ReadStoredSessionOptions = {}): AuthSession | null {
   try {
     const raw = window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
     if (!raw) {
@@ -127,7 +130,16 @@ export function readStoredSession(): AuthSession | null {
     }
 
     const parsed = JSON.parse(raw) as unknown;
-    if (!isAuthSession(parsed) || parsed.expiresAt <= Date.now()) {
+    if (!isAuthSession(parsed)) {
+      clearStoredSession();
+      return null;
+    }
+
+    if (parsed.expiresAt <= Date.now()) {
+      if (options.allowExpired) {
+        return parsed;
+      }
+
       clearStoredSession();
       return null;
     }
@@ -248,7 +260,7 @@ export async function completeAuthIfPresent(): Promise<AuthSession | null> {
 }
 
 export async function fetchExistingSession(): Promise<AuthSession | null> {
-  const storedSession = readStoredSession();
+  const storedSession = readStoredSession({ allowExpired: true });
   try {
     const session = toAuthSession(await fetchBackendSession());
     if (session) {

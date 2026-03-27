@@ -6,6 +6,7 @@ import {
   clearStoredSession,
   completeAuthIfPresent,
   fetchExistingSession,
+  readStoredSession,
   type AuthSession
 } from "./authSession";
 
@@ -54,6 +55,15 @@ export async function initializeAuthGateway(): Promise<AuthBootstrapState> {
           authenticated: true,
           session: callbackSession,
           source: "callback"
+        });
+      }
+
+      const storedSession = readStoredSession({ allowExpired: true });
+      if (storedSession) {
+        return finalizeAuthBootstrap({
+          authenticated: true,
+          session: storedSession,
+          source: "stored"
         });
       }
 

@@ -55,7 +55,7 @@ export class StartScene extends Phaser.Scene {
     this.continueSlots = [];
 
     const authToken = this.registry.get("authToken");
-    const storedSession = readStoredSession();
+    const storedSession = readStoredSession({ allowExpired: true });
     if (!storedSession) {
       void this.recoverSessionOrRedirect();
       return;
@@ -246,6 +246,13 @@ export class StartScene extends Phaser.Scene {
   }
 
   private async recoverSessionOrRedirect(): Promise<void> {
+    const storedSession = readStoredSession({ allowExpired: true });
+    if (storedSession) {
+      applySessionToRegistry(this.registry, storedSession);
+      this.scene.restart();
+      return;
+    }
+
     const existingSession = await fetchExistingSession();
     if (!existingSession) {
       this.scene.start(SceneKey.Login);
