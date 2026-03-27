@@ -549,16 +549,7 @@ export class MainScene extends Phaser.Scene {
 
   private async ensureAuthenticatedEntry(): Promise<boolean> {
     const storedSession = readStoredSession();
-    const authToken = this.registry.get("authToken");
-
-    // 디버그: 인증 상태 로깅
-    console.log("[MainScene] ensureAuthenticatedEntry", {
-      hasStoredSession: !!storedSession,
-      authToken
-    });
-
-    // 이미 인증된 상태면 바로 통과
-    if (authToken === "bff-session" && storedSession) {
+    if (this.registry.get("authToken") === "bff-session" && storedSession) {
       return true;
     }
 

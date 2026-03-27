@@ -56,9 +56,13 @@ export class StartScene extends Phaser.Scene {
 
     const authToken = this.registry.get("authToken");
     const storedSession = readStoredSession();
-    if (authToken !== "bff-session" || !storedSession) {
+    if (!storedSession) {
       void this.recoverSessionOrRedirect();
       return;
+    }
+
+    if (authToken !== "bff-session") {
+      applySessionToRegistry(this.registry, storedSession);
     }
 
     const { width, height } = this.scale;
