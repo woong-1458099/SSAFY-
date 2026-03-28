@@ -91,6 +91,20 @@ IV. 포팅 체크리스트
 - RabbitMQ
 - springdoc OpenAPI
 
+백엔드 버전 검증 기준:
+
+- 검증 일자: `2026-03-28`
+- 기준 커밋: `aabc8922c0ff92fd46ecf42e78f2c53e3d9fe2fe`
+- 파일 기준 검증 완료:
+  - `BackEnd/build.gradle`
+  - `BackEnd/gradle/wrapper/gradle-wrapper.properties`
+- 실행 검증 상태:
+  - `cd BackEnd && ./gradlew --version`
+  - 현재 작업 환경에서는 `JAVA_HOME is not set and no 'java' command could be found in your PATH.` 오류로 실행 검증 미완료
+- 포팅 시 재검증 필수 명령:
+  - `cd BackEnd && ./gradlew --version`
+  - `cd BackEnd && ./gradlew build`
+
 #### 다) 인프라 및 운영
 
 - Docker Compose
@@ -325,6 +339,17 @@ npm run preview
 ```bash
 ./gradlew build
 ./gradlew bootRun
+```
+
+문서 기준 검증 메모:
+
+- `2026-03-28`, 커밋 `aabc8922c0ff92fd46ecf42e78f2c53e3d9fe2fe` 기준으로 `build.gradle`, Gradle wrapper 설정 파일은 재확인했다.
+- 다만 현재 문서 작성 환경에는 Java 실행 환경이 없어 `./gradlew --version`, `./gradlew build` 성공 로그는 확보하지 못했다.
+- 실제 포팅 환경에서는 아래 순서로 재현 검증 후 결과를 함께 기록해야 한다.
+
+```bash
+./gradlew --version
+./gradlew build
 ```
 
 포팅 시 중요 포인트:

@@ -42,7 +42,7 @@
 
 ### 4. 프로젝트 기술 스택
 
-본 제출용 문서의 기술 스택과 버전 표기는 `exec/PORTING_MANUAL.md`를 단일 기준 소스로 삼아 동기화한다. 세부 근거 파일 경로는 원본 포팅 매뉴얼에 명시한다.
+본 제출용 문서의 기술 스택과 버전 표기는 `exec/PORTING_MANUAL.md`를 단일 기준 소스로 삼아 동기화한다. 제출용 문서에는 드리프트 방지를 위해 세부 버전 근거와 검증 메모를 중복 기재하지 않고, 원본 포팅 매뉴얼만 갱신 책임 문서로 사용한다.
 
 #### 가) 프론트엔드
 
@@ -51,15 +51,13 @@
 - TypeScript
 - Vite
 - npm
+  - 세부 Node/npm 기준, `.nvmrc`, 검증 명령은 `exec/PORTING_MANUAL.md` 참조
 
 #### 나) 백엔드
 
-- Java 25
-  - 근거: `BackEnd/build.gradle` `java.toolchain.languageVersion = 25`
-- Spring Boot 4.0.3
-  - 근거: `BackEnd/build.gradle` `plugins { id 'org.springframework.boot' version '4.0.3' }`
-- Gradle Wrapper 9.3.1
-  - 근거: `BackEnd/gradle/wrapper/gradle-wrapper.properties` `distributionUrl=...gradle-9.3.1-bin.zip`
+- Java
+- Spring Boot
+- Gradle Wrapper
 - Spring MVC
 - Spring Security
 - OAuth2 Resource Server
@@ -69,6 +67,7 @@
 - Redis
 - RabbitMQ
 - springdoc OpenAPI
+  - 세부 버전, 근거 파일, 검증 일자/커밋은 `exec/PORTING_MANUAL.md` 참조
 
 #### 다) 인프라 및 운영
 
@@ -90,25 +89,20 @@
 
 #### 가) 프론트엔드
 
-- Node.js
-  - 표준 버전 고정: 저장소 루트 `.nvmrc` = `20`
-  - 엔진 범위 근거: `package.json`, `FrontEnd/ssafy-maker/package.json` 기준 `>=20 <21`
-- npm
-  - 표준 메이저 버전: `10`
-  - 근거: `package.json`, `FrontEnd/ssafy-maker/package.json` `engines.npm = >=10 <11`, `packageManager = npm@10`
+- Node.js / npm
+  - 표준 버전, 고정 파일, 검증 명령은 `exec/PORTING_MANUAL.md` 참조
 - 개발 서버
   - Vite (`5173`)
 
 주의사항:
 
 - 일부 프론트 문서에는 Node 25, npm 11 기준이 적혀 있으나 실제 `package.json`과 불일치한다.
-- 실제 포팅 기준은 저장소 루트 `.nvmrc`와 각 `package.json`의 `engines`, `packageManager`를 함께 적용한다.
-- 환경 검증은 루트 또는 `FrontEnd/ssafy-maker`에서 `node -v`, `npm -v`로 수행하고, 각각 Node 20.x / npm 10.x인지 먼저 확인한다.
+- 실제 포팅 기준과 검증 절차는 `exec/PORTING_MANUAL.md`만 갱신 대상으로 유지한다.
 
 #### 나) 백엔드
 
-- Java toolchain 25
-- Gradle Wrapper 사용
+- Java toolchain / Gradle Wrapper 사용
+  - 상세 버전과 검증 상태는 `exec/PORTING_MANUAL.md` 참조
 - 기본 로컬 API 포트 `8080`
 
 #### 다) 운영 서버
