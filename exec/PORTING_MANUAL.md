@@ -95,6 +95,7 @@ IV. 포팅 체크리스트
 
 - 검증 일자: `2026-03-28`
 - 기준 커밋: `aabc8922c0ff92fd46ecf42e78f2c53e3d9fe2fe`
+- 현재 문서의 Java, Spring Boot, Gradle 버전은 저장소 선언값 기준이며, 이 작업 환경에서는 빌드 성공까지 재현 검증하지 못했다.
 - 파일 기준 검증 완료:
   - `BackEnd/build.gradle`
   - `BackEnd/gradle/wrapper/gradle-wrapper.properties`

@@ -90,6 +90,7 @@
 #### 가) 프론트엔드
 
 - Node.js / npm
+  - 최종 기준: Node `20.x`, npm `10.x`, 저장소 루트 `.nvmrc` 우선
   - 표준 버전, 고정 파일, 검증 명령은 `exec/PORTING_MANUAL.md` 참조
 - 개발 서버
   - Vite (`5173`)
