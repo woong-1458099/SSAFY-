@@ -29,70 +29,20 @@
 
 ### 3. 파일 구조도
 
-포팅 관점에서 필요한 `S14P21E206` 기준 파일 구조도는 다음과 같다.
+제출용 문서에서는 구조 정보를 중복 관리하지 않는다. 상세 파일 구조도와 기준 경로는 `exec/PORTING_MANUAL.md`의 `I. 개요 > 2. 프로젝트 구성`을 단일 기준 소스로 참조한다.
 
-```text
-S14P21E206/
-├─ BackEnd/
-│  ├─ src/
-│  │  ├─ main/
-│  │  │  ├─ java/
-│  │  │  └─ resources/
-│  │  │     ├─ db/migration/
-│  │  │     ├─ application.yml
-│  │  │     ├─ application-local.yml
-│  │  │     ├─ application-staging.yml
-│  │  │     └─ application-prod.yml
-│  │  └─ test/
-│  ├─ docs/
-│  ├─ build.gradle
-│  ├─ Dockerfile
-│  └─ compose.yaml
-├─ FrontEnd/
-│  └─ ssafy-maker/
-│     ├─ public/
-│     │  └─ assets/
-│     │     ├─ game/
-│     │     └─ raw/
-│     ├─ src/
-│     │  ├─ app/
-│     │  ├─ features/
-│     │  ├─ game/
-│     │  ├─ infra/
-│     │  ├─ scenes/
-│     │  └─ shared/
-│     ├─ docs/
-│     ├─ scripts/
-│     ├─ package.json
-│     ├─ vite.config.ts
-│     └─ index.html
-├─ Infra/
-│  ├─ infra/
-│  │  └─ nginx/
-│  │     ├─ conf.d/
-│  │     └─ upstreams/
-│  └─ monitoring/
-├─ docker/
-│  ├─ compose.app.yml
-│  ├─ compose.auth.yml
-│  ├─ compose.data.local.yml
-│  ├─ compose.nginx.yml
-│  └─ compose.ops.yml
-├─ docs-infra/
-│  ├─ 00_CURRENT_STATE.md
-│  ├─ 02_CI_CD.md
-│  ├─ 03_ENV_VARS.md
-│  ├─ 04_NETWORK_EDGE.md
-│  └─ 07_RUNBOOK.md
-├─ jenkins/
-│  ├─ Jenkinsfile.backend-develop-stg
-│  ├─ Jenkinsfile.backend-master-prod
-│  ├─ Jenkinsfile.frontend-develop-stg
-│  └─ Jenkinsfile.frontend-master-prod
-└─ WORK_GUIDE.md
-```
+제출 시 확인할 핵심 경로만 아래처럼 요약한다.
+
+- `BackEnd`
+  - Spring Boot API/BFF 및 Gradle 설정
+- `FrontEnd/ssafy-maker`
+  - 게임 프론트엔드 및 Node/npm 기준 설정
+- `docker`, `Infra`, `docs-infra`, `jenkins`
+  - 운영 스택, 배포, 런북, 파이프라인 문서
 
 ### 4. 프로젝트 기술 스택
+
+본 제출용 문서의 기술 스택과 버전 표기는 `exec/PORTING_MANUAL.md`를 단일 기준 소스로 삼아 동기화한다. 세부 근거 파일 경로는 원본 포팅 매뉴얼에 명시한다.
 
 #### 가) 프론트엔드
 
@@ -105,7 +55,11 @@ S14P21E206/
 #### 나) 백엔드
 
 - Java 25
+  - 근거: `BackEnd/build.gradle` `java.toolchain.languageVersion = 25`
 - Spring Boot 4.0.3
+  - 근거: `BackEnd/build.gradle` `plugins { id 'org.springframework.boot' version '4.0.3' }`
+- Gradle Wrapper 9.3.1
+  - 근거: `BackEnd/gradle/wrapper/gradle-wrapper.properties` `distributionUrl=...gradle-9.3.1-bin.zip`
 - Spring MVC
 - Spring Security
 - OAuth2 Resource Server
@@ -137,16 +91,19 @@ S14P21E206/
 #### 가) 프론트엔드
 
 - Node.js
-  - `package.json` 기준 `>=20 <21`
+  - 표준 버전 고정: 저장소 루트 `.nvmrc` = `20`
+  - 엔진 범위 근거: `package.json`, `FrontEnd/ssafy-maker/package.json` 기준 `>=20 <21`
 - npm
-  - `package.json` 기준 `>=10 <11`
+  - 표준 메이저 버전: `10`
+  - 근거: `package.json`, `FrontEnd/ssafy-maker/package.json` `engines.npm = >=10 <11`, `packageManager = npm@10`
 - 개발 서버
   - Vite (`5173`)
 
 주의사항:
 
 - 일부 프론트 문서에는 Node 25, npm 11 기준이 적혀 있으나 실제 `package.json`과 불일치한다.
-- 실제 포팅 기준은 `package.json` 엔진 설정을 우선 적용하는 것이 안전하다.
+- 실제 포팅 기준은 저장소 루트 `.nvmrc`와 각 `package.json`의 `engines`, `packageManager`를 함께 적용한다.
+- 환경 검증은 루트 또는 `FrontEnd/ssafy-maker`에서 `node -v`, `npm -v`로 수행하고, 각각 Node 20.x / npm 10.x인지 먼저 확인한다.
 
 #### 나) 백엔드
 

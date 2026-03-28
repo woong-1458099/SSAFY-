@@ -76,7 +76,11 @@ IV. 포팅 체크리스트
 #### 나) 백엔드
 
 - Java 25
+  - 근거: `BackEnd/build.gradle` `java.toolchain.languageVersion = 25`
 - Spring Boot 4.0.3
+  - 근거: `BackEnd/build.gradle` `plugins { id 'org.springframework.boot' version '4.0.3' }`
+- Gradle Wrapper 9.3.1
+  - 근거: `BackEnd/gradle/wrapper/gradle-wrapper.properties` `distributionUrl=...gradle-9.3.1-bin.zip`
 - Spring MVC
 - Spring Security
 - OAuth2 Resource Server
@@ -108,16 +112,19 @@ IV. 포팅 체크리스트
 #### 가) 프론트엔드
 
 - Node.js
-  - `package.json` 기준: `>=20 <21`
+  - 표준 버전 고정: 저장소 루트 `.nvmrc` = `20`
+  - 엔진 범위 근거: `package.json`, `FrontEnd/ssafy-maker/package.json` 기준 `>=20 <21`
 - npm
-  - `package.json` 기준: `>=10 <11`
+  - 표준 메이저 버전: `10`
+  - 근거: `package.json`, `FrontEnd/ssafy-maker/package.json` `engines.npm = >=10 <11`, `packageManager = npm@10`
 - 개발 서버
   - Vite (`5173`)
 
 주의사항:
 
 - 프론트 `README.md` 및 일부 문서에는 Node 25 / npm 11 기준이 적혀 있으나, 실제 `package.json` 엔진과 불일치한다.
-- 제출 및 실제 포팅 시에는 `package.json` 기준을 우선 적용하고, 필요 시 별도 버전 정리 문서를 추가하는 것이 안전하다.
+- 포팅 표준 버전은 저장소 루트 `.nvmrc`와 각 `package.json`의 `engines`, `packageManager`를 함께 기준으로 사용한다.
+- 환경 검증은 루트 또는 `FrontEnd/ssafy-maker`에서 `node -v`, `npm -v`로 수행하고, 각각 Node 20.x / npm 10.x인지 먼저 확인한다.
 
 #### 나) 백엔드
 
