@@ -111,14 +111,25 @@
 - AWS EC2 단일 호스트 기반 운영
 - Nginx ingress + Docker Compose 멀티 스택 운영
 
+운영 경로:
+
+- 원격 프로젝트 경로: `/home/ubuntu/apps/S14P21E206`
+- 프론트 STG live: `/home/ubuntu/deploy/frontend/stg/live`
+- 프론트 PROD live: `/home/ubuntu/deploy/frontend/prod/live`
+- Nginx upstream 경로: `/home/ubuntu/deploy/nginx/upstreams`
+- Nginx whitelist 경로: `/home/ubuntu/deploy/nginx/whitelist`
+
 ### 6. 외부 서비스
 
-현재 프로젝트에서 포팅 시 함께 검토해야 하는 외부 서비스는 다음과 같다.
+현재 프로젝트에서 포팅 시 함께 검토해야 하는 외부 서비스 및 외부 연계 지점은 다음과 같다.
 
 #### 가) 인증 및 보안
 
 - Keycloak
   - 로그인, 회원가입, OAuth callback, JWT issuer
+  - 공개 도메인: `https://auth.ssafymaker.cloud`
+  - 필수 준비 정보: 관리자 계정, Keycloak DB 접속 정보, realm `app`, client `ssafy-maker-bff`, client secret
+  - 참조 문서: `docs-infra/KEYCLOAK_POSTGRES_DEPLOYMENT.md`
 
 #### 나) 네트워크 및 엣지
 
@@ -126,14 +137,22 @@
   - DNS
   - Reverse proxy
   - 프론트 배포 후 캐시 purge
+  - 필수 준비 정보: zone, DNS 레코드, proxied 설정, API token, zone id
+  - 참조 문서: `docs-infra/00_CURRENT_STATE.md`, `docs-infra/04_NETWORK_EDGE.md`
 
 #### 다) 운영 자동화
 
 - Jenkins
   - 프론트/백엔드 STG, PROD 배포
+  - 공개 도메인: `https://jenkins.ssafymaker.cloud`
+  - 운영 job: `backend-develop-stg`, `frontend-develop-stg`, `backend-master-prod`, `frontend-master-prod`
+  - 필수 준비 정보: 관리자 계정, GitLab webhook, Jenkins credential
 - n8n
   - 배포 결과 알림
   - MR 리뷰 및 운영 보조 webhook
+  - 공개 도메인: `https://n8n.ssafymaker.cloud`
+  - 필수 준비 정보: Header Auth, `N8N_ENCRYPTION_KEY`, Basic Auth, workflow import JSON
+  - 참조 문서: `WORK_GUIDE.md`, `docs-infra/02_CI_CD.md`, `Infra/n8n_deploy_notify_bot.md`
 
 #### 라) 모니터링
 
@@ -142,7 +161,67 @@
 - Loki
 - Promtail
 
-### 7. Gitignore 및 비밀값 관리 대상
+#### 마) 범위 정리
+
+- Photon Cloud는 사용하지 않는다.
+- 런타임 필수 외부 서비스는 Keycloak, Cloudflare, Jenkins, n8n 중심이다.
+- 운영 자동화 보조 연계로 GitLab webhook, Mattermost webhook, OpenAI API, Google Sheets API가 존재한다.
+
+### 7. 주요 계정 및 프로퍼티 파일 목록
+
+포팅 시 확인해야 하는 주요 계정 및 프로퍼티 파일은 다음과 같다.
+
+#### 가) 백엔드 설정
+
+- `BackEnd/src/main/resources/application.yml`
+- `BackEnd/src/main/resources/application-local.yml`
+- `BackEnd/src/main/resources/application-staging.yml`
+- `BackEnd/src/main/resources/application-prod.yml`
+- `BackEnd/src/test/resources/application-test.yml`
+
+#### 나) 프론트 설정
+
+- `FrontEnd/ssafy-maker/src/shared/config/env.ts`
+- `FrontEnd/ssafy-maker/src/features/auth/api.ts`
+- `FrontEnd/ssafy-maker/vite.config.ts`
+
+#### 다) Docker 및 환경 파일
+
+- `docker/compose.app.yml`
+- `docker/compose.auth.yml`
+- `docker/compose.data.local.yml`
+- `docker/compose.nginx.yml`
+- `docker/compose.ops.yml`
+- `docker/.env.local`
+- `docker/.env.stg`
+- `docker/.env.prod`
+- `docker/.env.ops`
+- `docker/.env.auth.stg`
+- `docs-infra/03_ENV_VARS.md`
+
+#### 라) 운영 자동화/배포 문서
+
+- `WORK_GUIDE.md`
+- `docs-infra/00_CURRENT_STATE.md`
+- `docs-infra/02_CI_CD.md`
+- `docs-infra/04_NETWORK_EDGE.md`
+- `docs-infra/07_RUNBOOK.md`
+- `jenkins/Jenkinsfile.*`
+- `Infra/n8n_Deploy_NotifyBot.json`
+- `Infra/MR_Review_Sheet.json`
+
+### 8. DB 덤프 파일 최신본
+
+포팅 제출용 최신 DB 덤프 파일은 `exec` 폴더 아래에 포함한다.
+
+- `exec/ssafy-maker_2026-03-30.dump`
+  - PostgreSQL custom dump
+- `exec/ssafy-maker_2026-03-30.sql`
+  - PostgreSQL plain SQL
+
+운영/포팅 복원은 `*.dump` 를 우선 기준으로 보고, `*.sql` 은 검토 및 대체 복원용으로 함께 제공한다.
+
+### 9. Gitignore 및 비밀값 관리 대상
 
 실제 비밀값은 문서에 직접 기록하지 않고, 변수명과 사용 위치만 관리해야 한다.
 
@@ -192,6 +271,8 @@
 | 변수명 | 설명 | 사용 위치 | 비고 |
 | --- | --- | --- | --- |
 | `VITE_API_BASE_URL` | 프론트엔드가 호출할 API 기준 경로를 정의한다. | `FrontEnd/ssafy-maker/src/features/auth/api.ts` | 미지정 시 `/api`를 사용한다. |
+| `VITE_API_PROXY_TARGET` | 로컬 Vite dev server의 `/api` 프록시 대상 주소를 정의한다. | `FrontEnd/ssafy-maker/vite.config.ts` | 미지정 시 `http://localhost:8080` 이다. |
+| `VITE_ENABLE_AUTH_BYPASS_LOGIN` | 개발용 백엔드 우회 로그인 버튼 활성화 여부를 정의한다. | `FrontEnd/ssafy-maker/src/shared/config/env.ts` | STG/로컬 검증용으로 사용된다. |
 | `VITE_ENABLE_DEBUG_SHORTCUTS` | 디버그 단축키 기능 활성화 여부를 정의한다. | `FrontEnd/ssafy-maker/src/shared/config/env.ts` | 개발 환경에서 주로 사용한다. |
 | `VITE_ENABLE_DEBUG_OVERLAY` | 디버그 오버레이 UI 활성화 여부를 정의한다. | `FrontEnd/ssafy-maker/src/shared/config/env.ts` | 디버그 패널 노출 제어에 사용된다. |
 | `VITE_ENABLE_DEBUG_WORLD_GRID` | 월드 그리드 디버그 표시 여부를 정의한다. | `FrontEnd/ssafy-maker/src/shared/config/env.ts` | 월드 좌표 및 타일 편집 검증 시 사용된다. |
@@ -220,9 +301,17 @@
 | `KEYCLOAK_BASE_URL` | Keycloak 기본 URL을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | 내부 및 외부 URL 파생의 기준이 된다. |
 | `KEYCLOAK_PUBLIC_BASE_URL` | 브라우저 기준 Keycloak 공개 URL을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | reverse proxy 환경에서 특히 중요하다. |
 | `KEYCLOAK_INTERNAL_BASE_URL` | 서버 내부 통신용 Keycloak URL을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | 컨테이너 간 통신 시 사용된다. |
+| `KEYCLOAK_REQUIRE_CLIENT_SECRET` | confidential client secret 강제 여부를 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | STG/PROD 에서는 `true` 유지가 기준이다. |
 | `KEYCLOAK_REALM` | Keycloak realm 이름을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | issuer 및 client 구성과 함께 맞춰야 한다. |
 | `KEYCLOAK_CLIENT_ID` | Keycloak client ID를 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | 프론트 로그인 플로우와 연동된다. |
 | `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | 비밀값으로 별도 관리해야 한다. |
+| `KEYCLOAK_ADMIN_CLIENT_ID` | Keycloak admin API client ID를 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | 기본값은 `admin-cli` 이다. |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` | Keycloak admin API client secret을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | 비밀값으로 별도 관리해야 한다. |
+| `CORS_ALLOWED_ORIGINS` | 허용할 프론트 Origin 목록을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/compose.app.yml` | 운영 문서 기준 누락 경고 이력이 있다. |
+| `SERVER_SESSION_TIMEOUT` | 세션 만료 시간을 정의한다. | `BackEnd/src/main/resources/application.yml` | 기본값은 `30m` 이다. |
+| `SESSION_COOKIE_NAME` | 세션 쿠키 이름을 정의한다. | `BackEnd/src/main/resources/application.yml` | 기본값은 `SSAFY_MAKER_SESSION` 이다. |
+| `SESSION_COOKIE_SECURE` | 세션 쿠키 secure 속성을 정의한다. | `BackEnd/src/main/resources/application.yml` | HTTPS 환경에서 재검토해야 한다. |
+| `SESSION_COOKIE_SAME_SITE` | 세션 쿠키 SameSite 정책을 정의한다. | `BackEnd/src/main/resources/application.yml` | 기본값은 `Lax` 이다. |
 | `ASSET_BASE_URL` | 에셋 배포 기준 URL을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | 에셋 매니페스트 응답에 사용된다. |
 | `ASSET_MANIFEST_VERSION` | 에셋 버전을 정의한다. | `BackEnd/src/main/resources/application.yml`, `docker/.env.*` | 정적 에셋 릴리스 버전 식별에 사용된다. |
 
@@ -236,6 +325,17 @@
 | data | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `REDIS_IMAGE`, `RABBITMQ_IMAGE` | PostgreSQL, Redis, RabbitMQ 데이터 스택을 구성한다. |
 | auth | `KEYCLOAK_DB_URL`, `KEYCLOAK_DB_USER`, `KEYCLOAK_DB_PASSWORD`, `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD` | Keycloak 데이터베이스 및 관리자 초기 구성을 관리한다. |
 | ops | `JENKINS_BASE_URL`, `N8N_HOST`, `N8N_ENCRYPTION_KEY`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD` | Jenkins, n8n, 모니터링 도구 운영 설정을 관리한다. |
+
+누락 주의 변수:
+
+- `APP_PUBLIC_BASE_URLS`
+- `APP_FRONTEND_BASE_URLS`
+- `CORS_ALLOWED_ORIGINS`
+- `KEYCLOAK_REQUIRE_CLIENT_SECRET`
+- `KEYCLOAK_ADMIN_CLIENT_ID`
+- `KEYCLOAK_ADMIN_CLIENT_SECRET`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
 
 ### 2. 프론트엔드 빌드 및 실행
 
@@ -255,6 +355,8 @@ npm run dev
 ```bash
 npm run build
 ```
+
+실제 `npm run build` 에는 typecheck, 씬/미니게임/에셋 검증, 런타임 계약 테스트가 포함된다.
 
 미리보기:
 
@@ -288,6 +390,11 @@ npm run preview
 3. Redis, RabbitMQ, Keycloak 연결이 맞아야 한다.
 4. `/api/auth/session`, `/api/users/me`, `/api/public/deaths/dashboard` 등이 응답해야 한다.
 
+API 문서 기준:
+
+- 정적 문서: `BackEnd/docs/API_SPEC_DRAFT.md`, `BackEnd/docs/API_SPEC_WITH_EXAMPLES.txt`
+- 실행 문서: `/api/swagger-ui.html`, `/api/v3/api-docs`
+
 ### 4. 로컬 의존 서비스 실행
 
 백엔드는 PostgreSQL, Redis, RabbitMQ에 의존한다. 로컬 포팅 검증 시에는 `BackEnd/compose.yaml` 또는 루트 `docker/compose.data.local.yml`을 기준으로 데이터 스택을 먼저 올리는 편이 안전하다.
@@ -299,6 +406,13 @@ npm run preview
 - RabbitMQ
 
 인증 흐름까지 검증하려면 Keycloak도 함께 실행해야 한다.
+
+배포 시 특이사항:
+
+- 프론트는 release/live 디렉터리 전환과 nginx reload를 포함한다.
+- 백엔드는 blue-green health check, upstream 전환, verify, rollback 절차를 따른다.
+- Cloudflare cache purge가 프론트 배포 절차에 포함된다.
+- Jenkins, n8n UI는 whitelist 보호를 유지하고 webhook 경로만 예외 공개한다.
 
 ## III. 배포 및 인프라
 
