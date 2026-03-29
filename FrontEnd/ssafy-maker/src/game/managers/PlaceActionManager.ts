@@ -63,6 +63,7 @@ export class PlaceActionManager {
   private popupRoot?: Phaser.GameObjects.Container;
   private popupRequestId = 0;
   private homeTimeAdvanceScheduled = false;
+  private shopPage = 0;
 
   constructor(options: PlaceActionManagerOptions) {
     this.scene = options.scene;
@@ -168,7 +169,10 @@ export class PlaceActionManager {
         actionText: "상점 열기",
         backgroundImage,
         createButton: (params) => this.createActionButton(params),
-        onAction: () => this.openShopModal(),
+        onAction: () => {
+          this.shopPage = 0;
+          this.openShopModal();
+        },
         onClose: () => this.close()
       })
     );
@@ -179,8 +183,12 @@ export class PlaceActionManager {
       createShopModal(this.scene, {
         items: this.inventoryService.getShopCatalog(),
         money: this.getHudState().money,
+        initialPage: this.shopPage,
         backgroundImage,
         createButton: (params) => this.createActionButton(params),
+        onPageChange: (page) => {
+          this.shopPage = page;
+        },
         onBuy: (templateId) => this.buyShopItem(templateId),
         onClose: () => this.close()
       })
