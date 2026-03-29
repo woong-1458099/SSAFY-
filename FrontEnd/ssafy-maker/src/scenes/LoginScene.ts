@@ -15,6 +15,7 @@ import {
   type DeathRankingEntry,
   type DeathRecordEvent
 } from "@features/death/deathApi";
+import { formatDeathDashboardLines } from "@features/death/deathPresentation";
 import { APP_ENV } from "@shared/config/env";
 import { SceneKey } from "@shared/enums/sceneKey";
 
@@ -174,16 +175,20 @@ export class LoginScene extends Phaser.Scene {
 
       recentList.innerHTML = entries
         .map(
-          (entry) => `
+          (entry) => {
+            const deathLines = formatDeathDashboardLines(entry);
+            return `
             <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.14);">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                 <strong style="color:#f4fbff;font-size:15px;">${this.getPlayerLabel(entry.username, entry.userId)}</strong>
                 <span style="color:#ffd2dc;font-size:12px;">${entry.deathCountSnapshot}회차</span>
               </div>
               <div style="margin-top:6px;color:#dbeaf2;font-size:13px;">${this.formatDashboardTimestamp(entry.diedAt)}</div>
-              <div style="margin-top:6px;color:#afc2cf;font-size:12px;">${this.getDeathContextLabel(entry.areaId, entry.sceneId, entry.cause)}</div>
+              <div style="margin-top:6px;color:#afc2cf;font-size:12px;">${deathLines.location}</div>
+              <div style="margin-top:4px;color:#afc2cf;font-size:12px;">${deathLines.cause}</div>
             </div>
-          `
+          `;
+          }
         )
         .join("");
     };
@@ -486,19 +491,4 @@ export class LoginScene extends Phaser.Scene {
     return `player-${userId.slice(0, 8)}`;
   }
 
-  private getDeathContextLabel(
-    areaId: string | null,
-    sceneId: string | null,
-    cause: string | null
-  ): string {
-    const parts = [areaId, sceneId, cause]
-      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-      .map((value) => value.trim());
-
-    if (parts.length === 0) {
-      return "사망 위치 정보 없음";
-    }
-
-    return parts.join(" / ");
-  }
 }
