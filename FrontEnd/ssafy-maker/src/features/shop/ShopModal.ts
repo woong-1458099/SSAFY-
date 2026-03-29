@@ -169,6 +169,7 @@ export function createShopModal(scene: Phaser.Scene, options: {
   const pageRoot = scene.add.container(0, 0);
   const pageCount = Math.max(1, Math.ceil(options.items.length / itemsPerPage));
   let currentPage = Phaser.Math.Clamp(options.initialPage ?? 0, 0, Math.max(pageCount - 1, 0));
+  let lastReportedPage: number | null = null;
   const prevButton = createLayerButton(scene, {
     width: 108,
     height: 40,
@@ -205,7 +206,10 @@ export function createShopModal(scene: Phaser.Scene, options: {
 
   function renderPage(): void {
     currentPage = Phaser.Math.Clamp(currentPage, 0, Math.max(pageCount - 1, 0));
-    options.onPageChange?.(currentPage);
+    if (lastReportedPage !== currentPage) {
+      options.onPageChange?.(currentPage);
+      lastReportedPage = currentPage;
+    }
     tooltipRoot.setVisible(false);
     pageRoot.removeAll(true);
 
