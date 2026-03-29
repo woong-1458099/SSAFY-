@@ -12,6 +12,84 @@ import {
 import { getDefaultPlayerAppearanceDefinition } from "../definitions/player/playerAppearanceDefinitions";
 import type { WorldRenderBounds } from "./WorldManager";
 
+function resolvePlayerMovementActivityState(options: {
+  didMove: boolean;
+  hasMoveInput: boolean;
+  isInputLocked: boolean;
+}) {
+  return {
+    isMoving: options.didMove,
+    isMoveInputActive: options.isInputLocked ? false : options.hasMoveInput
+  };
+}
+
+function shouldPreservePlayerMovementActivity(options: {
+  isMoving: boolean;
+  isMoveInputActive: boolean;
+  lastActiveAtMs: number;
+  nowMs: number;
+  graceMs: number;
+}) {
+  if (options.isMoving || options.isMoveInputActive) {
+    return true;
+  }
+
+  return options.nowMs - options.lastActiveAtMs < options.graceMs;
+}
+
+export const PLAYER_MOVEMENT_ACTIVITY_GRACE_MS = 250;
+export const PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS = PLAYER_MOVEMENT_ACTIVITY_GRACE_MS;
+
+function hasImmediatePlayerMovementActivity(options: {
+  isMoving: boolean;
+  isMoveInputActive: boolean;
+}) {
+  return options.isMoving || options.isMoveInputActive;
+}
+
+function hasAutoSaveMovementActivity(options: {
+  isMoving: boolean;
+  hasRawMoveInput: boolean;
+  isInputLocked: boolean;
+}) {
+  return options.isMoving || (!options.isInputLocked && options.hasRawMoveInput);
+}
+
+function hasAutoSaveGateActivity(options: {
+  autoSaveActive: boolean;
+  isInputLocked: boolean;
+  preserveAutoSaveGateDuringInputLock: boolean;
+  lastLockEnteredAtMs: number;
+  nowMs: number;
+  graceMs: number;
+}) {
+  return (
+    options.autoSaveActive ||
+    (options.graceMs > 0 &&
+      options.isInputLocked &&
+      options.preserveAutoSaveGateDuringInputLock &&
+      options.nowMs - options.lastLockEnteredAtMs < options.graceMs)
+  );
+}
+
+function shouldRefreshMovementActivityOnInputLock(options: {
+  wasInputLocked: boolean;
+  isMoving: boolean;
+  isMoveInputActive: boolean;
+}) {
+  return !options.wasInputLocked && (options.isMoving || options.isMoveInputActive);
+}
+
+export type PlayerMovementActivitySnapshot = {
+  isMoving: boolean;
+  isMoveInputActive: boolean;
+  hasRawMoveInput: boolean;
+  immediateActive: boolean;
+  autoSaveActive: boolean;
+  autoSaveGateActive: boolean;
+  graceActive: boolean;
+};
+
 export class PlayerManager {
   private static readonly WORLD_BOUNDS_EPSILON = 2;
   private scene: Phaser.Scene;
@@ -33,6 +111,19 @@ export class PlayerManager {
   private appearance: PlayerAppearanceDefinition = getDefaultPlayerAppearanceDefinition();
   private runtimeGrids?: TmxRuntimeGrids;
   private parsedMap?: ParsedTmxMap;
+  // `isMoving` means the player position changed during the latest completed update tick.
+  private isMoving = false;
+  // `isMoveInputActive` means directional input is currently active for gameplay movement checks.
+  // Input-locked frames intentionally report `false` so autosave/UI consumers can treat locked scenes as non-movable.
+  private isMoveInputActive = false;
+  // `hasRawMoveInput` tracks held directional intent even while gameplay input is locked.
+  private hasRawMoveInput = false;
+  private lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
+  // Autosave gate transition timestamps are stamped only from `setInputLocked(...)` so snapshot reads stay
+  // pure and do not depend on whatever movement/update ordering happened earlier in the frame.
+  private lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+  private lastAutoSaveGateLockExitedAtMs = Number.NEGATIVE_INFINITY;
+  private preserveAutoSaveGateDuringInputLock = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -47,6 +138,13 @@ export class PlayerManager {
     this.player = undefined;
     this.cursors = undefined;
     this.moveKeys = undefined;
+    this.isMoving = false;
+    this.isMoveInputActive = false;
+    this.hasRawMoveInput = false;
+    this.lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+    this.lastAutoSaveGateLockExitedAtMs = Number.NEGATIVE_INFINITY;
+    this.preserveAutoSaveGateDuringInputLock = false;
+    this.lastMovementActivityAtMs = Number.NEGATIVE_INFINITY;
   }
 
   setRenderBounds(renderBounds?: WorldRenderBounds) {
@@ -81,13 +179,61 @@ export class PlayerManager {
     };
   }
 
-  setInputLocked(locked: boolean) {
+  setInputLocked(
+    locked: boolean,
+    options?: {
+      preserveAutoSaveGateDuringLockTransition?: boolean;
+    }
+  ) {
+    // `setInputLocked(...)` is the single source of truth for autosave gate transition timing.
+    // The snapshot below only reads these fields and must remain side-effect free.
+    const wasInputLocked = this.isInputLocked;
+    this.preserveAutoSaveGateDuringInputLock =
+      options?.preserveAutoSaveGateDuringLockTransition === true;
+    if (wasInputLocked !== locked) {
+      // Reset raw input on lock transitions so autosave does not read a stale held-key snapshot
+      // before the next update tick resamples keyboard state.
+      this.hasRawMoveInput = false;
+    }
+    if (
+      locked &&
+      shouldRefreshMovementActivityOnInputLock({
+        wasInputLocked,
+        isMoving: this.isMoving,
+        isMoveInputActive: this.isMoveInputActive
+      })
+    ) {
+      this.lastMovementActivityAtMs = this.scene.time.now;
+      if (this.preserveAutoSaveGateDuringInputLock) {
+        this.lastAutoSaveGateLockEnteredAtMs = this.scene.time.now;
+      }
+    }
+    if (!wasInputLocked && locked && !this.preserveAutoSaveGateDuringInputLock) {
+      this.lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+    }
+    if (wasInputLocked && !locked) {
+      this.lastAutoSaveGateLockExitedAtMs = this.scene.time.now;
+      this.lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+    }
+    if (!locked && !this.preserveAutoSaveGateDuringInputLock) {
+      this.lastAutoSaveGateLockEnteredAtMs = Number.NEGATIVE_INFINITY;
+    }
     this.isInputLocked = locked;
   }
 
   update(runtimeGrids?: TmxRuntimeGrids, parsedMap?: ParsedTmxMap) {
     this.runtimeGrids = runtimeGrids;
     this.parsedMap = parsedMap;
+    const moveVector = this.getRequestedMoveVector();
+    const hasRawMoveInput = moveVector.lengthSq() > 0;
+    this.hasRawMoveInput = hasRawMoveInput;
+    const baseActivityState = resolvePlayerMovementActivityState({
+      didMove: false,
+      hasMoveInput: hasRawMoveInput,
+      isInputLocked: this.isInputLocked
+    });
+    let nextIsMoving = baseActivityState.isMoving;
+    let nextIsMoveInputActive = baseActivityState.isMoveInputActive;
 
     if (
       !this.player ||
@@ -98,16 +244,18 @@ export class PlayerManager {
       !runtimeGrids ||
       !parsedMap
     ) {
+      this.commitMovementState(false, false);
       return;
     }
 
     if (this.isInputLocked) {
+      this.commitMovementState(nextIsMoving, false);
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
       return;
     }
 
-    const moveVector = this.getRequestedMoveVector();
-    if (moveVector.lengthSq() === 0) {
+    if (!hasRawMoveInput) {
+      this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
       updatePlayerVisualFrame(this.player, this.currentFacing, false, this.scene.time.now);
       return;
     }
@@ -130,6 +278,13 @@ export class PlayerManager {
     }
 
     const didMove = nextX !== this.player.root.x || nextY !== this.player.root.y;
+    const activityState = resolvePlayerMovementActivityState({
+      didMove,
+      hasMoveInput: hasRawMoveInput,
+      isInputLocked: this.isInputLocked
+    });
+    nextIsMoving = activityState.isMoving;
+    nextIsMoveInputActive = activityState.isMoveInputActive;
     this.player.root.setPosition(nextX, nextY);
     this.player.root.setDepth(getActorDepth(nextY));
 
@@ -137,6 +292,7 @@ export class PlayerManager {
     const prevTileX = this.currentTileX;
     const prevTileY = this.currentTileY;
     this.syncTilePositionFromWorldPosition(nextX, nextY, parsedMap);
+    this.commitMovementState(nextIsMoving, nextIsMoveInputActive);
     updatePlayerVisualFrame(this.player, this.currentFacing, didMove, this.scene.time.now);
 
     // Emit tutorial event only when tile position changes (not every frame)
@@ -156,6 +312,80 @@ export class PlayerManager {
       tileX: this.currentTileX,
       tileY: this.currentTileY
     };
+  }
+
+  isPlayerMoving(): boolean {
+    return this.isMoving;
+  }
+
+  isMoveInputInProgress(): boolean {
+    return this.isMoveInputActive;
+  }
+
+  hasRawMoveInputIntent(): boolean {
+    return this.hasRawMoveInput;
+  }
+
+  // Canonical API for external movement-state consumers. Prefer selecting a field from this snapshot
+  // instead of recomputing or mixing the helper methods ad hoc.
+  getMovementActivitySnapshot(): PlayerMovementActivitySnapshot {
+    const immediateActive = hasImmediatePlayerMovementActivity({
+      isMoving: this.isMoving,
+      isMoveInputActive: this.isMoveInputActive
+    });
+    const autoSaveActive = hasAutoSaveMovementActivity({
+      isMoving: this.isMoving,
+      hasRawMoveInput: this.hasRawMoveInput,
+      isInputLocked: this.isInputLocked
+    });
+    const graceActive = shouldPreservePlayerMovementActivity({
+      isMoving: this.isMoving,
+      isMoveInputActive: this.isMoveInputActive,
+      lastActiveAtMs: this.lastMovementActivityAtMs,
+      nowMs: this.scene.time.now,
+      graceMs: PLAYER_MOVEMENT_ACTIVITY_GRACE_MS
+    });
+    const autoSaveGateActive = hasAutoSaveGateActivity({
+      autoSaveActive,
+      isInputLocked: this.isInputLocked,
+      preserveAutoSaveGateDuringInputLock: this.preserveAutoSaveGateDuringInputLock,
+      lastLockEnteredAtMs: this.lastAutoSaveGateLockEnteredAtMs,
+      nowMs: this.scene.time.now,
+      graceMs: PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS
+    });
+
+    return {
+      isMoving: this.isMoving,
+      isMoveInputActive: this.isMoveInputActive,
+      hasRawMoveInput: this.hasRawMoveInput,
+      immediateActive,
+      autoSaveActive,
+      autoSaveGateActive,
+      graceActive
+    };
+  }
+
+  /** @deprecated Prefer `getMovementActivitySnapshot().immediateActive`. */
+  isImmediateMovementActivityInProgress(): boolean {
+    return this.getMovementActivitySnapshot().immediateActive;
+  }
+
+  /** @deprecated Prefer `getMovementActivitySnapshot().autoSaveGateActive`. */
+  isAutoSaveMovementActivityInProgress(): boolean {
+    return this.getMovementActivitySnapshot().autoSaveGateActive;
+  }
+
+  /** @deprecated Prefer `getMovementActivitySnapshot().graceActive`. */
+  isMovementActivityInProgress(): boolean {
+    return this.getMovementActivitySnapshot().graceActive;
+  }
+
+  private commitMovementState(isMoving: boolean, isMoveInputActive: boolean) {
+    this.isMoving = isMoving;
+    this.isMoveInputActive = isMoveInputActive;
+    if (isMoving || isMoveInputActive) {
+      this.lastMovementActivityAtMs = this.scene.time.now;
+    }
   }
 
   debugTeleportToTile(tileX: number, tileY: number) {
@@ -195,7 +425,6 @@ export class PlayerManager {
 
     return new Phaser.Math.Vector2(horizontal, vertical);
   }
-
   private resolveFacingFromVelocity(velocityX: number, velocityY: number): Facing {
     if (Math.abs(velocityX) > Math.abs(velocityY)) {
       return velocityX < 0 ? "left" : "right";
