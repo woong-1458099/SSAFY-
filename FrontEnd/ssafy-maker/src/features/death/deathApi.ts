@@ -1,4 +1,12 @@
-import { API_PREFIX, type ApiResponse } from "@features/auth/api";
+import {
+  API_PREFIX,
+  type ApiResponse,
+  type DeathRecordTokenResponse,
+  type RecordDeathRequest,
+  type UserProfile
+} from "@features/auth/api";
+
+export type { DeathRecordTokenResponse, RecordDeathRequest };
 
 export class DeathDashboardUnavailableError extends Error {
   constructor(message = "Death dashboard endpoint unavailable") {
@@ -68,6 +76,28 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   return payload.data;
+}
+
+export function issueDeathRecordToken(): Promise<DeathRecordTokenResponse> {
+  console.log("[death-api] issueDeathRecordToken");
+  return request<DeathRecordTokenResponse>("/users/me/deaths/token", {
+    method: "POST"
+  });
+}
+
+export function recordCurrentUserDeath(
+  token: string,
+  body: RecordDeathRequest = {}
+): Promise<UserProfile> {
+  console.log("[death-api] recordCurrentUserDeath");
+  return request<UserProfile>("/users/me/deaths", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Death-Record-Token": token
+    },
+    body: JSON.stringify(body)
+  });
 }
 
 export function fetchDeathDashboard(

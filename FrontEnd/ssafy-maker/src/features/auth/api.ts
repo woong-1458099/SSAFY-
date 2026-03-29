@@ -211,24 +211,3 @@ export function fetchBackendSession(): Promise<BackendAuthSession> {
   });
 }
 
-export function issueDeathRecordToken(): Promise<DeathRecordTokenResponse> {
-  console.log("[auth-api] issueDeathRecordToken");
-  return request<DeathRecordTokenResponse>("/users/me/deaths/token", {
-    method: "POST"
-  });
-}
-
-export function recordCurrentUserDeath(
-  token: string,
-  body: RecordDeathRequest = {}
-): Promise<UserProfile> {
-  console.log("[auth-api] recordCurrentUserDeath");
-  return request<UserProfile>("/users/me/deaths", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Death-Record-Token": token
-    },
-    body: JSON.stringify(body)
-  });
-}

@@ -99,6 +99,20 @@ Use this when changing:
 - debug ending presets
 - ending test payload defaults
 
+### `src/game/scenes/main/deathFlow.ts`
+
+Owns death-sequence helper policy for `MainScene`:
+
+- death overlay payload and timing
+- HP-zero to game-over ending handoff policy
+- death record request payload shaping
+
+Use this when changing:
+
+- death overlay duration or copy
+- HP-zero delayed ending entry behavior
+- death record cause/payload rules
+
 ### `src/game/scenes/main/debugPanel.ts`
 
 Owns debug panel view-model shaping:
