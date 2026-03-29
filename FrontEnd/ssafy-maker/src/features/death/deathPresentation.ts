@@ -1,6 +1,6 @@
-import type { AreaId } from "@common/enums/area";
-import { getAreaPresentationLabel } from "@game/scenes/main/areaPresentation";
-import { SCENE_IDS, type SceneId } from "@game/scripts/scenes/sceneIds";
+import type { AreaId } from "../../common/enums/area";
+import { getAreaPresentationLabel } from "../../game/scenes/main/areaPresentation";
+import { SCENE_IDS, type SceneId } from "../../game/scripts/scenes/sceneIds";
 import type { DeathRecordEvent } from "./deathApi";
 
 const SCENE_LABELS: Partial<Record<SceneId, string>> = {
