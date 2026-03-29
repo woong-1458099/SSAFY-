@@ -641,6 +641,9 @@ export class MainScene extends Phaser.Scene {
   private handleHudStateApplied(hudState: Partial<HudState>): void {
     this.events.emit("ui:patchHud", hudState);
     this.trackAnalyticsWeeklyProgress();
+    if (typeof hudState.week === "number") {
+      this.storyEventManager?.syncWeek(hudState.week);
+    }
     if (typeof hudState.hp === "number") {
       this.maybeTriggerPlayerDeath(hudState.hp);
     }
@@ -1062,8 +1065,7 @@ export class MainScene extends Phaser.Scene {
       this.escapeKey &&
       Phaser.Input.Keyboard.JustDown(this.escapeKey) &&
       !deathSequenceActive &&
-      !dialoguePlaying &&
-      !plannerOpen
+      !dialoguePlaying
     ) {
       if (debugTileEditorVisible) {
         this.worldTileEditor?.setVisible(false);
@@ -1071,6 +1073,12 @@ export class MainScene extends Phaser.Scene {
       }
       if (debugPanelVisible) {
         this.debugPanel?.hide();
+        return;
+      }
+      if (this.progressionManager?.dismissActivityModal()) {
+        return;
+      }
+      if (plannerOpen) {
         return;
       }
       if (placePopupOpen) {

@@ -18,7 +18,7 @@ import {
 import type { DialogueBox } from "../../features/ui/components/DialogueBox";
 import type { HudState, PlayerStatKey } from "../state/gameState";
 import { resolveRegisteredDialogue } from "../scripts/dialogues/dialogueRegistry";
-import { getCurrentLoadedWeek } from "../../infra/story/authoredStoryRepository";
+import { getCurrentLoadedWeek, ensureAuthoredStoryLoaded } from "../../infra/story/authoredStoryRepository";
 
 type DialogueRuntimeHooks = {
   getMetricValue?: (stat: DialogueRequirementStatKey) => number | string;
@@ -211,13 +211,14 @@ export class DialogueManager {
       const hudWeek = this.getHudState().week;
       const loadedWeek = getCurrentLoadedWeek();
 
-      // 로드된 주차와 HUD 주차가 다르면 경고 (주차 불일치 상태)
+      // 로드된 주차와 HUD 주차가 다르면 경고 및 재로드 트리거 (불일치 상태 복구)
       if (loadedWeek !== null && loadedWeek !== hudWeek) {
-        console.warn(`[Dialogue] Week mismatch! HUD: ${hudWeek}, Loaded: ${loadedWeek}. Using loaded week for dialogue lookup.`);
+        console.warn(`[Dialogue] Week mismatch! HUD: ${hudWeek}, Loaded: ${loadedWeek}. Triggering reload for week ${hudWeek}.`);
+        void ensureAuthoredStoryLoaded(this.scene, hudWeek);
       }
 
-      // 로드된 주차 데이터를 기준으로 대화를 찾음 (불일치 시 로드된 주차 우선)
-      const effectiveWeek = loadedWeek ?? hudWeek;
+      // HUD 주차 기준으로 대화를 찾음 (불일치 시에도 현재 주차 우선, 없으면 기본 대화로 폴백)
+      const effectiveWeek = hudWeek;
       const weekSpecificId = `${normalizedDialogueId}_w${effectiveWeek}`;
       console.log(`[Dialogue] Resolving: ${normalizedDialogueId} (HUD Week ${hudWeek}, Loaded Week ${loadedWeek}) -> Checking: ${weekSpecificId}`);
       const weekScript = resolveRegisteredDialogue(weekSpecificId);
