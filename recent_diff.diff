@@ -1,0 +1,250 @@
+diff --git a/FrontEnd/ssafy-maker/src/features/auth/api.ts b/FrontEnd/ssafy-maker/src/features/auth/api.ts
+index 2d620341..d4a669c3 100644
+--- a/FrontEnd/ssafy-maker/src/features/auth/api.ts
++++ b/FrontEnd/ssafy-maker/src/features/auth/api.ts
+@@ -32,6 +32,40 @@ export interface RecordDeathRequest {
+ 
+ export type BackendApiStatus = "unknown" | "available" | "unavailable";
+ 
++export class ApiRequestError extends Error {
++  readonly url: string;
++  readonly status?: number;
++  readonly code?: string;
++
++  constructor(
++    message: string,
++    options: {
++      url: string;
++      status?: number;
++      code?: string;
++      cause?: unknown;
++    }
++  ) {
++    super(message);
++    this.name = "ApiRequestError";
++    this.url = options.url;
++    this.status = options.status;
++    this.code = options.code;
++    if (options.cause !== undefined) {
++      Object.defineProperty(this, "cause", {
++        configurable: true,
++        enumerable: false,
++        value: options.cause,
++        writable: true
++      });
++    }
++  }
++}
++
++export function isApiRequestError(value: unknown): value is ApiRequestError {
++  return value instanceof ApiRequestError;
++}
++
+ const RAW_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+ const API_PATH_SEGMENT = "/api";
+ 
+@@ -102,24 +136,28 @@ export function getBackendApiStatus(): BackendApiStatus {
+ }
+ 
+ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
++  const url = `${API_PREFIX}${path}`;
+   console.log("[auth-api] request", {
+-    url: `${API_PREFIX}${path}`,
++    url,
+     method: init.method ?? "GET"
+   });
+   let response: Response;
+   try {
+-    response = await fetch(`${API_PREFIX}${path}`, {
++    response = await fetch(url, {
+       credentials: "include",
+       ...init
+     });
+     backendApiStatus = "available";
+   } catch (error) {
+     backendApiStatus = "unavailable";
+-    throw error;
++    throw new ApiRequestError("API request failed", {
++      url,
++      cause: error
++    });
+   }
+   const raw = await response.text();
+   console.log("[auth-api] response", {
+-    url: `${API_PREFIX}${path}`,
++    url,
+     status: response.status,
+     ok: response.ok,
+     raw
+@@ -129,11 +167,18 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+   try {
+     payload = JSON.parse(raw) as ApiResponse<T>;
+   } catch {
+-    throw new Error(raw || "API request failed");
++    throw new ApiRequestError(raw || "API request failed", {
++      url,
++      status: response.status
++    });
+   }
+ 
+   if (!response.ok || payload.code !== "OK") {
+-    throw new Error(payload.message || "API request failed");
++    throw new ApiRequestError(payload.message || "API request failed", {
++      url,
++      status: response.status,
++      code: payload.code
++    });
+   }
+ 
+   return payload.data;
+diff --git a/FrontEnd/ssafy-maker/src/features/auth/authSession.ts b/FrontEnd/ssafy-maker/src/features/auth/authSession.ts
+index 77f82308..f343256c 100644
+--- a/FrontEnd/ssafy-maker/src/features/auth/authSession.ts
++++ b/FrontEnd/ssafy-maker/src/features/auth/authSession.ts
+@@ -1,5 +1,11 @@
+ import type Phaser from "phaser";
+-import { API_PREFIX, fetchBackendSession, type BackendAuthSession, type UserProfile } from "@features/auth/api";
++import {
++  API_PREFIX,
++  fetchBackendSession,
++  isApiRequestError,
++  type BackendAuthSession,
++  type UserProfile
++} from "@features/auth/api";
+ 
+ export interface AuthSession {
+   authenticated: boolean;
+@@ -58,6 +64,19 @@ function toAuthSession(session: BackendAuthSession): AuthSession | null {
+   };
+ }
+ 
++function isUnauthenticatedSessionError(error: unknown): boolean {
++  if (!isApiRequestError(error)) {
++    return false;
++  }
++
++  const normalizedCode = error.code?.trim().toUpperCase();
++  return error.status === 401 ||
++    error.status === 403 ||
++    normalizedCode === "UNAUTHORIZED" ||
++    normalizedCode === "FORBIDDEN" ||
++    normalizedCode === "AUTH_REQUIRED";
++}
++
+ function isAuthSession(value: unknown): value is AuthSession {
+   if (typeof value !== "object" || value === null) {
+     return false;
+@@ -229,6 +248,7 @@ export async function completeAuthIfPresent(): Promise<AuthSession | null> {
+ }
+ 
+ export async function fetchExistingSession(): Promise<AuthSession | null> {
++  const storedSession = readStoredSession();
+   try {
+     const session = toAuthSession(await fetchBackendSession());
+     if (session) {
+@@ -238,7 +258,19 @@ export async function fetchExistingSession(): Promise<AuthSession | null> {
+       clearStoredSession();
+     }
+     return session;
+-  } catch {
++  } catch (error) {
++    if (isUnauthenticatedSessionError(error)) {
++      clearStoredSession();
++      return null;
++    }
++
++    if (storedSession) {
++      console.warn("[auth-session] fetchExistingSession failed; reusing stored session", {
++        message: error instanceof Error ? error.message : String(error)
++      });
++      return storedSession;
++    }
++
+     clearStoredSession();
+     return null;
+   }
+diff --git a/FrontEnd/ssafy-maker/src/game/scenes/MainScene.ts b/FrontEnd/ssafy-maker/src/game/scenes/MainScene.ts
+index 8321a493..5a9e3f99 100644
+--- a/FrontEnd/ssafy-maker/src/game/scenes/MainScene.ts
++++ b/FrontEnd/ssafy-maker/src/game/scenes/MainScene.ts
+@@ -549,36 +549,40 @@ export class MainScene extends Phaser.Scene {
+ 
+   private async ensureAuthenticatedEntry(): Promise<boolean> {
+     const storedSession = readStoredSession();
+-    const authToken = this.registry.get("authToken");
+-
+-    // 디버그: 인증 상태 로깅
+-    console.log("[MainScene] ensureAuthenticatedEntry", {
+-      hasStoredSession: !!storedSession,
+-      authToken
+-    });
+-
+-    if (authToken === "bff-session" && storedSession) {
++    if (this.registry.get("authToken") === "bff-session" && storedSession) {
+       return true;
+     }
+ 
+-    // 이미 세션이 있으면 API 호출 스킵 (네트워크 에러 방지)
++    // 저장된 세션이 있으면 API 호출 스킵 (CORS/네트워크 에러 방지)
+     if (storedSession) {
+       console.log("[MainScene] Using stored session, skipping API call");
+       applySessionToRegistry(this.registry, storedSession);
+       return true;
+     }
+ 
+-    const existingSession = await fetchExistingSession();
+-    if (!existingSession) {
+-      console.warn("[MainScene] No session found, redirecting to login");
+-      clearAuthRegistry(this.registry);
+-      clearStoredSession();
+-      this.scene.start(SceneKey.Login);
+-      return false;
++    // authToken이 있으면 (레지스트리에 인증 정보 있음) API 호출 스킵
++    if (authToken) {
++      console.log("[MainScene] authToken exists, skipping API call");
++      return true;
+     }
+ 
+-    applySessionToRegistry(this.registry, existingSession);
+-    return true;
++    // 세션 정보가 전혀 없을 때만 API 호출
++    try {
++      const existingSession = await fetchExistingSession();
++      if (!existingSession) {
++        console.warn("[MainScene] No session found, redirecting to login");
++        clearAuthRegistry(this.registry);
++        clearStoredSession();
++        this.scene.start(SceneKey.Login);
++        return false;
++      }
++      applySessionToRegistry(this.registry, existingSession);
++      return true;
++    } catch (error) {
++      console.error("[MainScene] Session fetch failed (CORS?), but continuing anyway", error);
++      // CORS 에러 등으로 실패해도 게임 진행 허용 (개발 환경 대응)
++      return true;
++    }
+   }
+ 
+   private async handleLogout(): Promise<void> {
+diff --git a/FrontEnd/ssafy-maker/src/scenes/StartScene.ts b/FrontEnd/ssafy-maker/src/scenes/StartScene.ts
+index f601e697..447728f7 100644
+--- a/FrontEnd/ssafy-maker/src/scenes/StartScene.ts
++++ b/FrontEnd/ssafy-maker/src/scenes/StartScene.ts
+@@ -56,11 +56,15 @@ export class StartScene extends Phaser.Scene {
+ 
+     const authToken = this.registry.get("authToken");
+     const storedSession = readStoredSession();
+-    if (authToken !== "bff-session" || !storedSession) {
++    if (!storedSession) {
+       void this.recoverSessionOrRedirect();
+       return;
+     }
+ 
++    if (authToken !== "bff-session") {
++      applySessionToRegistry(this.registry, storedSession);
++    }
++
+     const { width, height } = this.scale;
+ 
+     const bg = this.add.image(width / 2, height / 2, START_SCENE_ASSET_KEYS.background);

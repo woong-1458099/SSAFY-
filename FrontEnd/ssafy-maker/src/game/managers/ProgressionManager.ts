@@ -187,6 +187,7 @@ export class ProgressionManager {
   private pendingWeeklySalaryWeek: number | null = null;
   private plannerRoot?: Phaser.GameObjects.Container;
   private activityRoot?: Phaser.GameObjects.Container;
+  private pendingActivityClose?: () => void;
   private salaryRoot?: Phaser.GameObjects.Container;
   private endingFlowStarted = false;
 
@@ -615,16 +616,30 @@ export class ProgressionManager {
     };
   }
 
+  dismissActivityModal(): boolean {
+    if (!this.activityRoot?.visible) {
+      return false;
+    }
+    const close = this.pendingActivityClose;
+    this.pendingActivityClose = undefined;
+    this.closeWeeklyPlanActivity();
+    close?.();
+    return true;
+  }
+
   private openWeeklyPlanActivity(activity: WeeklyPlanActivityPayload, onComplete?: () => void): void {
     this.closeWeeklyPlanActivity();
+    this.pendingActivityClose = onComplete;
     this.activityRoot = createWeeklyPlanActivityModal(this.scene, {
       ...activity,
       onClose: () => {
         if (!this.activityRoot) {
           return;
         }
+        const close = this.pendingActivityClose;
+        this.pendingActivityClose = undefined;
         this.closeWeeklyPlanActivity();
-        onComplete?.();
+        close?.();
       }
     });
   }
@@ -632,6 +647,7 @@ export class ProgressionManager {
   private closeWeeklyPlanActivity(): void {
     this.activityRoot?.destroy(true);
     this.activityRoot = undefined;
+    this.pendingActivityClose = undefined;
   }
 
   private completeScheduledActivity(slotIndex: number, option: WeeklyPlanOption): void {
