@@ -17,7 +17,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-@Profile("staging")
+@Profile("stg")
 @RestController
 @RequestMapping("/api/public/debug")
 public class StagingRouteDiagnosticsController {
