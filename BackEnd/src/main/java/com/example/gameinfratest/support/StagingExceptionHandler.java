@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
-@Profile("stg")
+@Profile("staging")
 public class StagingExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
