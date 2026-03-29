@@ -9,7 +9,9 @@ I. 개요
 3. 프로젝트 기술 스택
 4. 개발환경
 5. 외부 서비스
-6. Gitignore 및 비밀값 관리 대상
+6. 주요 계정 및 프로퍼티 파일 목록
+7. DB 덤프 파일 최신본
+8. Gitignore 및 비밀값 관리 대상
 
 II. 빌드 및 실행
 
@@ -110,15 +112,60 @@ IV. 포팅 체크리스트
 
 - Docker Compose
 - Nginx
+  - 저장소 기준 운영 대상: ingress 컨테이너 `ingress-nginx-1`
+  - 버전: 저장소에서 고정되지 않음. 실제 운영 서버 이미지/패키지 버전 확인 필요
 - Keycloak
+  - 버전: `26.1`
+  - 근거: `docker/compose.auth.yml` `quay.io/keycloak/keycloak:26.1`
 - Cloudflare
 - Jenkins
+  - 이미지: `local/jenkins-jdk25:lts`
+  - JDK 기준: `25`
+  - 근거: `docker/compose.ops.yml`, `jenkins/Dockerfile`
 - n8n
+  - 버전: `latest`
+  - 근거: `docker/compose.ops.yml` `docker.n8n.io/n8nio/n8n:latest`
 - Prometheus
+  - 버전: `v3.5.0`
+  - 근거: `docker/compose.ops.yml` `prom/prometheus:v3.5.0`
 - Grafana
+  - 버전: `12.1.1`
+  - 근거: `docker/compose.ops.yml` `grafana/grafana:12.1.1`
 - Loki
 - Promtail
 - AWS EC2
+
+주요 실행 제품과 저장소 기준 확인 버전:
+
+- PostgreSQL
+  - 기본 로컬 기준 이미지: `postgres:16-alpine`
+  - 근거: `BackEnd/compose.yaml`
+- Redis
+  - 기본 로컬 기준 이미지: `redis:7-alpine`
+  - 근거: `BackEnd/compose.yaml`
+- RabbitMQ
+  - 기본 로컬 기준 이미지: `rabbitmq:3-management-alpine`
+  - 근거: `BackEnd/compose.yaml`
+- Keycloak
+  - 운영 기준 이미지: `quay.io/keycloak/keycloak:26.1`
+  - 근거: `docker/compose.auth.yml`
+
+IDE 기준:
+
+- IntelliJ IDEA, VS Code 등 사용 IDE 버전은 저장소에 고정되어 있지 않다.
+- 제출 시에는 실제 개발자가 사용한 IDE 버전을 별도 확인해 기입해야 한다.
+- 현재 저장소만으로는 IDE 버전을 확정할 수 없다.
+
+문서 작성 시 확인된 오류 및 특이사항:
+
+- 백엔드 빌드 환경
+  - `JAVA_HOME is not set and no 'java' command could be found in your PATH.`
+  - Java 미설치 또는 PATH 미설정 상태에서 발생하는 오류로 확인됨
+- 프론트 개발 환경 문서
+  - 일부 문서의 Node 25 / npm 11 표기와 실제 `package.json` 엔진 값이 불일치함
+- 운영 환경 변수
+  - `CORS_ALLOWED_ORIGINS` 는 운영 문서 기준 compose 확인 시 비어 있다는 경고가 있었음
+  - 근거: `docs-infra/00_CURRENT_STATE.md`
 
 ### 4. 개발환경
 
@@ -152,14 +199,44 @@ IV. 포팅 체크리스트
 - AWS EC2 단일 호스트 기반 운영
 - Nginx ingress + Docker Compose 멀티 스택 운영
 
+운영 경로 및 설정값:
+
+- 원격 프로젝트 경로: `/home/ubuntu/apps/S14P21E206`
+- 프론트 STG release/live
+  - `/home/ubuntu/deploy/frontend/stg/releases`
+  - `/home/ubuntu/deploy/frontend/stg/live`
+- 프론트 PROD release/live
+  - `/home/ubuntu/deploy/frontend/prod/releases`
+  - `/home/ubuntu/deploy/frontend/prod/live`
+- Nginx upstream 경로
+  - `/home/ubuntu/deploy/nginx/upstreams`
+- Nginx whitelist 경로
+  - `/home/ubuntu/deploy/nginx/whitelist`
+
 ### 5. 외부 서비스
 
-현재 프로젝트에서 포팅 시 함께 검토해야 하는 외부 서비스는 다음과 같다.
+현재 프로젝트에서 포팅 시 함께 검토해야 하는 외부 서비스 및 외부 연계 지점은 다음과 같다.
 
 #### 가) 인증 및 보안
 
 - Keycloak
   - 로그인, 회원가입, OAuth callback, JWT issuer
+  - 공개 도메인: `https://auth.ssafymaker.cloud`
+  - 내부 서비스명: `stg-keycloak`
+  - 필수 준비 정보:
+    - 관리자 계정 `KEYCLOAK_ADMIN`
+    - 관리자 비밀번호 `KEYCLOAK_ADMIN_PASSWORD`
+    - DB 접속 정보 `KEYCLOAK_DB_URL`, `KEYCLOAK_DB_USER`, `KEYCLOAK_DB_PASSWORD`
+    - realm 이름 `app`
+    - client id `ssafy-maker-bff`
+    - client secret `KEYCLOAK_CLIENT_SECRET`
+    - redirect URI, web origin 등록 정보
+  - 활용 문서:
+    - `docs-infra/KEYCLOAK_POSTGRES_DEPLOYMENT.md`
+    - `docs-infra/KEYCLOAK_BFF_BACKEND_GUIDE.md`
+  - 가입/활용 관점 메모:
+    - SaaS 가입형 서비스가 아니라 자체 호스팅 Keycloak 인스턴스다.
+    - 신규 환경 포팅 시 별도 회원가입이 아니라 관리자 계정/bootstrap, realm import, client 생성 절차가 필요하다.
 
 #### 나) 네트워크 및 엣지
 
@@ -167,14 +244,79 @@ IV. 포팅 체크리스트
   - DNS
   - Reverse proxy
   - 프론트 배포 후 캐시 purge
+  - 사용 도메인:
+    - `ssafymaker.cloud`
+    - `www.ssafymaker.cloud`
+    - `stg.ssafymaker.cloud`
+    - `auth.ssafymaker.cloud`
+    - `jenkins.ssafymaker.cloud`
+    - `n8n.ssafymaker.cloud`
+  - 필수 준비 정보:
+    - Zone 생성 및 도메인 소유권
+    - DNS A/CNAME 레코드
+    - Proxied 설정
+    - Jenkins purge용 API Token
+    - Zone ID
+  - 활용 문서:
+    - `docs-infra/00_CURRENT_STATE.md`
+    - `docs-infra/04_NETWORK_EDGE.md`
+    - `docs-infra/07_RUNBOOK.md`
+  - 가입/활용 관점 메모:
+    - 신규 포팅 환경에서 Cloudflare 계정 및 zone 준비 없이는 현재 공개 도메인 구조를 재현할 수 없다.
+    - 프론트 배포 후 Cloudflare cache purge를 수행하는 운영 절차가 포함된다.
 
 #### 다) 운영 자동화
 
 - Jenkins
   - 프론트/백엔드 STG, PROD 배포
+  - 공개 도메인: `https://jenkins.ssafymaker.cloud`
+  - 내부 서비스 URL: `http://jenkins:8080`
+  - 운영 job:
+    - `backend-develop-stg`
+    - `frontend-develop-stg`
+    - `backend-master-prod`
+    - `frontend-master-prod`
+  - webhook 진입점:
+    - `/project/backend-develop-stg`
+    - `/project/frontend-develop-stg`
+    - `/project/backend-master-prod`
+    - `/project/frontend-master-prod`
+  - 필수 준비 정보:
+    - Jenkins 관리자 계정
+    - GitLab webhook 연동
+    - Jenkins credential
+      - `ec2-deploy-ssh-v2`
+      - `cloudflare-api-token`
+      - `cloudflare-zone-id`
+      - `n8n-deploy-token`
+  - 활용 문서:
+    - `WORK_GUIDE.md`
+    - `docs-infra/00_CURRENT_STATE.md`
+    - `docs-infra/02_CI_CD.md`
+    - `docs-infra/07_RUNBOOK.md`
 - n8n
   - 배포 결과 알림
   - MR 리뷰 및 운영 보조 webhook
+  - 공개 도메인: `https://n8n.ssafymaker.cloud`
+  - 내부 서비스 URL: `http://n8n:5678`
+  - 주요 webhook:
+    - `https://n8n.ssafymaker.cloud/webhook/jenkins/deploy-notify`
+    - `https://n8n.ssafymaker.cloud/webhook/gitlab/mr-review`
+  - 필수 준비 정보:
+    - Header Auth credential
+    - `N8N_ENCRYPTION_KEY`
+    - `N8N_BASIC_AUTH_USER`, `N8N_BASIC_AUTH_PASSWORD`
+    - Jenkins, GitLab, OpenAI, Google Sheets 관련 credential
+  - 활용 문서:
+    - `WORK_GUIDE.md`
+    - `docs-infra/00_CURRENT_STATE.md`
+    - `docs-infra/02_CI_CD.md`
+    - `Infra/n8n_deploy_notify_bot.md`
+    - `Infra/n8n_Deploy_NotifyBot.json`
+    - `Infra/MR_Review_Sheet.json`
+  - 가입/활용 관점 메모:
+    - 자체 호스팅 n8n 인스턴스이며, 워크플로 JSON import와 credential 재등록이 필요하다.
+    - MR 리뷰 워크플로는 OpenAI API와 Google Sheets를 추가 연동한다.
 
 #### 라) 모니터링
 
@@ -183,7 +325,134 @@ IV. 포팅 체크리스트
 - Loki
 - Promtail
 
-### 6. Gitignore 및 비밀값 관리 대상
+#### 마) 외부 서비스 범위 정리
+
+- 본 프로젝트는 Photon Cloud를 사용하지 않는다.
+- 소셜 인증 SaaS, 코드 컴파일 SaaS도 현재 저장소 기준 직접 사용하지 않는다.
+- 다만 다음 외부 연계는 존재한다.
+  - GitLab webhook
+  - Mattermost 알림 수신 webhook
+  - OpenAI API
+  - Google Sheets API
+- 위 항목은 인프라 운영 자동화 보조 기능이며, 게임 런타임 필수 의존성은 아니다.
+
+### 6. 주요 계정 및 프로퍼티 파일 목록
+
+포팅 시 함께 확인해야 하는 주요 계정, 환경 변수, 프로퍼티 정의/소비 파일은 다음과 같다.
+
+#### 가) 백엔드 애플리케이션 설정
+
+- `BackEnd/src/main/resources/application.yml`
+- `BackEnd/src/main/resources/application-local.yml`
+- `BackEnd/src/main/resources/application-staging.yml`
+- `BackEnd/src/main/resources/application-prod.yml`
+- `BackEnd/src/main/resources/application.properties`
+- `BackEnd/src/test/resources/application-test.yml`
+
+주요 확인 항목:
+
+- Spring profile
+- DB, Redis, RabbitMQ 접속값
+- JWT issuer
+- Keycloak base/public/internal URL
+- client id / secret
+- asset base URL / manifest version
+- session cookie 정책
+- CORS allowed origins
+
+#### 나) 프론트엔드 환경 변수 관련 파일
+
+- `FrontEnd/ssafy-maker/src/shared/config/env.ts`
+- `FrontEnd/ssafy-maker/src/features/auth/api.ts`
+- `FrontEnd/ssafy-maker/vite.config.ts`
+- `FrontEnd/ssafy-maker/docs/conventions/ENVIRONMENT_SETUP.md`
+
+주요 확인 항목:
+
+- `VITE_API_BASE_URL`
+- `VITE_API_PROXY_TARGET`
+- `VITE_ENABLE_AUTH_BYPASS_LOGIN`
+- `VITE_ENABLE_DEBUG_SHORTCUTS`
+- `VITE_ENABLE_DEBUG_OVERLAY`
+- `VITE_ENABLE_DEBUG_WORLD_GRID`
+
+#### 다) Docker Compose 및 서버 환경 파일
+
+- `docker/compose.app.yml`
+- `docker/compose.auth.yml`
+- `docker/compose.data.local.yml`
+- `docker/compose.nginx.yml`
+- `docker/compose.ops.yml`
+- `docker/.env.local`
+- `docker/.env.stg`
+- `docker/.env.prod`
+- `docker/.env.ops`
+- `docker/.env.auth.stg`
+- `docs-infra/03_ENV_VARS.md`
+
+주요 확인 항목:
+
+- app stack image / alias / URL
+- data stack image / 계정 / 비밀번호
+- Keycloak 관리자/DB/client 정보
+- Jenkins, n8n, Grafana 등 운영 도구 변수
+
+#### 라) 배포 파이프라인 및 운영 자동화 파일
+
+- `jenkins/Jenkinsfile.frontend-develop-stg`
+- `jenkins/Jenkinsfile.frontend-master-prod`
+- `jenkins/Jenkinsfile.backend-develop-stg`
+- `jenkins/Jenkinsfile.backend-master-prod`
+- `WORK_GUIDE.md`
+- `docs-infra/00_CURRENT_STATE.md`
+- `docs-infra/02_CI_CD.md`
+- `docs-infra/04_NETWORK_EDGE.md`
+- `docs-infra/07_RUNBOOK.md`
+- `Infra/n8n_deploy_notify_bot.md`
+- `Infra/n8n_Deploy_NotifyBot.json`
+- `Infra/MR_Review_Sheet.json`
+
+주요 확인 항목:
+
+- Jenkins credential id
+- GitLab webhook URL
+- n8n webhook URL
+- Cloudflare purge 토큰/zone id 사용 위치
+- 배포 release/live 경로
+- whitelist 예외 경로
+
+### 7. DB 덤프 파일 최신본
+
+포팅 제출용 최신 DB 덤프 파일은 `exec` 폴더 아래에 다음과 같이 정리한다.
+
+- `exec/ssafy-maker_2026-03-30.dump`
+  - PostgreSQL custom dump 형식
+  - `pg_restore` 기반 복원용
+- `exec/ssafy-maker_2026-03-30.sql`
+  - PostgreSQL plain SQL 형식
+  - SQL 직접 확인 및 plain restore 용도
+
+파일 기준:
+
+- 추출 일자: `2026-03-30`
+- 파일 위치: 저장소 `exec` 폴더
+- 용도:
+  - `*.dump`: 운영/포팅 복원 기준본
+  - `*.sql`: 내용 검토 및 대체 복원용
+
+복원 예시:
+
+```bash
+pg_restore -d <TARGET_DB> ssafy-maker_2026-03-30.dump
+psql -d <TARGET_DB> -f ssafy-maker_2026-03-30.sql
+```
+
+주의사항:
+
+- 실제 복원 전 대상 DB 이름, 계정, 확장(extension), 인코딩이 현재 운영 환경과 맞는지 확인해야 한다.
+- 제출 시에는 dump와 sql 두 파일을 함께 제공해 복원 호환성을 높인다.
+
+### 8. Gitignore 및 비밀값 관리 대상
 
 문서와 저장소 원칙상 실제 비밀값은 직접 기록하지 않고, 변수명과 사용 위치만 관리해야 한다.
 
@@ -226,6 +495,8 @@ IV. 포팅 체크리스트
 
 ### 1. 환경변수 형태
 
+환경변수는 실제 값을 문서에 기록하지 않고, 변수명, 용도, 사용 위치를 중심으로 관리한다.
+
 ### 가) 프론트엔드 환경변수
 
 프론트는 Vite 환경변수를 사용한다.
@@ -234,6 +505,8 @@ IV. 포팅 체크리스트
 
 ```env
 VITE_API_BASE_URL=/api
+VITE_API_PROXY_TARGET=http://localhost:8080
+VITE_ENABLE_AUTH_BYPASS_LOGIN=false
 VITE_ENABLE_DEBUG_SHORTCUTS=false
 VITE_ENABLE_DEBUG_OVERLAY=false
 VITE_ENABLE_DEBUG_WORLD_GRID=false
@@ -244,6 +517,11 @@ VITE_ENABLE_DEBUG_WORLD_GRID=false
 - `VITE_API_BASE_URL`
   - 프론트가 호출할 API 기준 경로
   - 미지정 시 `/api`
+- `VITE_API_PROXY_TARGET`
+  - Vite dev server의 `/api` 프록시 대상 주소
+  - 미지정 시 `http://localhost:8080`
+- `VITE_ENABLE_AUTH_BYPASS_LOGIN`
+  - 개발용 백엔드 우회 로그인 버튼 활성화 여부
 - `VITE_ENABLE_DEBUG_SHORTCUTS`
   - 디버그 단축키 사용 여부
 - `VITE_ENABLE_DEBUG_OVERLAY`
@@ -276,9 +554,17 @@ KEYCLOAK_ENABLED=true
 KEYCLOAK_BASE_URL=http://localhost:8081
 KEYCLOAK_PUBLIC_BASE_URL=http://localhost:8081
 KEYCLOAK_INTERNAL_BASE_URL=http://localhost:8081
+KEYCLOAK_REQUIRE_CLIENT_SECRET=true
 KEYCLOAK_REALM=app
-KEYCLOAK_CLIENT_ID=ssafy-maker-prod
+KEYCLOAK_CLIENT_ID=ssafy-maker-bff
 KEYCLOAK_CLIENT_SECRET=
+KEYCLOAK_ADMIN_CLIENT_ID=admin-cli
+KEYCLOAK_ADMIN_CLIENT_SECRET=
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+SERVER_SESSION_TIMEOUT=30m
+SESSION_COOKIE_NAME=SSAFY_MAKER_SESSION
+SESSION_COOKIE_SECURE=false
+SESSION_COOKIE_SAME_SITE=Lax
 ASSET_BASE_URL=https://assets.ssafymaker.cloud/game/releases/2026-03-12.1
 ASSET_MANIFEST_VERSION=2026-03-12.1
 ```
@@ -290,13 +576,29 @@ ASSET_MANIFEST_VERSION=2026-03-12.1
 주요 그룹:
 
 - app
-  - backend image, alias, frontend URL, public URL
+  - backend image, alias, frontend URL, public URL, CORS, multi-url
 - data
   - PostgreSQL, Redis, RabbitMQ
 - auth
   - Keycloak DB, admin, realm/client
 - ops
   - Jenkins, n8n, monitoring
+
+추가로 실제 포팅 시 빠뜨리기 쉬운 변수:
+
+- app
+  - `APP_PUBLIC_BASE_URLS`
+  - `APP_FRONTEND_BASE_URLS`
+  - `CORS_ALLOWED_ORIGINS`
+- auth
+  - `KEYCLOAK_REQUIRE_CLIENT_SECRET`
+  - `KEYCLOAK_ADMIN_CLIENT_ID`
+  - `KEYCLOAK_ADMIN_CLIENT_SECRET`
+- ops
+  - `OPENAI_API_KEY`
+  - `OPENAI_MODEL`
+  - `N8N_ENCRYPTION_KEY`
+  - `GRAFANA_ADMIN_PASSWORD`
 
 ### 2. 프론트엔드 빌드 및 실행
 
@@ -316,6 +618,19 @@ npm run dev
 ```bash
 npm run build
 ```
+
+프론트 빌드 시 실제 수행되는 검증:
+
+- `npm run typecheck`
+- `npm run validate:scene-registry`
+- `npm run validate:minigame-structure`
+- `npm run validate:game-assets`
+- `npm run validate:tmx-patch-layers`
+- `npm run test:tmx-navigation-policy`
+- `npm run test:main-scene-runtime-contracts`
+- `npm run test:audio-runtime-contracts`
+- `npm run validate:fixed-events`
+- `vite build`
 
 미리보기:
 
@@ -360,6 +675,15 @@ npm run preview
 3. Redis, RabbitMQ, Keycloak 연결이 맞아야 한다.
 4. `/api/auth/session`, `/api/users/me`, `/api/public/deaths/dashboard` 등이 응답해야 한다.
 
+백엔드 API 문서 위치:
+
+- 정적 초안 문서
+  - `BackEnd/docs/API_SPEC_DRAFT.md`
+  - `BackEnd/docs/API_SPEC_WITH_EXAMPLES.txt`
+- 실행 시 노출 경로
+  - `/api/swagger-ui.html`
+  - `/api/v3/api-docs`
+
 ### 4. 로컬 의존 서비스 실행
 
 백엔드는 PostgreSQL, Redis, RabbitMQ에 의존한다. 로컬 포팅 검증 시에는 `BackEnd/compose.yaml` 또는 루트 `docker/compose.data.local.yml`을 기준으로 데이터 스택을 먼저 올리는 편이 안전하다.
@@ -371,6 +695,14 @@ npm run preview
 - RabbitMQ
 
 또한 인증 흐름까지 검증하려면 Keycloak도 함께 실행해야 한다.
+
+배포 시 특이사항:
+
+- 프론트는 단순 정적 파일 업로드가 아니라 release/live 디렉터리 전환과 nginx reload까지 포함한다.
+- 백엔드는 blue-green 구조이므로 비활성 color 배포 후 health check, upstream 전환, verify, rollback 순서를 따라야 한다.
+- Cloudflare를 사용하는 경우 프론트 배포 후 cache purge가 필요하다.
+- Jenkins UI 전체를 외부 개방하지 않고 `/project/*` webhook 경로만 whitelist 예외를 둔다.
+- n8n도 UI 전체 공개가 아니라 `/webhook/*`, `/webhook-test/*`만 예외 공개한다.
 
 ---
 
@@ -634,3 +966,8 @@ docker logs --tail 200 docker-n8n-1
 6. 최종 smoke check 및 rollback 검증
 
 이 순서를 기준으로 포팅하면 개발용 이전과 운영용 이전을 분리해서 안정적으로 진행할 수 있다.
+
+## 부록. 시연 시나리오
+
+- 시연 절차 및 테스트 흐름은 `exec/시연테스트.md`를 기준으로 진행한다.
+- 해당 문서에는 로그인, 새 게임 시작, 캐릭터 생성, 메인 플레이, 저장/불러오기, 공개 통계 확인, 엔딩 흐름 점검 순서가 정리되어 있다.
