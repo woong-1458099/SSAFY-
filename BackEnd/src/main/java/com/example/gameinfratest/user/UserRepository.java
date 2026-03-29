@@ -34,6 +34,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             select u
             from User u
             where u.deletedAt is null
+              and u.deathCount > 0
             order by u.deathCount desc,
                      case when u.lastDeathAt is null then 1 else 0 end asc,
                      u.lastDeathAt desc,
