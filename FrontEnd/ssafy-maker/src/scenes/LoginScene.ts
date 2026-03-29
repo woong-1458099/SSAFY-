@@ -89,7 +89,7 @@ export class LoginScene extends Phaser.Scene {
                   </div>
                   <span style="padding:6px 10px;border-radius:999px;background:rgba(201,74,97,0.16);color:#ffd2dc;font-size:11px;">시점 포함</span>
                 </div>
-                <div id="death-recent-list" style="display:flex;flex-direction:column;gap:10px;min-height:0;max-height:210px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;color:#e7f4ff;">
+                <div id="death-recent-list" style="display:flex;flex-direction:column;gap:10px;min-height:0;color:#e7f4ff;">
                   <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.16);color:#d4e7f1;">사망 기록을 불러오는 중입니다.</div>
                 </div>
               </article>
@@ -101,7 +101,7 @@ export class LoginScene extends Phaser.Scene {
                   </div>
                   <span style="padding:6px 10px;border-radius:999px;background:rgba(92,166,255,0.14);color:#d4e9ff;font-size:11px;">TOP 순위</span>
                 </div>
-                <div id="death-ranking-list" style="display:flex;flex-direction:column;gap:10px;min-height:0;max-height:210px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;color:#e7f4ff;">
+                <div id="death-ranking-list" style="display:flex;flex-direction:column;gap:10px;min-height:0;color:#e7f4ff;">
                   <div style="padding:12px 0;border-bottom:1px solid rgba(120,193,231,0.16);color:#d4e7f1;">랭킹을 불러오는 중입니다.</div>
                 </div>
               </article>
@@ -246,7 +246,7 @@ export class LoginScene extends Phaser.Scene {
       }
 
       try {
-        const dashboard = await fetchDeathDashboard({ recentLimit: 8, rankingLimit: 8 });
+        const dashboard = await fetchDeathDashboard({ recentLimit: 5, rankingLimit: 5 });
         if (destroyed) {
           return;
         }
