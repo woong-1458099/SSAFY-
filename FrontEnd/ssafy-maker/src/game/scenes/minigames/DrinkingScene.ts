@@ -34,7 +34,7 @@ export default class DrinkingScene extends Phaser.Scene {
   private foamActive = false;
   private foamClicked = false;
 
-  private bgm!: Phaser.Sound.BaseSound;
+  private bgm: Phaser.Sound.BaseSound | null = null;
   private npcSprite!: Phaser.GameObjects.Sprite;
   private grandmaSprite!: Phaser.GameObjects.Sprite;
 
