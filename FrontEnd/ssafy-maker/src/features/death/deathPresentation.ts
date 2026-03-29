@@ -19,6 +19,10 @@ function isAreaId(value: string): value is AreaId {
   return value === "world" || value === "downtown" || value === "campus" || value === "classroom";
 }
 
+function normalizeLookupKey(value: string | null): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
 function toDisplayLabel(value: string): string {
   return value
     .replace(/[_-]+/g, " ")
@@ -36,8 +40,10 @@ export function formatDeathCauseLabel(cause: string | null): string {
 }
 
 export function formatDeathLocationLabel(areaId: string | null, sceneId: string | null): string {
-  const normalizedAreaId = areaId?.trim() ?? "";
-  const normalizedSceneId = sceneId?.trim() ?? "";
+  const rawAreaId = areaId?.trim() ?? "";
+  const rawSceneId = sceneId?.trim() ?? "";
+  const normalizedAreaId = normalizeLookupKey(areaId);
+  const normalizedSceneId = normalizeLookupKey(sceneId);
 
   const areaLabel = normalizedAreaId
     ? (isAreaId(normalizedAreaId) ? getAreaPresentationLabel(normalizedAreaId) : toDisplayLabel(normalizedAreaId))
@@ -54,6 +60,13 @@ export function formatDeathLocationLabel(areaId: string | null, sceneId: string 
   }
   if (areaLabel) {
     return areaLabel;
+  }
+
+  if (rawSceneId) {
+    return toDisplayLabel(rawSceneId);
+  }
+  if (rawAreaId) {
+    return toDisplayLabel(rawAreaId);
   }
 
   return "위치 정보 없음";
