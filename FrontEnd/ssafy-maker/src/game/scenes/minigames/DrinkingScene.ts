@@ -3,6 +3,7 @@ import { applyLegacyViewport } from './viewport';
 import { installMinigamePause } from './installMinigamePause';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
+import { AudioManager } from '../../../core/managers/AudioManager';
 import {
   LEGACY_DRINKING_SCENE_KEY,
   LEGACY_MINIGAME_MENU_SCENE_KEY
@@ -15,7 +16,7 @@ import {
   preloadLegacyDrinkingAssets,
   resolveLegacyDrinkingJudge
 } from '@features/minigame/legacy/legacyDrinkingConfig';
-import { SCREEN, PIXEL_FONT, COLORS, createBackground, createButton } from './utils';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createButton, playMinigameBgm, stopMinigameBgm } from './utils';
 import { showMinigameTutorial } from './utils/minigameTutorial';
 import { getMinigameCard } from '@features/minigame/minigameCatalog';
 
@@ -51,6 +52,7 @@ export default class DrinkingScene extends Phaser.Scene {
   private returnSceneKey: string = LEGACY_MINIGAME_MENU_SCENE_KEY;
   private rewardEmitted = false;
   private tutorialContainer: Phaser.GameObjects.Container | null = null;
+  private readonly audioManager = new AudioManager();
 
   constructor() {
     super({ key: LEGACY_DRINKING_SCENE_KEY });
@@ -92,9 +94,7 @@ export default class DrinkingScene extends Phaser.Scene {
   startGame() {
     const W = 800, H = 600;
 
-    this.sound.stopAll();
-    this.bgm = this.sound.add(LEGACY_DRINKING_ASSET_KEYS.bgm, { loop: true, volume: 0.5 });
-    if (!this.sound.locked) this.bgm.play();
+    this.bgm = playMinigameBgm(this, this.audioManager, LEGACY_DRINKING_ASSET_KEYS.bgm, { volume: 0.5 });
 
     this.round = 1; this.score = 0; this.success = 0; this.gameOver = false;
     this.rewardEmitted = false;
@@ -126,6 +126,8 @@ export default class DrinkingScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown-SPACE', this.handleClick, this);
     this.add.rectangle(W/2, H/2, W, H, 0, 0).setInteractive().on('pointerdown', this.handleClick, this);
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
 
     this.time.delayedCall(800, () => this.startRound());
   }
@@ -254,9 +256,15 @@ export default class DrinkingScene extends Phaser.Scene {
     this.add.text(W/2, H/2 + 110, '[ RETRY ]', { fontSize: '20px', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => this.scene.restart());
     this.add.text(W/2, H/2 + 160, '[ EXIT ]', { fontSize: '20px', fontFamily: PIXEL_FONT }).setOrigin(0.5).setDepth(101).setInteractive().on('pointerdown', () => {
       this.emitRewardIfNeeded();
-      this.sound.stopAll();
+      stopMinigameBgm(this, this.audioManager);
       returnToScene(this, this.returnSceneKey);
     });
+  }
+
+  shutdown() {
+    stopMinigameBgm(this, this.audioManager);
+    this.input.keyboard?.off('keydown-SPACE', this.handleClick, this);
+    this.bgm = null;
   }
 
   emitRewardIfNeeded() {

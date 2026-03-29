@@ -17,6 +17,7 @@ type ManagedSound = {
   sound: Phaser.Sound.BaseSound;
   category: AudioCategory;
   baseVolume: number;
+  ownerScene?: Phaser.Scene;
 };
 
 export class AudioManager {
@@ -118,7 +119,7 @@ export class AudioManager {
       volume: AudioManager.getEffectiveVolumeFor(category, baseVolume)
     });
 
-    AudioManager.registerManagedSound(sound, category, baseVolume);
+    AudioManager.registerManagedSound(sound, category, baseVolume, scene);
 
     return sound;
   }
@@ -127,11 +128,21 @@ export class AudioManager {
     AudioManager.registerManagedSound(sound, category, baseVolume);
   }
 
+  registerSceneManagedSound(
+    scene: Phaser.Scene,
+    sound: Phaser.Sound.BaseSound,
+    category: AudioCategory,
+    baseVolume = 1
+  ): void {
+    AudioManager.registerManagedSound(sound, category, baseVolume, scene);
+  }
+
   stopManagedSounds(
     category: AudioCategory,
     options: {
       scene?: Phaser.Scene;
       exceptKey?: string;
+      destroy?: boolean;
     } = {}
   ): void {
     AudioManager.stopManagedSounds(category, options);
@@ -188,15 +199,21 @@ export class AudioManager {
     return true;
   }
 
-  private static registerManagedSound(sound: Phaser.Sound.BaseSound, category: AudioCategory, baseVolume: number): void {
+  private static registerManagedSound(
+    sound: Phaser.Sound.BaseSound,
+    category: AudioCategory,
+    baseVolume: number,
+    ownerScene?: Phaser.Scene
+  ): void {
     const existingEntry = Array.from(AudioManager.managedSounds).find((entry) => entry.sound === sound);
     if (existingEntry) {
       existingEntry.category = category;
       existingEntry.baseVolume = baseVolume;
+      existingEntry.ownerScene = ownerScene ?? existingEntry.ownerScene;
       return;
     }
 
-    const managedSound: ManagedSound = { sound, category, baseVolume };
+    const managedSound: ManagedSound = { sound, category, baseVolume, ownerScene };
     AudioManager.managedSounds.add(managedSound);
     sound.once("destroy", () => {
       AudioManager.managedSounds.delete(managedSound);
@@ -218,6 +235,7 @@ export class AudioManager {
     options: {
       scene?: Phaser.Scene;
       exceptKey?: string;
+      destroy?: boolean;
     }
   ): void {
     Array.from(AudioManager.managedSounds).forEach((entry) => {
@@ -225,7 +243,7 @@ export class AudioManager {
         return;
       }
 
-      if (options.scene && entry.sound.manager !== options.scene.sound) {
+      if (options.scene && entry.ownerScene !== options.scene) {
         return;
       }
 
@@ -236,6 +254,10 @@ export class AudioManager {
 
       if (entry.sound.isPlaying) {
         entry.sound.stop();
+      }
+
+      if (options.destroy) {
+        entry.sound.destroy();
       }
     });
   }
