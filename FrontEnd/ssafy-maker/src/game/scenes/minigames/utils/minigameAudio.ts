@@ -1,9 +1,7 @@
 import Phaser from "phaser";
 import { AudioManager } from "../../../../core/managers/AudioManager";
 
-type MinigameAudioScene = Phaser.Scene & {
-  __minigameBgmUnlockCleanup?: () => void;
-};
+const minigameBgmUnlockCleanupByScene = new WeakMap<Phaser.Scene, () => void>();
 
 function canPlayManagedSound(sound: Phaser.Sound.BaseSound): boolean {
   const typedSound = sound as Phaser.Sound.BaseSound & {
@@ -28,11 +26,10 @@ export function playMinigameBgm(
     volume?: number;
   } = {}
 ): Phaser.Sound.BaseSound | null {
-  const typedScene = scene as MinigameAudioScene;
   const volume = options.volume ?? 0.5;
 
-  typedScene.__minigameBgmUnlockCleanup?.();
-  typedScene.__minigameBgmUnlockCleanup = undefined;
+  minigameBgmUnlockCleanupByScene.get(scene)?.();
+  minigameBgmUnlockCleanupByScene.delete(scene);
   audioManager.stopManagedSounds("bgm", { scene });
 
   const bgm = audioManager.add(scene, key, "bgm", {
@@ -50,7 +47,7 @@ export function playMinigameBgm(
   }
 
   const handleUnlocked = () => {
-    typedScene.__minigameBgmUnlockCleanup = undefined;
+    minigameBgmUnlockCleanupByScene.delete(scene);
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanupUnlockedHandler);
     scene.events.off(Phaser.Scenes.Events.DESTROY, cleanupUnlockedHandler);
     if (canPlayManagedSound(bgm) && !bgm.isPlaying) {
@@ -62,12 +59,12 @@ export function playMinigameBgm(
     scene.sound.off(Phaser.Sound.Events.UNLOCKED, handleUnlocked);
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanupUnlockedHandler);
     scene.events.off(Phaser.Scenes.Events.DESTROY, cleanupUnlockedHandler);
-    if (typedScene.__minigameBgmUnlockCleanup === cleanupUnlockedHandler) {
-      typedScene.__minigameBgmUnlockCleanup = undefined;
+    if (minigameBgmUnlockCleanupByScene.get(scene) === cleanupUnlockedHandler) {
+      minigameBgmUnlockCleanupByScene.delete(scene);
     }
   };
 
-  typedScene.__minigameBgmUnlockCleanup = cleanupUnlockedHandler;
+  minigameBgmUnlockCleanupByScene.set(scene, cleanupUnlockedHandler);
   scene.sound.once(Phaser.Sound.Events.UNLOCKED, handleUnlocked);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupUnlockedHandler);
   scene.events.once(Phaser.Scenes.Events.DESTROY, cleanupUnlockedHandler);
@@ -76,8 +73,7 @@ export function playMinigameBgm(
 }
 
 export function stopMinigameBgm(scene: Phaser.Scene, audioManager: AudioManager): void {
-  const typedScene = scene as MinigameAudioScene;
-  typedScene.__minigameBgmUnlockCleanup?.();
-  typedScene.__minigameBgmUnlockCleanup = undefined;
+  minigameBgmUnlockCleanupByScene.get(scene)?.();
+  minigameBgmUnlockCleanupByScene.delete(scene);
   audioManager.stopManagedSounds("bgm", { scene, destroy: true });
 }

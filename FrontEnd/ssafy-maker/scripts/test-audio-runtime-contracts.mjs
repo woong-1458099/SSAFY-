@@ -172,6 +172,9 @@ const legacyManaged = legacyScene.sound.add("audio-a");
 legacyManaged.isPlaying = true;
 audioManager.registerManagedSound(legacyManaged, "bgm", 0.5);
 const otherManaged = audioManager.add(otherScene, "audio-b", "bgm", { loop: true, volume: 0.5 });
+const registerSceneOnlyManaged = otherScene.sound.add("audio-a");
+registerSceneOnlyManaged.isPlaying = true;
+audioManager.registerSceneManagedSound(otherScene, registerSceneOnlyManaged, "bgm", 0.5);
 
 ownerManaged.isPlaying = true;
 otherManaged.isPlaying = true;
@@ -180,9 +183,13 @@ audioManager.stopManagedSounds("bgm", { scene: ownerScene });
 assert.equal(ownerManaged.isPlaying, false, "ownerScene-managed sounds should stop for the matching scene");
 assert.equal(legacyManaged.isPlaying, true, "legacy manager-only sounds from other scenes should remain untouched");
 assert.equal(otherManaged.isPlaying, true, "other ownerScene-managed sounds should remain untouched");
+assert.equal(registerSceneOnlyManaged.isPlaying, true, "explicit registerScene-managed sounds from other scenes should remain untouched");
 
 audioManager.stopManagedSounds("bgm", { scene: legacyScene });
 assert.equal(legacyManaged.isPlaying, false, "legacy manager-only sounds should still stop via manager fallback");
+
+audioManager.stopManagedSounds("bgm", { scene: otherScene });
+assert.equal(registerSceneOnlyManaged.isPlaying, false, "registerScene-managed sounds should stop for the matching owner scene");
 
 const lockedScene = createScene();
 lockedScene.sound.locked = true;
@@ -202,4 +209,4 @@ assert.equal(relockedBgm.isPlaying, true, "unlock should resume deferred bgm pla
 stopMinigameBgm(relockedScene, audioManager);
 assert.equal(relockedScene.sound.count(Phaser.Sound.Events.UNLOCKED), 0, "explicit stop should also clear pending unlock listeners");
 
-console.log("[test:audio-runtime-contracts] OK (7 cases)");
+console.log("[test:audio-runtime-contracts] OK (9 cases)");
