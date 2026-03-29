@@ -119,6 +119,12 @@ export class DebugOverlay {
     return this.visible;
   }
 
+  destroy(): void {
+    this.text.destroy();
+    this.helpText.destroy();
+    this.uiInspectText.destroy();
+  }
+
   private buildUiInspectorLines(): string[] {
     const pointer = this.scene.input.activePointer;
     const hits = this.collectUiHits(pointer.x, pointer.y);
