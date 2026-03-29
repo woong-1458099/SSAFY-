@@ -22,7 +22,6 @@ export function playMinigameBgm(
     return null;
   }
 
-  audioManager.registerSceneManagedSound(scene, bgm, "bgm", volume);
   bgm.play();
   return bgm;
 }
