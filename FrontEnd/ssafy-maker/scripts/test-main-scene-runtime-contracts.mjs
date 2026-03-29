@@ -1,0 +1,934 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import ts from "typescript";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, "..");
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "ssafy-maker-main-scene-runtime-"));
+const tsconfigPath = path.join(projectRoot, "tsconfig.json");
+const tsconfigResult = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+const parsedTsconfig = ts.parseJsonConfigFileContent(
+  tsconfigResult.config,
+  ts.sys,
+  projectRoot
+);
+const transpileCompilerOptions = {
+  ...parsedTsconfig.options,
+  module: ts.ModuleKind.ESNext,
+  noEmit: false
+};
+
+let didCleanupTempDir = false;
+
+function cleanupTempDir() {
+  if (didCleanupTempDir) {
+    return;
+  }
+  didCleanupTempDir = true;
+  fs.rmSync(tempDir, { recursive: true, force: true });
+}
+
+process.on("exit", cleanupTempDir);
+process.on("SIGINT", () => {
+  cleanupTempDir();
+  process.exit(130);
+});
+process.on("SIGTERM", () => {
+  cleanupTempDir();
+  process.exit(143);
+});
+
+function transpileModuleToTemp(sourcePath, outputName) {
+  const transpiled = ts.transpileModule(fs.readFileSync(sourcePath, "utf8"), {
+    compilerOptions: transpileCompilerOptions,
+    fileName: sourcePath
+  });
+
+  const outputPath = path.join(tempDir, outputName);
+  fs.writeFileSync(outputPath, transpiled.outputText, "utf8");
+  return outputPath;
+}
+
+function writeFile(filePath, content) {
+  fs.writeFileSync(filePath, content, "utf8");
+}
+
+function flushMicrotasks() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+class FakeTimerEvent {
+  constructor(callback) {
+    this.callback = callback;
+    this.removed = false;
+  }
+
+  remove() {
+    this.removed = true;
+  }
+
+  fire() {
+    if (!this.removed) {
+      this.callback();
+    }
+  }
+}
+
+class FakeEmitter {
+  constructor() {
+    this.handlers = new Map();
+  }
+
+  on(eventName, handler) {
+    const handlers = this.handlers.get(eventName) ?? [];
+    handlers.push(handler);
+    this.handlers.set(eventName, handlers);
+  }
+
+  off(eventName, handler) {
+    const handlers = this.handlers.get(eventName) ?? [];
+    this.handlers.set(
+      eventName,
+      handlers.filter((candidate) => candidate !== handler)
+    );
+  }
+
+  emit(eventName) {
+    for (const handler of this.handlers.get(eventName) ?? []) {
+      handler();
+    }
+  }
+
+  count(eventName) {
+    return (this.handlers.get(eventName) ?? []).length;
+  }
+}
+
+class FakeScene {
+  constructor() {
+    this.events = new FakeEmitter();
+    this.timers = [];
+    this.time = {
+      now: 0,
+      delayedCall: (_delay, callback) => {
+        const timer = new FakeTimerEvent(callback);
+        this.timers.push(timer);
+        return timer;
+      }
+    };
+    this.destroyed = false;
+    this.sys = {
+      isDestroyed: () => this.destroyed
+    };
+  }
+
+  shutdown() {
+    this.events.emit("shutdown");
+  }
+
+  destroy() {
+    this.destroyed = true;
+    this.events.emit("destroy");
+  }
+}
+
+const phaserStubPath = path.join(tempDir, "phaser-stub.mjs");
+const renderDepthStubPath = path.join(tempDir, "renderDepth-stub.mjs");
+const playerVisualStubPath = path.join(tempDir, "playerVisual-stub.mjs");
+const appearanceStubPath = path.join(tempDir, "playerAppearanceDefinitions-stub.mjs");
+const authSessionStubPath = path.join(tempDir, "authSession-stub.mjs");
+const sceneKeyStubPath = path.join(tempDir, "sceneKey-stub.mjs");
+
+writeFile(
+  phaserStubPath,
+  [
+    "class Vector2 {",
+    "  constructor(x = 0, y = 0) { this.x = x; this.y = y; }",
+    "  lengthSq() { return this.x * this.x + this.y * this.y; }",
+    "  normalize() { return this; }",
+    "  scale() { return this; }",
+    "}",
+    "export default {",
+    "  Scenes: { Events: { SHUTDOWN: 'shutdown', DESTROY: 'destroy' } },",
+    "  Math: { Vector2, Clamp: (value, min, max) => Math.min(max, Math.max(min, value)) },",
+    "  Input: { Keyboard: { KeyCodes: { W: 87, A: 65, S: 83, D: 68 } } }",
+    "};"
+  ].join("\n")
+);
+writeFile(renderDepthStubPath, "export function getActorDepth() { return 0; }\n");
+writeFile(
+  playerVisualStubPath,
+  [
+    "export function createPlayerVisual() {",
+    "  return {",
+    "    root: { active: true, x: 0, y: 0, setPosition() {}, setDepth() {}, destroy() {} },",
+    "    base: { active: true },",
+    "    clothes: { active: true },",
+    "    hair: { active: true }",
+    "  };",
+    "}",
+    "export function updatePlayerVisualFrame() {}"
+  ].join("\n")
+);
+writeFile(
+  appearanceStubPath,
+  "export function getDefaultPlayerAppearanceDefinition() { return {}; }\n"
+);
+writeFile(
+  authSessionStubPath,
+  [
+    "let state = {",
+    "  storedSession: null,",
+    "  existingSession: null,",
+    "  activeAuthUserId: null,",
+    "  logoutShouldReject: false,",
+    "  registryApplications: [],",
+    "  clearRegistryCalls: 0,",
+    "  clearStoredSessionCalls: 0,",
+    "  beginLogoutCalls: 0",
+    "};",
+    "export function __setAuthState(nextState) { state = { ...state, ...nextState }; }",
+    "export function __getAuthState() { return state; }",
+    "export function applySessionToRegistry(registry, session) {",
+    "  state.registryApplications.push(session);",
+    "  registry.set('authToken', 'bff-session');",
+    "  registry.set('authUser', { id: session.userId });",
+    "}",
+    "export async function beginLogout() {",
+    "  state.beginLogoutCalls += 1;",
+    "  if (state.logoutShouldReject) { throw new Error('logout failed'); }",
+    "}",
+    "export function clearAuthRegistry(registry) {",
+    "  state.clearRegistryCalls += 1;",
+    "  registry.remove('authToken');",
+    "  registry.remove('authUser');",
+    "}",
+    "export function clearStoredSession() { state.clearStoredSessionCalls += 1; state.storedSession = null; }",
+    "export async function fetchExistingSession() { return state.existingSession; }",
+    "export function getActiveAuthUserId() { return state.activeAuthUserId; }",
+    "export function readStoredSession() { return state.storedSession; }"
+  ].join("\n")
+);
+writeFile(
+  sceneKeyStubPath,
+  "export const SceneKey = { Login: 'LoginScene' };\n"
+);
+const areaPresentationSourcePath = path.join(projectRoot, "src", "game", "scenes", "main", "areaPresentation.ts");
+const areaPresentationOutputPath = transpileModuleToTemp(areaPresentationSourcePath, "areaPresentation.mjs");
+let areaPresentationOutput = ts.transpileModule(fs.readFileSync(areaPresentationSourcePath, "utf8"), {
+  compilerOptions: transpileCompilerOptions,
+  fileName: areaPresentationSourcePath
+}).outputText;
+areaPresentationOutput = areaPresentationOutput.replace(
+  /from "\.\.\/\.\.\/systems\/tmxNavigation"/g,
+  'from "./tmxNavigation-stub.mjs"'
+);
+writeFile(path.join(tempDir, "tmxNavigation-stub.mjs"), "export function findFirstWalkableTile() { return { tileX: 0, tileY: 0 }; }\n");
+writeFile(areaPresentationOutputPath, areaPresentationOutput);
+
+const playerManagerSourcePath = path.join(projectRoot, "src", "game", "managers", "PlayerManager.ts");
+const playerManagerOutputPath = transpileModuleToTemp(playerManagerSourcePath, "PlayerManager.mjs");
+let playerManagerOutput = ts.transpileModule(fs.readFileSync(playerManagerSourcePath, "utf8"), {
+  compilerOptions: transpileCompilerOptions,
+  fileName: playerManagerSourcePath
+}).outputText;
+playerManagerOutput = playerManagerOutput
+  .replace(/from "phaser"/g, 'from "./phaser-stub.mjs"')
+  .replace(/from "\.\.\/systems\/renderDepth"/g, 'from "./renderDepth-stub.mjs"')
+  .replace(/from "\.\.\/systems\/playerVisual"/g, 'from "./playerVisual-stub.mjs"')
+  .replace(
+    /from "\.\.\/definitions\/player\/playerAppearanceDefinitions"/g,
+    'from "./playerAppearanceDefinitions-stub.mjs"'
+  );
+writeFile(playerManagerOutputPath, playerManagerOutput);
+
+const coordinatorSourcePath = path.join(
+  projectRoot,
+  "src",
+  "game",
+  "scenes",
+  "main",
+  "areaRefreshCoordinator.ts"
+);
+const coordinatorOutputPath = transpileModuleToTemp(coordinatorSourcePath, "areaRefreshCoordinator.mjs");
+let coordinatorOutput = ts.transpileModule(fs.readFileSync(coordinatorSourcePath, "utf8"), {
+  compilerOptions: transpileCompilerOptions,
+  fileName: coordinatorSourcePath
+}).outputText;
+coordinatorOutput = coordinatorOutput.replace(/from "phaser"/g, 'from "./phaser-stub.mjs"');
+writeFile(coordinatorOutputPath, coordinatorOutput);
+
+const authFlowSourcePath = path.join(projectRoot, "src", "game", "scenes", "main", "authFlow.ts");
+const authFlowOutputPath = transpileModuleToTemp(authFlowSourcePath, "authFlow.mjs");
+let authFlowOutput = ts.transpileModule(fs.readFileSync(authFlowSourcePath, "utf8"), {
+  compilerOptions: transpileCompilerOptions,
+  fileName: authFlowSourcePath
+}).outputText;
+authFlowOutput = authFlowOutput
+  .replace(/from "\.\.\/\.\.\/\.\.\/features\/auth\/authSession"/g, 'from "./authSession-stub.mjs"')
+  .replace(/from "\.\.\/\.\.\/\.\.\/shared\/enums\/sceneKey"/g, 'from "./sceneKey-stub.mjs"');
+writeFile(authFlowOutputPath, authFlowOutput);
+
+const {
+  PlayerManager,
+  PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS,
+  PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
+} = await import(
+  `${pathToFileURL(playerManagerOutputPath).href}?t=${Date.now()}`
+);
+const { MainSceneAreaRefreshCoordinator, shouldAbortAreaRefreshRequest } = await import(
+  `${pathToFileURL(coordinatorOutputPath).href}?t=${Date.now()}`
+);
+const { ensureMainSceneAuthenticatedEntry, logoutMainSceneSession } = await import(
+  `${pathToFileURL(authFlowOutputPath).href}?t=${Date.now()}`
+);
+const { __getAuthState, __setAuthState } = await import(
+  pathToFileURL(authSessionStubPath).href
+);
+const {
+  findNearestWalkableRefreshTile,
+  createRefreshTileSearchCache,
+  clearRefreshTileSearchCache
+} = await import(`${pathToFileURL(areaPresentationOutputPath).href}?t=${Date.now()}`);
+
+const movementCases = [
+  {
+    name: "collision-blocked directional input still counts as activity",
+    snapshot: {
+      isMoving: false,
+      isMoveInputActive: true,
+      hasRawMoveInput: true,
+      isInputLocked: false,
+      lastMovementActivityAtMs: Number.NEGATIVE_INFINITY,
+      scene: { time: { now: 1_000 } }
+    },
+    expected: { immediateActive: true, autoSaveActive: true, autoSaveGateActive: true, graceActive: true }
+  },
+  {
+    name: "input-locked frames disable autosave activity but preserve grace activity",
+    snapshot: {
+      isMoving: false,
+      isMoveInputActive: false,
+      hasRawMoveInput: true,
+      isInputLocked: true,
+      lastAutoSaveGateLockEnteredAtMs: 1_000,
+      lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+      preserveAutoSaveGateDuringInputLock: true,
+      lastMovementActivityAtMs: 1_000,
+      scene: { time: { now: 1_050 } }
+    },
+    expected: { immediateActive: false, autoSaveActive: false, autoSaveGateActive: true, graceActive: true }
+  },
+  {
+    name: "ui-style input locks do not keep autosave gate active",
+    snapshot: {
+      isMoving: false,
+      isMoveInputActive: false,
+      hasRawMoveInput: true,
+      isInputLocked: true,
+      lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+      lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+      preserveAutoSaveGateDuringInputLock: false,
+      lastMovementActivityAtMs: 1_000,
+      scene: { time: { now: 1_050 } }
+    },
+    expected: { immediateActive: false, autoSaveActive: false, autoSaveGateActive: false, graceActive: true }
+  },
+  {
+    name: "idle frames stay inactive",
+    snapshot: {
+      isMoving: false,
+      isMoveInputActive: false,
+      hasRawMoveInput: false,
+      isInputLocked: false,
+      lastMovementActivityAtMs: Number.NEGATIVE_INFINITY,
+      scene: { time: { now: 1_000 } }
+    },
+    expected: { immediateActive: false, autoSaveActive: false, autoSaveGateActive: false, graceActive: false }
+  }
+];
+
+movementCases.forEach(({ name, snapshot, expected }) => {
+  const result = PlayerManager.prototype.getMovementActivitySnapshot.call(snapshot);
+  assert.equal(result.immediateActive, expected.immediateActive, `${name} (immediate)`);
+  assert.equal(result.autoSaveActive, expected.autoSaveActive, `${name} (autosave)`);
+  assert.equal(result.autoSaveGateActive, expected.autoSaveGateActive, `${name} (autosave-gate)`);
+  assert.equal(result.graceActive, expected.graceActive, `${name} (grace)`);
+});
+
+const autoSaveActivityReader = PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
+  getMovementActivitySnapshot: () => ({
+    autoSaveGateActive: true
+  })
+});
+assert.equal(
+  autoSaveActivityReader,
+  true,
+  "autosave callers should read the dedicated PlayerManager autosave activity contract"
+);
+const movementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: true,
+  isInputLocked: true,
+  lastAutoSaveGateLockEnteredAtMs: 1_000,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  preserveAutoSaveGateDuringInputLock: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  movementSnapshot.autoSaveActive,
+  false,
+  "movement snapshots should expose autosave activity as lock-aware even when raw input is still held"
+);
+assert.equal(
+  movementSnapshot.autoSaveGateActive,
+  true,
+  "movement snapshots should keep autosave gating active across the configured lock-transition grace window"
+);
+assert.equal(
+  PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS,
+  PLAYER_MOVEMENT_ACTIVITY_GRACE_MS,
+  "autosave lock-transition grace should stay aligned with the shared movement grace budget"
+);
+assert.equal(
+  movementSnapshot.graceActive,
+  true,
+  "movement snapshots should keep grace activity separate from autosave activity"
+);
+const preLockMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: true,
+  isMoveInputActive: true,
+  hasRawMoveInput: true,
+  isInputLocked: false,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_000 } }
+});
+assert.equal(
+  preLockMovementSnapshot.autoSaveActive,
+  true,
+  "movement snapshots should keep autosave active during the last unlocked movement frame"
+);
+const lockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: true,
+  isInputLocked: true,
+  lastAutoSaveGateLockEnteredAtMs: 1_000,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  preserveAutoSaveGateDuringInputLock: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  lockedMovementSnapshot.autoSaveActive,
+  false,
+  "movement snapshots should disable autosave activity immediately once input becomes locked"
+);
+assert.equal(
+  lockedMovementSnapshot.autoSaveGateActive,
+  true,
+  "movement snapshots should keep autosave gated during the initial input-lock transition window"
+);
+const longLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: false,
+  isInputLocked: true,
+  lastAutoSaveGateLockEnteredAtMs: 1_000,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  preserveAutoSaveGateDuringInputLock: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_000 + PLAYER_AUTOSAVE_LOCK_TRANSITION_GRACE_MS + 1 } }
+});
+assert.equal(
+  longLockedMovementSnapshot.autoSaveGateActive,
+  false,
+  "movement snapshots should release autosave gating after the configured lock-transition grace expires"
+);
+const unlockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: true,
+  hasRawMoveInput: true,
+  isInputLocked: false,
+  lastMovementActivityAtMs: 1_050,
+  scene: { time: { now: 1_060 } }
+});
+assert.equal(
+  unlockedMovementSnapshot.autoSaveActive,
+  true,
+  "movement snapshots should re-enable autosave activity immediately after input unlock with held input"
+);
+assert.equal(
+  unlockedMovementSnapshot.autoSaveGateActive,
+  true,
+  "movement snapshots should keep autosave gating active immediately after input unlock with held input"
+);
+const unlockedIdleMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: false,
+  isInputLocked: false,
+  lastMovementActivityAtMs: 1_050,
+  scene: { time: { now: 1_060 } }
+});
+assert.equal(
+  unlockedIdleMovementSnapshot.autoSaveGateActive,
+  false,
+  "movement snapshots should reopen autosave immediately after unlock when no input or movement remains"
+);
+const relockedWithoutMovementManager = {
+  isInputLocked: false,
+  hasRawMoveInput: false,
+  isMoving: false,
+  isMoveInputActive: false,
+  preserveAutoSaveGateDuringInputLock: false,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  lastMovementActivityAtMs: 1_100,
+  scene: { time: { now: 1_120 } }
+};
+PlayerManager.prototype.setInputLocked.call(relockedWithoutMovementManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  relockedWithoutMovementManager.lastAutoSaveGateLockEnteredAtMs,
+  Number.NEGATIVE_INFINITY,
+  "locking again without movement or active input should not start a new autosave gate transition"
+);
+const lockTransitionManager = {
+  isInputLocked: false,
+  hasRawMoveInput: true,
+  isMoving: false,
+  isMoveInputActive: true,
+  preserveAutoSaveGateDuringInputLock: false,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+};
+PlayerManager.prototype.setInputLocked.call(lockTransitionManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  lockTransitionManager.hasRawMoveInput,
+  false,
+  "locking input should clear stale raw movement intent before the next update tick"
+);
+assert.equal(
+  lockTransitionManager.preserveAutoSaveGateDuringInputLock,
+  true,
+  "interaction-style input locks should opt into autosave gate preservation"
+);
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockEnteredAtMs,
+  1_050,
+  "interaction-style input locks should stamp a dedicated autosave gate transition timestamp"
+);
+const lockThenImmediateSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  ...lockTransitionManager,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  lockThenImmediateSnapshot.autoSaveGateActive,
+  true,
+  "the first locked-frame snapshot should keep autosave gated after an interaction-style lock transition"
+);
+PlayerManager.prototype.setInputLocked.call(lockTransitionManager, false, {
+  preserveAutoSaveGateDuringLockTransition: false
+});
+assert.equal(
+  lockTransitionManager.hasRawMoveInput,
+  false,
+  "unlocking input should also clear stale raw movement intent until update resamples current input"
+);
+assert.equal(
+  lockTransitionManager.preserveAutoSaveGateDuringInputLock,
+  false,
+  "unlocking or non-transition locks should clear autosave gate preservation hints"
+);
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockEnteredAtMs,
+  Number.NEGATIVE_INFINITY,
+  "unlocking should clear the dedicated autosave gate lock-enter timestamp"
+);
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockExitedAtMs,
+  1_050,
+  "unlocking should stamp the dedicated autosave gate lock-exit timestamp"
+);
+lockTransitionManager.isMoving = false;
+lockTransitionManager.isMoveInputActive = true;
+lockTransitionManager.scene = { time: { now: 1_080 } };
+PlayerManager.prototype.setInputLocked.call(lockTransitionManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockEnteredAtMs,
+  1_080,
+  "relocking with fresh movement input should stamp a new autosave gate lock-enter timestamp"
+);
+assert.equal(
+  lockTransitionManager.lastAutoSaveGateLockExitedAtMs,
+  1_050,
+  "relocking should preserve the previous unlock timestamp for transition debugging"
+);
+const repeatedLockManager = {
+  isInputLocked: true,
+  hasRawMoveInput: false,
+  isMoving: false,
+  isMoveInputActive: false,
+  lastAutoSaveGateLockEnteredAtMs: 500,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  preserveAutoSaveGateDuringInputLock: true,
+  lastMovementActivityAtMs: 500,
+  scene: { time: { now: 1_000 } }
+};
+PlayerManager.prototype.setInputLocked.call(repeatedLockManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  repeatedLockManager.lastMovementActivityAtMs,
+  500,
+  "reapplying an already-locked input state should not refresh movement activity timestamps"
+);
+assert.equal(
+  repeatedLockManager.lastAutoSaveGateLockEnteredAtMs,
+  500,
+  "reapplying an already-locked input state should not refresh autosave gate transition timestamps"
+);
+const idleLockManager = {
+  isInputLocked: false,
+  hasRawMoveInput: false,
+  isMoving: false,
+  isMoveInputActive: false,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  preserveAutoSaveGateDuringInputLock: false,
+  lastMovementActivityAtMs: 400,
+  scene: { time: { now: 900 } }
+};
+PlayerManager.prototype.setInputLocked.call(idleLockManager, true, {
+  preserveAutoSaveGateDuringLockTransition: true
+});
+assert.equal(
+  idleLockManager.lastMovementActivityAtMs,
+  400,
+  "locking input from an already-idle state should not extend autosave gate grace"
+);
+assert.equal(
+  idleLockManager.lastAutoSaveGateLockEnteredAtMs,
+  Number.NEGATIVE_INFINITY,
+  "locking input from an already-idle state should not create a dedicated autosave gate transition timestamp"
+);
+const uiLockedMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: true,
+  isInputLocked: true,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  preserveAutoSaveGateDuringInputLock: false,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  uiLockedMovementSnapshot.autoSaveGateActive,
+  false,
+  "non-interaction input locks should not extend autosave gating through grace-only activity"
+);
+const staleGraceMovementSnapshot = PlayerManager.prototype.getMovementActivitySnapshot.call({
+  isMoving: false,
+  isMoveInputActive: false,
+  hasRawMoveInput: false,
+  isInputLocked: true,
+  lastAutoSaveGateLockEnteredAtMs: Number.NEGATIVE_INFINITY,
+  lastAutoSaveGateLockExitedAtMs: Number.NEGATIVE_INFINITY,
+  preserveAutoSaveGateDuringInputLock: true,
+  lastMovementActivityAtMs: 1_000,
+  scene: { time: { now: 1_050 } }
+});
+assert.equal(
+  staleGraceMovementSnapshot.graceActive,
+  true,
+  "movement grace can remain active after a recent lock transition"
+);
+assert.equal(
+  staleGraceMovementSnapshot.autoSaveGateActive,
+  false,
+  "autosave gate should not piggyback on generic grace without a dedicated lock-transition timestamp"
+);
+assert.equal(
+  PlayerManager.prototype.isAutoSaveMovementActivityInProgress.call({
+    getMovementActivitySnapshot: () => movementSnapshot
+  }),
+  true,
+  "autosave helper should delegate to the canonical autosave gate snapshot field"
+);
+assert.equal(
+  movementSnapshot.autoSaveGateActive,
+  true,
+  "autosave gating should still block saves on the input-lock transition frame even when autosaveActive is already false"
+);
+assert.equal(
+  PlayerManager.prototype.isMovementActivityInProgress.call({
+    getMovementActivitySnapshot: () => movementSnapshot
+  }),
+  true,
+  "grace helper should delegate to the canonical movement snapshot"
+);
+const refreshSearchCache = createRefreshTileSearchCache();
+assert.equal(
+  findNearestWalkableRefreshTile(
+    -1,
+    3,
+    { blockedGrid: [[false]] },
+    { width: 1, height: 1, tileWidth: 32, tileHeight: 32, layers: [], tilesets: [] },
+    refreshSearchCache,
+    0
+  ),
+  undefined,
+  "out-of-bounds refresh origins should fail fast instead of expanding BFS work"
+);
+assert.equal(
+  findNearestWalkableRefreshTile(
+    -1,
+    3,
+    { blockedGrid: [[false]] },
+    { width: 1, height: 1, tileWidth: 32, tileHeight: 32, layers: [], tilesets: [] },
+    refreshSearchCache,
+    0
+  ),
+  undefined,
+  "repeated out-of-bounds refresh origins should still fail fast"
+);
+const mutableBlockedGrid = [[true, false]];
+const mutableParsedMap = {
+  width: 2,
+  height: 1,
+  tileWidth: 32,
+  tileHeight: 32,
+  layers: [],
+  tilesets: []
+};
+const mutableRuntimeGrids = { blockedGrid: mutableBlockedGrid };
+assert.deepEqual(
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache, 0),
+  { tileX: 1, tileY: 0 },
+  "initial refresh search should find the nearest open tile"
+);
+mutableBlockedGrid[0][0] = false;
+assert.deepEqual(
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache, 0),
+  { tileX: 1, tileY: 0 },
+  "scene-owned caches can return stale data until explicitly invalidated"
+);
+assert.deepEqual(
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache, 1),
+  { tileX: 0, tileY: 0 },
+  "bumping the refresh-search revision should invalidate stale cache entries even for the same objects"
+);
+clearRefreshTileSearchCache(refreshSearchCache);
+assert.deepEqual(
+  findNearestWalkableRefreshTile(0, 0, mutableRuntimeGrids, mutableParsedMap, refreshSearchCache, 1),
+  { tileX: 0, tileY: 0 },
+  "explicit cache invalidation should force refresh-tile searches to observe mutated grid data"
+);
+
+assert.equal(
+  shouldAbortAreaRefreshRequest({
+    signal: new AbortController().signal,
+    isCurrentRequest: () => true
+  }),
+  false,
+  "active request should not abort"
+);
+
+const abortedController = new AbortController();
+abortedController.abort();
+assert.equal(
+  shouldAbortAreaRefreshRequest({
+    signal: abortedController.signal,
+    isCurrentRequest: () => true
+  }),
+  true,
+  "aborted request should stop"
+);
+
+assert.equal(
+  shouldAbortAreaRefreshRequest({
+    signal: new AbortController().signal,
+    isCurrentRequest: () => false
+  }),
+  true,
+  "stale request should stop"
+);
+
+const runningScene = new FakeScene();
+const refreshResolvers = [];
+const refreshCalls = [];
+const coordinator = new MainSceneAreaRefreshCoordinator({
+  scene: runningScene,
+  canRefresh: () => true,
+  refresh: (_expectedAreaId, _expectedPlayerSnapshot, request) => {
+    refreshCalls.push(request?.requestId ?? -1);
+    return new Promise((resolve) => {
+      refreshResolvers.push({
+        requestId: request?.requestId ?? -1,
+        request,
+        resolve
+      });
+    });
+  }
+});
+
+coordinator.queue("world");
+runningScene.timers.shift().fire();
+await flushMicrotasks();
+assert.equal(coordinator.isRefreshInProgress(), true, "first refresh should start");
+assert.equal(refreshResolvers.length, 1, "first refresh should register a pending resolver");
+
+coordinator.queue("home");
+assert.equal(coordinator.isRefreshInProgress(), false, "cancelled refresh should release running flag");
+runningScene.timers.shift().fire();
+await flushMicrotasks();
+assert.equal(coordinator.isRefreshInProgress(), true, "latest refresh should start");
+assert.equal(refreshResolvers.length, 2, "second refresh should register a pending resolver");
+
+refreshResolvers[0].resolve();
+await flushMicrotasks();
+assert.equal(
+  coordinator.isRefreshInProgress(),
+  true,
+  "older refresh completion must not clear the latest running state"
+);
+
+refreshResolvers[1].resolve();
+await flushMicrotasks();
+assert.equal(coordinator.isRefreshInProgress(), false, "latest refresh completion should clear running state");
+assert.deepEqual(refreshCalls, [2, 4], "coordinator should only execute the latest queued refreshes");
+
+const disposedScene = new FakeScene();
+let disposedRefreshCalled = false;
+const disposedCoordinator = new MainSceneAreaRefreshCoordinator({
+  scene: disposedScene,
+  canRefresh: () => true,
+  refresh: () => {
+    disposedRefreshCalled = true;
+  }
+});
+
+disposedCoordinator.queue("world");
+assert.equal(disposedScene.events.count("shutdown"), 1, "shutdown handler should be registered");
+assert.equal(disposedScene.events.count("destroy"), 1, "destroy handler should be registered");
+disposedScene.shutdown();
+assert.equal(disposedScene.events.count("shutdown"), 0, "shutdown handler should be removed on dispose");
+assert.equal(disposedScene.events.count("destroy"), 0, "destroy handler should be removed on dispose");
+disposedScene.destroy();
+disposedScene.timers.shift().fire();
+await flushMicrotasks();
+assert.equal(disposedRefreshCalled, false, "disposed scenes must not run deferred refresh callbacks");
+
+function createFakeRegistry(initialState = {}) {
+  const store = new Map(Object.entries(initialState));
+  return {
+    get(key) {
+      return store.get(key);
+    },
+    set(key, value) {
+      store.set(key, value);
+    },
+    remove(key) {
+      store.delete(key);
+    }
+  };
+}
+
+function createFakeScenePlugin() {
+  return {
+    starts: [],
+    start(key) {
+      this.starts.push(key);
+    }
+  };
+}
+
+__setAuthState({
+  storedSession: { userId: "stored-user" },
+  existingSession: null,
+  activeAuthUserId: null,
+  logoutShouldReject: false,
+  registryApplications: [],
+  clearRegistryCalls: 0,
+  clearStoredSessionCalls: 0,
+  beginLogoutCalls: 0
+});
+const storedRegistry = createFakeRegistry();
+const storedScenePlugin = createFakeScenePlugin();
+assert.equal(
+  await ensureMainSceneAuthenticatedEntry(storedRegistry, storedScenePlugin),
+  true,
+  "stored sessions should allow MainScene entry without redirect"
+);
+assert.equal(
+  storedScenePlugin.starts.length,
+  0,
+  "stored-session entry should not redirect to login"
+);
+
+__setAuthState({
+  storedSession: null,
+  existingSession: null,
+  activeAuthUserId: null,
+  logoutShouldReject: false,
+  registryApplications: [],
+  clearRegistryCalls: 0,
+  clearStoredSessionCalls: 0,
+  beginLogoutCalls: 0
+});
+const missingRegistry = createFakeRegistry();
+const missingScenePlugin = createFakeScenePlugin();
+assert.equal(
+  await ensureMainSceneAuthenticatedEntry(missingRegistry, missingScenePlugin),
+  false,
+  "missing sessions should deny MainScene entry"
+);
+assert.deepEqual(
+  missingScenePlugin.starts,
+  ["LoginScene"],
+  "missing sessions should redirect to login"
+);
+
+__setAuthState({
+  storedSession: null,
+  existingSession: null,
+  activeAuthUserId: null,
+  logoutShouldReject: true,
+  registryApplications: [],
+  clearRegistryCalls: 0,
+  clearStoredSessionCalls: 0,
+  beginLogoutCalls: 0
+});
+const logoutRegistry = createFakeRegistry({
+  authToken: "bff-session",
+  authUser: { id: "user-1" }
+});
+const logoutScenePlugin = createFakeScenePlugin();
+let fallbackCalls = 0;
+await logoutMainSceneSession(logoutRegistry, logoutScenePlugin, () => {
+  fallbackCalls += 1;
+});
+assert.equal(fallbackCalls, 1, "logout failure should trigger exactly one local fallback");
+assert.deepEqual(
+  logoutScenePlugin.starts,
+  ["LoginScene"],
+  "logout failure should still land on the login scene exactly once"
+);
+assert.equal(__getAuthState().beginLogoutCalls, 1, "logout flow should attempt remote logout once");
+
+console.log(`[test:main-scene-runtime-contracts] OK (${movementCases.length + 23} cases)`);
