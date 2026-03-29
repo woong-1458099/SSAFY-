@@ -23,7 +23,7 @@ import { buildMinigameUnlockFlag } from "../../features/minigame/minigameUnlocks
 import type { EndingFlowPayload } from "../../features/progression/types/ending";
 import type { EndingId } from "../../features/progression/types/ending";
 import { resolveEnding } from "../../features/progression/services/endingResolver";
-import { issueDeathRecordToken, recordCurrentUserDeath } from "../../features/auth/api";
+import { issueDeathRecordToken, recordCurrentUserDeath } from "../../features/death/deathApi";
 import {
   getActiveAuthUserId,
   patchStoredSessionUser,
@@ -108,6 +108,13 @@ import {
   resolveAreaTransitionTargets as buildAreaTransitionTargets,
   resolveStaticPlaceTargets as buildStaticPlaceTargets
 } from "./main/targets";
+import {
+  buildMainSceneDeathOverlayPayload,
+  buildMainSceneDeathRecordRequest,
+  scheduleMainSceneDeathEndingTransition,
+  shouldDeferImmediateEndingDuringDeathSequence,
+  shouldTriggerMainSceneDeathSequence
+} from "./main/deathFlow";
 
 export class MainScene extends Phaser.Scene {
   private static readonly PENDING_START_TILE_KEY = "pendingStartTile";
@@ -156,7 +163,7 @@ export class MainScene extends Phaser.Scene {
   private brightnessOverlay?: Phaser.GameObjects.Rectangle;
   private currentStaticPlaceTargets: RuntimeStaticPlaceTarget[] = [];
   private deathSequenceActive = false;
-  private pendingDeathSceneExit?: Phaser.Time.TimerEvent;
+  private pendingDeathSequenceTransition?: Phaser.Time.TimerEvent;
   private endingFlowRequested = false;
   private pendingDialogueWeekMismatch?: {
     key: string;
@@ -204,8 +211,8 @@ export class MainScene extends Phaser.Scene {
     this.logoutInProgress = false;
     this.deathSequenceActive = false;
     this.endingFlowRequested = false;
-    this.pendingDeathSceneExit?.remove(false);
-    this.pendingDeathSceneExit = undefined;
+    this.pendingDeathSequenceTransition?.remove(false);
+    this.pendingDeathSequenceTransition = undefined;
     this.ensureRuntimeCoordinators();
     this.autoSaveCoordinator?.reset();
     this.clearPendingInitialAreaRefresh();
@@ -528,8 +535,8 @@ export class MainScene extends Phaser.Scene {
       this.areaRefreshCoordinator?.dispose();
       clearRefreshTileSearchCache(this.refreshTileSearchCache);
       this.refreshTileSearchRevision = 0;
-      this.pendingDeathSceneExit?.remove(false);
-      this.pendingDeathSceneExit = undefined;
+      this.pendingDeathSequenceTransition?.remove(false);
+      this.pendingDeathSequenceTransition = undefined;
       this.autoSaveCoordinator?.destroy();
       this.deathSequenceActive = false;
       this.brightnessOverlay?.destroy();
@@ -673,13 +680,16 @@ export class MainScene extends Phaser.Scene {
   }
 
   private maybeTriggerPlayerDeath(hp: number): void {
-    if (!this.initialized || this.deathSequenceActive || hp > 0) {
+    if (!shouldTriggerMainSceneDeathSequence(hp, {
+      initialized: this.initialized,
+      deathSequenceActive: this.deathSequenceActive
+    })) {
       return;
     }
 
     this.deathSequenceActive = true;
-    this.pendingDeathSceneExit?.remove(false);
-    this.pendingDeathSceneExit = undefined;
+    this.pendingDeathSequenceTransition?.remove(false);
+    this.pendingDeathSequenceTransition = undefined;
     this.clearPendingInitialAreaRefresh();
     this.events.emit("ui:closeMenu");
     this.events.emit("ui:closePlaceAction");
@@ -687,20 +697,16 @@ export class MainScene extends Phaser.Scene {
     if (this.progressionManager?.isPlannerOpen()) {
       this.progressionManager.togglePlanner();
     }
-    this.events.emit("ui:showDeathOverlay", {
-      title: "WASTED",
-      subtitle: "HP가 모두 소진되었습니다."
-    });
+    this.events.emit("ui:showDeathOverlay", buildMainSceneDeathOverlayPayload());
     void this.recordCurrentUserDeathIfAvailable();
 
-    this.pendingDeathSceneExit = this.time.delayedCall(1800, () => {
-      this.pendingDeathSceneExit = undefined;
-      if (!this.sys.isActive()) {
-        return;
+    this.pendingDeathSequenceTransition = scheduleMainSceneDeathEndingTransition({
+      scene: this,
+      onComplete: () => {
+        this.pendingDeathSequenceTransition = undefined;
+        this.clearPendingInitialAreaRefresh();
+        void this.startEndingFlow();
       }
-
-      this.clearPendingInitialAreaRefresh();
-      this.scene.start(SceneKey.Start);
     });
   }
 
@@ -717,11 +723,13 @@ export class MainScene extends Phaser.Scene {
 
     try {
       const { token } = await issueDeathRecordToken();
-      const updatedUser = await recordCurrentUserDeath(token, {
-        areaId: this.worldManager?.getCurrentAreaId(),
-        sceneId: this.currentSceneId,
-        cause: "HP_ZERO"
-      });
+      const updatedUser = await recordCurrentUserDeath(
+        token,
+        buildMainSceneDeathRecordRequest({
+          areaId: this.worldManager?.getCurrentAreaId(),
+          sceneId: this.currentSceneId
+        })
+      );
       patchStoredSessionUser(updatedUser);
       this.registry.set("authUser", {
         id: updatedUser.id,
@@ -1784,6 +1792,9 @@ hudWeek: number): number {
     }
 
     const payload = this.buildEndingPayload();
+    if (shouldDeferImmediateEndingDuringDeathSequence(payload, this.deathSequenceActive)) {
+      return;
+    }
     const ending = resolveEnding(payload);
     if (ending.triggerMode !== "immediate") {
       return;

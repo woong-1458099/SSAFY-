@@ -12,6 +12,8 @@ Current split:
   - Debug panel view-state payload shaping.
 - `debugFlow.ts`
   - Debug command routing and debug-scene restart helpers.
+- `deathFlow.ts`
+  - Death overlay timing, death-ending deferral policy, and death record payload shaping.
 - `areaPresentation.ts`
   - Safe rerender tile resolution and area presentation helpers.
 - `areaRefreshCoordinator.ts`
