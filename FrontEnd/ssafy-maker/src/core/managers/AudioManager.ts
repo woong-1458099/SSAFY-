@@ -243,8 +243,12 @@ export class AudioManager {
         return;
       }
 
-      if (options.scene && entry.ownerScene !== options.scene) {
-        return;
+      if (options.scene) {
+        const matchesOwnerScene = entry.ownerScene === options.scene;
+        const matchesSoundManager = entry.sound.manager === options.scene.sound;
+        if (!matchesOwnerScene && (entry.ownerScene || !matchesSoundManager)) {
+          return;
+        }
       }
 
       const soundKey = (entry.sound as Phaser.Sound.BaseSound & { key?: string }).key;

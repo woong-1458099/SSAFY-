@@ -22,7 +22,17 @@ export function playMinigameBgm(
     return null;
   }
 
-  bgm.play();
+  if (!scene.sound.locked) {
+    bgm.play();
+    return bgm;
+  }
+
+  scene.sound.once(Phaser.Sound.Events.UNLOCKED, () => {
+    if (bgm.manager && !bgm.isPlaying) {
+      bgm.play();
+    }
+  });
+
   return bgm;
 }
 
