@@ -5,4 +5,5 @@
 export * from "./minigameConstants";
 export * from "./minigameStyles";
 export * from "./minigameUI";
+export * from "./minigameAudio";
 export * from "./sceneCleanup";

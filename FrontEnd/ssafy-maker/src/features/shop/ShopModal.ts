@@ -76,8 +76,10 @@ function createLayerButton(
 export function createShopModal(scene: Phaser.Scene, options: {
   items: InventoryItemTemplate[];
   money: number;
+  initialPage?: number;
   backgroundImage?: Phaser.GameObjects.Image | null;
   createButton: ButtonFactory;
+  onPageChange?: (page: number) => void;
   onBuy: (templateId: string) => void;
   onClose: () => void;
 }): Phaser.GameObjects.Container {
@@ -166,7 +168,8 @@ export function createShopModal(scene: Phaser.Scene, options: {
   const tooltipRoot = scene.add.container(0, 0, [tooltipBg, tooltipText]).setVisible(false);
   const pageRoot = scene.add.container(0, 0);
   const pageCount = Math.max(1, Math.ceil(options.items.length / itemsPerPage));
-  let currentPage = 0;
+  let currentPage = Phaser.Math.Clamp(options.initialPage ?? 0, 0, Math.max(pageCount - 1, 0));
+  let lastReportedPage: number | null = null;
   const prevButton = createLayerButton(scene, {
     width: 108,
     height: 40,
@@ -202,6 +205,11 @@ export function createShopModal(scene: Phaser.Scene, options: {
   closeButton.setPosition(0, footerTop + 64);
 
   function renderPage(): void {
+    currentPage = Phaser.Math.Clamp(currentPage, 0, Math.max(pageCount - 1, 0));
+    if (lastReportedPage !== currentPage) {
+      options.onPageChange?.(currentPage);
+      lastReportedPage = currentPage;
+    }
     tooltipRoot.setVisible(false);
     pageRoot.removeAll(true);
 

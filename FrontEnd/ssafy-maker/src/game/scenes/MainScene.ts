@@ -515,21 +515,38 @@ export class MainScene extends Phaser.Scene {
       }
 
       cleanedUp = true;
+      this.initialized = false;
       this.unsubscribeDebugCommandBus?.();
       this.unsubscribeDebugCommandBus = undefined;
       this.debugCommandBus?.destroy();
+      this.debugCommandBus = undefined;
+      this.debugOverlay?.destroy();
+      this.debugOverlay = undefined;
       this.debugMinigameHud?.destroy();
+      this.debugMinigameHud = undefined;
       this.debugPanel?.destroy();
+      this.debugPanel = undefined;
       this.worldGridOverlay?.destroy();
       this.worldGridOverlay = undefined;
       this.worldTileEditor?.destroy();
+      this.worldTileEditor = undefined;
       this.debugInputController?.destroy();
+      this.debugInputController = undefined;
       this.playerManager?.destroy();
+      this.playerManager = undefined;
       this.dialogueManager?.destroy();
+      this.dialogueManager = undefined;
       this.fixedEventNpcManager?.destroy();
+      this.fixedEventNpcManager = undefined;
       this.minigameRewardManager?.destroy();
+      this.minigameRewardManager = undefined;
       this.progressionManager?.destroy();
+      this.progressionManager = undefined;
       this.storyEventManager?.destroy();
+      this.storyEventManager = undefined;
+      this.interactionManager = undefined;
+      this.npcManager = undefined;
+      this.worldManager = undefined;
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.clearPendingInitialAreaRefresh();
       this.areaRefreshCoordinator?.dispose();

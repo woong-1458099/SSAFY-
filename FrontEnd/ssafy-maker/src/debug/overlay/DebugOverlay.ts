@@ -29,6 +29,7 @@ export class DebugOverlay {
   private helpText: Phaser.GameObjects.Text;
   private uiInspectText: Phaser.GameObjects.Text;
   private visible = true;
+  private destroyed = false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -117,6 +118,17 @@ export class DebugOverlay {
 
   isVisible() {
     return this.visible;
+  }
+
+  destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.destroyed = true;
+    this.text?.destroy();
+    this.helpText?.destroy();
+    this.uiInspectText?.destroy();
   }
 
   private buildUiInspectorLines(): string[] {

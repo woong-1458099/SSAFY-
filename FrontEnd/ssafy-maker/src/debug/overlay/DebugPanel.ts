@@ -198,6 +198,7 @@ export class DebugPanel {
   private renderVersion = 0;
   private lastRenderedVersion = -1;
   private visible = false;
+  private destroyed = false;
   private page: PanelPage = "stats";
   private storySelectedWeek = 1;
   private readonly storySelectedEventIndexByWeek: Partial<Record<number, number>> = {};
@@ -307,6 +308,10 @@ export class DebugPanel {
   }
 
   render(state: DebugPanelState, options?: { force?: boolean }): void {
+    if (this.destroyed || !this.scene.sys.isActive()) {
+      return;
+    }
+
     if (!this.visible) {
       this.latestState = state;
       return;
@@ -369,6 +374,12 @@ export class DebugPanel {
   }
 
   destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.destroyed = true;
+    this.visible = false;
     this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize);
     this.scene.input.off(Phaser.Input.Events.POINTER_WHEEL, this.handleWheel);
     this.root.destroy(true);

@@ -5,13 +5,14 @@ import { applyLegacyViewport } from './viewport';
 import { returnToScene } from '@features/minigame/minigameLauncher';
 import { emitMinigameReward } from '@features/minigame/minigameRewardEvents';
 import { LEGACY_COOKING_SCENE_KEY } from '@features/minigame/minigameSceneKeys';
+import { AudioManager } from '../../../core/managers/AudioManager';
 import {
   LEGACY_COOKING_ASSET_KEYS,
   LEGACY_COOKING_DISHES,
   LEGACY_COOKING_INGREDIENTS,
   preloadLegacyCookingAssets,
 } from '@features/minigame/legacy/legacyCookingConfig';
-import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton } from './utils';
+import { SCREEN, PIXEL_FONT, COLORS, createBackground, createPanel, createButton, playMinigameBgm, stopMinigameBgm } from './utils';
 import { showMinigameTutorial } from './utils/minigameTutorial';
 import { getMinigameCard } from '@features/minigame/minigameCatalog';
 
@@ -21,6 +22,7 @@ export default class CookingScene extends Phaser.Scene {
   private completedRewardText = null;
   private rewardEmitted = false;
   private tutorialContainer = null;
+  private readonly audioManager = new AudioManager();
 
   constructor() { super({ key: LEGACY_COOKING_SCENE_KEY }); }
 
@@ -67,9 +69,7 @@ export default class CookingScene extends Phaser.Scene {
     this.completedRewardText = null;
     this.rewardEmitted = false;
 
-    this.sound.stopAll();
-    this.bgm = this.sound.add(LEGACY_COOKING_ASSET_KEYS.bgm, { loop: true, volume: 0.5 });
-    if (!this.sound.locked) this.bgm.play();
+    this.bgm = playMinigameBgm(this, this.audioManager, LEGACY_COOKING_ASSET_KEYS.bgm, { volume: 0.5 });
 
     this.add.image(W / 2, H / 2, LEGACY_COOKING_ASSET_KEYS.background).setDisplaySize(W, H);
 
@@ -270,6 +270,7 @@ update() {
     this.createBtn(W / 2 - 120, 470, '다시하기', 0x442200, 0xff8822, () => this.scene.restart());
     this.createBtn(W / 2 + 120, 470, '나가기', 0x222222, 0x666666, () => {
       this.emitRewardIfNeeded();
+      stopMinigameBgm(this, this.audioManager);
       returnToScene(this, this.returnSceneKey);
     });
   }
@@ -287,6 +288,7 @@ update() {
   }
 
   shutdown() {
+    stopMinigameBgm(this, this.audioManager);
     if (this.timerEvent) this.timerEvent.remove();
     if (this.spawnEvent) this.spawnEvent.remove();
     if (this.cursors) {
@@ -294,6 +296,7 @@ update() {
       this.cursors.right.destroy();
     }
     this.ingredients = [];
+    this.bgm = null;
   }
 
   emitRewardIfNeeded() {
