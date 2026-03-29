@@ -83,19 +83,16 @@ public class RedisCacheConfig implements CachingConfigurer {
             @Override
             public void handleCachePutError(RuntimeException exception, org.springframework.cache.Cache cache, Object key, Object value) {
                 log.error("Cache PUT failed for cache={} key={}: {}", cache.getName(), key, exception.getMessage(), exception);
-                throw exception;
             }
 
             @Override
             public void handleCacheEvictError(RuntimeException exception, org.springframework.cache.Cache cache, Object key) {
                 log.error("Cache EVICT failed for cache={} key={}: {}", cache.getName(), key, exception.getMessage(), exception);
-                throw exception;
             }
 
             @Override
             public void handleCacheClearError(RuntimeException exception, org.springframework.cache.Cache cache) {
                 log.error("Cache CLEAR failed for cache={}: {}", cache.getName(), exception.getMessage(), exception);
-                throw exception;
             }
         };
     }
